@@ -13,7 +13,9 @@
       "Bash(\"grant-research-env/Scripts/python.exe\" test_bmf_filter.py)",
       "Bash(\"grant-research-env/Scripts/python.exe\" test_full_scoring.py)",
       "Bash(\"grant-research-env/Scripts/streamlit.exe\" run src/dashboard/app.py)",
-      "Bash(\"grant-research-env/Scripts/python.exe\" export_results.py)"
+      "Bash(\"grant-research-env/Scripts/python.exe\" export_results.py)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" export_board_network.py)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" test_interactive_network.py)"
     ],
     "deny": []
   }
