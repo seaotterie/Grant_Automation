@@ -251,6 +251,11 @@ class ProPublicaFetchProcessor(BaseProcessor):
             org.most_recent_filing_year = recent_filing.get('tax_prd_yr')
             org.filing_years = [f.get('tax_prd_yr') for f in filings if f.get('tax_prd_yr')]
             org.filing_consistency_score = len(org.filing_years) / 5.0  # Score based on 5-year consistency
+            
+            # Store raw filing data for financial scorer
+            org.filing_data = {
+                "filings": filings[:5]  # Store up to 5 most recent filings
+            }
         
         # Add mission and activity descriptions
         if organization.get('mission'):

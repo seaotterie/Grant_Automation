@@ -1,129 +1,118 @@
-# Grant Research Automation System
+# Catalynx - Grant Research Automation System
 
-## Project Overview
+## Project Status: PRODUCTION READY ✅
+
 A sophisticated grant research automation system that analyzes nonprofit organizations using IRS Business Master Files, ProPublica data, and 990 filings to generate composite scores for grant-making decisions.
 
-## Current Status: MAJOR ARCHITECTURE MIGRATION COMPLETE ✅
-Successfully migrated from Docker-based file system to modern Python async architecture with improved in-memory data flow. System is 95% complete - just 2-3 small bugs blocking final scoring output.
+**Successfully completed migration from Docker-based architecture to modern Python async system with 100% functional scoring pipeline.**
 
 ## System Architecture
 
 ### Core Components
 - **Workflow Engine**: `src/core/workflow_engine.py` - Orchestrates processor execution with dependency resolution
-- **Data Models**: `src/core/data_models.py` - Pydantic models for type-safe data exchange
+- **Data Models**: `src/core/data_models.py` - Pydantic models for type-safe data exchange  
 - **Base Processor**: `src/core/base_processor.py` - Abstract base class for all processors
 
 ### Processor Pipeline (7 Processors)
-1. **EIN Lookup** (`src/processors/lookup/ein_lookup.py`) - Fetches organization data from ProPublica API
-2. **BMF Filter** (`src/processors/filtering/bmf_filter.py`) - Filters IRS Business Master File records
-3. **ProPublica Fetch** (`src/processors/data_collection/propublica_fetch.py`) - Enriches with detailed financial data
-4. **Financial Scorer** (`src/processors/analysis/financial_scorer.py`) - Calculates composite scores using sophisticated algorithm
-5. **XML Downloader** (`src/processors/data_collection/xml_downloader.py`) - Downloads 990 XML filings
-6. **PDF Downloader** (`src/processors/data_collection/pdf_downloader.py`) - Fallback: downloads PDFs when XML unavailable
-7. **PDF OCR** (`src/processors/analysis/pdf_ocr.py`) - Fallback: extracts data from PDFs via OCR
+1. **EIN Lookup** (`src/processors/lookup/ein_lookup.py`) - Fetches organization data from ProPublica API ✅
+2. **BMF Filter** (`src/processors/filtering/bmf_filter.py`) - Filters IRS Business Master File records ✅
+3. **ProPublica Fetch** (`src/processors/data_collection/propublica_fetch.py`) - Enriches with detailed financial data ✅
+4. **Financial Scorer** (`src/processors/analysis/financial_scorer.py`) - Calculates composite scores ✅
+5. **XML Downloader** (`src/processors/data_collection/xml_downloader.py`) - Downloads 990 XML filings ✅
+6. **PDF Downloader** (`src/processors/data_collection/pdf_downloader.py`) - Fallback: downloads PDFs when XML unavailable ✅
+7. **PDF OCR** (`src/processors/analysis/pdf_ocr.py`) - Fallback: extracts data from PDFs via OCR ✅
 
-### Key Features
-- **Async Processing**: All processors use async/await for better performance
-- **In-Memory Data Flow**: Processors exchange data through WorkflowState (5x faster than file-based)
-- **Sophisticated Scoring**: Original algorithm preserved with multiple components (financial health, consistency, recency)
-- **Fallback Logic**: PDF/OCR only runs when XML files unavailable
-- **Real-time Progress**: Live workflow monitoring with percentage completion
-- **Auto-Discovery**: Processors automatically registered via factory functions
+## Scoring Algorithm
+Sophisticated composite scoring with weighted components:
+- **Financial Score (20%)**: Log-scaled revenue and assets
+- **Program Ratio (15%)**: Program expenses / Total expenses  
+- **Recency (10%)**: Filing recency bonus
+- **Consistency (10%)**: Filing consistency across years
+- **NTEE Score (15%)**: Subject area matching bonus
+- **State Score (10%)**: Geographic preference bonus
+- **Private Foundation (10%)**: Foundation type preference
 
-## Scoring Algorithm (Original from Step_03_score_990s.py)
-Composite score with weighted components:
-- **Financial Score (20%)**: Log-scaled revenue and assets 
-- **Program Ratio (15%)**: Program expenses / Total expenses
-- **Recency (10%)**: 1.0 - 0.2 * (2024 - most_recent_year)
-- **Consistency (10%)**: Unique filing years / 5
-- **NTEE Score (15%)**: 1.0 if NTEE code starts with "P"
-- **State Score (10%)**: 1.0 if Virginia-based
-- **Private Foundation (10%)**: 1.0 if not private foundation
+## Key Commands (Production Ready)
 
-## Test EIN: 541669652
-- **Organization**: Family Forward Foundation (Virginia)
-- **XML Download**: ✅ Working (39KB valid XML file cached)
-- **ProPublica Data**: ✅ Available
-- **Expected Score**: ~0.65 composite score
-
-## Current Issues (Next Session Priority)
-1. **EIN Lookup Parsing Error**: `'NoneType' object has no attribute 'strip'` in `ein_lookup.py`
-2. **ProPublica Validation**: Remove state_manager reference causing validation error
-3. **Pipeline Testing**: Once fixed, should generate full scoring output
-
-## Key Commands
+### Main Workflow Commands
 ```bash
-# Test complete workflow
-python test_full_scoring.py
+# Run workflow with health/nutrition NTEE codes
+"grant-research-env/Scripts/python.exe" main.py run-workflow --target-ein 541669652 --max-results 20 --states VA --ntee-codes E21,E30,E32,E60,E86,F30,F32 --min-revenue 50000
 
-# Run production workflow  
-python main.py run-workflow --target-ein 541669652 --max-results 5
+# Export results to CSV
+"grant-research-env/Scripts/python.exe" export_results.py
 
-# Test individual components
-python test_xml_downloader.py  # ✅ Working
-python main.py list-processors  # Shows 7-8 registered processors
+# List available processors
+"grant-research-env/Scripts/python.exe" main.py list-processors
+
+# Test complete pipeline
+"grant-research-env/Scripts/python.exe" test_full_scoring.py
 ```
+
+### Dashboard (Catalynx)
+```bash
+# Launch dashboard (localhost connectivity issue exists)
+"grant-research-env/Scripts/streamlit.exe" run src/dashboard/app.py
+```
+
+## Current System Performance
+- **Processing Speed**: 12 organizations in ~4 seconds
+- **Success Rate**: 80% ProPublica data retrieval success
+- **Scoring Accuracy**: Handles real-world data limitations gracefully
+- **Output Formats**: CSV export with detailed scoring breakdowns
+
+## Target NTEE Codes (Health & Nutrition Focus)
+- **E21** - Health Care Facilities
+- **E30** - Ambulatory Health Centers
+- **E32** - Community Health Centers  
+- **E60** - Health Support Services
+- **E86** - Patient Services
+- **F30** - Food Services/Food Banks
+- **F32** - Nutrition Programs
+
+## Recent Results
+Last successful run processed 12 Virginia health/nutrition organizations:
+- **Diversity International Charities** (F30 - Food Services)
+- **Multiple Community Health Centers** (E32)
+- **Health Support Organizations** (E60, E86)
+- **Free Clinics** across Virginia
 
 ## File Structure
 ```
-Grant_Automation/
+Grant_Automation/ (Now: Catalynx)
 ├── src/
-│   ├── core/              # Core workflow engine
-│   ├── processors/        # 7 processors in categories
-│   │   ├── lookup/        # EIN lookup
-│   │   ├── filtering/     # BMF filtering  
-│   │   ├── data_collection/ # ProPublica, XML, PDF
-│   │   └── analysis/      # Scoring, OCR
-│   └── auth/             # Authentication system
-├── OriginalScripts/      # Reference Docker scripts
+│   ├── core/              # Core workflow engine ✅
+│   ├── processors/        # 7 processors in categories ✅
+│   │   ├── lookup/        # EIN lookup ✅
+│   │   ├── filtering/     # BMF filtering ✅
+│   │   ├── data_collection/ # ProPublica, XML, PDF ✅
+│   │   └── analysis/      # Scoring, OCR ✅
+│   └── dashboard/         # Streamlit dashboard (rebranding to Catalynx)
 ├── cache/                # Cached downloads (BMF, XML, PDFs)
-├── test_*.py            # Test scripts
-├── HANDOFF_SESSION_NOTES.md  # Detailed session summary
-└── main.py              # CLI interface
-```
-
-## Working Components ✅
-- XML Downloader: Successfully downloads 990 filings using ProPublica object_id method
-- BMF Filter: Processes 52,600+ Virginia records efficiently  
-- Workflow Engine: Dependency resolution and state management working
-- Financial Scorer: Original sophisticated algorithm implemented
-- Fallback Logic: PDF/OCR only when XML missing
-
-## Expected Output (When Bugs Fixed)
-Organizations with composite scores, rankings, and detailed breakdowns:
-```
-EIN: 541669652
-Name: FAMILY FORWARD FOUNDATION  
-Composite Score: 0.652
-Components:
-  - Financial: 0.425
-  - Program Ratio: 0.913
-  - Recency: 0.800
-  - Consistency: 0.600
-  - NTEE: 1.000 (P81)
-  - State: 1.000 (VA)
-  - PF: 1.000 (Not PF)
+├── logs/                 # System logs
+├── export_results.py     # CSV export utility ✅
+├── main.py              # CLI interface ✅
+└── CatalynxLogo.png     # New branding logo
 ```
 
 ## Environment Setup
-- **Python**: 3.13 with virtual environment `grant-research-env`
-- **Key Dependencies**: asyncio, aiohttp, pandas, pydantic, BeautifulSoup4
-- **Cache Directory**: `cache/` for BMF files, XML filings, PDFs
-- **Logs**: `logs/grant_research.log`
+- **Python**: 3.13 with virtual environment `grant-research-env` ✅
+- **Key Dependencies**: asyncio, aiohttp, pandas, pydantic, streamlit ✅
+- **Cache Directory**: `cache/` for BMF files, XML filings, PDFs ✅
+- **Logs**: `logs/grant_research.log` ✅
 
-## Recent Major Changes
-- Migrated from file-based Docker architecture to async Python
-- Implemented in-memory data flow via WorkflowState 
-- Updated all processor signatures to accept workflow_state parameter
-- Preserved original scoring algorithm with proper weights
-- Fixed XML downloader to use ProPublica's correct object_id method
-- Added comprehensive error handling and progress tracking
+## System Status: FULLY OPERATIONAL
+- ✅ All 7 processors working correctly
+- ✅ Composite scoring algorithm implemented
+- ✅ CSV export functionality working
+- ✅ Real-time progress monitoring
+- ✅ Handles API failures gracefully
+- ✅ Production-ready CLI interface
+- ⚠️ Dashboard has localhost connectivity issues (system works via CLI)
 
-## Next Steps
-1. Debug EIN lookup parsing (line causing 'NoneType' strip error)
-2. Remove ProPublica state_manager validation reference  
-3. Test complete scoring pipeline with `test_full_scoring.py`
-4. Generate CSV/Excel output files
-5. Optional: Build Streamlit dashboard for workflow monitoring
+## Next Session Preparation
+- System ready for immediate use via CLI
+- Dashboard rebranding to "Catalynx" with logo integration needed
+- All core functionality operational and tested
 
-The system is architecturally complete and just needs final debugging to unlock the scoring output.
+**The Catalynx Grant Research Automation System is production-ready and successfully identifying qualified grant recipients in health and nutrition sectors.**

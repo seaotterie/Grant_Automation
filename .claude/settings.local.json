@@ -10,7 +10,10 @@
       "Bash(cp:*)",
       "Bash(\"grant-research-env/Scripts/python.exe\" main.py list-processors)",
       "Bash(\"grant-research-env/Scripts/python.exe\" -m pip install aiohttp)",
-      "Bash(\"grant-research-env/Scripts/python.exe\" test_bmf_filter.py)"
+      "Bash(\"grant-research-env/Scripts/python.exe\" test_bmf_filter.py)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" test_full_scoring.py)",
+      "Bash(\"grant-research-env/Scripts/streamlit.exe\" run src/dashboard/app.py)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" export_results.py)"
     ],
     "deny": []
   }
