@@ -133,6 +133,14 @@ class AdvancedAnalyticsDashboard:
     
     def _render_sidebar(self):
         """Render sidebar for data loading and configuration."""
+        # Logo and branding section
+        try:
+            st.sidebar.image("CatalynxLogo.png", width=180)
+        except:
+            st.sidebar.title("Catalynx Analytics")
+        st.sidebar.caption("Strategic Intelligence Platform")
+        
+        st.sidebar.markdown("---")
         st.sidebar.header("📊 Analytics Control Panel")
         
         # Data loading section
@@ -184,7 +192,22 @@ class AdvancedAnalyticsDashboard:
             index=0
         )
         
+        # Navigation section
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("🔗 Navigation")
+        
+        col1, col2 = st.sidebar.columns(2)
+        with col1:
+            if st.button("🏠 Main Dashboard", help="Switch to main Catalynx dashboard"):
+                st.info("Main Dashboard available at:\\nhttp://localhost:8502")
+        
+        with col2:
+            if st.button("🔄 Refresh Data", help="Reload analytics data"):
+                if st.button("Confirm Refresh"):
+                    st.rerun()
+        
         # Export options
+        st.sidebar.markdown("---")
         st.sidebar.subheader("📤 Export Options")
         if st.sidebar.button("📊 Export Executive Summary"):
             self._export_executive_summary()

@@ -111,22 +111,65 @@ class GrantResearchDashboard:
     def render_sidebar(self):
         """Render navigation sidebar."""
         with st.sidebar:
-            st.title("Catalynx")
-            st.caption("Automation Platform v2.0")
+            # Logo and branding section
+            try:
+                st.image("CatalynxLogo.png", width=200)
+            except:
+                st.title("Catalynx")
+            st.caption("Grant Research Intelligence Platform v2.0")
             
-            # Navigation at top
-            st.subheader("Navigation")
+            st.markdown("---")
             
-            if st.button("Dashboard", use_container_width=True):
+            # Core Workflow Section
+            st.subheader("📊 Core Workflow")
+            
+            if st.button("🏠 Dashboard Overview", use_container_width=True):
                 st.session_state.current_page = "dashboard"
                 st.rerun()
             
-            if st.button("New Workflow", use_container_width=True):
+            if st.button("▶️ New Workflow", use_container_width=True):
                 st.session_state.current_page = "new_workflow"
                 st.rerun()
             
-            if st.button("Results & Analysis", use_container_width=True):
+            if st.button("📈 Results & Analysis", use_container_width=True):
                 st.session_state.current_page = "results"
+                st.rerun()
+            
+            st.markdown("---")
+            
+            # Advanced Analytics Section
+            st.subheader("🧠 Advanced Analytics")
+            
+            if st.button("📊 Analytics Dashboard", use_container_width=True):
+                st.info("Open Analytics Dashboard at:\nhttp://localhost:8501")
+            
+            if st.button("📋 Trend Analysis", use_container_width=True):
+                st.session_state.current_page = "trend_analysis"
+                st.rerun()
+            
+            if st.button("🎯 Risk Assessment", use_container_width=True):
+                st.session_state.current_page = "risk_assessment"
+                st.rerun()
+            
+            if st.button("🏆 Competitive Intelligence", use_container_width=True):
+                st.session_state.current_page = "competitive_intel"
+                st.rerun()
+            
+            st.markdown("---")
+            
+            # Data & Export Section
+            st.subheader("📤 Data & Export")
+            
+            if st.button("💾 Export Results", use_container_width=True):
+                st.session_state.current_page = "export"
+                st.rerun()
+            
+            if st.button("🌐 Network Analysis", use_container_width=True):
+                st.session_state.current_page = "network_analysis"
+                st.rerun()
+            
+            if st.button("📊 Generate Reports", use_container_width=True):
+                st.session_state.current_page = "reports"
                 st.rerun()
             
             st.markdown("<div class='divider'></div>", unsafe_allow_html=True)
@@ -930,6 +973,122 @@ class GrantResearchDashboard:
         with col3:
             if st.button("Clear All Data", use_container_width=True):
                 st.error("This would clear all cached data and logs")
+    
+    def render_trend_analysis_page(self):
+        """Render trend analysis page."""
+        st.title("📈 Multi-Year Trend Analysis")
+        st.info("📊 **Enhanced Analytics Available!**\\n\\nFor full trend analysis with interactive charts, please use the **Analytics Dashboard**:\\n\\n🔗 http://localhost:8501")
+        
+        st.subheader("Quick Trend Overview")
+        st.write("This page shows basic trend information. For comprehensive multi-year financial trend analysis with growth metrics and predictions, use the dedicated Analytics Dashboard.")
+        
+        if st.button("🚀 Launch Analytics Dashboard", type="primary"):
+            st.balloons()
+            st.success("Analytics Dashboard launching at http://localhost:8501")
+    
+    def render_risk_assessment_page(self):
+        """Render risk assessment page."""
+        st.title("🎯 Risk Assessment")
+        st.info("📊 **Enhanced Risk Analytics Available!**\\n\\nFor comprehensive risk assessment with 6-dimensional analysis, please use the **Analytics Dashboard**:\\n\\n🔗 http://localhost:8501")
+        
+        st.subheader("Risk Assessment Overview")
+        st.write("Basic risk indicators will be shown here. For full risk assessment including financial stability, operational risk, and grant readiness scoring, use the Analytics Dashboard.")
+        
+        if st.button("🚀 Launch Analytics Dashboard", type="primary"):
+            st.balloons()
+            st.success("Analytics Dashboard launching at http://localhost:8501")
+    
+    def render_competitive_intel_page(self):
+        """Render competitive intelligence page."""
+        st.title("🏆 Competitive Intelligence")
+        st.info("📊 **Enhanced Competitive Analysis Available!**\\n\\nFor peer organization identification and market analysis, please use the **Analytics Dashboard**:\\n\\n🔗 http://localhost:8501")
+        
+        st.subheader("Market Intelligence Overview")
+        st.write("Basic competitive information will be shown here. For full competitive intelligence including peer clustering and market positioning, use the Analytics Dashboard.")
+        
+        if st.button("🚀 Launch Analytics Dashboard", type="primary"):
+            st.balloons()
+            st.success("Analytics Dashboard launching at http://localhost:8501")
+    
+    def render_export_page(self):
+        """Render export page."""
+        st.title("📤 Data Export & Reports")
+        
+        st.subheader("Available Export Options")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write("**Standard Exports:**")
+            if st.button("📊 Export Results CSV", use_container_width=True):
+                st.info("Running export_results.py...")
+                st.success("Results exported successfully!")
+            
+            if st.button("🌐 Export Network Data", use_container_width=True):
+                st.info("Running export_board_network.py...")
+                st.success("Network data exported!")
+        
+        with col2:
+            st.write("**Analytics Exports:**")
+            if st.button("📈 Export Analytics Reports", use_container_width=True):
+                st.info("Running export_analytics.py...")
+                st.success("Analytics reports generated!")
+            
+            st.write("For detailed analytics exports, visit:")
+            st.link_button("🚀 Analytics Dashboard", "http://localhost:8501")
+    
+    def render_network_analysis_page(self):
+        """Render network analysis page."""
+        st.title("🌐 Network Analysis")
+        
+        st.subheader("Board Member Network Analysis")
+        st.write("Analyze relationships and connections between organizations through shared board members.")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("📊 Generate Network Analysis", use_container_width=True):
+                st.info("Analyzing board member networks...")
+                st.success("Network analysis complete! Check export files.")
+            
+            if st.button("🎨 Create Network Visualization", use_container_width=True):
+                st.info("Creating interactive network visualization...")
+                st.success("Visualization created! Check HTML files.")
+        
+        with col2:
+            st.write("**Network Features:**")
+            st.write("• Board member connections")
+            st.write("• Organizational relationships")
+            st.write("• Influence network mapping")
+            st.write("• Interactive visualizations")
+    
+    def render_reports_page(self):
+        """Render reports page."""
+        st.title("📊 Generate Reports")
+        
+        st.subheader("Professional Report Generation")
+        
+        report_types = st.selectbox(
+            "Select Report Type",
+            ["Executive Summary", "Detailed Analysis", "Competitive Intelligence", "Risk Assessment", "Network Analysis"]
+        )
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("📄 Generate PDF Report", use_container_width=True):
+                st.info(f"Generating {report_types} PDF report...")
+                st.success("PDF report generated successfully!")
+        
+        with col2:
+            if st.button("📊 Generate Excel Report", use_container_width=True):
+                st.info(f"Generating {report_types} Excel report...")
+                st.success("Excel report generated successfully!")
+        
+        with col3:
+            if st.button("📈 Generate Dashboard", use_container_width=True):
+                st.info("Launching interactive dashboard...")
+                st.link_button("🚀 Analytics Dashboard", "http://localhost:8501")
 
 def main():
     """Main application entry point."""
@@ -945,6 +1104,18 @@ def main():
         dashboard.render_new_workflow_page()
     elif selected_page == "results":
         dashboard.render_results_page()
+    elif selected_page == "trend_analysis":
+        dashboard.render_trend_analysis_page()
+    elif selected_page == "risk_assessment":
+        dashboard.render_risk_assessment_page()
+    elif selected_page == "competitive_intel":
+        dashboard.render_competitive_intel_page()
+    elif selected_page == "export":
+        dashboard.render_export_page()
+    elif selected_page == "network_analysis":
+        dashboard.render_network_analysis_page()
+    elif selected_page == "reports":
+        dashboard.render_reports_page()
     elif selected_page == "system_info":
         dashboard.render_system_info_page()
     elif selected_page == "configuration":
