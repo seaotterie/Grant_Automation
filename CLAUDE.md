@@ -108,7 +108,7 @@ Grant_Automation/ (Now: Catalynx)
 - ✅ Real-time progress monitoring
 - ✅ Handles API failures gracefully
 - ✅ Production-ready CLI interface
-- ⚠️ Dashboard has localhost connectivity issues (system works via CLI)
+- ✅ Dashboard connectivity working - accessible via localhost
 
 ## Next Session Preparation
 - System ready for immediate use via CLI
@@ -135,6 +135,11 @@ Grant_Automation/ (Now: Catalynx)
 
 # Launch analytics dashboard
 "grant-research-env/Scripts/python.exe" -m streamlit run src/dashboard/analytics_dashboard.py
+# OR use launcher: launch_analytics_dashboard.bat
+
+# Launch main dashboard
+"grant-research-env/Scripts/python.exe" -m streamlit run src/dashboard/app.py --server.port 8502
+# OR use launcher: launch_main_dashboard.bat
 
 # Export analytics reports
 "grant-research-env/Scripts/python.exe" export_analytics.py
