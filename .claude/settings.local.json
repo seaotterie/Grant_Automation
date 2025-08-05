@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grant-research-envScriptspython.exe -m pip install --upgrade pip)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" -m pip install wheel setuptools)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" -c \"import pandas, requests, streamlit, cryptography, click, pydantic; print(''Core libraries imported successfully'')\")",
+      "Bash(\"grant-research-env/Scripts/python.exe\" -c \"from src.auth.api_key_manager import get_api_key_manager; print(''Authentication system ready'')\")",
+      "Bash(\"grant-research-env/Scripts/python.exe\" setup_auth.py status)",
+      "Bash(copy \".env.example\" \".env\")",
+      "Bash(cp:*)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" main.py list-processors)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" -m pip install aiohttp)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" test_bmf_filter.py)"
+    ],
+    "deny": []
+  }
+}

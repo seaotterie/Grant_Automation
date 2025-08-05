@@ -1,0 +1,29 @@
+# Authentication Dependencies for Grant Research Automation
+# Install with: pip install -r requirements-auth.txt
+
+# Core authentication and security
+cryptography>=41.0.0         # For API key encryption
+pydantic>=2.0.0              # For configuration management
+pydantic-settings>=2.0.0     # For environment-based settings
+
+# CLI interface
+click>=8.1.0                 # Command line interface
+
+# Password hashing and security
+bcrypt>=4.0.0               # Alternative password hashing (optional)
+# secrets is built-in Python module, no installation needed
+
+# Configuration and environment
+python-dotenv>=1.0.0        # Environment variable loading
+
+# Streamlit authentication (if using dashboard)
+streamlit>=1.28.0           # Dashboard framework
+
+# Logging and monitoring
+structlog>=23.0.0           # Structured logging (optional)
+
+# Development dependencies (optional)
+pytest>=7.4.0               # Testing framework
+pytest-cov>=4.1.0           # Coverage reporting
+black>=23.0.0               # Code formatting
+mypy>=1.5.0                 # Type checking
