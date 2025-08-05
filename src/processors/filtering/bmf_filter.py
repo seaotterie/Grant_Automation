@@ -189,6 +189,9 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
             classification = row.get('CLASSIFICATION', '').strip()
             foundation_code = row.get('FOUNDATION', '').strip()
             activity_code = row.get('ACTIVITY', '').strip()
+            subsection_code = row.get('SUBSECTION', '').strip()
+            asset_code = row.get('ASSET_CD', '').strip()
+            income_code = row.get('INCOME_CD', '').strip()
             
             return {
                 'ein': ein,
@@ -200,7 +203,10 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
                 'assets': assets,
                 'classification': classification,
                 'foundation_code': foundation_code,
-                'activity_code': activity_code
+                'activity_code': activity_code,
+                'subsection_code': subsection_code,
+                'asset_code': asset_code,
+                'income_code': income_code
             }
         
         except Exception as e:
@@ -266,6 +272,9 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
             city=org_data['city'],
             revenue=org_data.get('revenue'),
             assets=org_data.get('assets'),
+            subsection_code=org_data.get('subsection_code'),
+            asset_code=org_data.get('asset_code'),
+            income_code=org_data.get('income_code'),
             last_updated=datetime.now()
         )
         

@@ -78,6 +78,9 @@ class OrganizationProfile(BaseModel):
     city: Optional[str] = Field(None, description="City")
     zip_code: Optional[str] = Field(None, description="ZIP code")
     organization_type: OrganizationType = Field(default=OrganizationType.NONPROFIT)
+    subsection_code: Optional[str] = Field(None, description="IRS subsection code (1=private foundation)")
+    asset_code: Optional[str] = Field(None, description="IRS asset amount code")
+    income_code: Optional[str] = Field(None, description="IRS income amount code")
     
     # Financial Data (Most Recent Year)
     revenue: Optional[float] = Field(None, description="Total revenue")
@@ -120,8 +123,14 @@ class OrganizationProfile(BaseModel):
     # Scoring and Analysis
     composite_score: Optional[float] = Field(None, description="Overall composite score")
     component_scores: Dict[str, float] = Field(default_factory=dict, description="Individual component scores")
+    scoring_components: Dict[str, float] = Field(default_factory=dict, description="Detailed scoring components")
     score_rank: Optional[int] = Field(None, description="Rank among analyzed organizations")
     score_percentile: Optional[float] = Field(None, description="Percentile ranking")
+    
+    # Individual Scoring Components
+    filing_consistency_score: Optional[float] = Field(None, description="Filing consistency score")
+    filing_recency_score: Optional[float] = Field(None, description="Filing recency score")
+    financial_health_score: Optional[float] = Field(None, description="Financial health score")
     
     # Analysis Flags
     is_potential_funder: bool = Field(default=False, description="Identified as potential funder")

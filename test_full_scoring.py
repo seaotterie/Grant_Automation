@@ -93,8 +93,11 @@ async def test_full_scoring():
                                 # Check for scoring data
                                 if 'composite_score' in sample_org:
                                     score = sample_org['composite_score']
-                                    print(f"         *** COMPOSITE SCORE: {score:.3f} ***")
-                                    has_scores = True
+                                    if score is not None:
+                                        print(f"         *** COMPOSITE SCORE: {score:.3f} ***")
+                                        has_scores = True
+                                    else:
+                                        print(f"         *** COMPOSITE SCORE: None (scoring failed) ***")
                                     
                                     if 'scoring_components' in sample_org:
                                         components = sample_org['scoring_components']

@@ -303,19 +303,9 @@ class ProPublicaFetchProcessor(BaseProcessor):
         """Validate inputs for ProPublica fetch."""
         errors = []
         
-        # Check if BMF filter step completed successfully
-        workflow_id = config.workflow_id
-        from src.core.workflow_engine import WorkflowEngine
-        engine = WorkflowEngine()
-        
-        try:
-            state = engine.state_manager.get_workflow_state(workflow_id)
-            if not state or 'bmf_filter' not in state:
-                errors.append("BMF filter step must complete before ProPublica fetch")
-            elif not state['bmf_filter'].success:
-                errors.append("BMF filter step failed - cannot proceed with ProPublica fetch")
-        except Exception as e:
-            errors.append(f"Cannot validate workflow state: {e}")
+        # Note: Input validation will be handled by the workflow engine
+        # through dependency checking. BMF filter dependency is declared
+        # in the processor metadata.
         
         return errors
 

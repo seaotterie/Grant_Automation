@@ -112,19 +112,19 @@ class EINLookupProcessor(BaseProcessor, SyncProcessorMixin):
         """
         organization = api_data.get('organization', {})
         
-        # Extract basic information
-        name = organization.get('name', '').strip()
+        # Extract basic information (null-safe)
+        name = (organization.get('name') or '').strip()
         if not name:
             raise ValueError(f"Organization name not found for EIN: {ein}")
         
-        # Extract location information
-        city = organization.get('city', '').strip()
-        state = organization.get('state', '').strip()
+        # Extract location information (null-safe)
+        city = (organization.get('city') or '').strip()
+        state = (organization.get('state') or '').strip()
         if not state:
             raise ValueError(f"State information not found for EIN: {ein}")
         
-        # Extract NTEE code and description
-        ntee_code = organization.get('ntee_code', '').strip()
+        # Extract NTEE code and description (null-safe)
+        ntee_code = (organization.get('ntee_code') or '').strip()
         ntee_description = None
         
         # Get the most recent filing data for financial information
