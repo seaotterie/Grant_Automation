@@ -20,6 +20,7 @@
     <!-- Configure Tailwind -->
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -30,26 +31,53 @@
                             800: '#1e40af',
                             900: '#1e3a8a'
                         }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(10px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' }
+                        }
                     }
                 }
             }
         }
     </script>
 </head>
-<body class="bg-gray-100 font-sans antialiased" x-data="catalynxApp()">
+<body class="bg-gray-100 dark:bg-gray-900 font-sans antialiased transition-colors duration-300" x-data="catalynxApp()">
     
     <!-- Main Container -->
     <div class="min-h-screen flex">
         
         <!-- Sidebar Navigation -->
-        <div class="bg-gray-900 text-white w-64 min-h-screen flex-shrink-0">
+        <div class="bg-gray-900 dark:bg-gray-800 text-white w-64 min-h-screen flex-shrink-0 transition-colors duration-300">
             <!-- Logo Header -->
-            <div class="p-4 border-b border-gray-800">
-                <h1 class="text-xl font-bold flex items-center">
-                    <span class="text-2xl mr-2">🎯</span>
-                    <span>Catalynx</span>
-                </h1>
-                <p class="text-sm text-gray-400 mt-1">Grant Research Automation</p>
+            <div class="p-4 border-b border-gray-800 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-xl font-bold flex items-center">
+                            <span class="text-2xl mr-2">🎯</span>
+                            <span>Catalynx</span>
+                        </h1>
+                        <p class="text-sm text-gray-400 mt-1">Grant Research Automation</p>
+                    </div>
+                    
+                    <!-- Dark Mode Toggle -->
+                    <button @click="toggleDarkMode()" 
+                            class="p-2 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+                            :title="darkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+                        <span x-show="!darkMode" class="text-lg">🌙</span>
+                        <span x-show="darkMode" class="text-lg">☀️</span>
+                    </button>
+                </div>
             </div>
             
             <!-- Navigation Menu -->
@@ -83,6 +111,18 @@
                        class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors">
                         <span class="text-lg mr-3">🧠</span>
                         Classification
+                    </a>
+                    
+                    <!-- Profiles -->
+                    <a href="#" 
+                       @click.prevent="switchTab('profiles')"
+                       :class="{'bg-primary-600 text-white': activeTab === 'profiles', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'profiles'}"
+                       class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors">
+                        <span class="text-lg mr-3">👤</span>
+                        Profiles
+                        <span x-show="totalProfiles > 0" 
+                              class="ml-auto bg-green-500 text-white text-xs rounded-full px-2 py-0.5"
+                              x-text="totalProfiles"></span>
                     </a>
                     
                     <!-- Analytics -->
@@ -140,79 +180,103 @@
         <div class="flex-1 flex flex-col min-h-screen">
             
             <!-- Top Bar -->
-            <header class="bg-white border-b border-gray-200 px-6 py-4">
+            <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 transition-colors duration-300">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-2xl font-semibold text-gray-900" x-text="getPageTitle()"></h2>
-                        <p class="text-sm text-gray-600 mt-1" x-text="getPageDescription()"></p>
+                        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white" x-text="getPageTitle()"></h2>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1" x-text="getPageDescription()"></p>
                     </div>
                     
-                    <!-- System Status Indicator -->
-                    <div class="flex items-center space-x-4">
+                    <!-- Enhanced System Status Indicators -->
+                    <div class="flex items-center space-x-6">
+                        <!-- Overall System Health -->
                         <div class="flex items-center">
-                            <div :class="systemStatus === 'healthy' ? 'bg-green-400' : 'bg-red-400'" 
-                                 class="w-2 h-2 rounded-full mr-2"></div>
-                            <span class="text-sm text-gray-600" x-text="systemStatus === 'healthy' ? 'System Healthy' : 'System Issues'"></span>
+                            <div :class="systemStatus === 'healthy' ? 'bg-green-400 animate-pulse' : systemStatus === 'warning' ? 'bg-yellow-400 animate-pulse' : 'bg-red-400 animate-pulse'" 
+                                 class="w-3 h-3 rounded-full mr-2"></div>
+                            <div class="text-sm">
+                                <div class="text-gray-900 dark:text-white font-medium" x-text="getSystemStatusText()"></div>
+                                <div class="text-gray-500 dark:text-gray-400 text-xs" x-text="systemInfo.uptime || 'Unknown uptime'"></div>
+                            </div>
                         </div>
                         
-                        <div class="text-sm text-gray-500">
-                            <span x-text="new Date().toLocaleTimeString()"></span>
+                        <!-- API Status -->
+                        <div class="flex items-center">
+                            <div :class="apiStatus === 'healthy' ? 'bg-green-400' : apiStatus === 'slow' ? 'bg-yellow-400' : 'bg-red-400'" 
+                                 class="w-2 h-2 rounded-full mr-2"></div>
+                            <div class="text-sm">
+                                <div class="text-gray-600 dark:text-gray-300">API</div>
+                                <div class="text-gray-500 dark:text-gray-400 text-xs" x-text="getApiStatusText()"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Processing Queue -->
+                        <div class="flex items-center" x-show="activeWorkflows > 0">
+                            <div class="w-2 h-2 bg-blue-400 rounded-full mr-2 animate-pulse"></div>
+                            <div class="text-sm">
+                                <div class="text-gray-600 dark:text-gray-300">Processing</div>
+                                <div class="text-gray-500 dark:text-gray-400 text-xs" x-text="`${activeWorkflows} active`"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Live Clock -->
+                        <div class="text-sm text-gray-500 dark:text-gray-400 border-l border-gray-300 dark:border-gray-600 pl-4">
+                            <div x-text="currentTime"></div>
                         </div>
                     </div>
                 </div>
             </header>
             
             <!-- Main Content -->
-            <main class="flex-1 p-6 bg-gray-50">
+            <main class="flex-1 p-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
                 
                 <!-- Dashboard Tab -->
                 <div x-show="activeTab === 'dashboard'" class="space-y-6">
                     
                     <!-- Stats Cards -->
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div class="bg-white rounded-lg shadow p-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 transition-all duration-300 hover:shadow-xl hover:scale-105 animate-fade-in">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-medium text-gray-600">Active Workflows</p>
-                                    <p class="text-3xl font-semibold text-gray-900" x-text="stats.activeWorkflows"></p>
+                                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Active Workflows</p>
+                                    <p class="text-3xl font-semibold text-gray-900 dark:text-white" x-text="stats.activeWorkflows"></p>
                                 </div>
-                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
                                     🔄
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="bg-white rounded-lg shadow p-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 transition-all duration-300 hover:shadow-xl hover:scale-105 animate-fade-in">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-medium text-gray-600">Organizations Processed</p>
-                                    <p class="text-3xl font-semibold text-gray-900" x-text="stats.totalProcessed.toLocaleString()"></p>
+                                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Organizations Processed</p>
+                                    <p class="text-3xl font-semibold text-gray-900 dark:text-white" x-text="stats.totalProcessed.toLocaleString()"></p>
                                 </div>
-                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center text-green-600 dark:text-green-400">
                                     📊
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="bg-white rounded-lg shadow p-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 transition-all duration-300 hover:shadow-xl hover:scale-105 animate-fade-in">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-medium text-gray-600">Success Rate</p>
-                                    <p class="text-3xl font-semibold text-gray-900"><span x-text="(stats.successRate * 100).toFixed(1)"></span>%</p>
+                                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Success Rate</p>
+                                    <p class="text-3xl font-semibold text-gray-900 dark:text-white"><span x-text="(stats.successRate * 100).toFixed(1)"></span>%</p>
                                 </div>
-                                <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <div class="w-12 h-12 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center text-green-600 dark:text-green-400">
                                     ✅
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="bg-white rounded-lg shadow p-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 transition-all duration-300 hover:shadow-xl hover:scale-105 animate-fade-in">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-sm font-medium text-gray-600">Available Processors</p>
-                                    <p class="text-3xl font-semibold text-gray-900" x-text="stats.processorsAvailable"></p>
+                                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Available Processors</p>
+                                    <p class="text-3xl font-semibold text-gray-900 dark:text-white" x-text="stats.processorsAvailable"></p>
                                 </div>
-                                <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center text-purple-600 dark:text-purple-400">
                                     ⚙️
                                 </div>
                             </div>
@@ -314,8 +378,8 @@
                 
                 <!-- Classification Tab -->
                 <div x-show="activeTab === 'classification'" class="space-y-6">
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-6">🧠 Intelligent Classification</h3>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 transition-all duration-300 animate-fade-in">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">🧠 Intelligent Classification</h3>
                         
                         <!-- Classification Form -->
                         <form @submit.prevent="startClassification()" class="space-y-4">
@@ -359,51 +423,120 @@
                             <div class="pt-4">
                                 <button type="submit" 
                                         :disabled="isRunningClassification"
-                                        :class="isRunningClassification ? 'bg-gray-400' : 'bg-primary-600 hover:bg-primary-700'"
-                                        class="px-6 py-3 text-white rounded-md font-medium transition-colors">
-                                    <span x-show="!isRunningClassification">Start Classification</span>
-                                    <span x-show="isRunningClassification">Running...</span>
+                                        :class="isRunningClassification ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary-600 hover:bg-primary-700 hover:scale-105'"
+                                        class="px-6 py-3 text-white rounded-md font-medium transition-all duration-200 transform">
+                                    <span x-show="!isRunningClassification" class="flex items-center">
+                                        <span class="mr-2">🚀</span> Start Classification
+                                    </span>
+                                    <span x-show="isRunningClassification" class="flex items-center">
+                                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Processing...
+                                    </span>
                                 </button>
                             </div>
                         </form>
                     </div>
                     
+                    <!-- Loading Skeleton for Classification Results -->
+                    <div x-show="isRunningClassification && classificationResults.length === 0" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 animate-fade-in">
+                        <div class="animate-pulse">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="h-6 bg-gray-300 dark:bg-gray-600 rounded w-48"></div>
+                                <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="grid grid-cols-5 gap-4">
+                                    <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded"></div>
+                                    <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded"></div>
+                                    <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded"></div>
+                                    <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded"></div>
+                                    <div class="h-4 bg-gray-300 dark:bg-gray-600 rounded"></div>
+                                </div>
+                                <div x-data="{}" x-init="() => { for(let i = 0; i < 5; i++) { setTimeout(() => { $el.appendChild($el.firstElementChild.cloneNode(true)) }, i * 200) } }">
+                                    <div class="grid grid-cols-5 gap-4">
+                                        <div class="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                                        <div class="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                                        <div class="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                                        <div class="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                                        <div class="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-4 text-center">
+                                <div class="inline-flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Analyzing organizations...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Classification Results -->
-                    <div x-show="classificationResults.length > 0" class="bg-white rounded-lg shadow">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <h3 class="text-lg font-semibold text-gray-900">Classification Results</h3>
+                    <div x-show="classificationResults.length > 0" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 animate-slide-up">
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Classification Results</h3>
+                                <div class="flex items-center space-x-4">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400" x-text="`${classificationResults.length} results`"></span>
+                                    <input type="text" placeholder="Search organizations..." 
+                                           class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                           x-model="searchQuery" @input="filterResults()">
+                                </div>
+                            </div>
                         </div>
                         <div class="p-6">
                             <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead class="bg-gray-50 dark:bg-gray-700">
                                         <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organization</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qualification</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" @click="sortResults('name')">
+                                                Organization
+                                                <span x-show="sortField === 'name'" class="ml-1">
+                                                    <span x-show="sortDirection === 'asc'">↑</span>
+                                                    <span x-show="sortDirection === 'desc'">↓</span>
+                                                </span>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" @click="sortResults('composite_score')">
+                                                Score
+                                                <span x-show="sortField === 'composite_score'" class="ml-1">
+                                                    <span x-show="sortDirection === 'asc'">↑</span>
+                                                    <span x-show="sortDirection === 'desc'">↓</span>
+                                                </span>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Category</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Qualification</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Location</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200">
-                                        <template x-for="result in classificationResults.slice(0, 50)" :key="result.ein">
-                                            <tr class="hover:bg-gray-50">
+                                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                        <template x-for="result in filteredResults.slice(0, 50)" :key="result.ein">
+                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <div class="text-sm font-medium text-gray-900" x-text="result.name"></div>
-                                                    <div class="text-sm text-gray-500" x-text="result.ein"></div>
+                                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="result.name"></div>
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400" x-text="result.ein"></div>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <div class="text-sm text-gray-900" x-text="(result.composite_score || 0).toFixed(3)"></div>
+                                                    <div class="text-sm font-semibold text-gray-900 dark:text-white" x-text="(result.composite_score || 0).toFixed(3)"></div>
+                                                    <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1 mt-1">
+                                                        <div class="bg-blue-600 h-1 rounded-full transition-all duration-300" 
+                                                             :style="`width: ${(result.composite_score || 0) * 100}%`"></div>
+                                                    </div>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800"
+                                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200"
                                                           x-text="result.predicted_category || 'N/A'"></span>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <div class="text-sm text-gray-900" x-text="result.primary_qualification_reason || 'N/A'"></div>
-                                                    <div class="text-sm text-gray-500" x-text="result.qualification_strength || ''"></div>
+                                                    <div class="text-sm text-gray-900 dark:text-white" x-text="result.primary_qualification_reason || 'N/A'"></div>
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400" x-text="result.qualification_strength || ''"></div>
                                                 </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                     <span x-text="(result.city || '') + ', ' + (result.state || '')"></span>
                                                 </td>
                                             </tr>
@@ -415,25 +548,919 @@
                     </div>
                 </div>
                 
-                <!-- Other tabs will be implemented similarly -->
-                <div x-show="activeTab === 'workflows'" class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900">Workflows</h3>
-                    <p class="text-gray-600 mt-2">Workflow management interface coming soon...</p>
+                <!-- Workflows Tab -->
+                <div x-show="activeTab === 'workflows'" class="space-y-6">
+                    
+                    <!-- New Workflow Form -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 animate-fade-in">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                            <span class="text-2xl mr-3">🚀</span>
+                            Create New Workflow
+                        </h3>
+                        
+                        <form @submit.prevent="startWorkflow()" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Workflow Type</label>
+                                    <select x-model="workflowParams.type" class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                        <option value="standard">Standard Grant Research</option>
+                                        <option value="classification">Intelligent Classification</option>
+                                        <option value="analytics">Advanced Analytics</option>
+                                        <option value="combined">Combined Analysis</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target State</label>
+                                    <select x-model="workflowParams.state" class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                        <option value="VA">Virginia</option>
+                                        <option value="MD">Maryland</option>
+                                        <option value="DC">District of Columbia</option>
+                                        <option value="NC">North Carolina</option>
+                                        <option value="WV">West Virginia</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Maximum Results</label>
+                                    <input type="number" x-model="workflowParams.maxResults" min="1" max="10000" 
+                                           class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Minimum Revenue</label>
+                                    <input type="number" x-model="workflowParams.minRevenue" min="0" step="1000"
+                                           class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">NTEE Codes (Health & Nutrition Focus)</label>
+                                <div class="grid grid-cols-3 md:grid-cols-7 gap-2">
+                                    <template x-for="code in availableNteeCodes" :key="code.code">
+                                        <label class="flex items-center p-2 border dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                                            <input type="checkbox" :value="code.code" x-model="workflowParams.nteeCodes" 
+                                                   class="rounded border-gray-300 dark:border-gray-600 mr-2">
+                                            <div>
+                                                <div class="text-sm font-medium" x-text="code.code"></div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400" x-text="code.name"></div>
+                                            </div>
+                                        </label>
+                                    </template>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center space-x-4">
+                                <label class="flex items-center">
+                                    <input type="checkbox" x-model="workflowParams.includeClassified" 
+                                           class="rounded border-gray-300 dark:border-gray-600 mr-2">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Include intelligent classification</span>
+                                </label>
+                                
+                                <label class="flex items-center">
+                                    <input type="checkbox" x-model="workflowParams.exportResults" 
+                                           class="rounded border-gray-300 dark:border-gray-600 mr-2">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Auto-export results</span>
+                                </label>
+                            </div>
+                            
+                            <div class="pt-4 border-t dark:border-gray-700">
+                                <button type="submit" 
+                                        :disabled="isRunningWorkflow"
+                                        :class="isRunningWorkflow ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary-600 hover:bg-primary-700 hover:scale-105'"
+                                        class="px-8 py-3 text-white rounded-md font-medium transition-all duration-200 transform flex items-center">
+                                    <span x-show="!isRunningWorkflow" class="flex items-center">
+                                        <span class="mr-2">🚀</span> Start Workflow
+                                    </span>
+                                    <span x-show="isRunningWorkflow" class="flex items-center">
+                                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Processing...
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Active Workflows -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 animate-fade-in">
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                                    <span class="text-2xl mr-3">⚡</span>
+                                    Active Workflows
+                                </h3>
+                                <button @click="loadWorkflows()" class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                                    Refresh
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div x-show="activeWorkflowsList.length === 0" class="text-center text-gray-500 dark:text-gray-400 py-8">
+                                <div class="text-4xl mb-4">💤</div>
+                                <p>No active workflows</p>
+                                <p class="text-sm mt-2">Start a new workflow above to begin processing</p>
+                            </div>
+                            
+                            <div x-show="activeWorkflowsList.length > 0" class="space-y-4">
+                                <template x-for="workflow in activeWorkflowsList" :key="workflow.workflow_id">
+                                    <div class="border dark:border-gray-600 rounded-lg p-4 hover:shadow-md dark:hover:shadow-gray-900/50 transition-all duration-200">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div class="flex items-center">
+                                                <div class="w-3 h-3 bg-green-400 rounded-full mr-3 animate-pulse"></div>
+                                                <h4 class="font-semibold text-gray-900 dark:text-white" x-text="workflow.name || workflow.workflow_id"></h4>
+                                            </div>
+                                            <div class="flex items-center space-x-2">
+                                                <span class="px-2 py-1 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 text-xs rounded-full font-medium"
+                                                      x-text="workflow.status"></span>
+                                                <button @click="stopWorkflow(workflow.workflow_id)" 
+                                                        class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm">
+                                                    Stop
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                            <div>
+                                                <span class="text-gray-600 dark:text-gray-400">Type:</span>
+                                                <span class="font-medium ml-1" x-text="workflow.type || 'Standard'"></span>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-600 dark:text-gray-400">Progress:</span>
+                                                <span class="font-medium ml-1">
+                                                    <span x-text="workflow.processed_count || 0"></span>/<span x-text="workflow.total_count || 0"></span>
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-600 dark:text-gray-400">Speed:</span>
+                                                <span class="font-medium ml-1" x-text="(workflow.processing_speed || 0).toFixed(1)"></span> orgs/sec
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-600 dark:text-gray-400">Started:</span>
+                                                <span class="font-medium ml-1" x-text="formatTimeAgo(workflow.started_at)"></span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mt-3">
+                                            <div class="flex justify-between text-sm mb-1">
+                                                <span class="text-gray-600 dark:text-gray-400">Progress</span>
+                                                <span class="font-medium" x-text="Math.round(workflow.progress_percentage || 0)"></span>%
+                                            </div>
+                                            <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                                                <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                                     :style="`width: ${workflow.progress_percentage || 0}%`"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Workflow History -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 animate-fade-in">
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                                <span class="text-2xl mr-3">📚</span>
+                                Workflow History
+                            </h3>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div x-show="workflowHistory.length === 0" class="text-center text-gray-500 dark:text-gray-400 py-8">
+                                No completed workflows
+                            </div>
+                            
+                            <div x-show="workflowHistory.length > 0" class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead class="bg-gray-50 dark:bg-gray-700">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Workflow</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Results</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Completed</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                        <template x-for="workflow in workflowHistory.slice(0, 10)" :key="workflow.workflow_id">
+                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="workflow.name || workflow.workflow_id"></div>
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400" x-text="workflow.workflow_id"></div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white" x-text="workflow.type || 'Standard'"></td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white" x-text="workflow.organizations_processed || 0"></td>
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <span :class="workflow.status === 'completed' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' : 
+                                                                 workflow.status === 'error' ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200' : 
+                                                                 'bg-gray-100 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200'"
+                                                          class="px-2 py-1 text-xs font-semibold rounded-full" x-text="workflow.status"></span>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400" x-text="formatTimeAgo(workflow.completed_at)"></td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                                                    <button @click="viewWorkflowResults(workflow.workflow_id)" 
+                                                            class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                                                        View
+                                                    </button>
+                                                    <button @click="exportWorkflow(workflow.workflow_id)" 
+                                                            class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300">
+                                                        Export
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
-                <div x-show="activeTab === 'analytics'" class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900">Analytics</h3>
-                    <p class="text-gray-600 mt-2">Analytics dashboard coming soon...</p>
+                <!-- Profiles Tab -->
+                <div x-show="activeTab === 'profiles'" class="space-y-6">
+                    <!-- Profile Management Header -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 transition-all duration-300 animate-fade-in">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                                <span class="text-2xl mr-3">👤</span>
+                                Organization Profiles
+                            </h3>
+                            <div class="flex space-x-3">
+                                <button @click="showCreateProfile = true" 
+                                        class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
+                                    <span class="text-lg mr-2">➕</span>
+                                    Create Profile
+                                </button>
+                                <button @click="loadProfiles()" 
+                                        class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
+                                    <span class="text-lg mr-2">🔄</span>
+                                    Refresh
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Profile Stats -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                <div class="text-2xl font-bold text-gray-900 dark:text-white" x-text="profileStats.total || 0"></div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Total Profiles</div>
+                            </div>
+                            <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                                <div class="text-2xl font-bold text-green-600 dark:text-green-400" x-text="profileStats.active || 0"></div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Active Profiles</div>
+                            </div>
+                            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" x-text="profileStats.opportunities || 0"></div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Total Opportunities</div>
+                            </div>
+                            <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+                                <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" x-text="profileStats.templates || 0"></div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Templates</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Create Profile Modal -->
+                    <div x-show="showCreateProfile" 
+                         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                         x-transition:enter="transition ease-out duration-300"
+                         x-transition:enter-start="opacity-0"
+                         x-transition:enter-end="opacity-100"
+                         x-transition:leave="transition ease-in duration-200"
+                         x-transition:leave-start="opacity-100"
+                         x-transition:leave-end="opacity-0">
+                        
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                             x-transition:enter="transition ease-out duration-300 transform"
+                             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                             x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                             x-transition:leave="transition ease-in duration-200 transform"
+                             x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+                            
+                            <!-- Modal Header -->
+                            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Create Organization Profile</h3>
+                                <button @click="showCreateProfile = false" 
+                                        class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                                    <span class="text-2xl">&times;</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Profile Creation Form -->
+                            <form @submit.prevent="createProfile()" class="p-6 space-y-6">
+                                <!-- Basic Information -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Organization Name *
+                                        </label>
+                                        <input type="text" x-model="profileForm.name" required
+                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                               placeholder="Enter organization name">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Organization Type *
+                                        </label>
+                                        <select x-model="profileForm.organization_type" required
+                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                            <option value="">Select type</option>
+                                            <option value="nonprofit">Nonprofit</option>
+                                            <option value="for_profit">For Profit</option>
+                                            <option value="government">Government</option>
+                                            <option value="academic">Academic</option>
+                                            <option value="healthcare">Healthcare</option>
+                                            <option value="foundation">Foundation</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        EIN (Tax ID)
+                                    </label>
+                                    <input type="text" x-model="profileForm.ein"
+                                           class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                           placeholder="XX-XXXXXXX (optional)">
+                                </div>
+                                
+                                <!-- Mission and Focus -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Mission Statement *
+                                    </label>
+                                    <textarea x-model="profileForm.mission_statement" required rows="3"
+                                              class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                              placeholder="Describe your organization's mission and purpose"></textarea>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Focus Areas * (comma-separated)
+                                        </label>
+                                        <input type="text" x-model="profileForm.focus_areas" required
+                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                               placeholder="health, education, community development">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Target Populations (comma-separated)
+                                        </label>
+                                        <input type="text" x-model="profileForm.target_populations"
+                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                               placeholder="youth, seniors, low-income families">
+                                    </div>
+                                </div>
+                                
+                                <!-- Geographic Scope -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Target States (comma-separated)
+                                        </label>
+                                        <input type="text" x-model="profileForm.states"
+                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                               placeholder="VA, MD, DC">
+                                    </div>
+                                    <div class="flex items-center space-x-4 pt-6">
+                                        <label class="flex items-center">
+                                            <input type="checkbox" x-model="profileForm.nationwide"
+                                                   class="rounded border-gray-300 text-primary-600 shadow-sm">
+                                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Nationwide</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" x-model="profileForm.international"
+                                                   class="rounded border-gray-300 text-primary-600 shadow-sm">
+                                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">International</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <!-- Funding Preferences -->
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Min Funding Amount
+                                        </label>
+                                        <input type="number" x-model="profileForm.min_amount" min="0"
+                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                               placeholder="50000">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Max Funding Amount
+                                        </label>
+                                        <input type="number" x-model="profileForm.max_amount" min="0"
+                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                               placeholder="500000">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Annual Revenue/Budget
+                                        </label>
+                                        <input type="number" x-model="profileForm.annual_revenue" min="0"
+                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                               placeholder="1000000">
+                                    </div>
+                                </div>
+                                
+                                <!-- Funding Type Preferences -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Preferred Funding Types
+                                    </label>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        <label class="flex items-center">
+                                            <input type="checkbox" value="grants" x-model="profileForm.funding_types"
+                                                   class="rounded border-gray-300 text-primary-600 shadow-sm">
+                                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Grants</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" value="government" x-model="profileForm.funding_types"
+                                                   class="rounded border-gray-300 text-primary-600 shadow-sm">
+                                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Government</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" value="commercial" x-model="profileForm.funding_types"
+                                                   class="rounded border-gray-300 text-primary-600 shadow-sm">
+                                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Commercial</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" value="sponsorships" x-model="profileForm.funding_types"
+                                                   class="rounded border-gray-300 text-primary-600 shadow-sm">
+                                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Sponsorships</span>
+                                        </label>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" value="partnerships" x-model="profileForm.funding_types"
+                                                   class="rounded border-gray-300 text-primary-600 shadow-sm">
+                                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Partnerships</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <!-- Form Actions -->
+                                <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <button type="button" @click="showCreateProfile = false"
+                                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                        Cancel
+                                    </button>
+                                    <button type="button" @click="saveProfileTemplate()"
+                                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                        Save as Template
+                                    </button>
+                                    <button type="submit" 
+                                            :disabled="!profileForm.name || !profileForm.organization_type || !profileForm.mission_statement || !profileForm.focus_areas"
+                                            class="px-6 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 text-white rounded-md text-sm font-medium transition-colors">
+                                        Create Profile
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Profiles List -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 animate-fade-in">
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">My Profiles</h3>
+                                <div class="flex items-center space-x-4">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400" x-text="`${profiles.length} profiles`"></span>
+                                    <input type="text" placeholder="Search profiles..." 
+                                           class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                           x-model="profileSearchQuery" @input="filterProfiles()">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Profiles Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Focus Areas</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Opportunities</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    <template x-for="profile in filteredProfiles" :key="profile.profile_id">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div>
+                                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="profile.name"></div>
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400" x-text="profile.ein || 'No EIN'"></div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200" 
+                                                      x-text="profile.organization_type"></span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm text-gray-900 dark:text-white" x-text="profile.focus_areas?.join(', ') || 'None specified'"></div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                                <span x-text="profile.opportunities_count || 0"></span> leads
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span :class="profile.status === 'active' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 
+                                                               profile.status === 'draft' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' : 
+                                                               'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200'"
+                                                      class="px-2 py-1 text-xs font-medium rounded-full" 
+                                                      x-text="profile.status"></span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                                                <button @click="viewProfile(profile)" class="text-primary-600 hover:text-primary-800 font-medium">View</button>
+                                                <button @click="editProfile(profile)" class="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                                                <button @click="discoverOpportunities(profile)" class="text-green-600 hover:text-green-800 font-medium">Discover</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <tr x-show="filteredProfiles.length === 0">
+                                        <td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                            <div class="text-4xl mb-4">📝</div>
+                                            <div>No profiles found. Create your first organization profile to get started!</div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
                 
-                <div x-show="activeTab === 'exports'" class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900">Exports</h3>
-                    <p class="text-gray-600 mt-2">Export management interface coming soon...</p>
+                <!-- Analytics Tab -->
+                <div x-show="activeTab === 'analytics'" class="space-y-6">
+                    
+                    <!-- Analytics Overview Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 animate-fade-in">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Processing Trends</h3>
+                                <span class="text-2xl">📊</span>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">Today</span>
+                                    <span class="font-medium" x-text="analyticsData.todaysProcessed || 0"></span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">This Week</span>
+                                    <span class="font-medium" x-text="analyticsData.weekProcessed || 0"></span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">Success Rate</span>
+                                    <span class="font-medium">
+                                        <span x-text="((analyticsData.successRate || 0) * 100).toFixed(1)"></span>%
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 animate-fade-in">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Performance Metrics</h3>
+                                <span class="text-2xl">⚡</span>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">Avg Processing Speed</span>
+                                    <span class="font-medium" x-text="(analyticsData.avgSpeed || 0).toFixed(1)"></span> orgs/sec
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">API Success Rate</span>
+                                    <span class="font-medium">
+                                        <span x-text="((analyticsData.apiSuccessRate || 0) * 100).toFixed(1)"></span>%
+                                    </span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">Avg Response Time</span>
+                                    <span class="font-medium" x-text="(analyticsData.avgResponseTime || 0).toFixed(0)"></span>ms
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 animate-fade-in">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Quality Metrics</h3>
+                                <span class="text-2xl">🎯</span>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">High Score Orgs</span>
+                                    <span class="font-medium" x-text="analyticsData.highScoreOrgs || 0"></span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">Avg Composite Score</span>
+                                    <span class="font-medium" x-text="(analyticsData.avgCompositeScore || 0).toFixed(3)"></span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">Classification Accuracy</span>
+                                    <span class="font-medium">
+                                        <span x-text="((analyticsData.classificationAccuracy || 0) * 100).toFixed(1)"></span>%
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Charts Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Processing Volume Chart -->
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 animate-fade-in">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Processing Volume</h3>
+                                <div class="flex space-x-2">
+                                    <button @click="chartTimeRange = '7d'; loadAnalytics()" 
+                                            :class="chartTimeRange === '7d' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'"
+                                            class="px-3 py-1 text-xs rounded-md">7D</button>
+                                    <button @click="chartTimeRange = '30d'; loadAnalytics()" 
+                                            :class="chartTimeRange === '30d' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'"
+                                            class="px-3 py-1 text-xs rounded-md">30D</button>
+                                </div>
+                            </div>
+                            <div class="h-64">
+                                <canvas id="processingVolumeChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Success Rate Chart -->
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 animate-fade-in">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Success Rate Trends</h3>
+                                <span class="text-sm text-gray-500 dark:text-gray-400">Last 30 days</span>
+                            </div>
+                            <div class="h-64">
+                                <canvas id="successRateChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- NTEE Code Distribution -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 animate-fade-in">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">NTEE Code Distribution</h3>
+                            <button @click="loadAnalytics()" class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                                Refresh
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <template x-for="ntee in analyticsData.nteeDistribution || []" :key="ntee.code">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-gray-900 dark:text-white" x-text="ntee.count"></div>
+                                    <div class="text-sm font-medium text-gray-700 dark:text-gray-300" x-text="ntee.code"></div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400" x-text="ntee.name"></div>
+                                    <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mt-2">
+                                        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                             :style="`width: ${ntee.percentage}%`"></div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    <!-- Top Performing Organizations -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 animate-fade-in">
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Top Performing Organizations</h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead class="bg-gray-50 dark:bg-gray-700">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Organization</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Score</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">NTEE Code</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Revenue</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Location</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                        <template x-for="org in analyticsData.topOrganizations || []" :key="org.ein">
+                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="org.name"></div>
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400" x-text="org.ein"></div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="text-sm font-semibold text-gray-900 dark:text-white" x-text="(org.composite_score || 0).toFixed(3)"></div>
+                                                    <div class="w-16 bg-gray-200 dark:bg-gray-600 rounded-full h-1 mt-1">
+                                                        <div class="bg-green-600 h-1 rounded-full transition-all duration-300" 
+                                                             :style="`width: ${(org.composite_score || 0) * 100}%`"></div>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200"
+                                                          x-text="org.ntee_code || 'N/A'"></span>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                                                    $<span x-text="(org.revenue || 0).toLocaleString()"></span>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                                    <span x-text="(org.city || '') + ', ' + (org.state || '')"></span>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
-                <div x-show="activeTab === 'settings'" class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900">Settings</h3>
-                    <p class="text-gray-600 mt-2">System settings interface coming soon...</p>
+                <!-- Exports Tab -->
+                <div x-show="activeTab === 'exports'" class="space-y-6">
+                    
+                    <!-- Export Management -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 animate-fade-in">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                            <span class="text-2xl mr-3">📁</span>
+                            Available Exports
+                        </h3>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">File</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Size</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Created</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    <template x-for="file in exportFiles" :key="file.filename">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="flex items-center">
+                                                    <span class="text-2xl mr-3" x-text="getFileIcon(file.type)"></span>
+                                                    <div>
+                                                        <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="file.filename"></div>
+                                                        <div class="text-sm text-gray-500 dark:text-gray-400" x-text="file.description || ''"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span :class="getTypeColor(file.type)" class="px-2 py-1 text-xs font-semibold rounded-full" x-text="file.type.toUpperCase()"></span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white" x-text="formatFileSize(file.size)"></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400" x-text="formatTimeAgo(file.created_at)"></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                                                <button @click="downloadFile(file.filename)" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                                                    Download
+                                                </button>
+                                                <button @click="deleteFile(file.filename)" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
+                                                    Delete
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings Tab -->
+                <div x-show="activeTab === 'settings'" class="space-y-6">
+                    
+                    <!-- API Configuration -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 animate-fade-in">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                            <span class="text-2xl mr-3">🔑</span>
+                            API Configuration
+                        </h3>
+                        
+                        <form @submit.prevent="saveApiSettings()" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ProPublica API Key</label>
+                                    <input type="password" x-model="settings.propublicaApiKey" placeholder="Enter API key..." 
+                                           class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">API Timeout (ms)</label>
+                                    <input type="number" x-model="settings.apiTimeout" min="1000" max="60000" 
+                                           class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                Save API Settings
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <!-- Processing Settings -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 animate-fade-in">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                            <span class="text-2xl mr-3">⚡</span>
+                            Processing Settings
+                        </h3>
+                        
+                        <form @submit.prevent="saveProcessingSettings()" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Concurrent Requests</label>
+                                    <input type="number" x-model="settings.concurrentRequests" min="1" max="20" 
+                                           class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Retry Attempts</label>
+                                    <input type="number" x-model="settings.retryAttempts" min="1" max="5" 
+                                           class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cache Expiry (hours)</label>
+                                    <input type="number" x-model="settings.cacheExpiry" min="1" max="168" 
+                                           class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center space-x-4">
+                                <label class="flex items-center">
+                                    <input type="checkbox" x-model="settings.enableCaching" class="rounded mr-2">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Enable caching</span>
+                                </label>
+                                
+                                <label class="flex items-center">
+                                    <input type="checkbox" x-model="settings.autoExport" class="rounded mr-2">
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">Auto-export results</span>
+                                </label>
+                            </div>
+                            
+                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                Save Processing Settings
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <!-- System Information -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 animate-fade-in">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                            <span class="text-2xl mr-3">💻</span>
+                            System Information
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-3">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">Version:</span>
+                                    <span class="font-medium">Catalynx 2.0</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">Processors Available:</span>
+                                    <span class="font-medium" x-text="systemInfo.processorsCount || 12"></span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">Cache Size:</span>
+                                    <span class="font-medium" x-text="formatFileSize(systemInfo.cacheSize || 0)"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">Uptime:</span>
+                                    <span class="font-medium" x-text="systemInfo.uptime || 'Unknown'"></span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">Total Organizations:</span>
+                                    <span class="font-medium" x-text="(systemInfo.totalOrganizations || 0).toLocaleString()"></span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">BMF Records:</span>
+                                    <span class="font-medium" x-text="(systemInfo.bmfRecords || 0).toLocaleString()"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                            <div class="flex space-x-4">
+                                <button @click="clearCache()" class="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700">
+                                    Clear Cache
+                                </button>
+                                <button @click="exportSystemLogs()" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                                    Export Logs
+                                </button>
+                                <button @click="resetSettings()" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                                    Reset to Defaults
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
             </main>

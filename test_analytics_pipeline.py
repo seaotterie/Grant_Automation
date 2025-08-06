@@ -20,12 +20,12 @@ from src.processors.analysis.competitive_intelligence import CompetitiveIntellig
 
 async def test_analytics_pipeline():
     """Test the complete analytics pipeline."""
-    print("🚀 Testing Catalynx Advanced Analytics Pipeline")
+    print("Testing Catalynx Advanced Analytics Pipeline")
     print("=" * 60)
     
     try:
         # Initialize workflow engine
-        print("🔧 Initializing workflow engine...")
+        print("Initializing workflow engine...")
         workflow_engine = WorkflowEngine()
         
         # Create workflow configuration
@@ -40,7 +40,7 @@ async def test_analytics_pipeline():
             max_results=15
         )
         
-        print(f"📋 Created workflow configuration: {config.workflow_id}")
+        print(f"Created workflow configuration: {config.workflow_id}")
         
         # Define the analytics processor pipeline
         analytics_processors = [
@@ -53,19 +53,19 @@ async def test_analytics_pipeline():
             "competitive_intelligence"  # Step 7: Competitive analysis
         ]
         
-        print("📊 Analytics processor pipeline:")
+        print("Analytics processor pipeline:")
         for i, processor in enumerate(analytics_processors, 1):
             print(f"   {i}. {processor.replace('_', ' ').title()}")
         
-        print("\n🏃 Running analytics pipeline...")
+        print("\nRunning analytics pipeline...")
         print("-" * 40)
         
         # Execute the workflow
         result = await workflow_engine.execute_workflow(config, analytics_processors)
         
         if result.success:
-            print(f"\n✅ Analytics pipeline completed successfully!")
-            print(f"⏱️  Total execution time: {result.execution_time:.2f} seconds")
+            print(f"\nAnalytics pipeline completed successfully!")
+            print(f"Total execution time: {result.execution_time:.2f} seconds")
             
             # Display results summary
             await display_analytics_summary(result)
@@ -74,19 +74,19 @@ async def test_analytics_pipeline():
             await save_analytics_results(result)
             
         else:
-            print(f"\n❌ Analytics pipeline failed!")
+            print(f"\nAnalytics pipeline failed!")
             for error in result.errors:
-                print(f"   🔴 {error}")
+                print(f"   ERROR: {error}")
         
         return result
         
     except Exception as e:
-        print(f"❌ Analytics pipeline test failed: {e}")
+        print(f"Analytics pipeline test failed: {e}")
         raise
 
 async def display_analytics_summary(workflow_result):
     """Display summary of analytics results."""
-    print("\n📊 ANALYTICS RESULTS SUMMARY")
+    print("\n[STATS] ANALYTICS RESULTS SUMMARY")
     print("=" * 50)
     
     processor_results = workflow_result.processor_results
@@ -99,7 +99,7 @@ async def display_analytics_summary(workflow_result):
             organizations = scorer_data.get("organizations", [])
             scoring_stats = scorer_data.get("scoring_stats", {})
             
-            print(f"💰 Financial Scoring:")
+            print(f"[FINANCIAL] Financial Scoring:")
             print(f"   Organizations scored: {scoring_stats.get('fully_scored', 0)}")
             print(f"   Partial scores: {scoring_stats.get('partially_scored', 0)}")
             
@@ -115,7 +115,7 @@ async def display_analytics_summary(workflow_result):
             trend_analysis = trend_data.get("trend_analysis", [])
             market_insights = trend_data.get("market_insights", {})
             
-            print(f"\n📈 Trend Analysis:")
+            print(f"\n[TRENDS] Trend Analysis:")
             print(f"   Organizations analyzed: {len(trend_analysis)}")
             
             # Growth classification summary
@@ -139,7 +139,7 @@ async def display_analytics_summary(workflow_result):
             risk_data = risk_result.data
             risk_assessments = risk_data.get("risk_assessments", [])
             
-            print(f"\n🎯 Risk Assessment:")
+            print(f"\n[RISK] Risk Assessment:")
             print(f"   Organizations assessed: {len(risk_assessments)}")
             
             # Risk level summary
@@ -168,7 +168,7 @@ async def display_analytics_summary(workflow_result):
             market_analysis = comp_data.get("market_analysis", {})
             peer_analysis = comp_data.get("peer_analysis", {})
             
-            print(f"\n🏆 Competitive Intelligence:")
+            print(f"\n[COMPETITIVE] Competitive Intelligence:")
             
             # Market structure
             concentration = market_analysis.get("market_concentration", {})
@@ -193,7 +193,7 @@ async def display_analytics_summary(workflow_result):
 
 async def save_analytics_results(workflow_result):
     """Save analytics results to files."""
-    print(f"\n💾 Saving analytics results...")
+    print(f"\n[SAVE] Saving analytics results...")
     
     # Save to logs directory
     logs_dir = Path("logs")
@@ -229,7 +229,7 @@ async def save_analytics_results(workflow_result):
     with open(results_file, 'w') as f:
         json.dump(result_dict, f, indent=2, default=str)
     
-    print(f"   📄 Results saved to: {results_file}")
+    print(f"   [FILE] Results saved to: {results_file}")
     
     # Also save a summary file
     summary_file = logs_dir / f"analytics_summary_{timestamp}.txt"
@@ -251,11 +251,11 @@ async def save_analytics_results(workflow_result):
         
         f.write(f"\nGenerated: {workflow_result.end_time.isoformat()}\n")
     
-    print(f"   📝 Summary saved to: {summary_file}")
+    print(f"   [SUMMARY] Summary saved to: {summary_file}")
 
 async def test_individual_processors():
     """Test individual analytics processors."""
-    print("\n🔬 Testing Individual Analytics Processors")
+    print("\n[TEST] Testing Individual Analytics Processors")
     print("=" * 50)
     
     # Test data (mock organizations with filing data)
@@ -330,7 +330,7 @@ async def test_individual_processors():
     )
     
     # Test Trend Analyzer
-    print("📈 Testing Trend Analyzer...")
+    print("[TRENDS] Testing Trend Analyzer...")
     trend_processor = TrendAnalyzerProcessor()
     
     # Mock workflow state for testing
@@ -348,16 +348,16 @@ async def test_individual_processors():
     trend_result = await trend_processor.execute(config, mock_state)
     
     if trend_result.success:
-        print("   ✅ Trend analysis completed")
+        print("   [PASS] Trend analysis completed")
         trend_data = trend_result.data.get("trend_analysis", [])
-        print(f"   📊 Analyzed {len(trend_data)} organizations")
+        print(f"   [STATS] Analyzed {len(trend_data)} organizations")
     else:
-        print("   ❌ Trend analysis failed")
+        print("   [FAIL] Trend analysis failed")
         for error in trend_result.errors:
-            print(f"      🔴 {error}")
+            print(f"      [ERROR] {error}")
     
     # Test Risk Assessor
-    print("\n🎯 Testing Risk Assessor...")
+    print("\n[RISK] Testing Risk Assessor...")
     risk_processor = RiskAssessorProcessor()
     
     # Update mock state with trend results
@@ -368,16 +368,16 @@ async def test_individual_processors():
     risk_result = await risk_processor.execute(config, mock_state)
     
     if risk_result.success:
-        print("   ✅ Risk assessment completed")
+        print("   [PASS] Risk assessment completed")
         risk_data = risk_result.data.get("risk_assessments", [])
-        print(f"   🎯 Assessed {len(risk_data)} organizations")
+        print(f"   [RISK] Assessed {len(risk_data)} organizations")
     else:
-        print("   ❌ Risk assessment failed")
+        print("   [FAIL] Risk assessment failed")
         for error in risk_result.errors:
-            print(f"      🔴 {error}")
+            print(f"      [ERROR] {error}")
     
     # Test Competitive Intelligence
-    print("\n🏆 Testing Competitive Intelligence...")
+    print("\n[COMPETITIVE] Testing Competitive Intelligence...")
     comp_processor = CompetitiveIntelligenceProcessor()
     
     # Update mock state with risk results
@@ -388,42 +388,42 @@ async def test_individual_processors():
     comp_result = await comp_processor.execute(config, mock_state)
     
     if comp_result.success:
-        print("   ✅ Competitive intelligence completed")
+        print("   [PASS] Competitive intelligence completed")
         market_analysis = comp_result.data.get("market_analysis", {})
         competitive_insights = comp_result.data.get("competitive_insights", {})
-        print(f"   🏆 Market analysis: {len(market_analysis)} components")
-        print(f"   💡 Strategic insights generated")
+        print(f"   [COMPETITIVE] Market analysis: {len(market_analysis)} components")
+        print(f"   Strategic insights generated")
     else:
-        print("   ❌ Competitive intelligence failed")
+        print("   [FAIL] Competitive intelligence failed")
         for error in comp_result.errors:
-            print(f"      🔴 {error}")
+            print(f"      [ERROR] {error}")
     
     return trend_result.success and risk_result.success and comp_result.success
 
 async def main():
     """Main test function."""
-    print("🧪 CATALYNX ADVANCED ANALYTICS TEST SUITE")
+    print("CATALYNX ADVANCED ANALYTICS TEST SUITE")
     print("=" * 60)
     
     # Test individual processors first
     individual_success = await test_individual_processors()
     
     if individual_success:
-        print("\n✅ Individual processor tests passed!")
+        print("\n[PASS] Individual processor tests passed!")
         
         # Test full pipeline
         pipeline_result = await test_analytics_pipeline()
         
         if pipeline_result and pipeline_result.success:
-            print("\n🎉 ANALYTICS PIPELINE TEST COMPLETED SUCCESSFULLY!")
-            print("\n📋 Next Steps:")
+            print("\n[SUCCESS] ANALYTICS PIPELINE TEST COMPLETED SUCCESSFULLY!")
+            print("\n[NEXT STEPS] Next Steps:")
             print("   1. Launch analytics dashboard: python -m streamlit run src/dashboard/analytics_dashboard.py")
             print("   2. Export analytics reports: python export_analytics.py")
             print("   3. Run full workflow: python main.py run-workflow --analytics")
         else:
-            print("\n❌ Pipeline test failed")
+            print("\n[FAIL] Pipeline test failed")
     else:
-        print("\n❌ Individual processor tests failed")
+        print("\n[FAIL] Individual processor tests failed")
     
     print("\n" + "=" * 60)
 
