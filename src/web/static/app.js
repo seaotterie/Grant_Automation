@@ -91,6 +91,19 @@ function catalynxApp() {
             autoExport: true
         },
         systemInfo: {},
+
+        // Multi-user collaboration
+        currentUser: { id: 'user1', name: 'Current User', role: 'admin' },
+        onlineUsers: [],
+        sharedWorkflows: [],
+        workflowComments: {},
+        notifications: [],
+        teamMembers: [
+            { id: 'user1', name: 'John Smith', role: 'admin', status: 'online', avatar: 'JS' },
+            { id: 'user2', name: 'Sarah Johnson', role: 'analyst', status: 'online', avatar: 'SJ' },
+            { id: 'user3', name: 'Mike Chen', role: 'researcher', status: 'away', avatar: 'MC' }
+        ],
+        collaborationModalOpen: false,
         
         // Table management
         searchQuery: '',
@@ -1074,7 +1087,20 @@ function catalynxApp() {
             }, duration);
         },
         
-        // Enhanced table functionality
+        // Enhanced filtering and search system
+        globalSearchQuery: '',
+        advancedFilters: {
+            stage: '',
+            status: '',
+            score: { min: 0, max: 1 },
+            dateRange: { start: '', end: '' },
+            organizationType: '',
+            state: '',
+            tags: []
+        },
+        filterModalOpen: false,
+        savedFilters: [],
+        
         filterResults() {
             if (!this.searchQuery.trim()) {
                 this.filteredResults = [...this.classificationResults];
@@ -1089,6 +1115,69 @@ function catalynxApp() {
                 (result.predicted_category || '').toLowerCase().includes(query) ||
                 (result.primary_qualification_reason || '').toLowerCase().includes(query)
             );
+        },
+
+        // Global search across all data
+        performGlobalSearch() {
+            const query = this.globalSearchQuery.toLowerCase();
+            if (!query) return;
+            
+            // Search across profiles, results, workflows, etc
+            const searchResults = {
+                profiles: this.profiles.filter(p => 
+                    p.name.toLowerCase().includes(query) ||
+                    p.organization_type.toLowerCase().includes(query)
+                ),
+                results: this.classificationResults.filter(r =>
+                    (r.name || '').toLowerCase().includes(query)
+                ),
+                workflows: this.workflowHistory.filter(w =>
+                    (w.name || '').toLowerCase().includes(query)
+                )
+            };
+            
+            this.showEnhancedNotification(`Found ${Object.values(searchResults).flat().length} results`, 'info');
+        },
+
+        // Advanced filter system
+        openAdvancedFilters() {
+            this.filterModalOpen = true;
+        },
+
+        applyAdvancedFilters() {
+            let filtered = [...this.classificationResults];
+            
+            if (this.advancedFilters.score.min > 0 || this.advancedFilters.score.max < 1) {
+                filtered = filtered.filter(r => {
+                    const score = parseFloat(r.composite_score || 0);
+                    return score >= this.advancedFilters.score.min && score <= this.advancedFilters.score.max;
+                });
+            }
+            
+            if (this.advancedFilters.state) {
+                filtered = filtered.filter(r => r.state === this.advancedFilters.state);
+            }
+            
+            this.filteredResults = filtered;
+            this.filterModalOpen = false;
+            this.showEnhancedNotification(`Applied filters: ${filtered.length} results`, 'success');
+        },
+
+        saveCurrentFilter() {
+            const filterName = prompt('Enter filter name:');
+            if (filterName) {
+                this.savedFilters.push({
+                    name: filterName,
+                    filters: JSON.parse(JSON.stringify(this.advancedFilters)),
+                    created: new Date().toISOString()
+                });
+                this.showEnhancedNotification(`Filter "${filterName}" saved`, 'success');
+            }
+        },
+
+        loadSavedFilter(filter) {
+            this.advancedFilters = JSON.parse(JSON.stringify(filter.filters));
+            this.applyAdvancedFilters();
         },
         
         sortResults(field) {
@@ -1413,7 +1502,6 @@ function catalynxApp() {
             try {
                 alert(`Discovering opportunities for: ${profile.name}\n\nInitiating multi-track discovery process...`);
                 
-                // TODO: Implement opportunity discovery
                 const response = await this.apiCall(`/profiles/${profile.profile_id}/discover`, {
                     method: 'POST',
                     body: JSON.stringify({
@@ -1428,6 +1516,33 @@ function catalynxApp() {
                 console.error('Failed to start discovery:', error);
                 alert('Failed to start opportunity discovery. Please try again.');
             }
-        }
+        },
+
+        // Collaboration functions
+        openCollaboration() { this.collaborationModalOpen = true; },
+        
+        shareWorkflow(workflowId, userIds) {
+            this.sharedWorkflows.push({ id: workflowId, sharedWith: userIds, sharedBy: this.currentUser.id, sharedAt: new Date().toISOString() });
+            this.showEnhancedNotification(`Workflow shared with ${userIds.length} users`, 'success');
+        },
+
+        addWorkflowComment(workflowId, comment) {
+            if (!this.workflowComments[workflowId]) this.workflowComments[workflowId] = [];
+            this.workflowComments[workflowId].push({ id: Date.now(), userId: this.currentUser.id, userName: this.currentUser.name, comment, timestamp: new Date().toISOString() });
+            this.showEnhancedNotification('Comment added', 'success');
+        },
+
+        assignWorkflow(workflowId, userId) {
+            const user = this.teamMembers.find(u => u.id === userId);
+            if (user) {
+                this.notifications.push({ id: Date.now(), type: 'assignment', message: `Workflow assigned to ${user.name}`, workflowId, timestamp: new Date().toISOString(), read: false });
+                this.showEnhancedNotification(`Workflow assigned to ${user.name}`, 'success');
+            }
+        },
+
+        getOnlineUsers() { return this.teamMembers.filter(user => user.status === 'online'); },
+        getUserAvatar(userId) { const user = this.teamMembers.find(u => u.id === userId); return user ? user.avatar : 'U'; },
+        markNotificationRead(notificationId) { const notification = this.notifications.find(n => n.id === notificationId); if (notification) notification.read = true; },
+        getUnreadNotifications() { return this.notifications.filter(n => !n.read); }
     }
 }
