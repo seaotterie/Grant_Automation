@@ -122,7 +122,7 @@ class OrganizationProfile(BaseModel):
     
     # Scoring and Analysis
     composite_score: Optional[float] = Field(None, description="Overall composite score")
-    component_scores: Dict[str, float] = Field(default_factory=dict, description="Individual component scores")
+    component_scores: Dict[str, Any] = Field(default_factory=dict, description="Individual component scores")
     scoring_components: Dict[str, float] = Field(default_factory=dict, description="Detailed scoring components")
     score_rank: Optional[int] = Field(None, description="Rank among analyzed organizations")
     score_percentile: Optional[float] = Field(None, description="Percentile ranking")

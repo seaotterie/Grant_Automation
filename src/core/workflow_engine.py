@@ -119,19 +119,31 @@ class DependencyResolver:
         Returns:
             List of processor names in standard order
         """
-        # Main workflow (Steps 0-4a) - PDF/OCR are fallback only
+        # Enhanced Multi-Track Workflow (Phase 2 Complete)
         standard_order = [
-            "ein_lookup",           # Step 0: EIN lookup and validation
-            "bmf_filter",           # Step 1: Filter IRS Business Master File
-            "propublica_fetch",     # Step 2: Fetch data from ProPublica API
-            "financial_scorer",     # Step 3: Score organizations based on financial data
-            "xml_downloader",       # Step 4a: Download XML 990 filings
+            # DISCOVERY TRACK - Organization Discovery
+            "ein_lookup",              # Step 0: EIN lookup and validation  
+            "bmf_filter",              # Step 1: Filter IRS Business Master File
+            "propublica_fetch",        # Step 2: Fetch data from ProPublica API
+            
+            # GOVERNMENT TRACK - Federal Opportunities & Historical Awards
+            "grants_gov_fetch",        # Step 2a: Discover federal grant opportunities
+            "usaspending_fetch",       # Step 2b: Historical federal award analysis
+            
+            # ANALYSIS TRACK - Scoring and Intelligence
+            "financial_scorer",        # Step 3: Score organizations based on financial data
+            "government_opportunity_scorer",  # Step 3a: Score government opportunity matches
+            
+            # EXTENDED ANALYSIS - Advanced Intelligence
+            "xml_downloader",          # Step 4a: Download XML 990 filings
+            "trend_analyzer",          # Step 4b: Multi-year trend analysis
+            "risk_assessor",           # Step 4c: Risk assessment
+            "competitive_intelligence", # Step 4d: Competitive analysis
+            "board_network_analyzer",  # Step 4e: Board network analysis
+            "intelligent_classifier",  # Step 4f: Intelligent classification
+            
             # NOTE: pdf_downloader and pdf_ocr are fallback processors
             # They automatically run when XML files are not available
-            "board_analyzer",       # Additional: Analyze board members
-            "grant_analyzer",       # Additional: Analyze grant-making patterns
-            "similarity_analyzer",  # Additional: Mission similarity analysis
-            "report_generator"      # Final: Generate reports and exports
         ]
         
         # Filter to only include processors that are registered
