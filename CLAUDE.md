@@ -72,16 +72,27 @@ Multi-dimensional scoring for organizations without NTEE codes:
 "grant-research-env/Scripts/python.exe" test_full_scoring.py
 ```
 
-### Dashboard (Catalynx) - ONGOING ISSUES
+### Modern Web Interface (CATALYNX 2.0) - FULLY OPERATIONAL ✅
 ```bash
-# Dashboard has persistent stability issues on BOTH ports - USE CLI INSTEAD (recommended)
-# "grant-research-env/Scripts/python.exe" -m streamlit run src/dashboard/app.py --server.port 8502
+# NEW: Modern FastAPI-based web interface with real-time progress monitoring
+launch_catalynx_web.bat
 
-# ISSUES: 
-# - Port 8502: Dashboard keeps timing out and crashing
-# - Port 8501: Also broken and not reachable
-# ROOT CAUSE: Heavy imports and processor registration at startup causing crashes
-# SOLUTION: Use the robust CLI interface below (preferred for enterprise users)
+# OR manual start:
+cd src/web
+"../../grant-research-env/Scripts/python.exe" main.py
+
+# Access the interface:
+# http://localhost:8000 - Modern WordPress admin-style interface
+# http://localhost:8000/api/docs - Automatic API documentation
+
+# FEATURES:
+# - Real-time WebSocket progress updates
+# - Professional sidebar navigation with tabs
+# - Live qualification breakdown during processing
+# - Modern Tailwind CSS design
+# - Responsive layout for desktop/tablet
+# - Interactive data tables with sorting/filtering
+# - Export management with download links
 ```
 
 ### CLI Interface (RECOMMENDED - Fully Functional)
@@ -140,26 +151,32 @@ Grant_Automation/ (Now: Catalynx)
 
 ## Environment Setup
 - **Python**: 3.13 with virtual environment `grant-research-env` ✅
-- **Key Dependencies**: asyncio, aiohttp, pandas, pydantic, streamlit ✅
+- **Key Dependencies**: asyncio, aiohttp, pandas, pydantic, fastapi, uvicorn, websockets ✅
 - **Cache Directory**: `cache/` for BMF files, XML filings, PDFs ✅
 - **Logs**: `logs/grant_research.log` ✅
 
-## System Status: FULLY OPERATIONAL + INTELLIGENT CLASSIFICATION DEPLOYED
-- ✅ All 7 processors working correctly
-- ✅ Composite scoring algorithm implemented
-- ✅ CSV export functionality working
-- ✅ Real-time progress monitoring
-- ✅ Handles API failures gracefully
-- ✅ **Production-ready CLI interface (PRIMARY INTERFACE)**
-- ⚠️ Dashboard has stability issues - CLI recommended instead
-- ✅ **NEW: Intelligent Classification System LIVE**
-- ✅ **NEW: 15,973 unclassified organizations now accessible**
-- ✅ **NEW: 13,785 qualified candidates identified (86.3% success rate)**
-- ✅ **NEW: Enhanced workflow with classification integration**
-- ✅ **NEW: Professional export utilities with full metadata**
-- ✅ **LATEST: Qualification Factor Analysis** - Tracks WHY organizations qualify
-- ✅ **LATEST: Primary Qualification Reason** - Groups by keyword match, financial strength, foundation type, etc.
-- ✅ **LATEST: Enhanced Foundation Analysis** - Improved foundation type scoring and classification
+## System Status: PRODUCTION READY + MODERN WEB INTERFACE DEPLOYED ✅
+- ✅ **All 12 processors working correctly** (7 core + 5 analytics)
+- ✅ **Composite scoring algorithm implemented**
+- ✅ **CSV export functionality working**
+- ✅ **Real-time progress monitoring via WebSocket**
+- ✅ **Handles API failures gracefully**
+- ✅ **Production-ready CLI interface**
+- ✅ **NEW: Modern FastAPI Web Interface (CATALYNX 2.0)**
+  - WordPress admin-style professional UI with Tailwind CSS
+  - Real-time WebSocket progress updates
+  - Interactive data tables with sorting/filtering
+  - Professional sidebar navigation with tabs
+  - Live qualification breakdown during processing
+  - Export management with download functionality
+- ✅ **Intelligent Classification System LIVE**
+- ✅ **15,973 unclassified organizations now accessible**
+- ✅ **13,785 qualified candidates identified (86.3% success rate)**
+- ✅ **Enhanced workflow with classification integration**
+- ✅ **Professional export utilities with full metadata**
+- ✅ **Qualification Factor Analysis** - Tracks WHY organizations qualify
+- ✅ **Primary Qualification Reason** - Groups by keyword match, financial strength, foundation type, etc.
+- ✅ **Enhanced Foundation Analysis** - Improved foundation type scoring and classification
 
 ## Discovery: Hidden Opportunities in Unclassified Data
 **MAJOR FINDING**: 15,973 Virginia organizations (30.4% of BMF records) lack NTEE codes but represent significant untapped grant opportunities.

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catalynx API Debug</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        }
+        .test { 
+            margin: 10px 0; 
+            padding: 15px; 
+            border-radius: 4px; 
+            border-left: 4px solid #ddd; 
+        }
+        .success { 
+            background: #d4edda; 
+            color: #155724; 
+            border-left-color: #28a745; 
+        }
+        .error { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border-left-color: #dc3545; 
+        }
+        .pending { 
+            background: #fff3cd; 
+            color: #856404; 
+            border-left-color: #ffc107; 
+        }
+        button { 
+            padding: 12px 24px; 
+            margin: 5px; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 14px; 
+        }
+        button:hover { 
+            background: #0056b3; 
+        }
+        button:disabled { 
+            background: #6c757d; 
+            cursor: not-allowed; 
+        }
+        pre { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 4px; 
+            overflow-x: auto; 
+            font-size: 12px; 
+            margin: 10px 0; 
+        }
+        .header { 
+            text-align: center; 
+            color: #333; 
+            margin-bottom: 30px; 
+        }
+        .api-url { 
+            font-family: monospace; 
+            background: #e9ecef; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Catalynx API Debug Console</h1>
+            <p>Use this page to test which API endpoints are working</p>
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button onclick="testAllAPIs()" id="testAllBtn">Test All APIs</button>
+            <button onclick="clearResults()">Clear Results</button>
+            <button onclick="showConsoleInstructions()">Show Console Debug</button>
+        </div>
+        
+        <div id="results"></div>
+        
+        <div id="console-instructions" style="display: none; background: #f0f8ff; padding: 15px; border-radius: 4px; margin-top: 20px;">
+            <h3>🛠️ Browser Console Debug Instructions:</h3>
+            <p>If you're still seeing "Network connection failed" errors:</p>
+            <ol>
+                <li>Press <strong>F12</strong> to open Developer Tools</li>
+                <li>Click the <strong>Console</strong> tab</li>
+                <li>Look for red error messages</li>
+                <li>Check the <strong>Network</strong> tab to see failed requests</li>
+                <li>Copy any error messages and report them</li>
+            </ol>
+            <p><strong>Common fixes:</strong></p>
+            <ul>
+                <li>Refresh the page (F5)</li>
+                <li>Clear browser cache (Ctrl+Shift+Delete)</li>
+                <li>Try a different browser</li>
+                <li>Check that server is running on port 8000</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let results = document.getElementById('results');
+        let testButton = document.getElementById('testAllBtn');
+        
+        function showConsoleInstructions() {
+            const div = document.getElementById('console-instructions');
+            div.style.display = div.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function addResult(endpoint, status, message, data = null, duration = null) {
+            const div = document.createElement('div');
+            div.className = `test ${status}`;
+            
+            const durationText = duration ? ` (${duration}ms)` : '';
+            div.innerHTML = `
+                <strong>${endpoint}</strong>${durationText}<br>
+                <span class="api-url">${endpoint}</span><br>
+                ${message}
+                ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+            `;
+            results.appendChild(div);
+            
+            // Auto-scroll to bottom
+            div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+        
+        function clearResults() {
+            results.innerHTML = '';
+        }
+        
+        async function testAPI(endpoint, name) {
+            const startTime = Date.now();
+            
+            try {
+                console.log(`Testing ${endpoint}...`);
+                const response = await fetch(endpoint, { 
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 10000
+                });
+                
+                const duration = Date.now() - startTime;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(name, 'success', `✓ SUCCESS (${response.status} ${response.statusText})`, data, duration);
+                } else {
+                    const errorText = await response.text();
+                    addResult(name, 'error', `✗ HTTP ${response.status}: ${response.statusText}`, errorText, duration);
+                }
+            } catch (error) {
+                const duration = Date.now() - startTime;
+                addResult(name, 'error', `✗ NETWORK ERROR: ${error.message}`, null, duration);
+                console.error(`API test failed for ${endpoint}:`, error);
+            }
+        }
+        
+        async function testAllAPIs() {
+            clearResults();
+            testButton.disabled = true;
+            testButton.textContent = 'Testing...';
+            
+            const tests = [
+                ['/api/test', 'Test Endpoint'],
+                ['/api/health', 'Health Check'],
+                ['/api/system/status', 'System Status'], 
+                ['/api/dashboard/overview', 'Dashboard Overview'],
+                ['/api/workflows', 'Workflows List']
+            ];
+            
+            addResult('API Test Suite', 'pending', 'Starting comprehensive API tests...');
+            
+            for (const [endpoint, name] of tests) {
+                await testAPI(endpoint, name);
+                // Small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            addResult('API Test Suite', 'success', 'All API tests completed! Check results above.');
+            
+            testButton.disabled = false;
+            testButton.textContent = 'Test All APIs';
+        }
+        
+        // Auto-run a quick test when page loads
+        window.onload = () => {
+            setTimeout(() => {
+                testAPI('/api/test', 'Quick Connection Test');
+            }, 1000);
+        };
+    </script>
+</body>
+</html>
