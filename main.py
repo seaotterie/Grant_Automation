@@ -52,8 +52,10 @@ def cli(verbose: bool, config_env: str):
 @click.option('--max-results', type=int, default=100, help='Maximum results to process')
 @click.option('--output-dir', help='Output directory for results')
 @click.option('--name', help='Workflow name')
+@click.option('--include-classified', is_flag=True, help='Include organizations classified by intelligent classifier')
+@click.option('--classification-score-threshold', type=float, default=0.5, help='Minimum classification score for included organizations (default: 0.5)')
 def run_workflow(target_ein: str, states: str, ntee_codes: str, min_revenue: int, 
-                max_results: int, output_dir: str, name: str):
+                max_results: int, output_dir: str, name: str, include_classified: bool, classification_score_threshold: float):
     """Run a complete grant research workflow."""
     click.echo("Starting Grant Research Workflow...")
     
@@ -69,7 +71,9 @@ def run_workflow(target_ein: str, states: str, ntee_codes: str, min_revenue: int
         states=state_list,
         ntee_codes=ntee_list,
         min_revenue=min_revenue,
-        max_results=max_results
+        max_results=max_results,
+        include_classified_organizations=include_classified,
+        classification_score_threshold=classification_score_threshold
     )
     
     click.echo(f"Workflow ID: {config.workflow_id}")
@@ -78,6 +82,11 @@ def run_workflow(target_ein: str, states: str, ntee_codes: str, min_revenue: int
     click.echo(f"NTEE Codes: {', '.join(ntee_list)}")
     click.echo(f"Min Revenue: ${config.min_revenue:,}")
     click.echo(f"Max Results: {config.max_results}")
+    
+    if include_classified:
+        click.echo(f"Include Classified Orgs: Yes (score >= {classification_score_threshold})")
+    else:
+        click.echo("Include Classified Orgs: No (NTEE-coded only)")
     
     # Run workflow
     async def run():
@@ -201,6 +210,197 @@ def workflow_status(workflow_id: str):
         click.echo("Warnings:")
         for warning in workflow.warnings:
             click.echo(f"  - {warning}")
+
+
+@cli.command()
+@click.option('--state', default='VA', help='State to analyze (default: VA)')
+@click.option('--min-score', type=float, default=0.3, help='Minimum composite score threshold (default: 0.3)')
+@click.option('--max-results', type=int, help='Maximum promising candidates to display')
+@click.option('--export', is_flag=True, help='Export results to CSV file')
+@click.option('--detailed', is_flag=True, help='Show detailed breakdown for top candidates')
+def classify_organizations(state: str, min_score: float, max_results: int, export: bool, detailed: bool):
+    """Run intelligent classification on organizations without NTEE codes."""
+    click.echo("Starting Intelligent Classification Analysis...")
+    click.echo("=" * 50)
+    
+    # Create configuration
+    config = WorkflowConfig(
+        workflow_id=f"classification_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+        name="Intelligent Classification",
+        states=[state],
+        max_results=50000  # Process all available
+    )
+    
+    click.echo(f"State: {state}")
+    click.echo(f"Score threshold: {min_score}")
+    click.echo()
+    
+    async def run_classification():
+        from src.processors.analysis.intelligent_classifier import IntelligentClassifier
+        from src.core.data_models import ProcessorConfig
+        
+        # Create processor config
+        processor_config = ProcessorConfig(
+            workflow_id=config.workflow_id,
+            processor_name="intelligent_classifier",
+            workflow_config=config
+        )
+        
+        # Initialize and run classifier
+        classifier = IntelligentClassifier()
+        
+        try:
+            click.echo("Loading unclassified organizations...")
+            result = await classifier.execute(processor_config)
+            
+            if not result.success:
+                click.echo("FAILED: Classification failed")
+                for error in result.errors:
+                    click.echo(f"  Error: {error}")
+                return
+            
+            # Extract results
+            classified_orgs = result.data.get('classified_organizations', [])
+            promising_candidates = result.data.get('promising_candidates', [])
+            total_unclassified = result.data.get('total_unclassified', 0)
+            
+            # Apply score filter
+            promising_candidates = [
+                org for org in promising_candidates 
+                if org['composite_score'] >= min_score
+            ]
+            
+            # Apply result limit
+            if max_results and len(promising_candidates) > max_results:
+                promising_candidates = promising_candidates[:max_results]
+            
+            click.echo("SUCCESS: Classification completed!")
+            click.echo()
+            
+            # Summary statistics
+            click.echo("Classification Results:")
+            click.echo(f"  Total unclassified organizations: {total_unclassified:,}")
+            click.echo(f"  Promising candidates (score >= {min_score}): {len(promising_candidates):,}")
+            click.echo(f"  Success rate: {len(promising_candidates)/total_unclassified*100:.1f}%")
+            click.echo()
+            
+            # Category breakdown
+            category_breakdown = result.metadata.get('category_breakdown', {})
+            click.echo("Category Breakdown:")
+            for category, count in sorted(category_breakdown.items(), key=lambda x: x[1], reverse=True):
+                percentage = count / len(promising_candidates) * 100 if promising_candidates else 0
+                click.echo(f"  {category.title()}: {count:,} ({percentage:.1f}%)")
+            click.echo()
+            
+            # NEW: Qualification factor analysis
+            if promising_candidates:
+                qualification_breakdown = {}
+                strength_breakdown = {}
+                
+                for org in promising_candidates:
+                    if 'primary_qualification_reason' in org:
+                        # Extract primary factor type
+                        reason = org['primary_qualification_reason']
+                        if 'keyword match' in reason.lower():
+                            primary_factor = 'Keyword Match'
+                        elif 'financial capacity' in reason.lower():
+                            primary_factor = 'Financial Strength'
+                        elif 'foundation type' in reason.lower():
+                            primary_factor = 'Foundation Type'
+                        elif 'geographic' in reason.lower():
+                            primary_factor = 'Geographic Match'
+                        else:
+                            primary_factor = 'Other'
+                        
+                        qualification_breakdown[primary_factor] = qualification_breakdown.get(primary_factor, 0) + 1
+                        
+                        # Track strength distribution
+                        strength = org.get('qualification_strength', 'Unknown')
+                        strength_breakdown[strength] = strength_breakdown.get(strength, 0) + 1
+                
+                click.echo("Qualification Factor Breakdown:")
+                for factor, count in sorted(qualification_breakdown.items(), key=lambda x: x[1], reverse=True):
+                    percentage = count / len(promising_candidates) * 100
+                    click.echo(f"  {factor}: {count:,} ({percentage:.1f}%)")
+                click.echo()
+                
+                click.echo("Qualification Strength Distribution:")
+                for strength, count in sorted(strength_breakdown.items(), key=lambda x: x[1], reverse=True):
+                    percentage = count / len(promising_candidates) * 100
+                    click.echo(f"  {strength}: {count:,} ({percentage:.1f}%)")
+                click.echo()
+            
+            # Top candidates
+            display_count = min(20, len(promising_candidates))
+            click.echo(f"Top {display_count} Candidates:")
+            click.echo("Rank | Score | Category  | EIN       | Organization Name")
+            click.echo("-" * 80)
+            
+            for i, org in enumerate(promising_candidates[:display_count]):
+                score = org['composite_score']
+                category = org['predicted_category']
+                ein = org['ein']
+                name = org['name'][:40]
+                click.echo(f"{i+1:4d} | {score:.3f} | {category:9s} | {ein} | {name}")
+            
+            # Detailed breakdown if requested
+            if detailed and promising_candidates:
+                click.echo()
+                click.echo("Detailed Analysis - Top 5 Candidates:")
+                for i, org in enumerate(promising_candidates[:5]):
+                    click.echo(f"\n{i+1}. {org['name']} (EIN: {org['ein']})")
+                    click.echo(f"   Composite Score: {org['composite_score']:.3f}")
+                    click.echo(f"   Predicted Category: {org['predicted_category']}")
+                    
+                    # NEW: Show qualification analysis
+                    if 'primary_qualification_reason' in org:
+                        click.echo(f"   Primary Qualification: {org['primary_qualification_reason']}")
+                        click.echo(f"   Qualification Strength: {org['qualification_strength']}")
+                        if org.get('qualification_factors', {}).get('qualification_details'):
+                            click.echo(f"   Details: {'; '.join(org['qualification_factors']['qualification_details'])}")
+                    
+                    click.echo(f"   Keyword Scores: Health={org['keyword_scores']['health']:.2f}, "
+                              f"Nutrition={org['keyword_scores']['nutrition']:.2f}, "
+                              f"Safety={org['keyword_scores']['safety']:.2f}")
+                    click.echo(f"   Financial Score: {org['financial_score']:.3f}")
+                    if org.get('assets'):
+                        click.echo(f"   Assets: ${org['assets']:,.0f}")
+                    if org.get('revenue'):
+                        click.echo(f"   Revenue: ${org['revenue']:,.0f}")
+                    click.echo(f"   Location: {org['city']}, {org['state']}")
+            
+            # Export if requested
+            if export:
+                import csv
+                from pathlib import Path
+                
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                export_file = Path(f"intelligent_classification_results_{timestamp}.csv")
+                
+                with open(export_file, 'w', newline='', encoding='utf-8') as f:
+                    if promising_candidates:
+                        writer = csv.DictWriter(f, fieldnames=promising_candidates[0].keys())
+                        writer.writeheader()
+                        writer.writerows(promising_candidates)
+                
+                click.echo(f"\nExported {len(promising_candidates)} results to: {export_file}")
+            
+            # Score distribution
+            click.echo(f"\nScore Distribution:")
+            score_ranges = [(0.8, 1.0), (0.6, 0.8), (0.4, 0.6), (0.3, 0.4), (0.2, 0.3), (0.0, 0.2)]
+            for min_range, max_range in score_ranges:
+                count = len([org for org in classified_orgs 
+                           if min_range <= org['composite_score'] < max_range])
+                click.echo(f"  {min_range:.1f} - {max_range:.1f}: {count:,} organizations")
+        
+        except Exception as e:
+            click.echo(f"ERROR: Classification failed: {e}")
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
+    
+    # Run the classification
+    asyncio.run(run_classification())
 
 
 @cli.command()

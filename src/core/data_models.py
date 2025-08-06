@@ -219,6 +219,12 @@ class WorkflowConfig(BaseModel):
     include_grant_analysis: bool = Field(True, description="Analyze grant-making patterns")
     similarity_analysis: bool = Field(True, description="Perform mission similarity analysis")
     
+    # Intelligent Classification Options
+    include_classified_organizations: bool = Field(False, description="Include organizations classified by intelligent classifier")
+    classification_score_threshold: float = Field(0.5, description="Minimum classification score for inclusion")
+    classification_categories: List[str] = Field(default_factory=lambda: ["health", "nutrition", "safety", "education"], 
+                                               description="Categories to include from classification")
+    
     # Performance Settings
     max_concurrent_downloads: int = Field(3, description="Maximum concurrent downloads")
     max_concurrent_processors: int = Field(2, description="Maximum concurrent processors")

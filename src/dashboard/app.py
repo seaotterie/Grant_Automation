@@ -16,8 +16,9 @@ import os
 # Add src to path for imports
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from src.core.workflow_engine import WorkflowEngine
-from src.core.data_models import WorkflowConfig
+# Imports moved inside functions to prevent heavy loading at startup
+# from src.core.workflow_engine import WorkflowEngine
+# from src.core.data_models import WorkflowConfig
 
 # Configure Streamlit page
 st.set_page_config(
@@ -98,7 +99,8 @@ class GrantResearchDashboard:
     """Main dashboard application class."""
     
     def __init__(self):
-        self.workflow_engine = WorkflowEngine()
+        # Lazy load workflow engine to prevent startup crashes
+        self.workflow_engine = None
         
         # Initialize session state
         if 'workflow_status' not in st.session_state:
@@ -107,6 +109,17 @@ class GrantResearchDashboard:
             st.session_state.current_workflow_id = None
         if 'workflows_history' not in st.session_state:
             st.session_state.workflows_history = []
+    
+    def get_workflow_engine(self):
+        """Lazy load workflow engine when actually needed."""
+        if self.workflow_engine is None:
+            try:
+                from src.core.workflow_engine import WorkflowEngine
+                self.workflow_engine = WorkflowEngine()
+            except Exception as e:
+                st.error(f"Failed to load workflow engine: {e}")
+                return None
+        return self.workflow_engine
     
     def render_sidebar(self):
         """Render navigation sidebar."""
@@ -154,6 +167,9 @@ class GrantResearchDashboard:
             if st.button("🏆 Competitive Intelligence", use_container_width=True):
                 st.session_state.current_page = "competitive_intel"
                 st.rerun()
+            
+            if st.button("🧠 Intelligent Classification", use_container_width=True):
+                st.info("🚀 For intelligent classification, please use the CLI command:\\n\\n`python main.py classify-organizations --detailed --max-results 100`")
             
             st.markdown("---")
             
@@ -1010,6 +1026,11 @@ class GrantResearchDashboard:
             st.balloons()
             st.success("Analytics Dashboard launching at http://localhost:8501")
     
+    # COMMENTED OUT - Classification page causing dashboard crashes
+    # def render_classification_page(self):
+    #     """Render intelligent classification page."""
+    #     # Use CLI instead: python main.py classify-organizations --detailed --max-results 100
+    
     def render_export_page(self):
         """Render export page."""
         st.title("📤 Data Export & Reports")
@@ -1110,6 +1131,9 @@ def main():
         dashboard.render_risk_assessment_page()
     elif selected_page == "competitive_intel":
         dashboard.render_competitive_intel_page()
+    elif selected_page == "classification":
+        st.title("🧠 Intelligent Classification")
+        st.info("Please use the CLI for full intelligent classification functionality:\\n\\n`python main.py classify-organizations --detailed --max-results 100`")
     elif selected_page == "export":
         dashboard.render_export_page()
     elif selected_page == "network_analysis":
