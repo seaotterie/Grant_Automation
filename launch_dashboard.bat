@@ -1,13 +1,17 @@
 @echo off
-echo 🎯 Starting Grant Research Automation Dashboard...
+echo 🎯 Redirecting to Modern Catalynx Web Interface...
 echo.
-echo Dashboard will be available at:
-echo   Local:   http://localhost:8501
-echo   Network: http://192.168.1.163:8501
+echo The legacy Streamlit dashboard has been replaced with our modern web interface.
 echo.
-echo Press Ctrl+C to stop the dashboard
+echo Starting Catalynx Modern Web Interface...
+echo Interface will be available at:
+echo   http://localhost:8000
+echo   http://127.0.0.1:8000
+echo.
+echo Press Ctrl+C to stop the server.
 echo.
 
-grant-research-env\Scripts\streamlit.exe run src\dashboard\app.py --server.port 8501 --server.headless true --browser.gatherUsageStats false
+cd "%~dp0src\web"
+"..\..\grant-research-env\Scripts\python.exe" main.py
 
 pause

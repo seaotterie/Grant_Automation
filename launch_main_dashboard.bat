@@ -1,11 +1,18 @@
 @echo off
-echo Launching Catalynx Main Dashboard...
+echo Launching Modern Catalynx Interface...
 echo.
-echo Dashboard will be available at: http://localhost:8502
-echo Press Ctrl+C to stop the dashboard
+echo The legacy dashboard has been replaced with our modern web interface.
+echo.
+echo Starting Catalynx Modern Web Interface...
+echo Interface will be available at:
+echo   http://localhost:8000
+echo   http://127.0.0.1:8000
+echo.
+echo Features: Commercial Track, State Discovery, Enhanced Analytics, Mobile Support
+echo Press Ctrl+C to stop the server.
 echo.
 
-cd /d "%~dp0"
-"grant-research-env/Scripts/streamlit.exe" run src/dashboard/app.py --server.address 127.0.0.1 --server.port 8502 --server.headless false
+cd "%~dp0src\web"
+"..\..\grant-research-env\Scripts\python.exe" main.py
 
 pause

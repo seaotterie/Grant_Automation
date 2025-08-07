@@ -450,7 +450,7 @@ def init():
     click.echo("\nNext steps:")
     click.echo("1. Add API keys using: auth api-keys add <service>")
     click.echo("2. Edit configuration template if needed")
-    click.echo("3. Start the dashboard: streamlit run src/dashboard/app.py")
+    click.echo("3. Start the modern web interface: python src/web/main.py")
 
 
 if __name__ == '__main__':

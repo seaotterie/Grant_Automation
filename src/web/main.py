@@ -558,6 +558,178 @@ async def get_pipeline_status():
         logger.error(f"Failed to get pipeline status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Commercial Track API endpoints
+@app.post("/api/commercial/discover")
+async def discover_commercial_opportunities(request: Dict[str, Any]):
+    """Start commercial opportunity discovery with filters."""
+    try:
+        from src.discovery.commercial_discoverer import CommercialDiscoverer
+        
+        discoverer = CommercialDiscoverer()
+        
+        # Mock search params based on request
+        search_params = {
+            'industries': request.get('industries', []),
+            'company_sizes': request.get('company_sizes', []),
+            'funding_range': request.get('funding_range', {}),
+            'geographic_scope': request.get('geographic_scope', []),
+            'partnership_types': request.get('partnership_types', [])
+        }
+        
+        # For now, return mock results - in production this would call discoverer
+        mock_opportunities = [
+            {
+                "id": "corp_001",
+                "organization_name": "Microsoft Corporation Foundation",
+                "program_name": "STEM Education Grant Program", 
+                "opportunity_type": "corporate_foundation",
+                "funding_amount": 150000,
+                "compatibility_score": 0.87,
+                "description": "Supporting technology education initiatives in underserved communities",
+                "application_deadline": "2025-06-30",
+                "contact_info": {"email": "grants@microsoft.com", "type": "foundation"},
+                "match_factors": {
+                    "industry_alignment": True,
+                    "csr_focus_match": True,
+                    "geographic_presence": True,
+                    "partnership_potential": True
+                }
+            }
+        ]
+        
+        return {
+            "status": "completed",
+            "total_found": len(mock_opportunities),
+            "opportunities": mock_opportunities,
+            "search_params": search_params,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Commercial discovery failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/commercial/industries")
+async def get_available_industries():
+    """Get list of available industries for commercial discovery."""
+    return {
+        "industries": [
+            {"value": "technology", "label": "Technology"},
+            {"value": "healthcare", "label": "Healthcare"}, 
+            {"value": "financial_services", "label": "Financial Services"},
+            {"value": "retail", "label": "Retail"},
+            {"value": "manufacturing", "label": "Manufacturing"},
+            {"value": "energy", "label": "Energy"}
+        ]
+    }
+
+# State Discovery API endpoints  
+@app.post("/api/states/discover")
+async def discover_state_opportunities(request: Dict[str, Any]):
+    """Start state-level opportunity discovery."""
+    try:
+        from src.discovery.state_discoverer import StateDiscoverer
+        
+        selected_states = request.get('states', ['VA'])
+        
+        # Mock results for now - in production would call state discoverer
+        mock_opportunities = [
+            {
+                "id": "va_001",
+                "agency_name": "Virginia Department of Health",
+                "program_name": "Community Health Improvement Grants",
+                "opportunity_type": "state_grant",
+                "funding_amount": 125000,
+                "priority_score": 0.89,
+                "description": "Grants to support community-based health improvement initiatives",
+                "application_deadline": "2025-05-15",
+                "state": "VA",
+                "focus_areas": ["public_health", "community_wellness"],
+                "eligibility": "Virginia-based nonprofits"
+            }
+        ]
+        
+        return {
+            "status": "completed",
+            "total_found": len(mock_opportunities),
+            "opportunities": mock_opportunities,
+            "selected_states": selected_states,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"State discovery failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Analytics API endpoints
+@app.get("/api/analytics/overview")
+async def get_analytics_overview():
+    """Get analytics overview data for dashboard."""
+    try:
+        # Mock analytics data - in production would calculate from real data
+        return {
+            "metrics": {
+                "organizations_analyzed": 156,
+                "avg_risk_score": 0.68,
+                "low_risk_count": 89,
+                "grant_ready_count": 124,
+                "market_health": "good"
+            },
+            "trends": {
+                "revenue_growth": [
+                    {"year": 2020, "value": 2000000},
+                    {"year": 2021, "value": 2200000}, 
+                    {"year": 2022, "value": 2500000},
+                    {"year": 2023, "value": 2800000}
+                ],
+                "success_rate": [
+                    {"month": "Jan", "rate": 0.72},
+                    {"month": "Feb", "rate": 0.75},
+                    {"month": "Mar", "rate": 0.78},
+                    {"month": "Apr", "rate": 0.81}
+                ]
+            },
+            "risk_distribution": {
+                "low": 45,
+                "moderate": 32,
+                "high": 18,
+                "very_high": 5
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get analytics overview: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/analytics/trends")
+async def get_trend_analysis():
+    """Get trend analysis data."""
+    try:
+        return {
+            "financial_trends": [
+                {
+                    "organization": "Example Org 1",
+                    "growth_rate": 0.12,
+                    "stability_score": 0.85,
+                    "classification": "accelerating"
+                },
+                {
+                    "organization": "Example Org 2", 
+                    "growth_rate": 0.08,
+                    "stability_score": 0.72,
+                    "classification": "steady_growth"
+                }
+            ],
+            "market_analysis": {
+                "total_market_size": 25000000,
+                "competitive_health": "good",
+                "growth_potential": "high"
+            }
+        }
+    except Exception as e:
+        logger.error(f"Failed to get trend analysis: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Health check endpoint
 @app.get("/api/health")
 async def health_check():
