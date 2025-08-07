@@ -511,6 +511,10 @@ class XMLDownloaderProcessor(BaseProcessor):
         if xml_data["board_members"]:
             org.key_personnel = xml_data["board_members"][:5]  # Top 5 personnel
         
+        # Set Schedule I flag if grants were found
+        if xml_data["grants_made"]:
+            org.has_schedule_i = True
+        
         # Update data sources
         org.data_sources.append("IRS XML Filings")
         org.last_updated = datetime.now()

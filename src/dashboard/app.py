@@ -23,7 +23,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 # Configure Streamlit page
 st.set_page_config(
     page_title="Catalynx - Grant Research Automation",
-    page_icon="🎯",
+    page_icon="target",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -129,62 +129,72 @@ class GrantResearchDashboard:
                 st.image("CatalynxLogo.png", width=200)
             except:
                 st.title("Catalynx")
+            st.caption("Opportunistic Grantmogrifier")
             st.caption("Grant Research Intelligence Platform v2.0")
             
             st.markdown("---")
             
-            # Core Workflow Section
-            st.subheader("📊 Core Workflow")
+            # Organization Profiles Section
+            st.subheader("Organization Profiles")
             
-            if st.button("🏠 Dashboard Overview", use_container_width=True):
+            if st.button("Manage Profiles", use_container_width=True):
+                st.session_state.current_page = "profile_management"
+                st.rerun()
+            
+            st.markdown("---")
+            
+            # Core Workflow Section
+            st.subheader("Core Workflow")
+            
+            if st.button("Dashboard Overview", use_container_width=True):
                 st.session_state.current_page = "dashboard"
                 st.rerun()
             
-            if st.button("▶️ New Workflow", use_container_width=True):
+            if st.button("New Workflow", use_container_width=True):
                 st.session_state.current_page = "new_workflow"
                 st.rerun()
             
-            if st.button("📈 Results & Analysis", use_container_width=True):
+            if st.button("Results & Analysis", use_container_width=True):
                 st.session_state.current_page = "results"
                 st.rerun()
             
             st.markdown("---")
             
             # Advanced Analytics Section
-            st.subheader("🧠 Advanced Analytics")
+            st.subheader("Advanced Analytics")
             
-            if st.button("📊 Analytics Dashboard", use_container_width=True):
+            if st.button("Analytics Dashboard", use_container_width=True):
                 st.info("Open Analytics Dashboard at:\nhttp://localhost:8501")
             
-            if st.button("📋 Trend Analysis", use_container_width=True):
+            if st.button("Trend Analysis", use_container_width=True):
                 st.session_state.current_page = "trend_analysis"
                 st.rerun()
             
-            if st.button("🎯 Risk Assessment", use_container_width=True):
+            if st.button("Risk Assessment", use_container_width=True):
                 st.session_state.current_page = "risk_assessment"
                 st.rerun()
             
-            if st.button("🏆 Competitive Intelligence", use_container_width=True):
+            if st.button("Competitive Intelligence", use_container_width=True):
                 st.session_state.current_page = "competitive_intel"
                 st.rerun()
             
-            if st.button("🧠 Intelligent Classification", use_container_width=True):
-                st.info("🚀 For intelligent classification, please use the CLI command:\\n\\n`python main.py classify-organizations --detailed --max-results 100`")
+            if st.button("Intelligent Classification", use_container_width=True):
+                st.info("For intelligent classification, please use the CLI command:\n\n`python main.py classify-organizations --detailed --max-results 100`")
             
             st.markdown("---")
             
             # Data & Export Section
-            st.subheader("📤 Data & Export")
+            st.subheader("Data & Export")
             
-            if st.button("💾 Export Results", use_container_width=True):
+            if st.button("Export Results", use_container_width=True):
                 st.session_state.current_page = "export"
                 st.rerun()
             
-            if st.button("🌐 Network Analysis", use_container_width=True):
+            if st.button("Network Analysis", use_container_width=True):
                 st.session_state.current_page = "network_analysis"
                 st.rerun()
             
-            if st.button("📊 Generate Reports", use_container_width=True):
+            if st.button("Generate Reports", use_container_width=True):
                 st.session_state.current_page = "reports"
                 st.rerun()
             
@@ -1121,6 +1131,9 @@ def main():
     # Render selected page
     if selected_page == "dashboard":
         dashboard.render_dashboard_page()
+    elif selected_page == "profile_management":
+        from src.dashboard.profile_manager import render_profile_management
+        render_profile_management()
     elif selected_page == "new_workflow":
         dashboard.render_new_workflow_page()
     elif selected_page == "results":
