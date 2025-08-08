@@ -94,14 +94,14 @@
         </div>
         
         <!-- Desktop Sidebar Navigation -->
-        <div class="hidden lg:block bg-gray-900 dark:bg-gray-800 text-white w-64 min-h-screen flex-shrink-0 transition-colors duration-300">
+        <div class="hidden lg:block bg-gray-900 dark:bg-gray-800 text-white w-80 min-h-screen flex-shrink-0 transition-colors duration-300">
             <!-- Logo Header -->
             <div class="p-4 border-b border-gray-800 dark:border-gray-700">
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="text-xl font-bold flex items-center">
                             <span class="text-2xl mr-2">🎯</span>
-                            <span>Catalynx</span>
+                            <span class="font-bold">Opportunistic Grantmogrifier</span>
                         </h1>
                         <p class="text-sm text-gray-400 mt-1">Grant Research Automation</p>
                     </div>
@@ -132,61 +132,54 @@
                     </a>
                 </div>
 
-                <!-- Core Operations -->
-                <div class="px-2 mb-6">
-                    <h3 class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Core Operations</h3>
-                    <div class="space-y-1">
-                        <a href="#" @click.prevent="switchTab('dashboard')"
-                           :class="{'bg-primary-600 text-white': activeTab === 'dashboard', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'dashboard'}"
-                           class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors">
-                            <span class="text-lg mr-3">📊</span>
-                            <div class="flex-1"><div>Dashboard</div><div class="text-xs opacity-75">Overview</div></div>
+                <!-- P PARADOXIFIER -->
+                <div class="px-2 mb-4" x-data="{ expanded: activeTab === 'status' || activeTab === 'profiles' }" x-init="$watch('activeTab', value => { if (value === 'status' || value === 'profiles') expanded = true })">
+                    <h3 class="px-3 text-xs font-bold text-purple-400 uppercase tracking-wider mb-2 cursor-pointer" @click="expanded = !expanded">P PARADOXIFIER</h3>
+                    <div x-show="expanded" x-transition class="space-y-0.5">
+                        <a href="#" @click.prevent="switchTab('status')"
+                           :class="{'bg-primary-600 text-white': activeTab === 'status', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'status'}"
+                           class="flex items-center px-4 py-2 text-sm font-bold rounded-md transition-colors">
+                            <div class="flex-1"><div class="font-bold">GLOBAL STATUS</div></div>
                         </a>
                         <a href="#" @click.prevent="switchTab('profiles')"
                            :class="{'bg-primary-600 text-white': activeTab === 'profiles', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'profiles'}"
-                           class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors">
-                            <span class="text-lg mr-3">👤</span>
-                            <div class="flex-1"><div>Profiles</div><div class="text-xs opacity-75">Organizations</div></div>
-                            <span x-show="totalProfiles > 0" class="bg-green-500 text-white text-xs rounded-full px-2 py-0.5" x-text="totalProfiles"></span>
+                           class="flex items-center px-4 py-2 text-sm font-bold rounded-md transition-colors">
+                            <div class="flex-1"><div class="font-bold">PROFILER</div></div>
                         </a>
                     </div>
                 </div>
 
-                <!-- 4-Stage Pipeline -->
-                <div class="px-2 mb-6">
-                    <h3 class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Processing Pipeline</h3>
+                <!-- D DISCOMBOBULATOR -->
+                <div class="px-2 mb-4" x-data="{ expanded: ['discovery','prescoring','analysis','recommendations','commercial','states','predictive','roi'].includes(activeTab) }" x-init="$watch('activeTab', value => { if (['discovery','prescoring','analysis','recommendations','commercial','states','predictive','roi'].includes(value)) expanded = true })">
+                    <h3 class="px-3 text-xs font-bold text-green-400 uppercase tracking-wider mb-2 cursor-pointer" @click="expanded = !expanded">D DISCOMBOBULATOR</h3>
+                    <div x-show="expanded" x-transition class="space-y-0.5">
                     <div class="space-y-1">
                         <a href="#" @click.prevent="switchTab('discovery')"
                            :class="{'bg-primary-600 text-white': activeTab === 'discovery', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'discovery'}"
-                           class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors group">
-                            <div class="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center mr-3 text-white text-xs font-bold">1</div>
-                            <div class="flex-1"><div>Discovery</div><div class="text-xs opacity-75">Multi-Track</div></div>
+                           class="flex items-center px-4 py-2 text-sm font-bold rounded-md transition-colors group">
+                            <div class="flex-1"><div class="font-bold">FULL SUMMARY</div></div>
                         </a>
                         <a href="#" @click.prevent="switchTab('prescoring')"
                            :class="{'bg-primary-600 text-white': activeTab === 'prescoring', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'prescoring'}"
-                           class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors group">
-                            <div class="w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center mr-3 text-white text-xs font-bold">2</div>
-                            <div class="flex-1"><div>Pre-Scoring</div><div class="text-xs opacity-75">Compatibility</div></div>
+                           class="flex items-center px-4 py-2 text-sm font-bold rounded-md transition-colors group">
+                            <div class="flex-1"><div class="font-bold">NONPROFIT TRACK</div></div>
                         </a>
                         <a href="#" @click.prevent="switchTab('analysis')"
                            :class="{'bg-primary-600 text-white': activeTab === 'analysis', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'analysis'}"
-                           class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors group">
-                            <div class="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center mr-3 text-white text-xs font-bold">3</div>
-                            <div class="flex-1"><div>Deep Analysis</div><div class="text-xs opacity-75">Review</div></div>
+                           class="flex items-center px-4 py-2 text-sm font-bold rounded-md transition-colors group">
+                            <div class="flex-1"><div class="font-bold">FEDERAL TRACK</div></div>
                         </a>
                         <a href="#" @click.prevent="switchTab('recommendations')"
                            :class="{'bg-primary-600 text-white': activeTab === 'recommendations', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'recommendations'}"
-                           class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors group">
-                            <div class="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center mr-3 text-white text-xs font-bold">4</div>
-                            <div class="flex-1"><div>Recommendations</div><div class="text-xs opacity-75">Intelligence</div></div>
+                           class="flex items-center px-4 py-2 text-sm font-bold rounded-md transition-colors group">
+                            <div class="flex-1"><div class="font-bold">STATE AGENCIES</div></div>
                         </a>
                         
                         <!-- Commercial Track -->
                         <a href="#" @click.prevent="switchTab('commercial')"
                            :class="{'bg-primary-600 text-white': activeTab === 'commercial', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'commercial'}"
-                           class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors">
-                            <span class="text-lg mr-3">🏢</span>
-                            <div class="flex-1"><div>Commercial</div><div class="text-xs opacity-75">Corporate Giving</div></div>
+                           class="flex items-center px-4 py-2 text-sm font-bold rounded-md transition-colors">
+                            <div class="flex-1"><div class="font-bold">COMMERCIAL TRACK</div></div>
                         </a>
                         
                         <!-- State Discovery -->
@@ -194,7 +187,7 @@
                            :class="{'bg-primary-600 text-white': activeTab === 'states', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'states'}"
                            class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors">
                             <span class="text-lg mr-3">🏛️</span>
-                            <div class="flex-1"><div>State Grants</div><div class="text-xs opacity-75">State Agencies</div></div>
+                            <div class="flex-1"><div>BOARD OF DIRECTORS</div><div class="text-xs opacity-75">State Agencies</div></div>
                         </a>
                         
                         <!-- Predictive Analytics -->
@@ -202,7 +195,7 @@
                            :class="{'bg-primary-600 text-white': activeTab === 'predictive', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'predictive'}"
                            class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors">
                             <span class="text-lg mr-3">🔮</span>
-                            <div class="flex-1"><div>Predictive</div><div class="text-xs opacity-75">Success Models</div></div>
+                            <div class="flex-1"><div>GRANTEE NETWORK</div><div class="text-xs opacity-75">Success Models</div></div>
                         </a>
                         
                         <!-- ROI Analytics -->
@@ -210,32 +203,30 @@
                            :class="{'bg-primary-600 text-white': activeTab === 'roi', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'roi'}"
                            class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors">
                             <span class="text-lg mr-3">📊</span>
-                            <div class="flex-1"><div>ROI Analytics</div><div class="text-xs opacity-75">Optimization</div></div>
+                            <div class="flex-1"><div>SCROGIN SUMMARY</div><div class="text-xs opacity-75">Optimization</div></div>
                         </a>
                     </div>
                 </div>
 
-                <!-- Analytics & Tools -->
-                <div class="px-2 mb-6">
-                    <h3 class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Analytics & Tools</h3>
+                <!-- A AMPLINATOR -->
+                <div class="px-2 mb-4" x-data="{ expanded: ['analytics','network','exports','classification','workflows'].includes(activeTab) }" x-init="$watch('activeTab', value => { if (['analytics','network','exports','classification','workflows'].includes(value)) expanded = true })">
+                    <h3 class="px-3 text-xs font-bold text-purple-400 uppercase tracking-wider mb-2 cursor-pointer" @click="expanded = !expanded">A AMPLINATOR</h3>
+                    <div x-show="expanded" x-transition class="space-y-0.5">
                     <div class="space-y-1">
                         <a href="#" @click.prevent="switchTab('analytics')"
                            :class="{'bg-primary-600 text-white': activeTab === 'analytics', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'analytics'}"
-                           class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors">
-                            <span class="text-lg mr-3">📈</span>
-                            <div class="flex-1"><div>Analytics</div><div class="text-xs opacity-75">Metrics</div></div>
+                           class="flex items-center px-4 py-2 text-sm font-bold rounded-md transition-colors">
+                            <div class="flex-1"><div class="font-bold">SCORING SUMMARY</div></div>
                         </a>
                         <a href="#" @click.prevent="switchTab('network')"
                            :class="{'bg-primary-600 text-white': activeTab === 'network', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'network'}"
-                           class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors">
-                            <span class="text-lg mr-3">🕸️</span>
-                            <div class="flex-1"><div>Network</div><div class="text-xs opacity-75">Connections</div></div>
+                           class="flex items-center px-4 py-2 text-sm font-bold rounded-md transition-colors">
+                            <div class="flex-1"><div class="font-bold">EXPORT FUNCTIONS</div></div>
                         </a>
                         <a href="#" @click.prevent="switchTab('exports')"
                            :class="{'bg-primary-600 text-white': activeTab === 'exports', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'exports'}"
-                           class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors">
-                            <span class="text-lg mr-3">📤</span>
-                            <div class="flex-1"><div>Exports</div><div class="text-xs opacity-75">Downloads</div></div>
+                           class="flex items-center px-4 py-2 text-sm font-bold rounded-md transition-colors">
+                            <div class="flex-1"><div class="font-bold">REPORT GENERATION</div></div>
                         </a>
                         
                         <!-- Legacy Tools Collapsible -->
@@ -257,16 +248,15 @@
                     </div>
                 </div>
                 
-                <!-- System Section -->
-                <div class="mt-8 px-2">
-                    <h3 class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">System</h3>
-                    <div class="mt-2 space-y-1">
+                <!-- C CONFIGURAMA -->
+                <div class="mt-6 px-2" x-data="{ expanded: activeTab === 'settings' }" x-init="$watch('activeTab', value => { if (value === 'settings') expanded = true })">
+                    <h3 class="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 cursor-pointer" @click="expanded = !expanded">C CONFIGURAMA</h3>
+                    <div x-show="expanded" x-transition class="space-y-0.5">
                         <a href="#" 
                            @click.prevent="switchTab('settings')"
                            :class="{'bg-primary-600 text-white': activeTab === 'settings', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'settings'}"
-                           class="flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors">
-                            <span class="text-lg mr-3">⚙️</span>
-                            Settings
+                           class="flex items-center px-4 py-2 text-sm font-bold rounded-md transition-colors">
+                            <div class="flex-1"><div class="font-bold">SETTINGS</div></div>
                         </a>
                     </div>
                 </div>
@@ -488,6 +478,83 @@
                                 <button class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-md transition-colors">Pause All Processing</button>
                                 <button class="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors">Emergency Stop</button>
                                 <button class="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors">View Detailed Logs</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Global Status Tab -->
+                <div x-show="activeTab === 'status'" class="space-y-6">
+                    <!-- Logo and System Overview -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
+                        <div class="flex flex-col items-center space-y-6">
+                            <!-- Catalynx Logo -->
+                            <div class="w-32 h-32 mx-auto mb-6 flex items-center justify-center">
+                                <img src="/static/CatalynxLogo.png" 
+                                     alt="Catalynx Logo" 
+                                     class="w-32 h-32 object-contain"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="w-32 h-32 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center shadow-xl" style="display:none;">
+                                    <span class="text-6xl font-black text-white">CX</span>
+                                </div>
+                            </div>
+                            
+                            <!-- System Title -->
+                            <div>
+                                <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                                    Catalynx Intelligence Platform
+                                </h1>
+                                <p class="text-lg text-gray-600 dark:text-gray-400">
+                                    Comprehensive Opportunity Intelligence & Network Analysis
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- System Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Active Workflows</p>
+                                    <p class="text-3xl font-semibold text-gray-900 dark:text-white" x-text="stats.activeWorkflows"></p>
+                                </div>
+                                <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                                    <span class="text-2xl">⚡</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Organizations</p>
+                                    <p class="text-3xl font-semibold text-gray-900 dark:text-white" x-text="totalProfiles || 0"></p>
+                                </div>
+                                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                                    <span class="text-2xl">👤</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Success Rate</p>
+                                    <p class="text-3xl font-semibold text-gray-900 dark:text-white" x-text="(stats.successRate * 100).toFixed(1) + '%'"></p>
+                                </div>
+                                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                                    <span class="text-2xl">📊</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">System Status</p>
+                                    <p class="text-lg font-semibold" :class="systemStatus === 'healthy' ? 'text-green-600' : 'text-red-600'" x-text="systemStatus === 'healthy' ? 'Operational' : 'Issues'"></p>
+                                </div>
+                                <div class="w-12 h-12 rounded-lg flex items-center justify-center" :class="systemStatus === 'healthy' ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'">
+                                    <span class="text-2xl" x-text="systemStatus === 'healthy' ? '✅' : '❌'"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1199,23 +1266,31 @@
                             </div>
                         </div>
                         
-                        <!-- Profile Stats -->
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                <div class="text-2xl font-bold text-gray-900 dark:text-white" x-text="profileStats.total || 0"></div>
-                                <div class="text-sm text-gray-600 dark:text-gray-400">Total Profiles</div>
+                        <!-- Profile Stats - Compact -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-2">
+                            <div class="bg-gray-50 dark:bg-gray-700 p-2 rounded-lg">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-lg font-bold text-gray-900 dark:text-white" x-text="profileStats.total || 0"></span>
+                                    <span class="text-sm font-bold text-gray-600 dark:text-gray-400">Total Profiles</span>
+                                </div>
                             </div>
-                            <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                                <div class="text-2xl font-bold text-green-600 dark:text-green-400" x-text="profileStats.active || 0"></div>
-                                <div class="text-sm text-gray-600 dark:text-gray-400">Active Profiles</div>
+                            <div class="bg-green-50 dark:bg-green-900/20 p-2 rounded-lg">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-lg font-bold text-green-600 dark:text-green-400" x-text="profileStats.active || 0"></span>
+                                    <span class="text-sm font-bold text-gray-600 dark:text-gray-400">Active Profiles</span>
+                                </div>
                             </div>
-                            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" x-text="profileStats.opportunities || 0"></div>
-                                <div class="text-sm text-gray-600 dark:text-gray-400">Total Opportunities</div>
+                            <div class="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-lg font-bold text-blue-600 dark:text-blue-400" x-text="profileStats.opportunities || 0"></span>
+                                    <span class="text-sm font-bold text-gray-600 dark:text-gray-400">Total Opportunities</span>
+                                </div>
                             </div>
-                            <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-                                <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" x-text="profileStats.templates || 0"></div>
-                                <div class="text-sm text-gray-600 dark:text-gray-400">Templates</div>
+                            <div class="bg-purple-50 dark:bg-purple-900/20 p-2 rounded-lg">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-lg font-bold text-purple-600 dark:text-purple-400" x-text="profileStats.templates || 0"></span>
+                                    <span class="text-sm font-bold text-gray-600 dark:text-gray-400">Templates</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1434,6 +1509,33 @@
                             </div>
                         </div>
                         
+                        <!-- Profile Status Filters -->
+                        <div class="px-6 py-3 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center space-x-2" x-data="{ profileStatusFilter: 'all' }">
+                                <span class="text-sm text-gray-600 dark:text-gray-400 mr-3">Filter by status:</span>
+                                <button @click="profileStatusFilter = 'all'; filterProfiles()" 
+                                        :class="profileStatusFilter === 'all' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+                                        class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors">
+                                    All
+                                </button>
+                                <button @click="profileStatusFilter = 'active'; filterProfiles()" 
+                                        :class="profileStatusFilter === 'active' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+                                        class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors">
+                                    Active
+                                </button>
+                                <button @click="profileStatusFilter = 'archived'; filterProfiles()" 
+                                        :class="profileStatusFilter === 'archived' ? 'bg-primary-600 text-white' : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-200 dark:hover:bg-yellow-800'"
+                                        class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors">
+                                    Archived
+                                </button>
+                                <button @click="profileStatusFilter = 'draft'; filterProfiles()" 
+                                        :class="profileStatusFilter === 'draft' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+                                        class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors">
+                                    Draft
+                                </button>
+                            </div>
+                        </div>
+                        
                         <!-- Profiles Table -->
                         <div class="overflow-x-auto">
                             <table class="w-full">
@@ -1488,6 +1590,187 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                    
+                    <!-- View Profile Modal -->
+                    <div x-show="showViewProfile" 
+                         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                            <!-- Modal Header -->
+                            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                                <h3 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                                    <span class="text-2xl mr-3">👁️</span>
+                                    Profile Details
+                                </h3>
+                                <button @click="closeViewProfile()" 
+                                        class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                                    <span class="text-2xl">&times;</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Modal Content -->
+                            <div class="p-6 space-y-6" x-show="selectedProfile">
+                                <!-- Organization Info -->
+                                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-3" x-text="selectedProfile?.name || 'Organization'"></h4>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">EIN:</span>
+                                            <p class="text-gray-900 dark:text-white font-mono" x-text="selectedProfile?.ein || 'Not provided'"></p>
+                                        </div>
+                                        <div>
+                                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Status:</span>
+                                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ml-2"
+                                                  :class="selectedProfile?.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 
+                                                         selectedProfile?.status === 'archived' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                                         'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'"
+                                                  x-text="selectedProfile?.status || 'Unknown'"></span>
+                                        </div>
+                                        <div>
+                                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Type:</span>
+                                            <p class="text-gray-900 dark:text-white" x-text="selectedProfile?.organization_type || 'Not specified'"></p>
+                                        </div>
+                                        <div>
+                                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Opportunities:</span>
+                                            <p class="text-gray-900 dark:text-white" x-text="(selectedProfile?.opportunities_count || 0) + ' leads'"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Mission & Focus -->
+                                <div>
+                                    <h5 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Mission Statement</h5>
+                                    <p class="text-gray-700 dark:text-gray-300" x-text="selectedProfile?.mission_statement || 'Not provided'"></p>
+                                </div>
+                                
+                                <div>
+                                    <h5 class="text-md font-semibold text-gray-900 dark:text-white mb-2">Focus Areas</h5>
+                                    <p class="text-gray-700 dark:text-gray-300" x-text="selectedProfile?.focus_areas || 'Not specified'"></p>
+                                </div>
+                            </div>
+                            
+                            <!-- Modal Footer -->
+                            <div class="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+                                <button @click="editProfile(selectedProfile)" 
+                                        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors">
+                                    Edit Profile
+                                </button>
+                                <button @click="closeViewProfile()" 
+                                        class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Edit Profile Modal -->
+                    <div x-show="showEditProfile" 
+                         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                            <!-- Modal Header -->
+                            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                                <h3 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                                    <span class="text-2xl mr-3">✏️</span>
+                                    Edit Profile
+                                </h3>
+                                <button @click="closeEditProfile()" 
+                                        class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                                    <span class="text-2xl">&times;</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Modal Content -->
+                            <div class="p-6 space-y-6" x-show="selectedProfile">
+                                <!-- Organization Info -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Organization Name *
+                                        </label>
+                                        <input type="text" x-model="selectedProfile.name" required
+                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            EIN (Tax ID)
+                                        </label>
+                                        <input type="text" x-model="selectedProfile.ein"
+                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white font-mono"
+                                               placeholder="XX-XXXXXXX">
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Organization Type *
+                                        </label>
+                                        <select x-model="selectedProfile.organization_type" required
+                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                            <option value="nonprofit">Nonprofit</option>
+                                            <option value="government">Government</option>
+                                            <option value="educational">Educational Institution</option>
+                                            <option value="healthcare">Healthcare</option>
+                                            <option value="foundation">Foundation</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Status
+                                        </label>
+                                        <select x-model="selectedProfile.status"
+                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                            <option value="active">Active</option>
+                                            <option value="archived">Archived</option>
+                                            <option value="draft">Draft</option>
+                                            <option value="template">Template</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Mission Statement *
+                                    </label>
+                                    <textarea x-model="selectedProfile.mission_statement" required rows="3"
+                                              class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                              placeholder="Describe the organization's mission and purpose"></textarea>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Focus Areas * (comma-separated)
+                                    </label>
+                                    <input type="text" x-model="selectedProfile.focus_areas" required
+                                           class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                           placeholder="health, education, community development">
+                                </div>
+                            </div>
+                            
+                            <!-- Modal Footer -->
+                            <div class="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+                                <div class="space-x-3">
+                                    <button @click="deleteProfile()" 
+                                            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors">
+                                        Delete Profile
+                                    </button>
+                                    <button @click="archiveProfile()" 
+                                            class="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-md hover:bg-yellow-700 transition-colors">
+                                        Archive
+                                    </button>
+                                </div>
+                                <div class="space-x-3">
+                                    <button @click="closeEditProfile()" 
+                                            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                        Cancel
+                                    </button>
+                                    <button @click="saveProfileChanges()" 
+                                            class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors">
+                                        Save Changes
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
