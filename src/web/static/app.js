@@ -487,6 +487,7 @@ function catalynxApp() {
                 this.updateClock();
                 this.loadDashboardStats();
                 this.checkSystemHealth();
+                this.checkAndUpdateWorkflowProgress(); // Auto-update workflow progress
             }, 30000); // Update every 30 seconds
             
             // Setup real-time clock
@@ -809,6 +810,12 @@ function catalynxApp() {
                 this.stateTrackStatus.results + 
                 this.commercialTrackStatus.results;
                 
+            // Auto-complete discovery stage if results exist
+            if (this.discoveryStats.totalResults > 0 && !this.workflowProgress.discover) {
+                this.workflowProgress.discover = true;
+                console.log('Auto-completed DISCOVER stage - results found');
+            }
+                
             console.log(`Discovery stats updated: ${this.discoveryStats.totalResults} total results`);
         },
         
@@ -859,6 +866,99 @@ function catalynxApp() {
             if (stage in this.workflowProgress) {
                 this.workflowProgress[stage] = true;
             }
+            
+            // Auto-complete stages based on actions taken
+            if (stage === 'profiler' && this.profileCount > 0) {
+                this.workflowProgress.profiler = true;
+            }
+            if (stage === 'discover' && this.discoveryStats.totalResults > 0) {
+                this.workflowProgress.discover = true;
+            }
+            
+            console.log('Workflow progress updated:', this.workflowProgress);
+        },
+        
+        // ENHANCED WORKFLOW NAVIGATION FUNCTIONS
+        getNextRecommendedStep() {
+            // Determine the next recommended workflow step based on current progress
+            if (!this.workflowProgress.profiler) {
+                return 'profiler';
+            } else if (!this.workflowProgress.discover) {
+                return 'discover';
+            } else if (!this.workflowProgress.analyze) {
+                return 'analyze';
+            } else if (!this.workflowProgress.plan) {
+                return 'plan';
+            } else if (!this.workflowProgress.execute) {
+                return 'execute';
+            }
+            return null; // All stages complete
+        },
+        
+        getNextRecommendedStepName() {
+            const nextStep = this.getNextRecommendedStep();
+            const stepNames = {
+                'profiler': '1. Create Profiles',
+                'discover': '2. Run Discovery',
+                'analyze': '3. Analyze Results',
+                'plan': '4. Strategic Planning',
+                'execute': '5. Export & Execute'
+            };
+            return stepNames[nextStep] || 'Workflow Complete';
+        },
+        
+        isStageAvailable(stage) {
+            // Determine if a stage is available based on prerequisites
+            const prerequisites = {
+                'profiler': true, // Always available
+                'discover': true, // Can start discovery anytime, but better after profiler
+                'analyze': this.workflowProgress.discover || this.discoveryStats.totalResults > 0,
+                'plan': this.workflowProgress.analyze,
+                'execute': this.workflowProgress.plan
+            };
+            return prerequisites[stage] || false;
+        },
+        
+        getStageStatus(stage) {
+            // Get detailed status for a workflow stage
+            if (this.workflowProgress[stage]) {
+                return 'complete';
+            } else if (this.activeStage === stage) {
+                return 'current';
+            } else if (this.isStageAvailable(stage)) {
+                return 'available';
+            } else {
+                return 'locked';
+            }
+        },
+        
+        getWorkflowCompletionPercentage() {
+            const completedStages = Object.values(this.workflowProgress).filter(Boolean).length;
+            return Math.round((completedStages / 5) * 100);
+        },
+        
+        // Enhanced stage switching with validation
+        switchStageWithValidation(stage) {
+            if (this.isStageAvailable(stage)) {
+                this.switchStage(stage);
+            } else {
+                this.showNotification('Stage Locked', `Complete previous stages to access ${stage.toUpperCase()}`, 'warning');
+            }
+        },
+        
+        // Auto-complete workflow progress based on data
+        checkAndUpdateWorkflowProgress() {
+            // Auto-complete profiler stage if profiles exist
+            if (this.profileCount > 0 && !this.workflowProgress.profiler) {
+                this.workflowProgress.profiler = true;
+            }
+            
+            // Auto-complete discover stage if results exist
+            if (this.discoveryStats.totalResults > 0 && !this.workflowProgress.discover) {
+                this.workflowProgress.discover = true;
+            }
+            
+            console.log('Auto-updated workflow progress:', this.workflowProgress);
         },
         
         getCurrentStageLabel() {
