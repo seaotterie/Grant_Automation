@@ -256,6 +256,124 @@ async def websocket_progress(websocket: WebSocket, workflow_id: str):
         # Remove connection
         await progress_service.disconnect(workflow_id, websocket)
 
+@app.websocket("/api/live/system-monitor")
+async def websocket_system_monitor(websocket: WebSocket):
+    """WebSocket endpoint for real-time system monitoring."""
+    await websocket.accept()
+    logger.info("System monitoring WebSocket connected")
+    
+    try:
+        # Send initial status
+        initial_status = await get_all_processor_status()
+        await websocket.send_text(json.dumps({
+            "type": "processor_status",
+            "data": initial_status
+        }))
+        
+        # Keep connection alive and periodically send updates
+        while True:
+            try:
+                # Wait for messages or timeout
+                try:
+                    data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                    
+                    # Handle different message types
+                    if data == "ping":
+                        await websocket.send_text("pong")
+                    elif data == "get_processor_status":
+                        status = await get_all_processor_status()
+                        await websocket.send_text(json.dumps({
+                            "type": "processor_status",
+                            "data": status
+                        }))
+                    elif data == "get_system_logs":
+                        logs = await get_system_logs(50)
+                        await websocket.send_text(json.dumps({
+                            "type": "system_logs",
+                            "data": logs
+                        }))
+                        
+                except asyncio.TimeoutError:
+                    # Send periodic status update
+                    status = await get_all_processor_status()
+                    await websocket.send_text(json.dumps({
+                        "type": "processor_status",
+                        "data": status
+                    }))
+                    
+            except WebSocketDisconnect:
+                break
+                
+    except Exception as e:
+        logger.error(f"System monitor WebSocket error: {e}")
+    finally:
+        logger.info("System monitoring WebSocket disconnected")
+
+@app.post("/api/testing/export-results")
+async def export_test_results(request: Dict[str, Any]):
+    """Export test results in various formats."""
+    try:
+        results_data = request.get("results", [])
+        export_format = request.get("format", "json")
+        filename = request.get("filename", f"test_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+        
+        if not results_data:
+            raise HTTPException(status_code=400, detail="No results data provided")
+        
+        # Create temporary file for export
+        import tempfile
+        import csv
+        from pathlib import Path
+        
+        temp_dir = Path(tempfile.gettempdir()) / "catalynx_exports"
+        temp_dir.mkdir(exist_ok=True)
+        
+        if export_format.lower() == "csv":
+            file_path = temp_dir / f"{filename}.csv"
+            
+            # Write CSV file
+            with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+                if results_data and isinstance(results_data[0], dict):
+                    fieldnames = results_data[0].keys()
+                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(results_data)
+                else:
+                    writer = csv.writer(csvfile)
+                    for row in results_data:
+                        writer.writerow([row] if not isinstance(row, (list, tuple)) else row)
+            
+            return FileResponse(
+                path=file_path,
+                filename=f"{filename}.csv",
+                media_type="text/csv"
+            )
+            
+        elif export_format.lower() == "json":
+            file_path = temp_dir / f"{filename}.json"
+            
+            with open(file_path, 'w', encoding='utf-8') as jsonfile:
+                json.dump({
+                    "export_timestamp": datetime.now().isoformat(),
+                    "total_records": len(results_data),
+                    "results": results_data
+                }, jsonfile, indent=2)
+            
+            return FileResponse(
+                path=file_path,
+                filename=f"{filename}.json",
+                media_type="application/json"
+            )
+        
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported export format. Use 'csv' or 'json'")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to export test results: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Export endpoints
 @app.get("/api/exports/classification/{workflow_id}")
 async def export_classification(workflow_id: str, format: str = "csv"):
@@ -1259,6 +1377,202 @@ async def health_check():
         "service": "Catalynx API",
         "version": "2.0.0"
     }
+
+# Testing Interface API endpoints
+@app.get("/api/testing/processors/status")
+async def get_all_processor_status():
+    """Get detailed status for all processors with health indicators."""
+    try:
+        engine = get_workflow_engine()
+        processors = engine.registry.list_processors()
+        
+        processor_statuses = []
+        for processor_name in processors:
+            try:
+                # Get processor info
+                processor_class = engine.registry.get_processor(processor_name)
+                info = engine.registry.get_processor_info(processor_name) or {}
+                
+                # Determine health status
+                health_status = "healthy"
+                health_details = "Processor ready"
+                
+                # Try to instantiate processor to test health
+                try:
+                    if processor_class:
+                        test_processor = processor_class()
+                        health_status = "healthy"
+                    else:
+                        health_status = "error"
+                        health_details = "Processor class not available"
+                except Exception as e:
+                    health_status = "error"
+                    health_details = f"Initialization failed: {str(e)[:100]}"
+                
+                processor_status = {
+                    "name": processor_name,
+                    "health_status": health_status,
+                    "health_details": health_details,
+                    "type": info.get("type", "unknown"),
+                    "description": info.get("description", "No description available"),
+                    "last_check": datetime.now().isoformat(),
+                    "available": processor_class is not None
+                }
+                
+                processor_statuses.append(processor_status)
+                
+            except Exception as e:
+                processor_statuses.append({
+                    "name": processor_name,
+                    "health_status": "error",
+                    "health_details": f"Status check failed: {str(e)[:100]}",
+                    "type": "unknown",
+                    "description": "Error retrieving processor information",
+                    "last_check": datetime.now().isoformat(),
+                    "available": False
+                })
+        
+        # Calculate overall system health
+        healthy_count = sum(1 for p in processor_statuses if p["health_status"] == "healthy")
+        total_count = len(processor_statuses)
+        overall_health = "healthy" if healthy_count == total_count else "degraded" if healthy_count > total_count * 0.5 else "critical"
+        
+        return {
+            "overall_health": overall_health,
+            "healthy_processors": healthy_count,
+            "total_processors": total_count,
+            "processors": processor_statuses,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get processor status: {e}")
+        return {
+            "overall_health": "error",
+            "healthy_processors": 0,
+            "total_processors": 0,
+            "processors": [],
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.post("/api/testing/processors/{processor_name}/test")
+async def test_processor(processor_name: str, request: Dict[str, Any]):
+    """Test execute a processor with sample data."""
+    try:
+        engine = get_workflow_engine()
+        processor_class = engine.registry.get_processor(processor_name)
+        
+        if not processor_class:
+            raise HTTPException(status_code=404, detail="Processor not found")
+        
+        processor = processor_class()
+        
+        # Use sample data or provided test data
+        test_data = request.get("test_data", [])
+        test_params = request.get("parameters", {})
+        
+        # Add test mode parameter
+        test_params["test_mode"] = True
+        test_params["max_results"] = min(test_params.get("max_results", 5), 10)  # Limit test results
+        
+        start_time = datetime.now()
+        
+        # Execute processor
+        try:
+            result = await processor.process_async(test_data, **test_params)
+        except Exception as e:
+            # If async fails, try sync
+            try:
+                result = processor.process(test_data, **test_params)
+            except Exception as sync_e:
+                raise HTTPException(status_code=500, detail=f"Processor execution failed: {str(sync_e)}")
+        
+        execution_time = (datetime.now() - start_time).total_seconds()
+        
+        return {
+            "status": "success",
+            "processor": processor_name,
+            "execution_time_seconds": execution_time,
+            "test_data_count": len(test_data) if isinstance(test_data, list) else 1,
+            "result_count": len(result) if isinstance(result, list) else 1,
+            "result": result,
+            "parameters_used": test_params,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to test processor {processor_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/testing/processors/{processor_name}/logs")
+async def get_processor_logs(processor_name: str, lines: int = 100):
+    """Get recent log entries for a specific processor."""
+    try:
+        # For now, return mock logs - in production this would read actual log files
+        mock_logs = [
+            {
+                "timestamp": datetime.now().isoformat(),
+                "level": "INFO",
+                "message": f"Processor {processor_name} initialized successfully",
+                "source": processor_name
+            },
+            {
+                "timestamp": datetime.now().isoformat(),
+                "level": "DEBUG",
+                "message": f"Processing request for {processor_name}",
+                "source": processor_name
+            }
+        ]
+        
+        return {
+            "processor": processor_name,
+            "log_entries": mock_logs[-lines:],
+            "total_entries": len(mock_logs),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get logs for processor {processor_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/testing/system/logs")
+async def get_system_logs(lines: int = 200):
+    """Get recent system log entries."""
+    try:
+        # Mock system logs - in production would read actual log files
+        mock_system_logs = [
+            {
+                "timestamp": datetime.now().isoformat(),
+                "level": "INFO",
+                "message": "Catalynx system started successfully",
+                "source": "system"
+            },
+            {
+                "timestamp": datetime.now().isoformat(),
+                "level": "INFO",
+                "message": f"Registered {len(get_processor_summary()['processors_info'])} processors",
+                "source": "registry"
+            },
+            {
+                "timestamp": datetime.now().isoformat(),
+                "level": "DEBUG",
+                "message": "WebSocket connections established",
+                "source": "websocket"
+            }
+        ]
+        
+        return {
+            "log_entries": mock_system_logs[-lines:],
+            "total_entries": len(mock_system_logs),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get system logs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Simple test endpoint for debugging
 @app.get("/api/test")

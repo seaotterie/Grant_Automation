@@ -2856,6 +2856,312 @@ function catalynxApp() {
             
             this.commercialOpportunities = response.results?.opportunities || [];
             return response;
+        },
+
+        // Testing Interface Functions
+        testingInterface: {
+            // Processor monitoring
+            processorStatuses: [],
+            systemHealth: 'unknown',
+            selectedProcessor: null,
+            
+            // Log viewer
+            systemLogs: [],
+            processorLogs: {},
+            logViewerVisible: false,
+            
+            // Testing controls
+            testRunning: false,
+            testResults: {},
+            testParams: {},
+            
+            // Configuration dialog
+            configDialogVisible: false,
+            configParams: {
+                max_results: 10,
+                state: 'VA',
+                min_revenue: 50000,
+                ntee_codes: '',
+                keywords: '',
+                opportunity_category: '',
+                industries: '',
+                funding_range_min: 1000,
+                min_score: 0.3,
+                detailed_analysis: true,
+                test_data: ''
+            },
+            
+            // WebSocket for real-time monitoring
+            monitoringSocket: null,
+            
+            // Export functionality
+            exportFormat: 'json',
+            exportFilename: '',
+            
+            init() {
+                this.initSystemMonitoring();
+                this.loadProcessorStatuses();
+            },
+            
+            async initSystemMonitoring() {
+                try {
+                    // Connect to system monitoring WebSocket
+                    const wsUrl = `ws://${window.location.host}/api/live/system-monitor`;
+                    this.monitoringSocket = new WebSocket(wsUrl);
+                    
+                    this.monitoringSocket.onopen = () => {
+                        console.log('System monitoring WebSocket connected');
+                    };
+                    
+                    this.monitoringSocket.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        
+                        if (data.type === 'processor_status') {
+                            this.updateProcessorStatuses(data.data);
+                        } else if (data.type === 'system_logs') {
+                            this.updateSystemLogs(data.data);
+                        }
+                    };
+                    
+                    this.monitoringSocket.onerror = (error) => {
+                        console.error('System monitoring WebSocket error:', error);
+                    };
+                    
+                    this.monitoringSocket.onclose = () => {
+                        console.log('System monitoring WebSocket disconnected');
+                        // Attempt to reconnect after 5 seconds
+                        setTimeout(() => this.initSystemMonitoring(), 5000);
+                    };
+                    
+                } catch (error) {
+                    console.error('Failed to initialize system monitoring:', error);
+                }
+            },
+            
+            async loadProcessorStatuses() {
+                try {
+                    const response = await fetch('/api/testing/processors/status');
+                    const data = await response.json();
+                    this.updateProcessorStatuses(data);
+                } catch (error) {
+                    console.error('Failed to load processor statuses:', error);
+                }
+            },
+            
+            updateProcessorStatuses(data) {
+                this.processorStatuses = data.processors || [];
+                this.systemHealth = data.overall_health;
+                
+                // Update main app's processor status if needed
+                parent.updateProcessorHealthStatus?.(data);
+            },
+            
+            updateSystemLogs(data) {
+                this.systemLogs = data.log_entries || [];
+            },
+            
+            async loadProcessorLogs(processorName, lines = 100) {
+                try {
+                    const response = await fetch(`/api/testing/processors/${processorName}/logs?lines=${lines}`);
+                    const data = await response.json();
+                    
+                    this.processorLogs[processorName] = data.log_entries || [];
+                    
+                } catch (error) {
+                    console.error(`Failed to load logs for ${processorName}:`, error);
+                }
+            },
+            
+            toggleLogViewer() {
+                this.logViewerVisible = !this.logViewerVisible;
+                
+                if (this.logViewerVisible && this.monitoringSocket?.readyState === WebSocket.OPEN) {
+                    this.monitoringSocket.send('get_system_logs');
+                }
+            },
+            
+            async exportTestResults(processorName) {
+                try {
+                    if (!this.testResults[processorName]) {
+                        throw new Error('No test results available for export');
+                    }
+                    
+                    const filename = this.exportFilename || `${processorName}_test_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}`;
+                    
+                    const response = await fetch('/api/testing/export-results', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            results: [this.testResults[processorName]],
+                            format: this.exportFormat,
+                            filename: filename
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.detail || 'Export failed');
+                    }
+                    
+                    // Trigger download
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${filename}.${this.exportFormat}`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    
+                    parent.showEnhancedNotification?.('Test results exported successfully', 'success');
+                    
+                } catch (error) {
+                    console.error('Export failed:', error);
+                    parent.showEnhancedNotification?.(`Export failed: ${error.message}`, 'error');
+                }
+            },
+            
+            getHealthStatusIcon(status) {
+                switch (status) {
+                    case 'healthy': return '✅';
+                    case 'degraded': return '⚠️';
+                    case 'error': return '❌';
+                    case 'critical': return '🚨';
+                    default: return '❓';
+                }
+            },
+            
+            getHealthStatusColor(status) {
+                switch (status) {
+                    case 'healthy': return 'text-green-600';
+                    case 'degraded': return 'text-yellow-600';
+                    case 'error': return 'text-red-600';
+                    case 'critical': return 'text-red-800';
+                    default: return 'text-gray-600';
+                }
+            },
+            
+            refreshStatus() {
+                if (this.monitoringSocket?.readyState === WebSocket.OPEN) {
+                    this.monitoringSocket.send('get_processor_status');
+                } else {
+                    this.loadProcessorStatuses();
+                }
+            },
+            
+            cleanup() {
+                if (this.monitoringSocket) {
+                    this.monitoringSocket.close();
+                }
+            },
+            
+            showTestDialog(processorName) {
+                this.selectedProcessor = processorName;
+                this.configDialogVisible = true;
+                
+                // Reset to default values
+                this.configParams = {
+                    max_results: 10,
+                    state: 'VA',
+                    min_revenue: 50000,
+                    ntee_codes: '',
+                    keywords: '',
+                    opportunity_category: '',
+                    industries: '',
+                    funding_range_min: 1000,
+                    min_score: 0.3,
+                    detailed_analysis: true,
+                    test_data: ''
+                };
+            },
+            
+            closeConfigDialog() {
+                this.configDialogVisible = false;
+                this.selectedProcessor = null;
+            },
+            
+            async runConfiguredTest() {
+                if (!this.selectedProcessor) return;
+                
+                try {
+                    // Parse test data if provided
+                    let testData = [];
+                    if (this.configParams.test_data.trim()) {
+                        try {
+                            testData = JSON.parse(this.configParams.test_data);
+                        } catch (e) {
+                            throw new Error('Invalid JSON in test data field');
+                        }
+                    }
+                    
+                    // Convert string parameters to arrays where needed
+                    const params = { ...this.configParams };
+                    if (params.ntee_codes) {
+                        params.ntee_codes = params.ntee_codes.split(',').map(s => s.trim());
+                    }
+                    if (params.keywords) {
+                        params.keywords = params.keywords.split(',').map(s => s.trim());
+                    }
+                    if (params.industries) {
+                        params.industries = params.industries.split(',').map(s => s.trim());
+                    }
+                    
+                    // Remove empty parameters
+                    Object.keys(params).forEach(key => {
+                        if (params[key] === '' || params[key] === null) {
+                            delete params[key];
+                        }
+                    });
+                    
+                    // Run the test with configured parameters
+                    await this.testProcessor(this.selectedProcessor, params, testData);
+                    
+                    // Close the dialog after successful test
+                    this.closeConfigDialog();
+                    
+                } catch (error) {
+                    parent.showEnhancedNotification?.(`Configuration error: ${error.message}`, 'error');
+                }
+            },
+            
+            async testProcessor(processorName, testParams = {}, testData = []) {
+                try {
+                    this.testRunning = true;
+                    this.selectedProcessor = processorName;
+                    
+                    const response = await fetch(`/api/testing/processors/${processorName}/test`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            parameters: testParams,
+                            test_data: testData
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(result.detail || 'Test failed');
+                    }
+                    
+                    this.testResults[processorName] = result;
+                    
+                    // Show success notification
+                    parent.showEnhancedNotification?.(`Processor ${processorName} test completed successfully`, 'success');
+                    
+                    return result;
+                    
+                } catch (error) {
+                    console.error(`Processor test failed for ${processorName}:`, error);
+                    parent.showEnhancedNotification?.(`Processor test failed: ${error.message}`, 'error');
+                    throw error;
+                } finally {
+                    this.testRunning = false;
+                }
+            }
         }
     }
 }

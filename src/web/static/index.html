@@ -372,6 +372,20 @@
                     </div>
                 </div>
                 
+                <!-- T TESTINATOR -->
+                <div class="px-2 mb-4" x-data="{ expanded: activeTab === 'testing' }" x-init="$watch('activeTab', value => { if (value === 'testing') expanded = true })">
+                    <h3 class="px-3 text-xs font-bold text-orange-400 uppercase tracking-wider mb-2 cursor-pointer" @click="expanded = !expanded">T TESTINATOR</h3>
+                    <div x-show="expanded" x-transition class="space-y-0.5">
+                        <a href="#" 
+                           @click.prevent="switchTab('testing')"
+                           :class="{'bg-primary-600 text-white': activeTab === 'testing', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeTab !== 'testing'}"
+                           class="flex items-center px-4 py-2 text-sm font-bold rounded-md transition-colors">
+                            <span class="text-lg mr-3">🧪</span>
+                            <div class="flex-1"><div class="font-bold">TESTING INTERFACE</div><div class="text-xs opacity-75">Processor Testing & Monitoring</div></div>
+                        </a>
+                    </div>
+                </div>
+
                 <!-- C CONFIGURAMA -->
                 <div class="mt-6 px-2" x-data="{ expanded: activeTab === 'settings' }" x-init="$watch('activeTab', value => { if (value === 'settings') expanded = true })">
                     <h3 class="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 cursor-pointer" @click="expanded = !expanded">C CONFIGURAMA</h3>
@@ -2870,6 +2884,397 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Testing Interface Tab -->
+                <div x-show="activeTab === 'testing'" class="space-y-6" x-init="if (activeTab === 'testing') testingInterface.init()">
+                    
+                    <!-- Testing Header -->
+                    <div class="bg-gradient-to-r from-orange-600 to-red-600 rounded-lg p-6 text-white">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <span class="text-3xl mr-4">🧪</span>
+                                <div>
+                                    <h2 class="text-2xl font-bold">Processor Testing Interface</h2>
+                                    <p class="text-orange-100 mt-1">Real-time monitoring, testing, and validation</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <button @click="testingInterface.refreshStatus()" 
+                                        class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
+                                    <span class="text-lg mr-2">🔄</span>
+                                    Refresh Status
+                                </button>
+                                <div class="flex items-center px-3 py-2 bg-white/20 rounded-lg">
+                                    <span class="text-lg mr-2" x-text="testingInterface.getHealthStatusIcon(testingInterface.systemHealth)"></span>
+                                    <span x-text="testingInterface.systemHealth.toUpperCase()"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Status Overview -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                            <div class="flex items-center">
+                                <div class="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                                    <span class="text-2xl">💻</span>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Processors</p>
+                                    <p class="text-2xl font-bold text-gray-900 dark:text-white" x-text="testingInterface.processorStatuses.length"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                            <div class="flex items-center">
+                                <div class="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                                    <span class="text-2xl">✅</span>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Healthy Processors</p>
+                                    <p class="text-2xl font-bold text-green-600" x-text="testingInterface.processorStatuses.filter(p => p.health_status === 'healthy').length"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                            <div class="flex items-center">
+                                <div class="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+                                    <span class="text-2xl">❌</span>
+                                </div>
+                                <div class="ml-4">
+                                    <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Error Count</p>
+                                    <p class="text-2xl font-bold text-red-600" x-text="testingInterface.processorStatuses.filter(p => p.health_status === 'error').length"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Processor Status Table -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Processor Status Monitoring</h3>
+                                <div class="flex items-center space-x-3">
+                                    <button @click="testingInterface.toggleLogViewer()" 
+                                            class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-3 py-2 rounded-md transition-colors">
+                                        <span class="text-sm">📋 View Logs</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Processor</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Health Details</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    <template x-for="processor in testingInterface.processorStatuses" :key="processor.name">
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="flex items-center">
+                                                    <span class="text-lg mr-2" x-text="testingInterface.getHealthStatusIcon(processor.health_status)"></span>
+                                                    <span class="text-sm font-medium" 
+                                                          :class="testingInterface.getHealthStatusColor(processor.health_status)"
+                                                          x-text="processor.health_status"></span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="processor.name"></div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200" x-text="processor.type"></span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm text-gray-500 dark:text-gray-400" x-text="processor.health_details"></div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <div class="flex space-x-2">
+                                                    <button @click="testingInterface.showTestDialog(processor.name)" 
+                                                            :disabled="testingInterface.testRunning"
+                                                            class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-3 py-1 rounded text-xs">
+                                                        Configure & Test
+                                                    </button>
+                                                    <button @click="testingInterface.testProcessor(processor.name)" 
+                                                            :disabled="testingInterface.testRunning"
+                                                            class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 py-1 rounded text-xs">
+                                                        Quick Test
+                                                    </button>
+                                                    <button @click="testingInterface.loadProcessorLogs(processor.name)" 
+                                                            class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-xs">
+                                                        Logs
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Log Viewer Modal -->
+                    <div x-show="testingInterface.logViewerVisible" 
+                         x-transition:enter="transition ease-out duration-300"
+                         x-transition:enter-start="opacity-0"
+                         x-transition:enter-end="opacity-100"
+                         x-transition:leave="transition ease-in duration-200"
+                         x-transition:leave-start="opacity-100"
+                         x-transition:leave-end="opacity-0"
+                         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl h-3/4 overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">System Logs</h3>
+                                <button @click="testingInterface.toggleLogViewer()" 
+                                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                                    <span class="text-xl">×</span>
+                                </button>
+                            </div>
+                            <div class="p-6 h-full overflow-y-auto">
+                                <div class="space-y-2">
+                                    <template x-for="log in testingInterface.systemLogs" :key="log.timestamp">
+                                        <div class="flex space-x-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                                            <div class="text-xs text-gray-500 dark:text-gray-400 w-24 flex-shrink-0" x-text="new Date(log.timestamp).toLocaleTimeString()"></div>
+                                            <div class="text-xs font-semibold w-16 flex-shrink-0" 
+                                                 :class="{'text-red-600': log.level === 'ERROR', 'text-yellow-600': log.level === 'WARNING', 'text-blue-600': log.level === 'INFO', 'text-gray-600': log.level === 'DEBUG'}"
+                                                 x-text="log.level"></div>
+                                            <div class="text-sm text-gray-900 dark:text-white flex-1" x-text="log.message"></div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Test Configuration Dialog -->
+                    <div x-show="testingInterface.configDialogVisible" 
+                         x-transition:enter="transition ease-out duration-300"
+                         x-transition:enter-start="opacity-0"
+                         x-transition:enter-end="opacity-100"
+                         x-transition:leave="transition ease-in duration-200"
+                         x-transition:leave-start="opacity-100"
+                         x-transition:leave-end="opacity-0"
+                         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl max-h-3/4 overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                    Configure Test Parameters: <span x-text="testingInterface.selectedProcessor"></span>
+                                </h3>
+                                <button @click="testingInterface.closeConfigDialog()" 
+                                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                                    <span class="text-xl">×</span>
+                                </button>
+                            </div>
+                            <div class="p-6 overflow-y-auto">
+                                <form @submit.prevent="testingInterface.runConfiguredTest()">
+                                    <div class="space-y-6">
+                                        
+                                        <!-- Common Parameters -->
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                    Max Results
+                                                </label>
+                                                <input type="number" 
+                                                       x-model="testingInterface.configParams.max_results"
+                                                       min="1" max="100"
+                                                       class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                            </div>
+                                            
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                    State
+                                                </label>
+                                                <select x-model="testingInterface.configParams.state"
+                                                        class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                                    <option value="VA">Virginia</option>
+                                                    <option value="MD">Maryland</option>
+                                                    <option value="DC">Washington DC</option>
+                                                    <option value="PA">Pennsylvania</option>
+                                                    <option value="NC">North Carolina</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <!-- Processor-specific parameters -->
+                                        <div x-show="['bmf_filter', 'propublica_fetch'].includes(testingInterface.selectedProcessor)">
+                                            <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-3">Organization Discovery Parameters</h4>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                        Minimum Revenue
+                                                    </label>
+                                                    <input type="number" 
+                                                           x-model="testingInterface.configParams.min_revenue"
+                                                           min="0" step="1000"
+                                                           class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                        NTEE Codes
+                                                    </label>
+                                                    <input type="text" 
+                                                           x-model="testingInterface.configParams.ntee_codes"
+                                                           placeholder="E.g., E21,E30,F30"
+                                                           class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div x-show="['grants_gov_fetch', 'usaspending_fetch'].includes(testingInterface.selectedProcessor)">
+                                            <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-3">Government Grant Parameters</h4>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                        Keywords
+                                                    </label>
+                                                    <input type="text" 
+                                                           x-model="testingInterface.configParams.keywords"
+                                                           placeholder="E.g., education,health,community"
+                                                           class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                        Opportunity Category
+                                                    </label>
+                                                    <select x-model="testingInterface.configParams.opportunity_category"
+                                                            class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                                        <option value="">All Categories</option>
+                                                        <option value="D">Discretionary</option>
+                                                        <option value="M">Mandatory</option>
+                                                        <option value="O">Other</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div x-show="['foundation_directory_fetch', 'corporate_csr_analyzer'].includes(testingInterface.selectedProcessor)">
+                                            <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-3">Commercial Discovery Parameters</h4>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                        Industries
+                                                    </label>
+                                                    <input type="text" 
+                                                           x-model="testingInterface.configParams.industries"
+                                                           placeholder="E.g., technology,healthcare"
+                                                           class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                        Funding Range Min
+                                                    </label>
+                                                    <input type="number" 
+                                                           x-model="testingInterface.configParams.funding_range_min"
+                                                           min="0" step="1000"
+                                                           class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div x-show="['intelligent_classifier'].includes(testingInterface.selectedProcessor)">
+                                            <h4 class="text-md font-semibold text-gray-900 dark:text-white mb-3">Classification Parameters</h4>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                        Minimum Score
+                                                    </label>
+                                                    <input type="number" 
+                                                           x-model="testingInterface.configParams.min_score"
+                                                           min="0" max="1" step="0.1"
+                                                           class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                                </div>
+                                                <div class="flex items-center">
+                                                    <input type="checkbox" 
+                                                           x-model="testingInterface.configParams.detailed_analysis"
+                                                           class="rounded border-gray-300 dark:border-gray-600 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                                                    <label class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Detailed Analysis
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Test Data Input -->
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                Test Data (JSON format, optional)
+                                            </label>
+                                            <textarea x-model="testingInterface.configParams.test_data"
+                                                      rows="4"
+                                                      placeholder='[{"ein": "123456789", "name": "Test Organization"}]'
+                                                      class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"></textarea>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                        <button type="button" 
+                                                @click="testingInterface.closeConfigDialog()"
+                                                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button type="submit" 
+                                                :disabled="testingInterface.testRunning"
+                                                class="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-md transition-colors">
+                                            <span x-show="!testingInterface.testRunning">Run Test</span>
+                                            <span x-show="testingInterface.testRunning">Testing...</span>
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Test Results Panel -->
+                    <div x-show="Object.keys(testingInterface.testResults).length > 0" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Test Results</h3>
+                                <div class="flex items-center space-x-3">
+                                    <select x-model="testingInterface.exportFormat" 
+                                            class="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                        <option value="json">JSON</option>
+                                        <option value="csv">CSV</option>
+                                    </select>
+                                    <input type="text" 
+                                           x-model="testingInterface.exportFilename"
+                                           placeholder="Export filename"
+                                           class="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-6">
+                            <template x-for="(result, processorName) in testingInterface.testResults" :key="processorName">
+                                <div class="mb-6 p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h4 class="font-semibold text-gray-900 dark:text-white" x-text="processorName"></h4>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-xs text-gray-500 dark:text-gray-400" x-text="'Execution time: ' + result.execution_time_seconds + 's'"></span>
+                                            <button @click="testingInterface.exportTestResults(processorName)" 
+                                                    class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs">
+                                                Export
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-gray-50 dark:bg-gray-900 rounded-md p-3 text-sm">
+                                        <pre class="text-gray-800 dark:text-gray-200 whitespace-pre-wrap" x-text="JSON.stringify(result, null, 2)"></pre>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- Settings Tab -->
