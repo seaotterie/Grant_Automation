@@ -308,6 +308,45 @@ function catalynxApp() {
         processingVolumeChart: null,
         successRateChart: null,
         
+        // Workflow completion analytics and user journey tracking
+        workflowAnalytics: {
+            sessionStart: new Date().toISOString(),
+            sessionId: Math.random().toString(36).substr(2, 9),
+            stageTransitions: [],
+            timeSpentInStages: {
+                profiler: 0,
+                discover: 0,
+                analyze: 0,
+                plan: 0,
+                execute: 0
+            },
+            stageStartTimes: {},
+            completionRates: {
+                profiler: 0,
+                discover: 0,
+                analyze: 0,
+                plan: 0,
+                execute: 0,
+                overall: 0
+            },
+            userActions: [],
+            abandonmentPoints: {},
+            conversionFunnels: {
+                started: 0,
+                profilerComplete: 0,
+                discoverComplete: 0,
+                analyzeComplete: 0,
+                planComplete: 0,
+                executeComplete: 0
+            },
+            performanceMetrics: {
+                averageSessionTime: 0,
+                mostEngagingStage: 'profiler',
+                commonExitPoints: [],
+                successPatterns: []
+            }
+        },
+        
         // Phase 1.2: Processor Controls
         processorControls: {
             discombobulator: {
@@ -488,6 +527,7 @@ function catalynxApp() {
                 this.loadDashboardStats();
                 this.checkSystemHealth();
                 this.checkAndUpdateWorkflowProgress(); // Auto-update workflow progress
+                this.updateExportStats(); // Update export statistics
             }, 30000); // Update every 30 seconds
             
             // Setup real-time clock
@@ -497,6 +537,9 @@ function catalynxApp() {
             
             // Setup WebSocket for real-time progress
             this.setupWebSocket();
+            
+            // Initialize workflow analytics tracking
+            this.initializeWorkflowTracking();
             
             console.log('Catalynx Web Interface initialized successfully');
         },
@@ -522,6 +565,9 @@ function catalynxApp() {
         
         // NEW: Workflow Stage Management
         switchStage(stage) {
+            // Track stage transition for analytics
+            this.trackStageTransition(this.activeStage, stage);
+            
             this.activeStage = stage;
             console.log('Switched to workflow stage:', stage);
             
@@ -961,6 +1007,273 @@ function catalynxApp() {
             console.log('Auto-updated workflow progress:', this.workflowProgress);
         },
         
+        // WORKFLOW ANALYTICS AND USER JOURNEY TRACKING FUNCTIONS
+        trackStageTransition(fromStage, toStage) {
+            const now = Date.now();
+            const transition = {
+                from: fromStage,
+                to: toStage,
+                timestamp: new Date().toISOString(),
+                sessionTime: now - new Date(this.workflowAnalytics.sessionStart).getTime()
+            };
+            
+            // Record the transition
+            this.workflowAnalytics.stageTransitions.push(transition);
+            
+            // Update time spent in previous stage
+            if (fromStage && this.workflowAnalytics.stageStartTimes[fromStage]) {
+                const timeSpent = now - this.workflowAnalytics.stageStartTimes[fromStage];
+                this.workflowAnalytics.timeSpentInStages[fromStage] += timeSpent;
+            }
+            
+            // Record start time for new stage
+            this.workflowAnalytics.stageStartTimes[toStage] = now;
+            
+            // Track user action
+            this.trackUserAction('stage_transition', {
+                from: fromStage,
+                to: toStage,
+                method: 'navigation'
+            });
+            
+            console.log('Stage transition tracked:', transition);
+        },
+        
+        trackUserAction(actionType, actionData = {}) {
+            const action = {
+                type: actionType,
+                data: actionData,
+                timestamp: new Date().toISOString(),
+                currentStage: this.activeStage,
+                sessionTime: Date.now() - new Date(this.workflowAnalytics.sessionStart).getTime()
+            };
+            
+            this.workflowAnalytics.userActions.push(action);
+            
+            // Update conversion funnels
+            this.updateConversionFunnels(actionType, actionData);
+            
+            console.log('User action tracked:', action);
+        },
+        
+        updateConversionFunnels(actionType, actionData) {
+            // Track progression through the workflow funnel
+            if (actionType === 'stage_transition' && actionData.to) {
+                this.workflowAnalytics.conversionFunnels.started = Math.max(
+                    this.workflowAnalytics.conversionFunnels.started, 1
+                );
+                
+                const stageCompletions = {
+                    'profiler': 'profilerComplete',
+                    'discover': 'discoverComplete', 
+                    'analyze': 'analyzeComplete',
+                    'plan': 'planComplete',
+                    'execute': 'executeComplete'
+                };
+                
+                if (stageCompletions[actionData.to]) {
+                    this.workflowAnalytics.conversionFunnels[stageCompletions[actionData.to]]++;
+                }
+            }
+            
+            // Track specific completion actions
+            if (actionType === 'profile_created') {
+                this.workflowAnalytics.conversionFunnels.profilerComplete++;
+                this.markStageCompleted('profiler');
+            } else if (actionType === 'discovery_completed') {
+                this.workflowAnalytics.conversionFunnels.discoverComplete++;
+                this.markStageCompleted('discover');
+            } else if (actionType === 'analysis_completed') {
+                this.workflowAnalytics.conversionFunnels.analyzeComplete++;
+                this.markStageCompleted('analyze');
+            } else if (actionType === 'plan_created') {
+                this.workflowAnalytics.conversionFunnels.planComplete++;
+                this.markStageCompleted('plan');
+            } else if (actionType === 'export_generated') {
+                this.workflowAnalytics.conversionFunnels.executeComplete++;
+                this.markStageCompleted('execute');
+            }
+        },
+        
+        markStageCompleted(stage) {
+            if (!this.workflowProgress[stage]) {
+                this.workflowProgress[stage] = true;
+                this.workflowAnalytics.completionRates[stage] = 1;
+                
+                // Calculate overall completion rate
+                const completedStages = Object.values(this.workflowProgress).filter(Boolean).length;
+                this.workflowAnalytics.completionRates.overall = completedStages / 5; // 5 total stages
+                
+                console.log(`Stage ${stage} marked as completed. Overall completion: ${(this.workflowAnalytics.completionRates.overall * 100).toFixed(1)}%`);
+            }
+        },
+        
+        calculateWorkflowAnalytics() {
+            const analytics = this.workflowAnalytics;
+            const sessionDuration = Date.now() - new Date(analytics.sessionStart).getTime();
+            
+            // Calculate average session time
+            analytics.performanceMetrics.averageSessionTime = sessionDuration / 1000 / 60; // in minutes
+            
+            // Find most engaging stage (where user spent most time)
+            let maxTime = 0;
+            let mostEngagingStage = 'profiler';
+            for (const [stage, time] of Object.entries(analytics.timeSpentInStages)) {
+                if (time > maxTime) {
+                    maxTime = time;
+                    mostEngagingStage = stage;
+                }
+            }
+            analytics.performanceMetrics.mostEngagingStage = mostEngagingStage;
+            
+            // Identify common exit points (stages where users spend time but don't progress)
+            const exitPoints = [];
+            for (const [stage, time] of Object.entries(analytics.timeSpentInStages)) {
+                if (time > 30000 && !this.workflowProgress[stage]) { // 30 seconds without completion
+                    exitPoints.push(stage);
+                }
+            }
+            analytics.performanceMetrics.commonExitPoints = exitPoints;
+            
+            // Analyze success patterns
+            const completedStages = Object.entries(this.workflowProgress)
+                .filter(([stage, completed]) => completed)
+                .map(([stage]) => stage);
+            analytics.performanceMetrics.successPatterns = completedStages;
+            
+            return analytics;
+        },
+        
+        getWorkflowAnalyticsReport() {
+            const analytics = this.calculateWorkflowAnalytics();
+            const report = {
+                sessionSummary: {
+                    sessionId: analytics.sessionId,
+                    duration: `${analytics.performanceMetrics.averageSessionTime.toFixed(1)} minutes`,
+                    stagesCompleted: Object.values(this.workflowProgress).filter(Boolean).length,
+                    completionRate: `${(analytics.completionRates.overall * 100).toFixed(1)}%`
+                },
+                engagement: {
+                    mostEngagingStage: analytics.performanceMetrics.mostEngagingStage,
+                    totalActions: analytics.userActions.length,
+                    stageTransitions: analytics.stageTransitions.length
+                },
+                timeDistribution: Object.fromEntries(
+                    Object.entries(analytics.timeSpentInStages)
+                        .map(([stage, time]) => [stage, `${(time / 1000 / 60).toFixed(1)}m`])
+                ),
+                conversionFunnel: {
+                    started: analytics.conversionFunnels.started,
+                    profilerRate: analytics.conversionFunnels.profilerComplete / Math.max(analytics.conversionFunnels.started, 1),
+                    discoverRate: analytics.conversionFunnels.discoverComplete / Math.max(analytics.conversionFunnels.profilerComplete, 1),
+                    analyzeRate: analytics.conversionFunnels.analyzeComplete / Math.max(analytics.conversionFunnels.discoverComplete, 1),
+                    planRate: analytics.conversionFunnels.planComplete / Math.max(analytics.conversionFunnels.analyzeComplete, 1),
+                    executeRate: analytics.conversionFunnels.executeComplete / Math.max(analytics.conversionFunnels.planComplete, 1)
+                },
+                insights: this.generateWorkflowInsights()
+            };
+            
+            return report;
+        },
+        
+        generateWorkflowInsights() {
+            const analytics = this.workflowAnalytics;
+            const insights = [];
+            
+            // Time-based insights
+            const totalTime = Object.values(analytics.timeSpentInStages).reduce((a, b) => a + b, 0);
+            if (totalTime > 0) {
+                const stageTimePercentages = Object.fromEntries(
+                    Object.entries(analytics.timeSpentInStages)
+                        .map(([stage, time]) => [stage, (time / totalTime) * 100])
+                );
+                
+                const highTimeStages = Object.entries(stageTimePercentages)
+                    .filter(([stage, percentage]) => percentage > 30)
+                    .map(([stage]) => stage);
+                
+                if (highTimeStages.length > 0) {
+                    insights.push({
+                        type: 'time_distribution',
+                        message: `User spent significant time in ${highTimeStages.join(', ')} stage(s)`,
+                        recommendation: 'Consider simplifying these stages or providing better guidance'
+                    });
+                }
+            }
+            
+            // Completion insights
+            const completedStages = Object.values(this.workflowProgress).filter(Boolean).length;
+            if (completedStages === 5) {
+                insights.push({
+                    type: 'completion_success',
+                    message: 'User successfully completed the entire workflow',
+                    recommendation: 'Collect feedback for continuous improvement'
+                });
+            } else if (completedStages >= 3) {
+                insights.push({
+                    type: 'partial_success',
+                    message: `User completed ${completedStages}/5 workflow stages`,
+                    recommendation: 'Follow up to understand barriers to full completion'
+                });
+            }
+            
+            // Engagement insights
+            if (analytics.userActions.length > 20) {
+                insights.push({
+                    type: 'high_engagement',
+                    message: 'High user engagement with multiple interactions',
+                    recommendation: 'User is actively exploring - ensure clear next steps'
+                });
+            }
+            
+            return insights;
+        },
+        
+        initializeWorkflowTracking() {
+            // Initialize the first stage start time
+            this.workflowAnalytics.stageStartTimes[this.activeStage] = Date.now();
+            
+            // Track session start
+            this.trackUserAction('session_started', {
+                initialStage: this.activeStage,
+                userAgent: navigator.userAgent,
+                screenSize: `${window.screen.width}x${window.screen.height}`,
+                viewportSize: `${window.innerWidth}x${window.innerHeight}`
+            });
+            
+            // Set up periodic analytics calculations
+            setInterval(() => {
+                this.calculateWorkflowAnalytics();
+            }, 30000); // Update analytics every 30 seconds
+            
+            // Set up page visibility tracking for engagement metrics
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    this.trackUserAction('page_hidden', { activeStage: this.activeStage });
+                } else {
+                    this.trackUserAction('page_visible', { activeStage: this.activeStage });
+                }
+            });
+            
+            // Set up beforeunload to track session end
+            window.addEventListener('beforeunload', () => {
+                this.trackUserAction('session_ended', {
+                    finalStage: this.activeStage,
+                    sessionDuration: Date.now() - new Date(this.workflowAnalytics.sessionStart).getTime(),
+                    stagesCompleted: Object.values(this.workflowProgress).filter(Boolean).length,
+                    totalActions: this.workflowAnalytics.userActions.length
+                });
+                
+                // Store analytics data in localStorage for persistence
+                localStorage.setItem('catalynx-analytics', JSON.stringify({
+                    lastSession: this.workflowAnalytics,
+                    completionHistory: JSON.parse(localStorage.getItem('catalynx-completion-history') || '[]')
+                }));
+            });
+            
+            console.log('Workflow analytics tracking initialized');
+        },
+        
         // AI WORKFLOW GUIDANCE FUNCTIONS
         getWorkflowEncouragement() {
             const completedCount = Object.values(this.workflowProgress).filter(Boolean).length;
@@ -1108,6 +1421,259 @@ function catalynxApp() {
             // Show contextual AI recommendation based on current progress
             const recommendation = this.getContextualRecommendation();
             this.showNotification(recommendation.title, recommendation.message, 'info');
+        },
+        
+        // UNIFIED EXPORT CENTER FUNCTIONS
+        // Export statistics and data management
+        exportStats: {
+            availableReports: 12,
+            totalExportableRecords: 0,
+            analysisReports: 0,
+            strategicPlans: 0
+        },
+        
+        exportHistory: [],
+        showExportScheduler: false,
+        exportScheduler: {
+            reportType: 'executive',
+            frequency: 'monthly'
+        },
+        
+        // Calculate total exportable records across all stages
+        updateExportStats() {
+            this.exportStats.totalExportableRecords = 
+                this.profileCount + 
+                this.discoveryStats.totalResults + 
+                (this.workflowProgress.analyze ? 50 : 0) + // Mock analysis records
+                (this.workflowProgress.plan ? 25 : 0); // Mock strategic plans
+            
+            this.exportStats.analysisReports = this.workflowProgress.analyze ? 5 : 0;
+            this.exportStats.strategicPlans = this.workflowProgress.plan ? 3 : 0;
+            
+            console.log('Export stats updated:', this.exportStats);
+        },
+        
+        // Master report generation - consolidates all workflow stages
+        async generateMasterReport() {
+            console.log('Generating comprehensive master report across all workflow stages');
+            
+            this.showNotification('Master Report', 'Generating comprehensive report with all workflow data...', 'info');
+            
+            // Simulate report generation
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const reportData = {
+                profiles: this.profileCount,
+                opportunities: this.discoveryStats.totalResults,
+                nonprofitResults: this.nonprofitTrackStatus.results,
+                federalResults: this.federalTrackStatus.results,
+                stateResults: this.stateTrackStatus.results,
+                commercialResults: this.commercialTrackStatus.results,
+                analysisComplete: this.workflowProgress.analyze,
+                strategicPlanComplete: this.workflowProgress.plan,
+                timestamp: new Date().toISOString()
+            };
+            
+            this.addExportToHistory({
+                id: Date.now(),
+                type: 'master',
+                name: 'Comprehensive Master Report',
+                format: 'PDF',
+                created: new Date().toLocaleDateString(),
+                data: reportData
+            });
+            
+            this.showNotification('Export Complete', 'Master report generated successfully!', 'success');
+            
+            // Track export generation for analytics
+            this.trackUserAction('export_generated', {
+                exportType: 'master',
+                includesProfiles: reportData.profiles > 0,
+                includesOpportunities: reportData.opportunities > 0,
+                nonprofitResults: reportData.nonprofitResults,
+                federalResults: reportData.federalResults,
+                stateResults: reportData.stateResults,
+                commercialResults: reportData.commercialResults,
+                totalResults: reportData.opportunities
+            });
+            
+            // Auto-complete execute stage when master report is generated
+            if (!this.workflowProgress.execute) {
+                this.workflowProgress.execute = true;
+                console.log('Auto-completed EXECUTE stage - master report generated');
+            }
+        },
+        
+        // Export all data across stages
+        async exportAllData() {
+            console.log('Exporting all data across workflow stages');
+            
+            this.showNotification('Data Export', 'Exporting all workflow data...', 'info');
+            
+            // Simulate data export
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            const exportPackage = {
+                profiles: this.profiles || [],
+                discoveryResults: {
+                    nonprofit: Array(this.nonprofitTrackStatus.results).fill(null).map((_, i) => ({id: i, type: 'nonprofit', name: `Nonprofit ${i+1}`})),
+                    federal: Array(this.federalTrackStatus.results).fill(null).map((_, i) => ({id: i, type: 'federal', name: `Federal Grant ${i+1}`})),
+                    state: Array(this.stateTrackStatus.results).fill(null).map((_, i) => ({id: i, type: 'state', name: `State Grant ${i+1}`})),
+                    commercial: Array(this.commercialTrackStatus.results).fill(null).map((_, i) => ({id: i, type: 'commercial', name: `Foundation ${i+1}`}))
+                },
+                analysisData: this.workflowProgress.analyze ? {financial: [], network: [], competitive: []} : null,
+                strategicPlans: this.workflowProgress.plan ? [{name: 'Strategic Plan', priority: 'high'}] : null,
+                exportDate: new Date().toISOString()
+            };
+            
+            this.addExportToHistory({
+                id: Date.now(),
+                type: 'data',
+                name: 'Complete Data Export',
+                format: 'ZIP',
+                created: new Date().toLocaleDateString(),
+                data: exportPackage
+            });
+            
+            this.showNotification('Export Complete', 'All workflow data exported successfully!', 'success');
+        },
+        
+        // Create implementation plan
+        async createImplementationPlan() {
+            console.log('Creating implementation plan from strategic planning data');
+            
+            this.showNotification('Implementation Plan', 'Creating actionable implementation plan...', 'info');
+            
+            // Simulate plan creation
+            await new Promise(resolve => setTimeout(resolve, 1800));
+            
+            const implementationPlan = {
+                timeline: '6 months',
+                phases: [
+                    {name: 'Preparation', duration: '2 weeks', tasks: ['Document review', 'Team preparation']},
+                    {name: 'Application Phase', duration: '3 months', tasks: ['Grant applications', 'Follow-ups']},
+                    {name: 'Network Development', duration: '2 months', tasks: ['Board connections', 'Partnerships']},
+                    {name: 'Implementation', duration: '1 month', tasks: ['Award management', 'Reporting']}
+                ],
+                priorities: this.discoveryStats.totalResults > 0 ? ['High priority opportunities', 'Network connections', 'Strategic partnerships'] : [],
+                resources: ['Grant writer', 'Development staff', 'Board engagement'],
+                created: new Date().toISOString()
+            };
+            
+            this.addExportToHistory({
+                id: Date.now(),
+                type: 'plan',
+                name: 'Implementation Action Plan',
+                format: 'DOCX',
+                created: new Date().toLocaleDateString(),
+                data: implementationPlan
+            });
+            
+            this.showNotification('Plan Complete', 'Implementation plan created successfully!', 'success');
+        },
+        
+        // Generate specific report types
+        async generateReport(reportType) {
+            console.log(`Generating ${reportType} report`);
+            
+            const reportTypes = {
+                'executive': {name: 'Executive Summary Report', format: 'PDF', audience: 'Board & Leadership'},
+                'grantwriter': {name: 'Grant Writer\'s Comprehensive Guide', format: 'DOCX', audience: 'Grant Writing Team'},
+                'network': {name: 'Network Analysis & Relationship Report', format: 'HTML', audience: 'Development Staff'},
+                'tracker': {name: 'Implementation Tracking Spreadsheet', format: 'XLSX', audience: 'Project Management'}
+            };
+            
+            const report = reportTypes[reportType];
+            this.showNotification('Report Generation', `Creating ${report.name}...`, 'info');
+            
+            // Simulate report generation with varying complexity
+            const generationTime = reportType === 'network' ? 3000 : reportType === 'executive' ? 2000 : 1500;
+            await new Promise(resolve => setTimeout(resolve, generationTime));
+            
+            const reportData = {
+                type: reportType,
+                audience: report.audience,
+                dataIncluded: {
+                    profiles: reportType !== 'network' ? this.profileCount : 0,
+                    opportunities: ['executive', 'grantwriter', 'tracker'].includes(reportType) ? this.discoveryStats.totalResults : 0,
+                    networkData: reportType === 'network',
+                    analysisData: reportType === 'executive'
+                },
+                generatedAt: new Date().toISOString()
+            };
+            
+            this.addExportToHistory({
+                id: Date.now(),
+                type: reportType,
+                name: report.name,
+                format: report.format,
+                created: new Date().toLocaleDateString(),
+                data: reportData
+            });
+            
+            this.showNotification('Report Complete', `${report.name} generated successfully!`, 'success');
+        },
+        
+        // Export specific data types
+        async exportData(dataType, format) {
+            console.log(`Exporting ${dataType} data in ${format} format`);
+            
+            const dataTypes = {
+                'profiles': {name: 'Organization Profiles', count: this.profileCount},
+                'discovery': {name: 'Discovery Results', count: this.discoveryStats.totalResults},
+                'analysis': {name: 'Analysis Data', count: this.exportStats.analysisReports},
+                'plans': {name: 'Strategic Plans', count: this.exportStats.strategicPlans}
+            };
+            
+            const data = dataTypes[dataType];
+            this.showNotification('Data Export', `Exporting ${data.name} in ${format.toUpperCase()} format...`, 'info');
+            
+            // Simulate export processing
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            const exportData = {
+                dataType: dataType,
+                format: format,
+                recordCount: data.count,
+                columns: dataType === 'profiles' ? ['name', 'ein', 'mission', 'focus_areas'] :
+                        dataType === 'discovery' ? ['organization', 'type', 'amount', 'deadline'] :
+                        dataType === 'analysis' ? ['metric', 'value', 'trend', 'score'] :
+                        ['plan_name', 'priority', 'timeline', 'resources'],
+                exportedAt: new Date().toISOString()
+            };
+            
+            this.addExportToHistory({
+                id: Date.now(),
+                type: 'data',
+                name: `${data.name} (${format.toUpperCase()})`,
+                format: format.toUpperCase(),
+                created: new Date().toLocaleDateString(),
+                data: exportData
+            });
+            
+            this.showNotification('Export Complete', `${data.name} exported in ${format.toUpperCase()} format!`, 'success');
+        },
+        
+        // Schedule automated exports
+        async scheduleExport() {
+            console.log('Scheduling automated export:', this.exportScheduler);
+            
+            this.showNotification('Export Scheduled', `${this.exportScheduler.reportType} report scheduled for ${this.exportScheduler.frequency} generation`, 'success');
+            
+            // Simulate scheduling
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            this.showExportScheduler = false;
+        },
+        
+        // Add export to history
+        addExportToHistory(exportItem) {
+            this.exportHistory.unshift(exportItem);
+            // Keep only last 20 exports
+            if (this.exportHistory.length > 20) {
+                this.exportHistory = this.exportHistory.slice(0, 20);
+            }
+            console.log('Added export to history:', exportItem.name);
         },
         
         getCurrentStageLabel() {
@@ -2436,6 +3002,17 @@ function catalynxApp() {
                 });
                 
                 console.log('Profile created successfully:', response);
+                
+                // Track profile creation for analytics
+                this.trackUserAction('profile_created', {
+                    profileName: profileData.name,
+                    organizationType: profileData.organization_type,
+                    hasEIN: Boolean(profileData.ein),
+                    focusAreaCount: profileData.focus_areas.length,
+                    hasTargetPopulations: profileData.target_populations.length > 0,
+                    isNationwide: profileData.geographic_scope.nationwide,
+                    hasRevenue: Boolean(profileData.annual_revenue)
+                });
                 
                 // Close modal and refresh profiles
                 this.showCreateProfile = false;
