@@ -152,6 +152,68 @@
                 <!-- D DISCOMBOBULATOR -->
                 <div class="px-2 mb-4" x-data="{ expanded: ['discovery','prescoring','analysis','recommendations','commercial','states','predictive','roi'].includes(activeTab) }" x-init="$watch('activeTab', value => { if (['discovery','prescoring','analysis','recommendations','commercial','states','predictive','roi'].includes(value)) expanded = true })">
                     <h3 class="px-3 text-xs font-bold text-green-400 uppercase tracking-wider mb-2 cursor-pointer" @click="expanded = !expanded">D DISCOMBOBULATOR</h3>
+                    
+                    <!-- Phase 1.2: Processor Group Controls -->
+                    <div class="px-3 mb-3 bg-gray-800 rounded-lg p-2 border border-gray-700">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-semibold text-gray-400">Status:</span>
+                                <span :class="getProcessorStatusClass(processorControls.discombobulator.status)" 
+                                      class="text-xs font-bold" x-text="processorControls.discombobulator.status.toUpperCase()"></span>
+                                <span x-text="getProcessorStatusIcon(processorControls.discombobulator.status)"></span>
+                                <span x-show="processorControls.discombobulator.profileContext" 
+                                      class="text-xs bg-blue-600 px-1 rounded text-white" 
+                                      x-text="'Profile: ' + (processorControls.discombobulator.profileContext?.name || 'N/A')"></span>
+                            </div>
+                            <div class="flex space-x-1">
+                                <button @click="startDiscombobulatorGroup()" 
+                                        :disabled="processorControls.discombobulator.running"
+                                        :class="{'opacity-50 cursor-not-allowed': processorControls.discombobulator.running}"
+                                        class="px-2 py-1 text-xs bg-green-600 hover:bg-green-500 text-white rounded transition-colors">
+                                    Start
+                                </button>
+                                <button @click="stopDiscombobulatorGroup()" 
+                                        :disabled="!processorControls.discombobulator.canStop"
+                                        :class="{'opacity-50 cursor-not-allowed': !processorControls.discombobulator.canStop}"
+                                        class="px-2 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded transition-colors">
+                                    Stop
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="mb-2">
+                            <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+                                <span x-text="processorControls.discombobulator.currentTask || 'Ready'"></span>
+                                <span x-text="Math.round(processorControls.discombobulator.progress) + '%'"></span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-1.5">
+                                <div class="bg-green-400 h-1.5 rounded-full transition-all duration-300" 
+                                     :style="`width: ${processorControls.discombobulator.progress}%`"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Individual Processor Status -->
+                        <div class="grid grid-cols-2 gap-1 text-xs">
+                            <div class="flex items-center space-x-1">
+                                <span x-text="getProcessorStatusIcon(processorStatus.nonprofit_track.status)"></span>
+                                <span class="text-gray-400">Nonprofit</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span x-text="getProcessorStatusIcon(processorStatus.federal_track.status)"></span>
+                                <span class="text-gray-400">Federal</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span x-text="getProcessorStatusIcon(processorStatus.state_track.status)"></span>
+                                <span class="text-gray-400">State</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span x-text="getProcessorStatusIcon(processorStatus.commercial_track.status)"></span>
+                                <span class="text-gray-400">Commercial</span>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div x-show="expanded" x-transition class="space-y-0.5">
                     <div class="space-y-1">
                         <a href="#" @click.prevent="switchTab('discovery')"
@@ -211,6 +273,68 @@
                 <!-- A AMPLINATOR -->
                 <div class="px-2 mb-4" x-data="{ expanded: ['analytics','network','exports','classification','workflows'].includes(activeTab) }" x-init="$watch('activeTab', value => { if (['analytics','network','exports','classification','workflows'].includes(value)) expanded = true })">
                     <h3 class="px-3 text-xs font-bold text-purple-400 uppercase tracking-wider mb-2 cursor-pointer" @click="expanded = !expanded">A AMPLINATOR</h3>
+                    
+                    <!-- Phase 1.2: Processor Group Controls -->
+                    <div class="px-3 mb-3 bg-gray-800 rounded-lg p-2 border border-gray-700">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-semibold text-gray-400">Status:</span>
+                                <span :class="getProcessorStatusClass(processorControls.amplinator.status)" 
+                                      class="text-xs font-bold" x-text="processorControls.amplinator.status.toUpperCase()"></span>
+                                <span x-text="getProcessorStatusIcon(processorControls.amplinator.status)"></span>
+                                <span x-show="processorControls.amplinator.profileContext" 
+                                      class="text-xs bg-blue-600 px-1 rounded text-white" 
+                                      x-text="'Profile: ' + (processorControls.amplinator.profileContext?.name || 'N/A')"></span>
+                            </div>
+                            <div class="flex space-x-1">
+                                <button @click="startAmplinatorGroup()" 
+                                        :disabled="processorControls.amplinator.running"
+                                        :class="{'opacity-50 cursor-not-allowed': processorControls.amplinator.running}"
+                                        class="px-2 py-1 text-xs bg-purple-600 hover:bg-purple-500 text-white rounded transition-colors">
+                                    Start
+                                </button>
+                                <button @click="stopAmplinatorGroup()" 
+                                        :disabled="!processorControls.amplinator.canStop"
+                                        :class="{'opacity-50 cursor-not-allowed': !processorControls.amplinator.canStop}"
+                                        class="px-2 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded transition-colors">
+                                    Stop
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="mb-2">
+                            <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+                                <span x-text="processorControls.amplinator.currentTask || 'Ready'"></span>
+                                <span x-text="Math.round(processorControls.amplinator.progress) + '%'"></span>
+                            </div>
+                            <div class="w-full bg-gray-700 rounded-full h-1.5">
+                                <div class="bg-purple-400 h-1.5 rounded-full transition-all duration-300" 
+                                     :style="`width: ${processorControls.amplinator.progress}%`"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Individual Processor Status -->
+                        <div class="grid grid-cols-2 gap-1 text-xs">
+                            <div class="flex items-center space-x-1">
+                                <span x-text="getProcessorStatusIcon(processorStatus.scoring_analysis.status)"></span>
+                                <span class="text-gray-400">Scoring</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span x-text="getProcessorStatusIcon(processorStatus.network_analysis.status)"></span>
+                                <span class="text-gray-400">Network</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span x-text="getProcessorStatusIcon(processorStatus.export_functions.status)"></span>
+                                <span class="text-gray-400">Export</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span x-text="getProcessorStatusIcon(processorStatus.report_generation.status)"></span>
+                                <span class="text-gray-400">Reports</span>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div x-show="expanded" x-transition class="space-y-0.5">
                     <div class="space-y-1">
                         <a href="#" @click.prevent="switchTab('analytics')"
@@ -1578,7 +1702,12 @@
                                             <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                                                 <button @click="viewProfile(profile)" class="text-primary-600 hover:text-primary-800 font-medium">View</button>
                                                 <button @click="editProfile(profile)" class="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
-                                                <button @click="discoverOpportunities(profile)" class="text-green-600 hover:text-green-800 font-medium">Discover</button>
+                                                <button @click="discoverOpportunities(profile)" 
+                                                        class="text-green-600 hover:text-green-800 font-medium flex items-center space-x-1"
+                                                        :class="{'opacity-50 cursor-not-allowed': processorControls.discombobulator.running || processorControls.amplinator.running}">
+                                                    <span>🚀 Discover</span>
+                                                    <span v-if="processorControls.discombobulator.running || processorControls.amplinator.running" class="text-xs">Running...</span>
+                                                </button>
                                             </td>
                                         </tr>
                                     </template>

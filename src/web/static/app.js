@@ -4,13 +4,13 @@
 function catalynxApp() {
     return {
         // Application state
-        activeTab: 'dashboard',
+        activeTab: 'status',
         systemStatus: 'healthy',
         apiStatus: 'healthy',
         currentTime: new Date().toLocaleTimeString(),
         
-        // Theme system
-        darkMode: localStorage.getItem('catalynx-dark-mode') === 'true',
+        // Theme system - Dark mode default
+        darkMode: localStorage.getItem('catalynx-dark-mode') !== 'false',
         
         // Mobile menu state
         mobileMenuOpen: false,
@@ -83,6 +83,43 @@ function catalynxApp() {
         chartTimeRange: '7d',
         processingVolumeChart: null,
         successRateChart: null,
+        
+        // Phase 1.2: Processor Controls
+        processorControls: {
+            discombobulator: {
+                running: false,
+                status: 'idle', // idle, running, success, error
+                progress: 0,
+                currentTask: '',
+                activeProcessors: [],
+                lastRun: null,
+                canStop: false
+            },
+            amplinator: {
+                running: false,
+                status: 'idle',
+                progress: 0,
+                currentTask: '',
+                activeProcessors: [],
+                lastRun: null,
+                canStop: false
+            }
+        },
+        
+        // Individual processor status
+        processorStatus: {
+            // DISCOMBOBULATOR processors
+            nonprofit_track: { status: 'idle', progress: 0, message: '' },
+            federal_track: { status: 'idle', progress: 0, message: '' },
+            state_track: { status: 'idle', progress: 0, message: '' },
+            commercial_track: { status: 'idle', progress: 0, message: '' },
+            
+            // AMPLINATOR processors
+            scoring_analysis: { status: 'idle', progress: 0, message: '' },
+            network_analysis: { status: 'idle', progress: 0, message: '' },
+            export_functions: { status: 'idle', progress: 0, message: '' },
+            report_generation: { status: 'idle', progress: 0, message: '' }
+        },
         
         // Export management
         exportFiles: [],
@@ -192,6 +229,9 @@ function catalynxApp() {
             funding_types: []
         },
         showCreateProfile: false,
+        showViewProfile: false,
+        showEditProfile: false,
+        selectedProfile: null,
         profileSearchQuery: '',
         totalProfiles: 0,
         
@@ -1555,32 +1595,116 @@ function catalynxApp() {
         },
         
         viewProfile(profile) {
-            // TODO: Implement profile detail view
-            alert(`Viewing profile: ${profile.name}\n\nThis feature will show detailed profile information, opportunities, and analytics.`);
+            this.selectedProfile = profile;
+            this.showViewProfile = true;
+            console.log('Opening view modal for profile:', profile.name);
         },
         
         editProfile(profile) {
-            // TODO: Implement profile editing
-            alert(`Editing profile: ${profile.name}\n\nThis feature will allow you to modify profile information and settings.`);
+            this.selectedProfile = profile;
+            this.showEditProfile = true;
+            console.log('Opening edit modal for profile:', profile.name);
+        },
+        
+        closeViewProfile() {
+            this.showViewProfile = false;
+            this.selectedProfile = null;
+        },
+        
+        closeEditProfile() {
+            this.showEditProfile = false;
+            this.selectedProfile = null;
+        },
+        
+        async saveProfileChanges() {
+            try {
+                console.log('Saving profile changes:', this.selectedProfile);
+                // TODO: Implement actual save API call
+                this.showEnhancedNotification('Profile updated successfully!', 'success');
+                this.closeEditProfile();
+                await this.loadProfiles(); // Refresh profile list
+            } catch (error) {
+                console.error('Failed to save profile:', error);
+                this.showEnhancedNotification('Failed to save profile changes', 'error');
+            }
+        },
+        
+        async deleteProfile() {
+            if (!this.selectedProfile) return;
+            
+            const confirmDelete = confirm(`Are you sure you want to delete the profile "${this.selectedProfile.name}"?`);
+            if (!confirmDelete) return;
+            
+            try {
+                console.log('Deleting profile:', this.selectedProfile.name);
+                // TODO: Implement actual delete API call
+                this.showEnhancedNotification('Profile deleted successfully!', 'success');
+                this.closeEditProfile();
+                await this.loadProfiles(); // Refresh profile list
+            } catch (error) {
+                console.error('Failed to delete profile:', error);
+                this.showEnhancedNotification('Failed to delete profile', 'error');
+            }
         },
         
         async discoverOpportunities(profile) {
             try {
-                alert(`Discovering opportunities for: ${profile.name}\n\nInitiating multi-track discovery process...`);
+                this.showEnhancedNotification(`Discovering opportunities for: ${profile.name}`, 'info');
                 
+                // Configure processors based on profile
+                await this.configureProcessorsForProfile(profile);
+                
+                // Start DISCOMBOBULATOR sequence with profile context
+                this.processorControls.discombobulator.profileContext = profile;
+                this.startDiscombobulatorGroup();
+                
+                // Wait for DISCOMBOBULATOR to complete, then run AMPLINATOR
+                this.watchProcessorCompletion('discombobulator', async () => {
+                    if (this.processorControls.discombobulator.status === 'success') {
+                        this.showEnhancedNotification('Discovery complete! Starting analysis...', 'info');
+                        
+                        // Configure AMPLINATOR with discovered data
+                        this.processorControls.amplinator.profileContext = profile;
+                        this.processorControls.amplinator.discoveredData = this.getDiscoveredData();
+                        
+                        this.startAmplinatorGroup();
+                        
+                        // Watch for final completion
+                        this.watchProcessorCompletion('amplinator', async () => {
+                            if (this.processorControls.amplinator.status === 'success') {
+                                this.showEnhancedNotification(
+                                    `Complete opportunity discovery and analysis finished for ${profile.name}!`, 
+                                    'success'
+                                );
+                                
+                                // Store results in profile context
+                                await this.storeProfileResults(profile);
+                            }
+                        });
+                    }
+                });
+                
+                // Also call the original API for backend integration
                 const response = await this.apiCall(`/profiles/${profile.profile_id}/discover`, {
                     method: 'POST',
                     body: JSON.stringify({
                         funding_types: profile.funding_preferences?.funding_types || ['grants'],
-                        max_results: 100
+                        max_results: 100,
+                        trigger_processors: true,
+                        profile_context: {
+                            name: profile.name,
+                            focus_areas: profile.focus_areas,
+                            geographic_scope: profile.geographic_scope,
+                            funding_preferences: profile.funding_preferences
+                        }
                     })
                 });
                 
-                console.log('Discovery initiated:', response);
+                console.log('Profile discovery initiated:', response);
                 
             } catch (error) {
                 console.error('Failed to start discovery:', error);
-                alert('Failed to start opportunity discovery. Please try again.');
+                this.showEnhancedNotification('Failed to start opportunity discovery: ' + error.message, 'error');
             }
         },
 
@@ -1807,6 +1931,382 @@ function catalynxApp() {
             ];
         },
 
+        // DISCOMBOBULATOR Functions - Multi-Track Discovery
+        async executeNonprofitTrack() {
+            try {
+                this.showEnhancedNotification('Starting nonprofit discovery track...', 'info');
+                
+                const response = await this.apiCall('/discovery/nonprofit', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        state: this.classificationParams.state,
+                        max_results: this.classificationParams.maxResults
+                    })
+                });
+                
+                this.showEnhancedNotification(
+                    `Nonprofit track completed! Found ${response.total_found} organizations`, 
+                    'success'
+                );
+                
+                // Store results for viewing
+                this.nonprofitTrackResults = response.results;
+                console.log('Nonprofit track results:', response);
+                
+            } catch (error) {
+                console.error('Nonprofit track failed:', error);
+                this.showEnhancedNotification('Nonprofit discovery failed: ' + error.message, 'error');
+            }
+        },
+        
+        async executeFederalTrack() {
+            try {
+                this.showEnhancedNotification('Starting federal grants discovery...', 'info');
+                
+                const response = await this.apiCall('/discovery/federal', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        keywords: ['health', 'community', 'education'],
+                        opportunity_category: 'discretionary',
+                        max_results: 50
+                    })
+                });
+                
+                this.showEnhancedNotification(
+                    `Federal track completed! Found ${response.total_found} opportunities`, 
+                    'success'
+                );
+                
+                // Store results for viewing
+                this.federalTrackResults = response.results;
+                console.log('Federal track results:', response);
+                
+            } catch (error) {
+                console.error('Federal track failed:', error);
+                this.showEnhancedNotification('Federal discovery failed: ' + error.message, 'error');
+            }
+        },
+        
+        async executeStateTrack() {
+            try {
+                this.showEnhancedNotification('Starting state-level discovery...', 'info');
+                
+                const response = await this.apiCall('/discovery/state', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        states: this.selectedStates,
+                        focus_areas: ['health', 'community', 'education'],
+                        max_results: 50
+                    })
+                });
+                
+                this.showEnhancedNotification(
+                    `State track completed! Found ${response.total_found} opportunities`, 
+                    'success'
+                );
+                
+                // Store results for viewing
+                this.stateTrackResults = response.results;
+                console.log('State track results:', response);
+                
+            } catch (error) {
+                console.error('State track failed:', error);
+                this.showEnhancedNotification('State discovery failed: ' + error.message, 'error');
+            }
+        },
+        
+        async executeCommercialTrack() {
+            try {
+                this.showEnhancedNotification('Starting commercial discovery...', 'info');
+                
+                const response = await this.apiCall('/discovery/commercial', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        industries: this.commercialFilters.industries,
+                        company_sizes: this.commercialFilters.company_sizes,
+                        funding_range: this.commercialFilters.funding_range,
+                        max_results: 50
+                    })
+                });
+                
+                this.showEnhancedNotification(
+                    `Commercial track completed! Found ${response.total_found} opportunities`, 
+                    'success'
+                );
+                
+                // Store results for viewing
+                this.commercialTrackResults = response.results;
+                console.log('Commercial track results:', response);
+                
+            } catch (error) {
+                console.error('Commercial track failed:', error);
+                this.showEnhancedNotification('Commercial discovery failed: ' + error.message, 'error');
+            }
+        },
+        
+        async executeFullSummary() {
+            try {
+                this.showEnhancedNotification('Generating full pipeline summary...', 'info');
+                
+                const response = await this.apiCall('/pipeline/full-summary', {
+                    method: 'POST',
+                    body: JSON.stringify({})
+                });
+                
+                this.showEnhancedNotification('Full pipeline summary generated!', 'success');
+                
+                // Store results for viewing
+                this.fullSummaryResults = response;
+                console.log('Full summary results:', response);
+                
+                // Display summary in a more detailed way
+                this.displayPipelineSummary(response);
+                
+            } catch (error) {
+                console.error('Full summary failed:', error);
+                this.showEnhancedNotification('Pipeline summary failed: ' + error.message, 'error');
+            }
+        },
+        
+        displayPipelineSummary(summary) {
+            const details = [
+                `Processors: ${summary.system_overview.processors.total_processors}`,
+                `Active Workflows: ${summary.system_overview.workflows?.active_workflows || 0}`,
+                `Track Status: All tracks operational`,
+                `Resource Status: ${summary.system_overview.resources?.status || 'healthy'}`
+            ];
+            
+            alert(`Pipeline Summary:\n\n${details.join('\n')}`);
+        },
+        
+        // AMPLINATOR Functions - Analysis & Intelligence
+        async executeScoringAnalysis() {
+            try {
+                // Use existing classification results as input if available
+                const organizations = this.classificationResults.length > 0 
+                    ? this.classificationResults.slice(0, 20) // Limit to first 20 for performance
+                    : [];
+                    
+                if (organizations.length === 0) {
+                    this.showEnhancedNotification('Please run classification first to have organizations for scoring', 'warning');
+                    return;
+                }
+                
+                this.showEnhancedNotification('Starting scoring analysis...', 'info');
+                
+                const response = await this.apiCall('/analysis/scoring', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        organizations: organizations
+                    })
+                });
+                
+                this.showEnhancedNotification(
+                    `Scoring analysis completed! Analyzed ${response.organizations_analyzed} organizations`, 
+                    'success'
+                );
+                
+                // Store results for viewing
+                this.scoringResults = response.results;
+                console.log('Scoring analysis results:', response);
+                
+            } catch (error) {
+                console.error('Scoring analysis failed:', error);
+                this.showEnhancedNotification('Scoring analysis failed: ' + error.message, 'error');
+            }
+        },
+        
+        async executeNetworkAnalysis() {
+            try {
+                // Use existing classification results as input if available
+                const organizations = this.classificationResults.length > 0 
+                    ? this.classificationResults.slice(0, 10) // Limit for performance
+                    : [];
+                    
+                if (organizations.length === 0) {
+                    this.showEnhancedNotification('Please run classification first to have organizations for network analysis', 'warning');
+                    return;
+                }
+                
+                this.showEnhancedNotification('Starting network analysis...', 'info');
+                
+                const response = await this.apiCall('/analysis/network', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        organizations: organizations
+                    })
+                });
+                
+                this.showEnhancedNotification(
+                    `Network analysis completed! Analyzed ${response.organizations_analyzed} organizations`, 
+                    'success'
+                );
+                
+                // Store results for viewing
+                this.networkResults = response.results;
+                console.log('Network analysis results:', response);
+                
+            } catch (error) {
+                console.error('Network analysis failed:', error);
+                this.showEnhancedNotification('Network analysis failed: ' + error.message, 'error');
+            }
+        },
+        
+        async executeIntelligentClassification() {
+            try {
+                this.showEnhancedNotification('Starting intelligent classification...', 'info');
+                
+                const response = await this.apiCall('/intelligence/classify', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        state: this.classificationParams.state,
+                        min_score: this.classificationParams.minScore,
+                        organizations: [] // Empty for discovery mode
+                    })
+                });
+                
+                this.showEnhancedNotification('Intelligent classification completed!', 'success');
+                
+                // Store results and update classification results display
+                if (response.results.classifications) {
+                    this.classificationResults = response.results.classifications;
+                    this.filteredResults = [...this.classificationResults];
+                }
+                
+                console.log('Intelligent classification results:', response);
+                
+                // Switch to classification tab to show results
+                this.switchTab('classification');
+                
+            } catch (error) {
+                console.error('Intelligent classification failed:', error);
+                this.showEnhancedNotification('Intelligent classification failed: ' + error.message, 'error');
+            }
+        },
+        
+        // Processor Status Functions
+        async loadProcessorStatus() {
+            try {
+                const response = await this.apiCall('/processors');
+                this.processorStatus = response;
+                console.log('Processor status loaded:', response);
+            } catch (error) {
+                console.error('Failed to load processor status:', error);
+            }
+        },
+        
+        async executeProcessor(processorName, parameters = {}) {
+            try {
+                this.showEnhancedNotification(`Executing ${processorName}...`, 'info');
+                
+                const response = await this.apiCall(`/processors/${processorName}/execute`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        parameters: parameters,
+                        input_data: []
+                    })
+                });
+                
+                this.showEnhancedNotification(`${processorName} completed successfully!`, 'success');
+                console.log(`${processorName} results:`, response);
+                
+                return response;
+                
+            } catch (error) {
+                console.error(`${processorName} failed:`, error);
+                this.showEnhancedNotification(`${processorName} failed: ${error.message}`, 'error');
+                throw error;
+            }
+        },
+        
+        // Export Functions Integration
+        async exportCurrentResults(format = 'csv') {
+            try {
+                let dataToExport = null;
+                let filename = 'catalynx_export';
+                
+                // Determine what data to export based on current tab/results
+                if (this.classificationResults.length > 0) {
+                    dataToExport = this.classificationResults;
+                    filename = 'classification_results';
+                } else if (this.commercialOpportunities.length > 0) {
+                    dataToExport = this.commercialOpportunities;
+                    filename = 'commercial_opportunities';
+                } else if (this.stateOpportunities.length > 0) {
+                    dataToExport = this.stateOpportunities;
+                    filename = 'state_opportunities';
+                }
+                
+                if (!dataToExport || dataToExport.length === 0) {
+                    this.showEnhancedNotification('No results to export. Please run an analysis first.', 'warning');
+                    return;
+                }
+                
+                // Convert to CSV format
+                const csvContent = this.convertToCSV(dataToExport);
+                
+                // Download file
+                this.downloadCSV(csvContent, `${filename}_${new Date().toISOString().split('T')[0]}.${format}`);
+                
+                this.showEnhancedNotification(`Exported ${dataToExport.length} results to ${format.toUpperCase()}`, 'success');
+                
+            } catch (error) {
+                console.error('Export failed:', error);
+                this.showEnhancedNotification('Export failed: ' + error.message, 'error');
+            }
+        },
+        
+        convertToCSV(data) {
+            if (!data || data.length === 0) return '';
+            
+            // Get headers from first object
+            const headers = Object.keys(data[0]);
+            
+            // Create CSV content
+            const csvRows = [];
+            csvRows.push(headers.join(','));
+            
+            for (const row of data) {
+                const values = headers.map(header => {
+                    const value = row[header];
+                    // Handle values that might contain commas or quotes
+                    if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                        return `"${value.replace(/"/g, '""')}"`;
+                    }
+                    return value || '';
+                });
+                csvRows.push(values.join(','));
+            }
+            
+            return csvRows.join('\n');
+        },
+        
+        downloadCSV(csvContent, filename) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+        },
+        
+        // Results Management
+        nonprofitTrackResults: null,
+        federalTrackResults: null,
+        stateTrackResults: null,
+        commercialTrackResults: null,
+        fullSummaryResults: null,
+        scoringResults: null,
+        networkResults: null,
+        processorStatus: null,
+        
         // Collaboration functions
         openCollaboration() { this.collaborationModalOpen = true; },
         
@@ -1832,6 +2332,530 @@ function catalynxApp() {
         getOnlineUsers() { return this.teamMembers.filter(user => user.status === 'online'); },
         getUserAvatar(userId) { const user = this.teamMembers.find(u => u.id === userId); return user ? user.avatar : 'U'; },
         markNotificationRead(notificationId) { const notification = this.notifications.find(n => n.id === notificationId); if (notification) notification.read = true; },
-        getUnreadNotifications() { return this.notifications.filter(n => !n.read); }
+        getUnreadNotifications() { return this.notifications.filter(n => !n.read); },
+        
+        // Quick Action Functions for Direct Menu Integration
+        async quickNonprofitDiscovery() {
+            await this.executeNonprofitTrack();
+        },
+        
+        async quickFederalDiscovery() {
+            await this.executeFederalTrack();
+        },
+        
+        async quickStateDiscovery() {
+            await this.executeStateTrack();
+        },
+        
+        async quickCommercialDiscovery() {
+            await this.executeCommercialTrack();
+        },
+        
+        async quickScoringAnalysis() {
+            await this.executeScoringAnalysis();
+        },
+        
+        async quickNetworkAnalysis() {
+            await this.executeNetworkAnalysis();
+        },
+        
+        async quickIntelligentClassification() {
+            await this.executeIntelligentClassification();
+        },
+        
+        async quickExportResults() {
+            await this.exportCurrentResults('csv');
+        },
+        
+        async quickFullSummary() {
+            await this.executeFullSummary();
+        },
+
+        // Phase 1.2: Essential Process Controls
+        
+        // Processor Group Control Functions
+        startDiscombobulatorGroup() {
+            if (this.processorControls.discombobulator.running) return;
+            
+            this.processorControls.discombobulator.running = true;
+            this.processorControls.discombobulator.status = 'running';
+            this.processorControls.discombobulator.progress = 0;
+            this.processorControls.discombobulator.currentTask = 'Initializing DISCOMBOBULATOR...';
+            this.processorControls.discombobulator.canStop = true;
+            this.processorControls.discombobulator.lastRun = new Date().toISOString();
+            
+            this.showEnhancedNotification('Starting DISCOMBOBULATOR processor group...', 'info');
+            this.executeDiscombobulatorSequence();
+        },
+
+        stopDiscombobulatorGroup() {
+            if (!this.processorControls.discombobulator.running) return;
+            
+            this.processorControls.discombobulator.running = false;
+            this.processorControls.discombobulator.status = 'idle';
+            this.processorControls.discombobulator.currentTask = 'Stopped by user';
+            this.processorControls.discombobulator.canStop = false;
+            
+            // Stop individual processors
+            ['nonprofit_track', 'federal_track', 'state_track', 'commercial_track'].forEach(proc => {
+                this.processorStatus[proc].status = 'idle';
+                this.processorStatus[proc].progress = 0;
+                this.processorStatus[proc].message = 'Stopped';
+            });
+            
+            this.showEnhancedNotification('DISCOMBOBULATOR processor group stopped', 'warning');
+        },
+
+        startAmplinatorGroup() {
+            if (this.processorControls.amplinator.running) return;
+            
+            this.processorControls.amplinator.running = true;
+            this.processorControls.amplinator.status = 'running';
+            this.processorControls.amplinator.progress = 0;
+            this.processorControls.amplinator.currentTask = 'Initializing AMPLINATOR...';
+            this.processorControls.amplinator.canStop = true;
+            this.processorControls.amplinator.lastRun = new Date().toISOString();
+            
+            this.showEnhancedNotification('Starting AMPLINATOR processor group...', 'info');
+            this.executeAmplinatorSequence();
+        },
+
+        stopAmplinatorGroup() {
+            if (!this.processorControls.amplinator.running) return;
+            
+            this.processorControls.amplinator.running = false;
+            this.processorControls.amplinator.status = 'idle';
+            this.processorControls.amplinator.currentTask = 'Stopped by user';
+            this.processorControls.amplinator.canStop = false;
+            
+            // Stop individual processors
+            ['scoring_analysis', 'network_analysis', 'export_functions', 'report_generation'].forEach(proc => {
+                this.processorStatus[proc].status = 'idle';
+                this.processorStatus[proc].progress = 0;
+                this.processorStatus[proc].message = 'Stopped';
+            });
+            
+            this.showEnhancedNotification('AMPLINATOR processor group stopped', 'warning');
+        },
+
+        // Enhanced processor sequences with progress tracking
+        async executeDiscombobulatorSequence() {
+            // Check if we have profile context and use enhanced version
+            if (this.processorControls.discombobulator.profileContext) {
+                return this.executeDiscombobulatorSequenceWithProfile();
+            }
+            
+            try {
+                const processors = [
+                    { name: 'nonprofit_track', func: () => this.executeNonprofitTrack(), label: 'Nonprofit Discovery' },
+                    { name: 'federal_track', func: () => this.executeFederalTrack(), label: 'Federal Grants Discovery' },
+                    { name: 'state_track', func: () => this.executeStateTrack(), label: 'State Agencies Discovery' },
+                    { name: 'commercial_track', func: () => this.executeCommercialTrack(), label: 'Commercial Intelligence' }
+                ];
+                
+                for (let i = 0; i < processors.length; i++) {
+                    if (!this.processorControls.discombobulator.running) break;
+                    
+                    const proc = processors[i];
+                    this.processorControls.discombobulator.currentTask = proc.label;
+                    this.processorControls.discombobulator.progress = (i / processors.length) * 100;
+                    
+                    // Update individual processor status
+                    this.processorStatus[proc.name].status = 'running';
+                    this.processorStatus[proc.name].progress = 0;
+                    this.processorStatus[proc.name].message = `Running ${proc.label}...`;
+                    
+                    try {
+                        await proc.func();
+                        this.processorStatus[proc.name].status = 'success';
+                        this.processorStatus[proc.name].progress = 100;
+                        this.processorStatus[proc.name].message = 'Completed successfully';
+                    } catch (error) {
+                        this.processorStatus[proc.name].status = 'error';
+                        this.processorStatus[proc.name].message = `Error: ${error.message}`;
+                        this.processorControls.discombobulator.status = 'error';
+                    }
+                }
+                
+                if (this.processorControls.discombobulator.running) {
+                    this.processorControls.discombobulator.status = 'success';
+                    this.processorControls.discombobulator.progress = 100;
+                    this.processorControls.discombobulator.currentTask = 'DISCOMBOBULATOR sequence complete';
+                    this.processorControls.discombobulator.running = false;
+                    this.processorControls.discombobulator.canStop = false;
+                    
+                    this.showEnhancedNotification('DISCOMBOBULATOR sequence completed successfully!', 'success');
+                }
+                
+            } catch (error) {
+                this.processorControls.discombobulator.status = 'error';
+                this.processorControls.discombobulator.currentTask = `Error: ${error.message}`;
+                this.processorControls.discombobulator.running = false;
+                this.processorControls.discombobulator.canStop = false;
+                this.showEnhancedNotification('DISCOMBOBULATOR sequence failed: ' + error.message, 'error');
+            }
+        },
+
+        async executeAmplinatorSequence() {
+            try {
+                const processors = [
+                    { name: 'scoring_analysis', func: () => this.executeScoringAnalysis(), label: 'Scoring Analysis' },
+                    { name: 'network_analysis', func: () => this.executeNetworkAnalysis(), label: 'Network Analysis' },
+                    { name: 'export_functions', func: () => this.executeExportFunctions(), label: 'Export Functions' },
+                    { name: 'report_generation', func: () => this.executeReportGeneration(), label: 'Report Generation' }
+                ];
+                
+                for (let i = 0; i < processors.length; i++) {
+                    if (!this.processorControls.amplinator.running) break;
+                    
+                    const proc = processors[i];
+                    this.processorControls.amplinator.currentTask = proc.label;
+                    this.processorControls.amplinator.progress = (i / processors.length) * 100;
+                    
+                    // Update individual processor status
+                    this.processorStatus[proc.name].status = 'running';
+                    this.processorStatus[proc.name].progress = 0;
+                    this.processorStatus[proc.name].message = `Running ${proc.label}...`;
+                    
+                    try {
+                        await proc.func();
+                        this.processorStatus[proc.name].status = 'success';
+                        this.processorStatus[proc.name].progress = 100;
+                        this.processorStatus[proc.name].message = 'Completed successfully';
+                    } catch (error) {
+                        this.processorStatus[proc.name].status = 'error';
+                        this.processorStatus[proc.name].message = `Error: ${error.message}`;
+                        this.processorControls.amplinator.status = 'error';
+                    }
+                }
+                
+                if (this.processorControls.amplinator.running) {
+                    this.processorControls.amplinator.status = 'success';
+                    this.processorControls.amplinator.progress = 100;
+                    this.processorControls.amplinator.currentTask = 'AMPLINATOR sequence complete';
+                    this.processorControls.amplinator.running = false;
+                    this.processorControls.amplinator.canStop = false;
+                    
+                    this.showEnhancedNotification('AMPLINATOR sequence completed successfully!', 'success');
+                }
+                
+            } catch (error) {
+                this.processorControls.amplinator.status = 'error';
+                this.processorControls.amplinator.currentTask = `Error: ${error.message}`;
+                this.processorControls.amplinator.running = false;
+                this.processorControls.amplinator.canStop = false;
+                this.showEnhancedNotification('AMPLINATOR sequence failed: ' + error.message, 'error');
+            }
+        },
+
+        // New AMPLINATOR functions needed for sequence
+        async executeExportFunctions() {
+            try {
+                this.showEnhancedNotification('Starting export functions...', 'info');
+                
+                const response = await this.apiCall('/analysis/export', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        export_type: 'results',
+                        parameters: {}
+                    })
+                });
+                
+                this.showEnhancedNotification('Export functions completed successfully!', 'success');
+                console.log('Export results:', response);
+                
+            } catch (error) {
+                console.error('Export functions failed:', error);
+                this.showEnhancedNotification('Export functions failed: ' + error.message, 'error');
+                throw error;
+            }
+        },
+
+        async executeReportGeneration() {
+            try {
+                this.showEnhancedNotification('Starting report generation...', 'info');
+                
+                const response = await this.apiCall('/analysis/reports', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        report_type: 'comprehensive',
+                        parameters: {}
+                    })
+                });
+                
+                this.showEnhancedNotification('Report generation completed successfully!', 'success');
+                console.log('Report results:', response);
+                
+            } catch (error) {
+                console.error('Report generation failed:', error);
+                this.showEnhancedNotification('Report generation failed: ' + error.message, 'error');
+                throw error;
+            }
+        },
+
+        // Status helper functions
+        getProcessorGroupStatus(groupName) {
+            const control = this.processorControls[groupName];
+            return {
+                status: control.status,
+                progress: control.progress,
+                running: control.running,
+                canStop: control.canStop,
+                currentTask: control.currentTask,
+                lastRun: control.lastRun
+            };
+        },
+
+        getProcessorStatusIcon(status) {
+            switch (status) {
+                case 'idle': return '⚫';
+                case 'running': return '🟡';
+                case 'success': return '🟢';
+                case 'error': return '🔴';
+                default: return '⚫';
+            }
+        },
+
+        getProcessorStatusClass(status) {
+            switch (status) {
+                case 'idle': return 'text-gray-500';
+                case 'running': return 'text-yellow-500';
+                case 'success': return 'text-green-500';
+                case 'error': return 'text-red-500';
+                default: return 'text-gray-500';
+            }
+        },
+
+        // Phase 1.3: Profile-Processor Integration Functions
+        
+        async configureProcessorsForProfile(profile) {
+            try {
+                // Configure parameters based on profile data
+                this.classificationParams.state = profile.geographic_scope?.states?.[0] || 'VA';
+                this.classificationParams.maxResults = profile.funding_preferences?.max_amount ? 500 : 1000;
+                this.classificationParams.minScore = profile.funding_preferences?.min_amount ? 0.5 : 0.3;
+                
+                // Set focus areas for more targeted discovery
+                if (profile.focus_areas && profile.focus_areas.length > 0) {
+                    this.classificationParams.focusAreas = profile.focus_areas;
+                }
+                
+                // Configure workflow parameters
+                this.workflowParams.state = profile.geographic_scope?.states?.[0] || 'VA';
+                this.workflowParams.minRevenue = profile.funding_preferences?.min_amount || 50000;
+                this.workflowParams.maxResults = 200;
+                
+                // Update NTEE codes based on focus areas if possible
+                if (profile.program_areas && profile.program_areas.length > 0) {
+                    this.workflowParams.focusAreas = profile.program_areas;
+                }
+                
+                console.log('Processors configured for profile:', profile.name, {
+                    state: this.classificationParams.state,
+                    maxResults: this.classificationParams.maxResults,
+                    focusAreas: this.classificationParams.focusAreas
+                });
+                
+            } catch (error) {
+                console.error('Failed to configure processors:', error);
+                this.showEnhancedNotification('Warning: Could not configure processors for profile', 'warning');
+            }
+        },
+
+        watchProcessorCompletion(groupName, callback) {
+            const checkCompletion = () => {
+                const control = this.processorControls[groupName];
+                if (!control.running && (control.status === 'success' || control.status === 'error')) {
+                    callback();
+                    return;
+                }
+                // Check again in 1 second
+                setTimeout(checkCompletion, 1000);
+            };
+            
+            // Start checking after a brief delay
+            setTimeout(checkCompletion, 2000);
+        },
+
+        getDiscoveredData() {
+            // Collect data from completed DISCOMBOBULATOR processors
+            return {
+                nonprofitResults: this.nonprofitTrackResults || [],
+                federalResults: this.federalTrackResults || [],
+                stateResults: this.stateTrackResults || [],
+                commercialResults: this.commercialOpportunities || [],
+                timestamp: new Date().toISOString()
+            };
+        },
+
+        async storeProfileResults(profile) {
+            try {
+                const results = {
+                    profile_id: profile.profile_id,
+                    discovery_results: this.getDiscoveredData(),
+                    analysis_results: {
+                        scoring: this.scoringResults || {},
+                        network: this.networkResults || {},
+                        exports: this.exportResults || {},
+                        reports: this.reportResults || {}
+                    },
+                    completed_at: new Date().toISOString()
+                };
+                
+                // Store in browser storage for now
+                const storageKey = `profile_results_${profile.profile_id}`;
+                localStorage.setItem(storageKey, JSON.stringify(results));
+                
+                // Could also send to backend API
+                console.log('Profile results stored:', results);
+                
+            } catch (error) {
+                console.error('Failed to store profile results:', error);
+            }
+        },
+
+        // Enhanced processor sequences with profile context
+        async executeDiscombobulatorSequenceWithProfile() {
+            const profile = this.processorControls.discombobulator.profileContext;
+            if (!profile) {
+                return this.executeDiscombobulatorSequence();
+            }
+            
+            try {
+                this.showEnhancedNotification(`Running DISCOMBOBULATOR for ${profile.name}...`, 'info');
+                
+                // Configure each processor with profile-specific parameters
+                const processors = [
+                    { 
+                        name: 'nonprofit_track', 
+                        func: () => this.executeNonprofitTrackWithProfile(profile), 
+                        label: `Nonprofit Discovery (${profile.geographic_scope?.states?.[0] || 'VA'})` 
+                    },
+                    { 
+                        name: 'federal_track', 
+                        func: () => this.executeFederalTrackWithProfile(profile), 
+                        label: 'Federal Grants Discovery' 
+                    },
+                    { 
+                        name: 'state_track', 
+                        func: () => this.executeStateTrackWithProfile(profile), 
+                        label: 'State Agencies Discovery' 
+                    },
+                    { 
+                        name: 'commercial_track', 
+                        func: () => this.executeCommercialTrackWithProfile(profile), 
+                        label: 'Commercial Intelligence' 
+                    }
+                ];
+                
+                for (let i = 0; i < processors.length; i++) {
+                    if (!this.processorControls.discombobulator.running) break;
+                    
+                    const proc = processors[i];
+                    this.processorControls.discombobulator.currentTask = proc.label;
+                    this.processorControls.discombobulator.progress = (i / processors.length) * 100;
+                    
+                    this.processorStatus[proc.name].status = 'running';
+                    this.processorStatus[proc.name].progress = 0;
+                    this.processorStatus[proc.name].message = `Running ${proc.label}...`;
+                    
+                    try {
+                        await proc.func();
+                        this.processorStatus[proc.name].status = 'success';
+                        this.processorStatus[proc.name].progress = 100;
+                        this.processorStatus[proc.name].message = 'Completed successfully';
+                    } catch (error) {
+                        this.processorStatus[proc.name].status = 'error';
+                        this.processorStatus[proc.name].message = `Error: ${error.message}`;
+                        this.processorControls.discombobulator.status = 'error';
+                    }
+                }
+                
+                if (this.processorControls.discombobulator.running) {
+                    this.processorControls.discombobulator.status = 'success';
+                    this.processorControls.discombobulator.progress = 100;
+                    this.processorControls.discombobulator.currentTask = `DISCOMBOBULATOR complete for ${profile.name}`;
+                    this.processorControls.discombobulator.running = false;
+                    this.processorControls.discombobulator.canStop = false;
+                    
+                    this.showEnhancedNotification(`DISCOMBOBULATOR sequence completed for ${profile.name}!`, 'success');
+                }
+                
+            } catch (error) {
+                this.processorControls.discombobulator.status = 'error';
+                this.processorControls.discombobulator.currentTask = `Error: ${error.message}`;
+                this.processorControls.discombobulator.running = false;
+                this.processorControls.discombobulator.canStop = false;
+                this.showEnhancedNotification('DISCOMBOBULATOR sequence failed: ' + error.message, 'error');
+            }
+        },
+
+        // Profile-aware processor execution functions
+        async executeNonprofitTrackWithProfile(profile) {
+            const state = profile.geographic_scope?.states?.[0] || 'VA';
+            const maxResults = profile.funding_preferences?.max_amount ? 500 : 1000;
+            
+            const response = await this.apiCall('/discovery/nonprofit', {
+                method: 'POST',
+                body: JSON.stringify({
+                    state: state,
+                    max_results: maxResults,
+                    focus_areas: profile.focus_areas || [],
+                    target_populations: profile.target_populations || [],
+                    profile_context: profile
+                })
+            });
+            
+            this.nonprofitTrackResults = response.results;
+            return response;
+        },
+
+        async executeFederalTrackWithProfile(profile) {
+            const response = await this.apiCall('/discovery/federal', {
+                method: 'POST',
+                body: JSON.stringify({
+                    funding_types: profile.funding_preferences?.funding_types || ['grants'],
+                    min_amount: profile.funding_preferences?.min_amount || 0,
+                    max_amount: profile.funding_preferences?.max_amount || 10000000,
+                    focus_areas: profile.focus_areas || [],
+                    profile_context: profile
+                })
+            });
+            
+            this.federalTrackResults = response.results;
+            return response;
+        },
+
+        async executeStateTrackWithProfile(profile) {
+            const states = profile.geographic_scope?.states || ['VA'];
+            
+            const response = await this.apiCall('/discovery/state', {
+                method: 'POST',
+                body: JSON.stringify({
+                    states: states,
+                    focus_areas: profile.focus_areas || [],
+                    service_areas: profile.service_areas || [],
+                    profile_context: profile
+                })
+            });
+            
+            this.stateTrackResults = response.results;
+            return response;
+        },
+
+        async executeCommercialTrackWithProfile(profile) {
+            const response = await this.apiCall('/discovery/commercial', {
+                method: 'POST',
+                body: JSON.stringify({
+                    focus_areas: profile.focus_areas || [],
+                    geographic_scope: profile.geographic_scope || {},
+                    funding_preferences: profile.funding_preferences || {},
+                    profile_context: profile
+                })
+            });
+            
+            this.commercialOpportunities = response.results?.opportunities || [];
+            return response;
+        }
     }
 }

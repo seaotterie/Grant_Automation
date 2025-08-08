@@ -31,6 +31,7 @@ from src.profiles.models import OrganizationProfile, FundingType
 from src.profiles.workflow_integration import ProfileWorkflowIntegrator
 from src.pipeline.pipeline_engine import ProcessingPriority
 from src.pipeline.resource_allocator import resource_allocator
+from src.processors.registry import get_processor_summary
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -728,6 +729,524 @@ async def get_trend_analysis():
         }
     except Exception as e:
         logger.error(f"Failed to get trend analysis: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Processor Management API endpoints
+@app.get("/api/processors")
+async def list_processors():
+    """List all available processors with status."""
+    try:
+        summary = get_processor_summary()
+        return {
+            "status": "success",
+            "processors": summary["processors_info"],
+            "total_count": summary["total_processors"],
+            "by_type": summary["by_type"]
+        }
+    except Exception as e:
+        logger.error(f"Failed to get processors: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/processors/{processor_name}/status")
+async def get_processor_status(processor_name: str):
+    """Get detailed status for a specific processor."""
+    try:
+        engine = get_workflow_engine()
+        info = engine.registry.get_processor_info(processor_name)
+        if not info:
+            raise HTTPException(status_code=404, detail="Processor not found")
+        return info
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get processor status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/processors/{processor_name}/execute")
+async def execute_processor(processor_name: str, request: Dict[str, Any]):
+    """Execute a specific processor with parameters."""
+    try:
+        engine = get_workflow_engine()
+        
+        # Get processor instance
+        processor_class = engine.registry.get_processor(processor_name)
+        if not processor_class:
+            raise HTTPException(status_code=404, detail="Processor not found")
+        
+        processor = processor_class()
+        
+        # Extract parameters from request
+        params = request.get("parameters", {})
+        input_data = request.get("input_data", [])
+        
+        # Execute processor
+        result = await processor.process_async(input_data, **params)
+        
+        return {
+            "status": "success",
+            "processor": processor_name,
+            "result": result,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to execute processor {processor_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# DISCOMBOBULATOR Track Endpoints
+@app.post("/api/discovery/nonprofit")
+async def discover_nonprofits(request: Dict[str, Any]):
+    """Execute nonprofit discovery track (ProPublica + BMF + EIN lookup)."""
+    try:
+        logger.info("Starting nonprofit discovery track")
+        
+        # Execute nonprofit track processors
+        engine = get_workflow_engine()
+        
+        # Get parameters
+        state = request.get("state", "VA")
+        ein = request.get("ein")
+        max_results = request.get("max_results", 100)
+        
+        # Phase 1.3: Profile context integration
+        profile_context = request.get("profile_context")
+        focus_areas = request.get("focus_areas", [])
+        target_populations = request.get("target_populations", [])
+        
+        if profile_context:
+            logger.info(f"Using profile context for nonprofit discovery: {profile_context.get('name', 'Unknown')}")
+            # Override parameters with profile-specific values
+            if profile_context.get("geographic_scope", {}).get("states"):
+                state = profile_context["geographic_scope"]["states"][0]
+            if profile_context.get("focus_areas"):
+                focus_areas.extend(profile_context["focus_areas"])
+            if profile_context.get("target_populations"):
+                target_populations.extend(profile_context["target_populations"])
+        
+        results = {"track": "nonprofit", "results": []}
+        
+        # Execute BMF filtering if no specific EIN
+        if not ein:
+            bmf_processor = engine.registry.get_processor("bmf_filter")
+            if bmf_processor:
+                bmf_instance = bmf_processor()
+                bmf_results = await bmf_instance.process_async(
+                    [], 
+                    state=state, 
+                    max_results=max_results,
+                    focus_areas=focus_areas,
+                    target_populations=target_populations,
+                    profile_context=profile_context
+                )
+                results["bmf_results"] = bmf_results
+        
+        # Execute ProPublica fetch
+        propublica_processor = engine.registry.get_processor("propublica_fetch")
+        if propublica_processor:
+            pp_instance = propublica_processor()
+            if ein:
+                pp_results = await pp_instance.process_async([{"ein": ein}])
+            else:
+                pp_results = await pp_instance.process_async(results.get("bmf_results", [])[:50])
+            results["propublica_results"] = pp_results
+        
+        return {
+            "status": "completed",
+            "track": "nonprofit",
+            "total_found": len(results.get("propublica_results", [])),
+            "results": results,
+            "profile_context": profile_context.get('name') if profile_context else None,
+            "parameters_used": {
+                "state": state,
+                "max_results": max_results,
+                "focus_areas": focus_areas,
+                "target_populations": target_populations
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Nonprofit discovery failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/discovery/federal")
+async def discover_federal_opportunities(request: Dict[str, Any]):
+    """Execute federal grants discovery (Grants.gov + USASpending)."""
+    try:
+        logger.info("Starting federal discovery track")
+        
+        # Get parameters
+        keywords = request.get("keywords", [])
+        opportunity_category = request.get("opportunity_category")
+        max_results = request.get("max_results", 50)
+        
+        results = {"track": "federal", "results": []}
+        
+        # Execute Grants.gov fetch
+        engine = get_workflow_engine()
+        grants_processor = engine.registry.get_processor("grants_gov_fetch")
+        if grants_processor:
+            grants_instance = grants_processor()
+            grants_results = await grants_instance.process_async(
+                [], 
+                keywords=keywords,
+                opportunity_category=opportunity_category,
+                max_results=max_results
+            )
+            results["grants_gov_results"] = grants_results
+        
+        # Execute USASpending fetch for historical context
+        usaspending_processor = engine.registry.get_processor("usaspending_fetch")
+        if usaspending_processor:
+            usa_instance = usaspending_processor()
+            usa_results = await usa_instance.process_async([], keywords=keywords)
+            results["usaspending_results"] = usa_results
+        
+        return {
+            "status": "completed",
+            "track": "federal",
+            "total_found": len(results.get("grants_gov_results", [])),
+            "results": results,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Federal discovery failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/discovery/state")
+async def discover_state_opportunities(request: Dict[str, Any]):
+    """Execute state-level grants discovery."""
+    try:
+        logger.info("Starting state discovery track")
+        
+        # Get parameters
+        states = request.get("states", ["VA"])
+        focus_areas = request.get("focus_areas", [])
+        max_results = request.get("max_results", 50)
+        
+        results = {"track": "state", "results": []}
+        
+        # Execute Virginia state grants fetch
+        engine = get_workflow_engine()
+        va_processor = engine.registry.get_processor("va_state_grants_fetch")
+        if va_processor and "VA" in states:
+            va_instance = va_processor()
+            va_results = await va_instance.process_async(
+                [], 
+                focus_areas=focus_areas,
+                max_results=max_results
+            )
+            results["virginia_results"] = va_results
+        
+        return {
+            "status": "completed", 
+            "track": "state",
+            "total_found": len(results.get("virginia_results", [])),
+            "results": results,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"State discovery failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/discovery/commercial")
+async def discover_commercial_enhanced(request: Dict[str, Any]):
+    """Execute commercial discovery (Foundation Directory + CSR Analysis)."""
+    try:
+        logger.info("Starting enhanced commercial discovery track")
+        
+        # Get parameters
+        industries = request.get("industries", [])
+        company_sizes = request.get("company_sizes", [])
+        funding_range = request.get("funding_range", {})
+        max_results = request.get("max_results", 50)
+        
+        results = {"track": "commercial", "results": []}
+        
+        engine = get_workflow_engine()
+        
+        # Execute Foundation Directory fetch
+        foundation_processor = engine.registry.get_processor("foundation_directory_fetch")
+        if foundation_processor:
+            fd_instance = foundation_processor()
+            fd_results = await fd_instance.process_async(
+                [],
+                industries=industries,
+                funding_range=funding_range,
+                max_results=max_results
+            )
+            results["foundation_results"] = fd_results
+        
+        # Execute CSR Analysis
+        csr_processor = engine.registry.get_processor("corporate_csr_analyzer")
+        if csr_processor:
+            csr_instance = csr_processor()
+            csr_results = await csr_instance.process_async(
+                [],
+                industries=industries,
+                company_sizes=company_sizes
+            )
+            results["csr_results"] = csr_results
+        
+        return {
+            "status": "completed",
+            "track": "commercial", 
+            "total_found": len(results.get("foundation_results", [])) + len(results.get("csr_results", [])),
+            "results": results,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Commercial discovery failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# AMPLINATOR Track Endpoints
+@app.post("/api/analysis/scoring")
+async def run_scoring_analysis(request: Dict[str, Any]):
+    """Execute scoring analysis (Financial + Risk + Government Opportunity scoring)."""
+    try:
+        logger.info("Starting scoring analysis")
+        
+        # Get input organizations
+        organizations = request.get("organizations", [])
+        if not organizations:
+            raise HTTPException(status_code=400, detail="Organizations required for scoring")
+        
+        results = {"track": "scoring", "results": {}}
+        
+        engine = get_workflow_engine()
+        
+        # Execute Financial Scoring
+        financial_processor = engine.registry.get_processor("financial_scorer")
+        if financial_processor:
+            fs_instance = financial_processor()
+            financial_results = await fs_instance.process_async(organizations)
+            results["results"]["financial_scores"] = financial_results
+        
+        # Execute Risk Assessment
+        risk_processor = engine.registry.get_processor("risk_assessor")
+        if risk_processor:
+            risk_instance = risk_processor()
+            risk_results = await risk_instance.process_async(organizations)
+            results["results"]["risk_assessments"] = risk_results
+        
+        # Execute Government Opportunity Scoring
+        gov_scorer = engine.registry.get_processor("government_opportunity_scorer")
+        if gov_scorer:
+            gov_instance = gov_scorer()
+            gov_results = await gov_instance.process_async(organizations)
+            results["results"]["government_scores"] = gov_results
+        
+        return {
+            "status": "completed",
+            "track": "scoring",
+            "organizations_analyzed": len(organizations),
+            "results": results,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Scoring analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/analysis/network")
+async def run_network_analysis(request: Dict[str, Any]):
+    """Execute network analysis (Board connections + Strategic intelligence)."""
+    try:
+        logger.info("Starting network analysis")
+        
+        # Get input organizations
+        organizations = request.get("organizations", [])
+        if not organizations:
+            raise HTTPException(status_code=400, detail="Organizations required for network analysis")
+        
+        results = {"track": "network", "results": {}}
+        
+        engine = get_workflow_engine()
+        
+        # Execute Board Network Analysis
+        board_processor = engine.registry.get_processor("board_network_analyzer")
+        if board_processor:
+            board_instance = board_processor()
+            board_results = await board_instance.process_async(organizations)
+            results["results"]["board_networks"] = board_results
+        
+        # Execute Enhanced Network Analysis
+        enhanced_processor = engine.registry.get_processor("enhanced_network_analyzer")
+        if enhanced_processor:
+            enhanced_instance = enhanced_processor()
+            enhanced_results = await enhanced_instance.process_async(organizations)
+            results["results"]["enhanced_networks"] = enhanced_results
+        
+        return {
+            "status": "completed",
+            "track": "network",
+            "organizations_analyzed": len(organizations),
+            "results": results,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Network analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/analysis/export")
+async def run_export_functions(request: Dict[str, Any]):
+    """Execute export functions (All export/download processors)."""
+    try:
+        logger.info("Starting export functions")
+        
+        export_type = request.get("export_type", "results")
+        export_params = request.get("parameters", {})
+        
+        engine = get_workflow_engine()
+        
+        # Execute Export Processor
+        export_processor = engine.registry.get_processor("export_processor")
+        if not export_processor:
+            raise HTTPException(status_code=500, detail="Export processor not available")
+        
+        export_instance = export_processor()
+        export_context = {
+            "export_type": export_type,
+            **export_params
+        }
+        
+        export_results = await export_instance.execute(export_context)
+        
+        return {
+            "status": "completed",
+            "track": "export",
+            "export_type": export_type,
+            "results": export_results,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Export functions failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/analysis/reports")
+async def run_report_generation(request: Dict[str, Any]):
+    """Execute report generation processors."""
+    try:
+        logger.info("Starting report generation")
+        
+        report_type = request.get("report_type", "comprehensive")
+        report_params = request.get("parameters", {})
+        
+        engine = get_workflow_engine()
+        
+        # Execute Report Generator
+        report_processor = engine.registry.get_processor("report_generator")
+        if not report_processor:
+            raise HTTPException(status_code=500, detail="Report generator not available")
+        
+        report_instance = report_processor()
+        report_context = {
+            "report_type": report_type,
+            **report_params
+        }
+        
+        report_results = await report_instance.execute(report_context)
+        
+        return {
+            "status": "completed",
+            "track": "reports",
+            "report_type": report_type,
+            "results": report_results,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Report generation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/intelligence/classify")
+async def run_intelligent_classification(request: Dict[str, Any]):
+    """Execute intelligent classification analysis."""
+    try:
+        logger.info("Starting intelligent classification")
+        
+        # Get input organizations  
+        organizations = request.get("organizations", [])
+        state = request.get("state", "VA")
+        min_score = request.get("min_score", 0.3)
+        
+        results = {"track": "classification", "results": {}}
+        
+        engine = get_workflow_engine()
+        
+        # Execute Intelligent Classification
+        classifier = engine.registry.get_processor("intelligent_classifier")
+        if classifier:
+            classifier_instance = classifier()
+            classification_results = await classifier_instance.process_async(
+                organizations or [],
+                state=state,
+                min_score=min_score
+            )
+            results["results"]["classifications"] = classification_results
+        
+        return {
+            "status": "completed",
+            "track": "classification",
+            "organizations_analyzed": len(organizations) if organizations else "discovery_mode",
+            "results": results,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Intelligent classification failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Multi-Track Pipeline Endpoint
+@app.post("/api/pipeline/full-summary")
+async def run_full_pipeline_summary(request: Dict[str, Any]):
+    """Execute complete pipeline status overview across all tracks."""
+    try:
+        logger.info("Generating full pipeline summary")
+        
+        engine = get_workflow_engine()
+        processor_summary = get_processor_summary()
+        workflow_stats = engine.get_workflow_statistics()
+        resource_status = resource_allocator.get_resource_status()
+        
+        return {
+            "status": "completed",
+            "summary_type": "full_pipeline",
+            "system_overview": {
+                "processors": processor_summary,
+                "workflows": workflow_stats,
+                "resources": resource_status,
+                "uptime": datetime.now().isoformat()
+            },
+            "track_status": {
+                "nonprofit_track": "operational",
+                "federal_track": "operational", 
+                "state_track": "operational",
+                "commercial_track": "operational",
+                "intelligence_track": "operational"
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Full pipeline summary failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Health check endpoint
