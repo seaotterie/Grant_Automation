@@ -3,11 +3,25 @@
 
 function catalynxApp() {
     return {
-        // Application state
-        activeTab: 'status',
+        // Application state - New workflow-based navigation
+        activeTab: 'status', // Legacy compatibility
+        activeStage: 'profiler', // New workflow stage system
         systemStatus: 'healthy',
         apiStatus: 'healthy',
         currentTime: new Date().toLocaleTimeString(),
+        
+        // Workflow progress tracking
+        workflowProgress: {
+            profiler: false,
+            discover: false,
+            analyze: false,
+            plan: false,
+            execute: false
+        },
+        
+        // Stage-specific data
+        profileCount: 0,
+        activeWorkflows: 0,
         
         // Theme system - Dark mode default
         darkMode: localStorage.getItem('catalynx-dark-mode') !== 'false',
@@ -56,6 +70,185 @@ function catalynxApp() {
             messageCount: 0,
             errorCount: 0,
             latency: 0
+        },
+        
+        // Workflow Storytelling & Narration System
+        workflowNarration: {
+            currentStory: '',
+            storyHistory: [],
+            isNarrating: false,
+            currentAudience: 'nonprofit', // 'nonprofit' or 'technical'
+            
+            // Process narratives tailored for nonprofit audiences
+            processStories: {
+                bmf_filter: {
+                    nonprofit: "Searching the IRS Business Master File database to find organizations similar to yours across {state}. This helps us understand your competitive landscape and identify potential collaboration partners.",
+                    technical: "Executing BMF filter processor with state parameter {state}"
+                },
+                propublica_fetch: {
+                    nonprofit: "Analyzing detailed financial data from ProPublica to understand how organizations like yours manage their funding and operations. This reveals patterns in successful nonprofit financial strategies.",
+                    technical: "Fetching ProPublica 990 data for identified organizations"
+                },
+                financial_scorer: {
+                    nonprofit: "Evaluating financial health indicators including revenue stability, growth patterns, and operational efficiency. This helps identify which funding strategies are working best for similar organizations.",
+                    technical: "Calculating composite financial health scores using revenue, growth, and efficiency metrics"
+                },
+                grants_gov_fetch: {
+                    nonprofit: "Searching Grants.gov for federal funding opportunities that align with your mission and organizational capacity. We're looking for grants where organizations like yours have historically been successful.",
+                    technical: "Querying Grants.gov API with mission-aligned keywords and eligibility criteria"
+                },
+                va_state_grants_fetch: {
+                    nonprofit: "Exploring Virginia state agency grant opportunities, prioritized by alignment with your focus areas. State grants often have less competition and more flexibility than federal opportunities.",
+                    technical: "Processing Virginia state agency grant database with focus area matching"
+                },
+                board_network_analyzer: {
+                    nonprofit: "Mapping board member connections to identify potential warm introductions and partnership opportunities. Strong relationships are often the key to successful grant applications.",
+                    technical: "Analyzing board member overlap across organizations for network mapping"
+                },
+                intelligent_classifier: {
+                    nonprofit: "Using AI to identify organizations most likely to be interested in collaboration or have relevant expertise to share. This classification helps prioritize your networking efforts.",
+                    technical: "Running ML classification algorithms on organizational data"
+                },
+                foundation_directory_fetch: {
+                    nonprofit: "Searching foundation databases for private funders whose giving patterns align with your mission. Private foundations often provide more flexible funding than government sources.",
+                    technical: "Querying Foundation Directory API with mission and geographic parameters"
+                }
+            },
+            
+            // Progress context for different phases
+            progressContext: {
+                discovery: {
+                    nonprofit: "We're in the discovery phase, identifying organizations, opportunities, and connections relevant to your mission.",
+                    stages: [
+                        "Finding similar organizations in your area",
+                        "Analyzing successful funding patterns", 
+                        "Identifying collaboration opportunities",
+                        "Mapping potential partnership connections"
+                    ]
+                },
+                analysis: {
+                    nonprofit: "Now analyzing the data to identify your best opportunities and strategic advantages.",
+                    stages: [
+                        "Evaluating organizational compatibility",
+                        "Assessing funding opportunity fit",
+                        "Calculating success probability scores",
+                        "Prioritizing recommendations"
+                    ]
+                },
+                synthesis: {
+                    nonprofit: "Synthesizing findings into actionable recommendations tailored to your organization's strengths and goals.",
+                    stages: [
+                        "Generating strategic recommendations",
+                        "Creating opportunity pipeline",
+                        "Mapping next steps and timelines",
+                        "Preparing executive summary"
+                    ]
+                }
+            },
+            
+            updateNarration(processName, params = {}, phase = 'discovery') {
+                const story = this.processStories[processName];
+                if (story && story[this.currentAudience]) {
+                    let narrative = story[this.currentAudience];
+                    
+                    // Replace parameters in narrative
+                    Object.keys(params).forEach(key => {
+                        narrative = narrative.replace(`{${key}}`, params[key]);
+                    });
+                    
+                    this.currentStory = narrative;
+                    this.storyHistory.push({
+                        timestamp: new Date().toISOString(),
+                        process: processName,
+                        story: narrative,
+                        phase: phase,
+                        params: params
+                    });
+                    
+                    this.isNarrating = true;
+                    
+                    // Auto-clear narration after 10 seconds
+                    setTimeout(() => {
+                        if (this.currentStory === narrative) {
+                            this.isNarrating = false;
+                        }
+                    }, 10000);
+                }
+            },
+            
+            getPhaseContext(phase) {
+                const context = this.progressContext[phase];
+                return context ? context[this.currentAudience] : '';
+            },
+            
+            getCurrentStageDescription(phase, stageIndex) {
+                const context = this.progressContext[phase];
+                if (context && context.stages && context.stages[stageIndex]) {
+                    return context.stages[stageIndex];
+                }
+                return '';
+            },
+            
+            generateSessionSummary(profileName) {
+                const summary = {
+                    profileName: profileName,
+                    sessionStart: this.storyHistory.length > 0 ? this.storyHistory[0].timestamp : new Date().toISOString(),
+                    totalProcesses: this.storyHistory.length,
+                    phasesCompleted: [...new Set(this.storyHistory.map(s => s.phase))],
+                    keyInsights: this.extractKeyInsights(),
+                    recommendedNextSteps: this.generateNextSteps(profileName)
+                };
+                
+                return summary;
+            },
+            
+            extractKeyInsights() {
+                // Extract insights based on processes run
+                const processesRun = [...new Set(this.storyHistory.map(s => s.process))];
+                const insights = [];
+                
+                if (processesRun.includes('bmf_filter')) {
+                    insights.push("Identified competitive landscape and similar organizations in your area");
+                }
+                if (processesRun.includes('board_network_analyzer')) {
+                    insights.push("Mapped potential board connections for strategic partnerships");
+                }
+                if (processesRun.includes('grants_gov_fetch')) {
+                    insights.push("Found federal funding opportunities aligned with your mission");
+                }
+                if (processesRun.includes('financial_scorer')) {
+                    insights.push("Analyzed financial health patterns of successful similar organizations");
+                }
+                
+                return insights;
+            },
+            
+            generateNextSteps(profileName) {
+                const processesRun = [...new Set(this.storyHistory.map(s => s.process))];
+                const nextSteps = [];
+                
+                nextSteps.push(`Schedule follow-up meeting to review detailed findings for ${profileName}`);
+                
+                if (processesRun.includes('board_network_analyzer')) {
+                    nextSteps.push("Identify top 3 board connections for warm introductions");
+                }
+                if (processesRun.includes('grants_gov_fetch') || processesRun.includes('va_state_grants_fetch')) {
+                    nextSteps.push("Prioritize grant opportunities based on fit and deadline");
+                }
+                if (processesRun.includes('foundation_directory_fetch')) {
+                    nextSteps.push("Research foundation giving patterns and application requirements");
+                }
+                
+                nextSteps.push("Prepare executive summary report for board presentation");
+                
+                return nextSteps;
+            },
+            
+            clearSession() {
+                this.storyHistory = [];
+                this.currentStory = '';
+                this.isNarrating = false;
+            }
         },
         
         // Classification data
@@ -326,28 +519,180 @@ function catalynxApp() {
             }
         },
         
+        // NEW: Workflow Stage Management
+        switchStage(stage) {
+            this.activeStage = stage;
+            console.log('Switched to workflow stage:', stage);
+            
+            // Map stages to corresponding legacy tabs for backward compatibility
+            const stageToTabMapping = {
+                'profiler': 'profiles',
+                'discover': 'discovery',
+                'analyze': 'analytics', 
+                'plan': 'classification',
+                'execute': 'exports',
+                'pipeline': 'pipeline',
+                'testing': 'testing',
+                'settings': 'settings'
+            };
+            
+            // Update legacy activeTab for existing functionality
+            if (stageToTabMapping[stage]) {
+                this.activeTab = stageToTabMapping[stage];
+            }
+            
+            // Load stage-specific data and functionality
+            this.loadStageData(stage);
+            
+            // Update workflow progress
+            this.updateWorkflowProgress(stage);
+        },
+        
+        loadStageData(stage) {
+            switch(stage) {
+                case 'profiler':
+                    this.loadProfiles();
+                    this.loadProfileStats();
+                    console.log('Loading profiler data - profiles and stats');
+                    break;
+                case 'discover':
+                    this.loadDiscoveryData();
+                    break;
+                case 'analyze':
+                    this.loadAnalytics();
+                    break;
+                case 'plan':
+                    this.loadClassificationResults();
+                    break;
+                case 'execute':
+                    this.loadExports();
+                    break;
+                case 'pipeline':
+                    this.loadPipelineStatus();
+                    break;
+                case 'testing':
+                    this.loadTestingInterface();
+                    break;
+                case 'settings':
+                    this.loadSystemSettings();
+                    break;
+            }
+        },
+        
+        loadDiscoveryData() {
+            // Load discovery interface data - consolidates commercial, states, federal, nonprofit
+            console.log('Loading multi-track discovery data');
+        },
+        
+        loadPipelineStatus() {
+            // Load live pipeline control data
+            console.log('Loading pipeline status');
+        },
+        
+        loadTestingInterface() {
+            // Load testing interface
+            console.log('Loading testing interface');
+        },
+        
+        loadSystemSettings() {
+            // Load system settings
+            console.log('Loading system settings');
+        },
+        
+        updateWorkflowProgress(stage) {
+            // Mark the current stage as active/visited
+            if (stage in this.workflowProgress) {
+                this.workflowProgress[stage] = true;
+            }
+        },
+        
+        getCurrentStageLabel() {
+            const stageLabels = {
+                'profiler': 'Profile Management',
+                'discover': 'Multi-Track Discovery',
+                'analyze': 'Intelligence Analysis', 
+                'plan': 'Strategic Planning',
+                'execute': 'Implementation & Export',
+                'pipeline': 'Live Processing Control',
+                'testing': 'System Testing',
+                'settings': 'Configuration'
+            };
+            return stageLabels[this.activeStage] || 'Unknown Stage';
+        },
+        
+        getActiveProcessorCount() {
+            // Return count of active processors - placeholder
+            return '18';
+        },
+        
         getPageTitle() {
-            const titles = {
+            // Workflow stage titles have priority
+            const stageNames = {
+                'profiler': 'Profiler',
+                'discover': 'Discover',
+                'analyze': 'Analyze', 
+                'plan': 'Plan',
+                'execute': 'Execute',
+                'pipeline': 'Live Pipeline',
+                'testing': 'Testing',
+                'settings': 'Settings'
+            };
+            
+            // Legacy tab titles for backward compatibility
+            const tabNames = {
                 dashboard: 'Dashboard',
                 workflows: 'Workflows',
                 classification: 'Intelligent Classification',
                 analytics: 'Analytics',
                 exports: 'Data Exports',
-                settings: 'Settings'
+                settings: 'Settings',
+                status: 'System Status',
+                profiles: 'Organization Profiles',
+                commercial: 'Commercial Track',
+                states: 'State Discovery',
+                predictive: 'Predictive Analytics',
+                roi: 'ROI Analysis',
+                network: 'Network Analysis',
+                testing: 'Testing Interface',
+                pipeline: 'Pipeline Control'
             };
-            return titles[this.activeTab] || 'Catalynx';
+            
+            return stageNames[this.activeStage] || tabNames[this.activeTab] || 'Catalynx';
         },
         
         getPageDescription() {
-            const descriptions = {
+            // Workflow stage descriptions
+            const stageDescriptions = {
+                'profiler': 'Organization profile management and workflow hub',
+                'discover': 'Multi-track opportunity discovery across all funding sources',
+                'analyze': 'Financial intelligence, network analysis, and comprehensive analytics',
+                'plan': 'AI-powered classification and strategic recommendations',
+                'execute': 'Export results, generate reports, and track implementation',
+                'pipeline': 'Real-time processing control and system monitoring',
+                'testing': 'System diagnostics and processor testing',
+                'settings': 'System configuration and API management'
+            };
+            
+            // Legacy tab descriptions for backward compatibility
+            const tabDescriptions = {
                 dashboard: 'Overview of system status and recent activity',
                 workflows: 'Manage and monitor grant research workflows',
                 classification: 'Classify organizations using intelligent analysis',
                 analytics: 'View analytics and performance metrics',
                 exports: 'Download and manage export files',
-                settings: 'Configure system settings and preferences'
+                settings: 'Configure system settings and preferences',
+                status: 'Global system health and processor status',
+                profiles: 'Organization profile management and analytics',
+                commercial: 'Corporate foundation and CSR opportunity discovery',
+                states: 'State-level grant and agency opportunity discovery',
+                predictive: 'Growth trends and success probability analysis',
+                roi: 'Return on investment and opportunity cost analysis',
+                network: 'Board connections and strategic network intelligence',
+                testing: 'Processor testing and system diagnostics',
+                pipeline: 'Live processing control and workflow monitoring'
             };
-            return descriptions[this.activeTab] || '';
+            
+            return stageDescriptions[this.activeStage] || tabDescriptions[this.activeTab] || 'Grant research automation platform';
         },
         
         // API communication with retries and better error handling
@@ -1507,6 +1852,11 @@ function catalynxApp() {
                 opportunities: this.profiles.reduce((sum, p) => sum + (p.opportunities_count || 0), 0),
                 templates: this.profiles.filter(p => p.status === 'template').length
             };
+            
+            // Update workflow stage header count
+            this.profileCount = this.profiles.length;
+            
+            console.log('Profile stats updated:', this.profileStats, 'Total count for workflow:', this.profileCount);
         },
         
         filterProfiles() {
@@ -1965,7 +2315,20 @@ function catalynxApp() {
         // DISCOMBOBULATOR Functions - Multi-Track Discovery
         async executeNonprofitTrack() {
             try {
+                // Start narration for the nonprofit discovery process
+                this.workflowNarration.updateNarration('bmf_filter', { 
+                    state: this.classificationParams.state || 'VA' 
+                }, 'discovery');
+                
                 this.showEnhancedNotification('Starting nonprofit discovery track...', 'info');
+                
+                // Add progress context
+                const context = this.workflowNarration.getPhaseContext('discovery');
+                if (context) {
+                    setTimeout(() => {
+                        this.showEnhancedNotification(context, 'info');
+                    }, 1000);
+                }
                 
                 const response = await this.apiCall('/discovery/nonprofit', {
                     method: 'POST',
@@ -1975,10 +2338,19 @@ function catalynxApp() {
                     })
                 });
                 
+                // Update narration for analysis phase
+                this.workflowNarration.updateNarration('propublica_fetch', {}, 'analysis');
+                
                 this.showEnhancedNotification(
                     `Nonprofit track completed! Found ${response.total_found} organizations`, 
                     'success'
                 );
+                
+                // Provide insight-based summary for nonprofit audience
+                const insights = `Found ${response.total_found || 0} similar organizations in ${this.classificationParams.state || 'VA'}. This data reveals collaboration patterns and successful funding strategies in your sector.`;
+                setTimeout(() => {
+                    this.showEnhancedNotification(insights, 'success');
+                }, 2000);
                 
                 // Store results for viewing
                 this.nonprofitTrackResults = response.results;
@@ -1986,12 +2358,16 @@ function catalynxApp() {
                 
             } catch (error) {
                 console.error('Nonprofit track failed:', error);
+                this.workflowNarration.isNarrating = false;
                 this.showEnhancedNotification('Nonprofit discovery failed: ' + error.message, 'error');
             }
         },
         
         async executeFederalTrack() {
             try {
+                // Start narration for federal grants discovery
+                this.workflowNarration.updateNarration('grants_gov_fetch', {}, 'discovery');
+                
                 this.showEnhancedNotification('Starting federal grants discovery...', 'info');
                 
                 const response = await this.apiCall('/discovery/federal', {
@@ -3394,6 +3770,256 @@ function catalynxApp() {
                 errorCount: 0,
                 latency: 0
             };
+        },
+        
+        // Profile Dashboard Functions
+        getProfileSessions(profileId) {
+            // Mock data - in production this would fetch from backend
+            if (!profileId) return [];
+            
+            return [
+                {
+                    id: 1,
+                    title: 'Initial Discovery Session',
+                    date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+                    summary: 'Conducted comprehensive analysis of competitive landscape and funding opportunities',
+                    insights: ['Identified 15 similar organizations', 'Found 8 relevant grant opportunities', 'Mapped 12 board connections']
+                },
+                {
+                    id: 2,
+                    title: 'Network Analysis Deep Dive',
+                    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+                    summary: 'Analyzed board member connections and strategic partnership opportunities',
+                    insights: ['Key warm introduction opportunities', 'Strategic board recruitment targets']
+                }
+            ];
+        },
+        
+        getPipelineCount(profileId, status) {
+            // Mock data - in production this would fetch from backend
+            if (!profileId) return 0;
+            
+            const mockCounts = {
+                'discovered': 12,
+                'researching': 5,
+                'preparing': 3,
+                'submitted': 1
+            };
+            
+            return mockCounts[status] || 0;
+        },
+        
+        getRecentOpportunities(profileId) {
+            // Mock data - in production this would fetch from backend
+            if (!profileId) return [];
+            
+            return [
+                {
+                    id: 1,
+                    title: 'Community Health Initiative Grant',
+                    source: 'Federal - HHS',
+                    amount: 150000,
+                    status: 'researching',
+                    deadline: '2025-03-15'
+                },
+                {
+                    id: 2,
+                    title: 'Youth Development Program Funding',
+                    source: 'Foundation - Local Community Foundation',
+                    amount: 75000,
+                    status: 'preparing',
+                    deadline: '2025-02-28'
+                },
+                {
+                    id: 3,
+                    title: 'Technology Infrastructure Grant',
+                    source: 'State - Virginia IT Agency',
+                    amount: 50000,
+                    status: 'discovered',
+                    deadline: '2025-04-01'
+                }
+            ];
+        },
+        
+        getSimilarOrganizations(profile) {
+            // Mock data - in production this would analyze based on profile characteristics
+            if (!profile) return [];
+            
+            return [
+                {
+                    ein: '541234567',
+                    name: 'Similar Community Health Center',
+                    location: 'Richmond, VA',
+                    revenue: 2400000,
+                    similarity_score: 0.87
+                },
+                {
+                    ein: '541234568',
+                    name: 'Regional Youth Services',
+                    location: 'Norfolk, VA', 
+                    revenue: 1800000,
+                    similarity_score: 0.82
+                },
+                {
+                    ein: '541234569',
+                    name: 'Community Development Corp',
+                    location: 'Virginia Beach, VA',
+                    revenue: 3200000,
+                    similarity_score: 0.79
+                }
+            ];
+        },
+        
+        formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        },
+        
+        startProfileAnalysis(profile) {
+            if (!profile) return;
+            
+            // Start narration for profile analysis
+            this.workflowNarration.updateNarration('bmf_filter', { 
+                state: profile.geographic_scope?.states?.[0] || 'VA' 
+            }, 'discovery');
+            
+            // Initialize process flow for this profile
+            this.initializeProcessFlow('workflow');
+            
+            this.showEnhancedNotification(`Starting comprehensive analysis for ${profile.name}...`, 'info');
+            
+            // Simulate starting analysis workflow
+            this.selectedProfile = profile;
+            
+            setTimeout(() => {
+                const context = this.workflowNarration.getPhaseContext('discovery');
+                if (context) {
+                    this.showEnhancedNotification(context, 'info');
+                }
+            }, 1000);
+            
+            // Switch to status tab to show progress
+            this.activeTab = 'status';
+        },
+        
+        generateExecutiveSummary(profile) {
+            if (!profile) return;
+            
+            this.showEnhancedNotification('Generating executive summary report...', 'info');
+            
+            // Mock executive summary generation
+            setTimeout(() => {
+                const summary = {
+                    organizationName: profile.name,
+                    analysisDate: new Date().toLocaleDateString(),
+                    keyFindings: [
+                        'Strong alignment with federal health initiatives',
+                        'Excellent board network connections identified',
+                        'Optimal funding mix: 60% federal, 30% foundation, 10% corporate'
+                    ],
+                    topOpportunities: this.getRecentOpportunities(profile.profile_id).slice(0, 3),
+                    recommendedActions: [
+                        'Apply to Community Health Initiative Grant by March 15',
+                        'Schedule introduction with board member at Regional Health Foundation',
+                        'Prepare capacity building plan for technology infrastructure'
+                    ],
+                    nextSteps: [
+                        'Review detailed opportunity analysis',
+                        'Schedule board presentation for funding strategy',
+                        'Begin grant application preparation'
+                    ]
+                };
+                
+                // In a real implementation, this would generate and download a PDF
+                console.log('Executive Summary Generated:', summary);
+                
+                this.showEnhancedNotification(`Executive summary generated for ${profile.name}. Report includes ${summary.keyFindings.length} key findings and ${summary.topOpportunities.length} priority opportunities.`, 'success');
+                
+            }, 2000);
+        },
+        
+        // Demo function for workflow narration
+        demoWorkflowNarration(phase) {
+            // Initialize process flow for demo
+            this.initializeProcessFlow('classification');
+            
+            // Simulate different phases
+            const demoProcesses = {
+                'discovery': [
+                    { process: 'bmf_filter', params: { state: 'VA' } },
+                    { process: 'propublica_fetch', params: {} },
+                    { process: 'grants_gov_fetch', params: {} }
+                ],
+                'analysis': [
+                    { process: 'financial_scorer', params: {} },
+                    { process: 'intelligent_classifier', params: {} },
+                    { process: 'board_network_analyzer', params: {} }
+                ],
+                'synthesis': [
+                    { process: 'foundation_directory_fetch', params: {} },
+                    { process: 'va_state_grants_fetch', params: {} }
+                ]
+            };
+            
+            const processes = demoProcesses[phase] || demoProcesses['discovery'];
+            let currentIndex = 0;
+            
+            // Update process flow steps based on phase
+            this.processFlow.currentStep = 0;
+            this.processFlow.steps.forEach((step, index) => {
+                if (index === 0) {
+                    step.status = 'active';
+                } else {
+                    step.status = 'pending';
+                }
+            });
+            
+            const runDemoStep = () => {
+                if (currentIndex < processes.length) {
+                    const { process, params } = processes[currentIndex];
+                    
+                    // Update process flow
+                    if (this.processFlow.steps[currentIndex]) {
+                        this.processFlow.steps[currentIndex].status = 'active';
+                        this.updateProcessStep(currentIndex, 'active', `Running ${process}...`);
+                    }
+                    
+                    // Update narration
+                    this.workflowNarration.updateNarration(process, params, phase);
+                    
+                    // Mark previous step as completed
+                    if (currentIndex > 0 && this.processFlow.steps[currentIndex - 1]) {
+                        this.processFlow.steps[currentIndex - 1].status = 'completed';
+                        this.updateProcessStep(currentIndex - 1, 'completed');
+                    }
+                    
+                    currentIndex++;
+                    
+                    // Continue to next step after 4 seconds
+                    setTimeout(runDemoStep, 4000);
+                } else {
+                    // Mark final step as completed
+                    if (this.processFlow.steps[currentIndex - 1]) {
+                        this.processFlow.steps[currentIndex - 1].status = 'completed';
+                        this.updateProcessStep(currentIndex - 1, 'completed', 'Analysis complete');
+                    }
+                    
+                    // Show completion message
+                    setTimeout(() => {
+                        this.workflowNarration.isNarrating = false;
+                        this.showEnhancedNotification(`${phase.charAt(0).toUpperCase() + phase.slice(1)} phase demonstration completed!`, 'success');
+                    }, 2000);
+                }
+            };
+            
+            // Start the demo
+            this.showEnhancedNotification(`Starting ${phase} phase demonstration...`, 'info');
+            setTimeout(runDemoStep, 1000);
         },
         
         // Configuration Management System
