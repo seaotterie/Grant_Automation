@@ -961,6 +961,155 @@ function catalynxApp() {
             console.log('Auto-updated workflow progress:', this.workflowProgress);
         },
         
+        // AI WORKFLOW GUIDANCE FUNCTIONS
+        getWorkflowEncouragement() {
+            const completedCount = Object.values(this.workflowProgress).filter(Boolean).length;
+            
+            if (completedCount === 0) {
+                return "Welcome! Let's start your grant research journey.";
+            } else if (completedCount === 1) {
+                return "Great start! You're making excellent progress.";
+            } else if (completedCount === 2) {
+                return "Fantastic! You're building momentum.";
+            } else if (completedCount === 3) {
+                return "Outstanding work! More than halfway there.";
+            } else if (completedCount === 4) {
+                return "Almost complete! You're doing amazing.";
+            } else {
+                return "Congratulations! Workflow complete!";
+            }
+        },
+        
+        getWorkflowTip() {
+            const currentStage = this.activeStage;
+            const tips = {
+                'profiler': 'Tip: Complete profiles help generate better, more targeted opportunity recommendations.',
+                'discover': 'Tip: Running all tracks simultaneously gives you comprehensive coverage of all funding sources.',
+                'analyze': 'Tip: Focus on financial trends and board connections for the most strategic insights.',
+                'plan': 'Tip: AI-powered scoring helps prioritize opportunities with highest success probability.',
+                'execute': 'Tip: Exported reports include contact information and application deadlines for easy follow-up.'
+            };
+            return tips[currentStage] || 'Tip: Each workflow stage builds on the previous one for maximum effectiveness.';
+        },
+        
+        getContextualRecommendation() {
+            // Provide contextual recommendations based on current state
+            if (!this.workflowProgress.profiler && this.profileCount === 0) {
+                return {
+                    title: 'Start with Profile Setup',
+                    message: 'Creating an organization profile enables personalized recommendations throughout your research.',
+                    action: 'Create Profile',
+                    actionFunction: () => { this.showCreateProfile = true; }
+                };
+            }
+            
+            if (this.workflowProgress.profiler && !this.workflowProgress.discover) {
+                return {
+                    title: 'Begin Multi-Track Discovery',
+                    message: 'Run discovery across all 4 funding sources for comprehensive opportunity identification.',
+                    action: 'Start Discovery',
+                    actionFunction: () => { this.switchStage('discover'); }
+                };
+            }
+            
+            if (this.discoveryStats.totalResults > 0 && !this.workflowProgress.analyze) {
+                return {
+                    title: 'Analyze Your Discoveries',
+                    message: `You've found ${this.discoveryStats.totalResults} opportunities. Analyze them for strategic insights.`,
+                    action: 'Start Analysis',
+                    actionFunction: () => { this.switchStage('analyze'); }
+                };
+            }
+            
+            if (this.workflowProgress.analyze && !this.workflowProgress.plan) {
+                return {
+                    title: 'Create Strategic Plan',
+                    message: 'Use AI-powered insights to prioritize opportunities and create your funding strategy.',
+                    action: 'Start Planning',
+                    actionFunction: () => { this.switchStage('plan'); }
+                };
+            }
+            
+            if (this.workflowProgress.plan && !this.workflowProgress.execute) {
+                return {
+                    title: 'Execute Your Strategy',
+                    message: 'Export comprehensive reports and begin implementing your funding strategy.',
+                    action: 'Start Execution',
+                    actionFunction: () => { this.switchStage('execute'); }
+                };
+            }
+            
+            return {
+                title: 'Workflow Complete!',
+                message: 'You\'ve successfully completed the full grant research workflow. Review your results and take action.',
+                action: 'Review Results',
+                actionFunction: () => { this.switchStage('execute'); }
+            };
+        },
+        
+        getStageSpecificGuidance(stage) {
+            // Provide detailed guidance for each workflow stage
+            const guidance = {
+                'profiler': {
+                    title: 'Organization Profile Development',
+                    steps: [
+                        'Define your organization\'s mission and focus areas',
+                        'Identify target populations and geographic scope',
+                        'Set funding range preferences and organizational capacity',
+                        'Specify preferred funding types and partnership interests'
+                    ],
+                    tips: 'Complete profiles enable more accurate opportunity matching and better success predictions.'
+                },
+                'discover': {
+                    title: 'Multi-Track Opportunity Discovery',
+                    steps: [
+                        'Nonprofit Track: Find similar organizations and analyze their funding patterns',
+                        'Federal Track: Search Grants.gov and USASpending.gov for government opportunities',
+                        'State Track: Explore Virginia state agencies and local funding sources',
+                        'Commercial Track: Identify corporate foundations and CSR programs'
+                    ],
+                    tips: 'Running all tracks provides comprehensive coverage of the funding landscape.'
+                },
+                'analyze': {
+                    title: 'Comprehensive Opportunity Analysis',
+                    steps: [
+                        'Financial Health Analysis: Evaluate organization revenue trends and stability',
+                        'Network Analysis: Map board member connections and strategic relationships',
+                        'Competitive Intelligence: Assess competitive landscape and positioning',
+                        'Success Probability Scoring: Calculate likelihood of funding success'
+                    ],
+                    tips: 'Focus on network connections and financial patterns for strategic insights.'
+                },
+                'plan': {
+                    title: 'AI-Powered Strategic Planning',
+                    steps: [
+                        'Priority Ranking: AI scores opportunities by success probability',
+                        'Mission Alignment: Classify opportunities by strategic fit',
+                        'Partnership Identification: Find collaboration and networking targets',
+                        'Timeline Development: Create application and follow-up schedules'
+                    ],
+                    tips: 'AI recommendations help optimize your time investment and increase success rates.'
+                },
+                'execute': {
+                    title: 'Implementation and Export',
+                    steps: [
+                        'Export Opportunity Reports: Comprehensive summaries with contact details',
+                        'Generate Tracking Spreadsheets: Application status and deadline management',
+                        'Create Contact Databases: Board members and decision-maker information',
+                        'Setup Monitoring Systems: Ongoing opportunity and relationship tracking'
+                    ],
+                    tips: 'Exported reports include everything needed to begin pursuing opportunities immediately.'
+                }
+            };
+            return guidance[stage] || guidance['profiler'];
+        },
+        
+        showAIRecommendation() {
+            // Show contextual AI recommendation based on current progress
+            const recommendation = this.getContextualRecommendation();
+            this.showNotification(recommendation.title, recommendation.message, 'info');
+        },
+        
         getCurrentStageLabel() {
             const stageLabels = {
                 'profiler': 'Profile Management',
