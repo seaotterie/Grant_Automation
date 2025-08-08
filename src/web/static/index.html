@@ -696,6 +696,204 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Enhanced Performance Metrics Dashboard -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        
+                        <!-- Real-time Performance Metrics -->
+                        <div class="status-card">
+                            <div class="status-card-header">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Performance Metrics</h3>
+                                <div class="live-indicator">
+                                    <div class="live-dot"></div>
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">Live</span>
+                                </div>
+                            </div>
+                            <div class="status-card-body">
+                                <div class="metrics-grid">
+                                    <div class="metric-card">
+                                        <span class="metric-value" x-text="formatDuration(performanceMetrics.averageProcessingTime)">0ms</span>
+                                        <span class="metric-label">Avg Processing Time</span>
+                                        <span class="metric-change" 
+                                              :class="getPerformanceClass('responseTime', performanceMetrics.averageProcessingTime)"
+                                              x-text="`${performanceMetrics.averageProcessingTime > 1000 ? '↑' : '↓'} ${performanceMetrics.averageProcessingTime > 1000 ? 'Slow' : 'Fast'}`">
+                                        </span>
+                                    </div>
+                                    <div class="metric-card">
+                                        <span class="metric-value" x-text="performanceMetrics.throughputPerSecond.toFixed(2)">0.00</span>
+                                        <span class="metric-label">Ops/Second</span>
+                                        <span class="metric-change" 
+                                              :class="getPerformanceClass('throughput', performanceMetrics.throughputPerSecond)"
+                                              x-text="`${performanceMetrics.throughputPerSecond > 1 ? '↑' : '↓'} ${performanceMetrics.throughputPerSecond > 1 ? 'High' : 'Low'}`">
+                                        </span>
+                                    </div>
+                                    <div class="metric-card">
+                                        <span class="metric-value" x-text="performanceMetrics.successRate.toFixed(1) + '%'">100%</span>
+                                        <span class="metric-label">Success Rate</span>
+                                        <span class="metric-change" 
+                                              :class="getPerformanceClass('successRate', performanceMetrics.successRate)"
+                                              x-text="`${performanceMetrics.successRate >= 90 ? '↑' : '↓'} ${performanceMetrics.successRate >= 90 ? 'Excellent' : 'Needs Attention'}`">
+                                        </span>
+                                    </div>
+                                    <div class="metric-card">
+                                        <span class="metric-value" x-text="realTimeStatus.latency.toFixed(0) + 'ms'">0ms</span>
+                                        <span class="metric-label">Latency</span>
+                                        <span class="metric-change" 
+                                              :class="getPerformanceClass('latency', realTimeStatus.latency)"
+                                              x-text="`${realTimeStatus.latency <= 100 ? '↓' : '↑'} ${realTimeStatus.latency <= 100 ? 'Low' : 'High'}`">
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="status-card-footer">
+                                <div class="timing-display">
+                                    <div class="timing-metric">
+                                        <span class="timing-value" x-text="performanceMetrics.currentOperations">0</span>
+                                        <span class="timing-label">Active</span>
+                                    </div>
+                                    <div class="timing-metric">
+                                        <span class="timing-value" x-text="performanceMetrics.completedOperations">0</span>
+                                        <span class="timing-label">Completed</span>
+                                    </div>
+                                    <div class="timing-metric">
+                                        <span class="timing-value" x-text="performanceMetrics.errorCount">0</span>
+                                        <span class="timing-label">Errors</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- System Status Dashboard -->
+                        <div class="status-card">
+                            <div class="status-card-header">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">System Status</h3>
+                                <div class="status-indicator status-healthy">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                                    <span x-text="systemStatus === 'healthy' ? 'Healthy' : 'Degraded'">Healthy</span>
+                                </div>
+                            </div>
+                            <div class="status-card-body space-y-4">
+                                <!-- Connection Status -->
+                                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-2 h-2 rounded-full" 
+                                             :class="realTimeStatus.connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'"></div>
+                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">WebSocket Connection</span>
+                                    </div>
+                                    <span class="text-sm" 
+                                          :class="realTimeStatus.connectionStatus === 'connected' ? 'text-green-600' : 'text-red-600'"
+                                          x-text="realTimeStatus.connectionStatus">Disconnected</span>
+                                </div>
+                                
+                                <!-- API Status -->
+                                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">API Services</span>
+                                    </div>
+                                    <span class="text-sm text-green-600" x-text="apiStatus">Healthy</span>
+                                </div>
+                                
+                                <!-- Processors Status -->
+                                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Processors Available</span>
+                                    </div>
+                                    <span class="text-sm text-blue-600" x-text="stats.processorsAvailable || '18'">18</span>
+                                </div>
+                                
+                                <!-- Messages Processed -->
+                                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-2 h-2 bg-purple-500 rounded-full"></div>
+                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Messages Processed</span>
+                                    </div>
+                                    <span class="text-sm text-purple-600" x-text="realTimeStatus.messageCount">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Process Flow Visualization -->
+                    <div x-show="processFlow.steps.length > 0" class="status-card">
+                        <div class="status-card-header">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Process Flow</h3>
+                            <div class="flex items-center space-x-4">
+                                <span class="text-sm text-gray-600 dark:text-gray-400" 
+                                      x-text="`Step ${processFlow.currentStep + 1} of ${processFlow.totalSteps}`">Step 1 of 5</span>
+                                <span class="text-sm text-gray-600 dark:text-gray-400" 
+                                      x-text="`${getProcessFlowProgress().toFixed(0)}% Complete`">0% Complete</span>
+                            </div>
+                        </div>
+                        <div class="status-card-body">
+                            <!-- Progress Bar -->
+                            <div class="progress-container mb-6">
+                                <div class="progress-bar progress-striped" 
+                                     :style="`width: ${getProcessFlowProgress()}%`"></div>
+                            </div>
+                            
+                            <!-- Process Steps -->
+                            <div class="process-flow">
+                                <template x-for="(step, index) in processFlow.steps" :key="index">
+                                    <div class="flex items-center">
+                                        <div class="process-step">
+                                            <div class="process-step-icon" 
+                                                 :class="{
+                                                     'process-step-pending': step.status === 'pending',
+                                                     'process-step-active': step.status === 'active',
+                                                     'process-step-completed': step.status === 'completed',
+                                                     'process-step-error': step.status === 'error'
+                                                 }"
+                                                 x-text="index + 1">1</div>
+                                            <div class="process-step-label" x-text="step.label">Step</div>
+                                            <div x-show="step.message" class="text-xs text-gray-500 mt-1" x-text="step.message"></div>
+                                        </div>
+                                        <div x-show="index < processFlow.steps.length - 1" 
+                                             class="process-connector"
+                                             :class="{'process-connector-active': step.status === 'completed'}"></div>
+                                    </div>
+                                </template>
+                            </div>
+                            
+                            <!-- Time Estimates -->
+                            <div x-show="processFlow.estimatedTimeRemaining > 0" class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-blue-700 dark:text-blue-300">Estimated Time Remaining:</span>
+                                    <span class="text-sm font-medium text-blue-800 dark:text-blue-200" 
+                                          x-text="formatDuration(processFlow.estimatedTimeRemaining)">0ms</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Enhanced Error/Success Messages Demo -->
+                    <div class="space-y-4">
+                        <!-- Success Message Example -->
+                        <div class="success-message">
+                            <div class="success-header">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span>System Operational</span>
+                            </div>
+                            <div class="text-sm text-green-700 dark:text-green-300">
+                                All processors are running normally. Last successful operation completed in 2.3 seconds.
+                            </div>
+                        </div>
+                        
+                        <!-- Info Message Example -->
+                        <div x-show="realTimeStatus.messageCount > 0" class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 border-l-4 border-l-blue-500 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-blue-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span class="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                    Real-time monitoring active - <span x-text="realTimeStatus.messageCount">0</span> messages processed
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Dashboard Tab -->

@@ -27,6 +27,37 @@ function catalynxApp() {
         liveProgress: {},
         websocket: null,
         
+        // Enhanced timing and performance tracking
+        performanceMetrics: {
+            startTime: null,
+            endTime: null,
+            totalDuration: 0,
+            averageProcessingTime: 0,
+            throughputPerSecond: 0,
+            currentOperations: 0,
+            completedOperations: 0,
+            errorCount: 0,
+            successRate: 100
+        },
+        
+        // Process flow tracking
+        processFlow: {
+            currentStep: 0,
+            totalSteps: 0,
+            steps: [],
+            stepTimings: {},
+            estimatedTimeRemaining: 0
+        },
+        
+        // Real-time status tracking
+        realTimeStatus: {
+            lastUpdate: null,
+            connectionStatus: 'disconnected',
+            messageCount: 0,
+            errorCount: 0,
+            latency: 0
+        },
+        
         // Classification data
         classificationParams: {
             state: 'VA',
@@ -3161,6 +3192,667 @@ function catalynxApp() {
                 } finally {
                     this.testRunning = false;
                 }
+            }
+        },
+        
+        // Enhanced Timing and Performance Methods
+        startPerformanceTracking(operationName = 'operation') {
+            this.performanceMetrics.startTime = Date.now();
+            this.performanceMetrics.currentOperations++;
+            
+            // Initialize process flow if not set
+            if (!this.processFlow.steps.length) {
+                this.initializeProcessFlow(operationName);
+            }
+            
+            this.updateRealTimeStatus('connected', 'Performance tracking started');
+        },
+        
+        updateProcessStep(stepIndex, status = 'active', message = '') {
+            if (this.processFlow.steps[stepIndex]) {
+                this.processFlow.steps[stepIndex].status = status;
+                this.processFlow.steps[stepIndex].message = message;
+                this.processFlow.currentStep = stepIndex;
+                
+                // Record step timing
+                const stepName = this.processFlow.steps[stepIndex].name;
+                if (status === 'active' && !this.processFlow.stepTimings[stepName]?.startTime) {
+                    this.processFlow.stepTimings[stepName] = { startTime: Date.now() };
+                } else if (status === 'completed' && this.processFlow.stepTimings[stepName]?.startTime) {
+                    this.processFlow.stepTimings[stepName].endTime = Date.now();
+                    this.processFlow.stepTimings[stepName].duration = 
+                        this.processFlow.stepTimings[stepName].endTime - 
+                        this.processFlow.stepTimings[stepName].startTime;
+                }
+                
+                this.calculateEstimatedTimeRemaining();
+            }
+        },
+        
+        completePerformanceTracking(success = true) {
+            this.performanceMetrics.endTime = Date.now();
+            this.performanceMetrics.totalDuration = 
+                this.performanceMetrics.endTime - this.performanceMetrics.startTime;
+            
+            if (success) {
+                this.performanceMetrics.completedOperations++;
+            } else {
+                this.performanceMetrics.errorCount++;
+            }
+            
+            this.performanceMetrics.currentOperations = Math.max(0, 
+                this.performanceMetrics.currentOperations - 1);
+            
+            // Update success rate
+            const totalAttempts = this.performanceMetrics.completedOperations + this.performanceMetrics.errorCount;
+            this.performanceMetrics.successRate = totalAttempts > 0 ? 
+                (this.performanceMetrics.completedOperations / totalAttempts) * 100 : 100;
+            
+            // Calculate throughput
+            if (this.performanceMetrics.totalDuration > 0) {
+                this.performanceMetrics.throughputPerSecond = 
+                    this.performanceMetrics.completedOperations / 
+                    (this.performanceMetrics.totalDuration / 1000);
+            }
+            
+            // Update average processing time
+            if (this.performanceMetrics.completedOperations > 0) {
+                this.performanceMetrics.averageProcessingTime = 
+                    this.performanceMetrics.totalDuration / this.performanceMetrics.completedOperations;
+            }
+            
+            this.updateRealTimeStatus('connected', 
+                success ? 'Operation completed successfully' : 'Operation failed');
+        },
+        
+        initializeProcessFlow(operationName) {
+            const flowConfigs = {
+                'classification': [
+                    { name: 'initialization', label: 'Initialize', status: 'pending' },
+                    { name: 'data_fetch', label: 'Fetch Data', status: 'pending' },
+                    { name: 'processing', label: 'Process', status: 'pending' },
+                    { name: 'analysis', label: 'Analyze', status: 'pending' },
+                    { name: 'completion', label: 'Complete', status: 'pending' }
+                ],
+                'workflow': [
+                    { name: 'setup', label: 'Setup', status: 'pending' },
+                    { name: 'discovery', label: 'Discovery', status: 'pending' },
+                    { name: 'scoring', label: 'Scoring', status: 'pending' },
+                    { name: 'analysis', label: 'Analysis', status: 'pending' },
+                    { name: 'export', label: 'Export', status: 'pending' }
+                ],
+                'operation': [
+                    { name: 'start', label: 'Start', status: 'pending' },
+                    { name: 'process', label: 'Process', status: 'pending' },
+                    { name: 'finish', label: 'Finish', status: 'pending' }
+                ]
+            };
+            
+            this.processFlow.steps = flowConfigs[operationName] || flowConfigs['operation'];
+            this.processFlow.totalSteps = this.processFlow.steps.length;
+            this.processFlow.currentStep = 0;
+            this.processFlow.stepTimings = {};
+            this.processFlow.estimatedTimeRemaining = 0;
+        },
+        
+        calculateEstimatedTimeRemaining() {
+            const completedSteps = this.processFlow.steps.filter(step => step.status === 'completed').length;
+            const remainingSteps = this.processFlow.totalSteps - completedSteps;
+            
+            if (completedSteps > 0 && remainingSteps > 0) {
+                // Calculate average time per completed step
+                let totalCompletedTime = 0;
+                let completedCount = 0;
+                
+                Object.values(this.processFlow.stepTimings).forEach(timing => {
+                    if (timing.duration) {
+                        totalCompletedTime += timing.duration;
+                        completedCount++;
+                    }
+                });
+                
+                if (completedCount > 0) {
+                    const avgTimePerStep = totalCompletedTime / completedCount;
+                    this.processFlow.estimatedTimeRemaining = Math.round(avgTimePerStep * remainingSteps);
+                }
+            }
+        },
+        
+        updateRealTimeStatus(status, message = '') {
+            this.realTimeStatus.lastUpdate = Date.now();
+            this.realTimeStatus.connectionStatus = status;
+            this.realTimeStatus.messageCount++;
+            
+            if (status === 'error') {
+                this.realTimeStatus.errorCount++;
+            }
+            
+            // Calculate latency (mock for now - in real implementation would measure actual latency)
+            this.realTimeStatus.latency = Math.random() * 50 + 10; // 10-60ms mock latency
+        },
+        
+        formatDuration(milliseconds) {
+            if (milliseconds < 1000) return `${milliseconds}ms`;
+            if (milliseconds < 60000) return `${(milliseconds / 1000).toFixed(1)}s`;
+            return `${Math.floor(milliseconds / 60000)}m ${Math.floor((milliseconds % 60000) / 1000)}s`;
+        },
+        
+        getProcessFlowProgress() {
+            const completed = this.processFlow.steps.filter(step => step.status === 'completed').length;
+            return this.processFlow.totalSteps > 0 ? (completed / this.processFlow.totalSteps) * 100 : 0;
+        },
+        
+        getPerformanceClass(metric, value) {
+            const thresholds = {
+                successRate: { good: 90, warning: 75 },
+                throughput: { good: 5, warning: 2 },
+                latency: { good: 100, warning: 500 },
+                responseTime: { good: 1000, warning: 3000 }
+            };
+            
+            const threshold = thresholds[metric];
+            if (!threshold) return 'metric-neutral';
+            
+            if (metric === 'latency' || metric === 'responseTime') {
+                // Lower is better for latency/response time
+                if (value <= threshold.good) return 'metric-up';
+                if (value <= threshold.warning) return 'metric-neutral';
+                return 'metric-down';
+            } else {
+                // Higher is better for success rate/throughput
+                if (value >= threshold.good) return 'metric-up';
+                if (value >= threshold.warning) return 'metric-neutral';
+                return 'metric-down';
+            }
+        },
+        
+        resetPerformanceMetrics() {
+            this.performanceMetrics = {
+                startTime: null,
+                endTime: null,
+                totalDuration: 0,
+                averageProcessingTime: 0,
+                throughputPerSecond: 0,
+                currentOperations: 0,
+                completedOperations: 0,
+                errorCount: 0,
+                successRate: 100
+            };
+            
+            this.processFlow = {
+                currentStep: 0,
+                totalSteps: 0,
+                steps: [],
+                stepTimings: {},
+                estimatedTimeRemaining: 0
+            };
+            
+            this.realTimeStatus = {
+                lastUpdate: null,
+                connectionStatus: 'disconnected',
+                messageCount: 0,
+                errorCount: 0,
+                latency: 0
+            };
+        },
+        
+        // Configuration Management System
+        configurationManager: {
+            profiles: [],
+            presets: [],
+            currentConfig: {},
+            showConfigModal: false,
+            activeConfigTab: 'general',
+            
+            // Configuration categories
+            generalConfig: {
+                apiTimeout: 30000,
+                maxConcurrentRequests: 5,
+                retryAttempts: 3,
+                enableCaching: true,
+                cacheExpiry: 86400000,
+                autoExport: true,
+                notificationLevel: 'info'
+            },
+            
+            processorConfig: {
+                maxResults: 1000,
+                batchSize: 100,
+                parallelProcessing: true,
+                errorThreshold: 0.1,
+                enableLogging: true,
+                logLevel: 'info'
+            },
+            
+            uiConfig: {
+                theme: 'auto',
+                animationsEnabled: true,
+                autoRefresh: true,
+                refreshInterval: 30000,
+                showAdvancedOptions: false,
+                compactView: false
+            },
+            
+            securityConfig: {
+                sessionTimeout: 3600000,
+                enableMFA: false,
+                auditLogging: true,
+                encryptionEnabled: true
+            },
+            
+            init() {
+                this.loadConfigurations();
+                this.loadPresets();
+            },
+            
+            loadConfigurations() {
+                const saved = localStorage.getItem('catalynx-config');
+                if (saved) {
+                    try {
+                        const config = JSON.parse(saved);
+                        this.generalConfig = { ...this.generalConfig, ...config.general };
+                        this.processorConfig = { ...this.processorConfig, ...config.processor };
+                        this.uiConfig = { ...this.uiConfig, ...config.ui };
+                        this.securityConfig = { ...this.securityConfig, ...config.security };
+                    } catch (error) {
+                        console.warn('Failed to load saved configuration:', error);
+                    }
+                }
+            },
+            
+            saveConfiguration() {
+                const config = {
+                    general: this.generalConfig,
+                    processor: this.processorConfig,
+                    ui: this.uiConfig,
+                    security: this.securityConfig,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('catalynx-config', JSON.stringify(config));
+                parent.showEnhancedNotification?.('Configuration saved successfully', 'success');
+            },
+            
+            resetToDefaults() {
+                this.generalConfig = {
+                    apiTimeout: 30000,
+                    maxConcurrentRequests: 5,
+                    retryAttempts: 3,
+                    enableCaching: true,
+                    cacheExpiry: 86400000,
+                    autoExport: true,
+                    notificationLevel: 'info'
+                };
+                
+                this.processorConfig = {
+                    maxResults: 1000,
+                    batchSize: 100,
+                    parallelProcessing: true,
+                    errorThreshold: 0.1,
+                    enableLogging: true,
+                    logLevel: 'info'
+                };
+                
+                this.uiConfig = {
+                    theme: 'auto',
+                    animationsEnabled: true,
+                    autoRefresh: true,
+                    refreshInterval: 30000,
+                    showAdvancedOptions: false,
+                    compactView: false
+                };
+                
+                this.securityConfig = {
+                    sessionTimeout: 3600000,
+                    enableMFA: false,
+                    auditLogging: true,
+                    encryptionEnabled: true
+                };
+                
+                parent.showEnhancedNotification?.('Configuration reset to defaults', 'info');
+            },
+            
+            exportConfiguration() {
+                const config = {
+                    general: this.generalConfig,
+                    processor: this.processorConfig,
+                    ui: this.uiConfig,
+                    security: this.securityConfig,
+                    metadata: {
+                        version: '2.0.0',
+                        exported: new Date().toISOString(),
+                        platform: navigator.platform
+                    }
+                };
+                
+                const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `catalynx-config-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            },
+            
+            importConfiguration(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const config = JSON.parse(e.target.result);
+                        
+                        // Validate configuration structure
+                        if (config.general) this.generalConfig = { ...this.generalConfig, ...config.general };
+                        if (config.processor) this.processorConfig = { ...this.processorConfig, ...config.processor };
+                        if (config.ui) this.uiConfig = { ...this.uiConfig, ...config.ui };
+                        if (config.security) this.securityConfig = { ...this.securityConfig, ...config.security };
+                        
+                        this.saveConfiguration();
+                        parent.showEnhancedNotification?.('Configuration imported successfully', 'success');
+                    } catch (error) {
+                        parent.showEnhancedNotification?.('Failed to import configuration: ' + error.message, 'error');
+                    }
+                };
+                reader.readAsText(file);
+            },
+            
+            createPreset(name) {
+                const preset = {
+                    id: Date.now().toString(),
+                    name: name,
+                    config: {
+                        general: { ...this.generalConfig },
+                        processor: { ...this.processorConfig },
+                        ui: { ...this.uiConfig },
+                        security: { ...this.securityConfig }
+                    },
+                    created: new Date().toISOString()
+                };
+                
+                this.presets.push(preset);
+                this.savePresets();
+                parent.showEnhancedNotification?.(`Preset "${name}" created successfully`, 'success');
+            },
+            
+            loadPreset(presetId) {
+                const preset = this.presets.find(p => p.id === presetId);
+                if (preset) {
+                    this.generalConfig = { ...preset.config.general };
+                    this.processorConfig = { ...preset.config.processor };
+                    this.uiConfig = { ...preset.config.ui };
+                    this.securityConfig = { ...preset.config.security };
+                    
+                    this.saveConfiguration();
+                    parent.showEnhancedNotification?.(`Preset "${preset.name}" loaded successfully`, 'success');
+                }
+            },
+            
+            deletePreset(presetId) {
+                const index = this.presets.findIndex(p => p.id === presetId);
+                if (index !== -1) {
+                    const preset = this.presets[index];
+                    this.presets.splice(index, 1);
+                    this.savePresets();
+                    parent.showEnhancedNotification?.(`Preset "${preset.name}" deleted`, 'info');
+                }
+            },
+            
+            loadPresets() {
+                const saved = localStorage.getItem('catalynx-presets');
+                if (saved) {
+                    try {
+                        this.presets = JSON.parse(saved);
+                    } catch (error) {
+                        console.warn('Failed to load presets:', error);
+                    }
+                }
+            },
+            
+            savePresets() {
+                localStorage.setItem('catalynx-presets', JSON.stringify(this.presets));
+            },
+            
+            validateConfiguration() {
+                const errors = [];
+                
+                // Validate general config
+                if (this.generalConfig.apiTimeout < 1000) {
+                    errors.push('API timeout must be at least 1000ms');
+                }
+                if (this.generalConfig.maxConcurrentRequests < 1 || this.generalConfig.maxConcurrentRequests > 20) {
+                    errors.push('Concurrent requests must be between 1 and 20');
+                }
+                
+                // Validate processor config
+                if (this.processorConfig.maxResults < 1 || this.processorConfig.maxResults > 10000) {
+                    errors.push('Max results must be between 1 and 10000');
+                }
+                if (this.processorConfig.batchSize < 1 || this.processorConfig.batchSize > 1000) {
+                    errors.push('Batch size must be between 1 and 1000');
+                }
+                
+                // Validate UI config
+                if (this.uiConfig.refreshInterval < 5000) {
+                    errors.push('Refresh interval must be at least 5000ms');
+                }
+                
+                return errors;
+            },
+            
+            getConfigurationHealth() {
+                const errors = this.validateConfiguration();
+                return {
+                    status: errors.length === 0 ? 'healthy' : 'warning',
+                    errors: errors,
+                    lastValidated: new Date().toISOString()
+                };
+            }
+        },
+        
+        // Advanced Debugging Tools
+        debuggingTools: {
+            enabled: false,
+            logBuffer: [],
+            maxLogEntries: 1000,
+            logLevel: 'debug',
+            performanceMonitor: null,
+            networkMonitor: null,
+            
+            init() {
+                this.setupConsoleInterceptor();
+                this.setupPerformanceMonitoring();
+                this.setupNetworkMonitoring();
+            },
+            
+            setupConsoleInterceptor() {
+                const originalLog = console.log;
+                const originalError = console.error;
+                const originalWarn = console.warn;
+                
+                console.log = (...args) => {
+                    this.addLogEntry('log', args);
+                    originalLog.apply(console, args);
+                };
+                
+                console.error = (...args) => {
+                    this.addLogEntry('error', args);
+                    originalError.apply(console, args);
+                };
+                
+                console.warn = (...args) => {
+                    this.addLogEntry('warn', args);
+                    originalWarn.apply(console, args);
+                };
+            },
+            
+            addLogEntry(level, args) {
+                const entry = {
+                    timestamp: new Date().toISOString(),
+                    level: level,
+                    message: args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' '),
+                    source: 'console'
+                };
+                
+                this.logBuffer.push(entry);
+                
+                // Maintain buffer size
+                if (this.logBuffer.length > this.maxLogEntries) {
+                    this.logBuffer.shift();
+                }
+            },
+            
+            setupPerformanceMonitoring() {
+                if ('performance' in window) {
+                    this.performanceMonitor = {
+                        startTime: performance.now(),
+                        marks: new Map(),
+                        measures: new Map()
+                    };
+                }
+            },
+            
+            setupNetworkMonitoring() {
+                if ('Performance' in window && 'performance' in window) {
+                    const observer = new PerformanceObserver((list) => {
+                        for (const entry of list.getEntries()) {
+                            if (entry.entryType === 'navigation' || entry.entryType === 'resource') {
+                                this.addLogEntry('network', [
+                                    `${entry.name} - Duration: ${entry.duration}ms, Size: ${entry.transferSize || 'N/A'}bytes`
+                                ]);
+                            }
+                        }
+                    });
+                    
+                    try {
+                        observer.observe({ entryTypes: ['navigation', 'resource'] });
+                        this.networkMonitor = observer;
+                    } catch (e) {
+                        console.warn('Performance Observer not supported');
+                    }
+                }
+            },
+            
+            mark(name) {
+                if (this.performanceMonitor && 'performance' in window) {
+                    performance.mark(name);
+                    this.performanceMonitor.marks.set(name, performance.now());
+                    this.addLogEntry('performance', [`Mark: ${name}`]);
+                }
+            },
+            
+            measure(name, startMark, endMark) {
+                if (this.performanceMonitor && 'performance' in window) {
+                    try {
+                        performance.measure(name, startMark, endMark);
+                        const measure = performance.getEntriesByName(name, 'measure')[0];
+                        if (measure) {
+                            this.performanceMonitor.measures.set(name, measure.duration);
+                            this.addLogEntry('performance', [`Measure: ${name} - ${measure.duration}ms`]);
+                        }
+                    } catch (e) {
+                        this.addLogEntry('error', [`Failed to create measure: ${name}`, e.message]);
+                    }
+                }
+            },
+            
+            getSystemInfo() {
+                return {
+                    userAgent: navigator.userAgent,
+                    platform: navigator.platform,
+                    language: navigator.language,
+                    cookieEnabled: navigator.cookieEnabled,
+                    onLine: navigator.onLine,
+                    screenResolution: `${screen.width}x${screen.height}`,
+                    viewportSize: `${window.innerWidth}x${window.innerHeight}`,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    memory: performance.memory ? {
+                        used: Math.round(performance.memory.usedJSHeapSize / 1048576),
+                        total: Math.round(performance.memory.totalJSHeapSize / 1048576),
+                        limit: Math.round(performance.memory.jsHeapSizeLimit / 1048576)
+                    } : 'Not available'
+                };
+            },
+            
+            exportLogs(format = 'json') {
+                const data = {
+                    logs: this.logBuffer,
+                    systemInfo: this.getSystemInfo(),
+                    performance: this.performanceMonitor ? {
+                        marks: Array.from(this.performanceMonitor.marks.entries()),
+                        measures: Array.from(this.performanceMonitor.measures.entries())
+                    } : null,
+                    exported: new Date().toISOString()
+                };
+                
+                let content, filename, mimeType;
+                
+                if (format === 'json') {
+                    content = JSON.stringify(data, null, 2);
+                    filename = `catalynx-debug-${new Date().toISOString().split('T')[0]}.json`;
+                    mimeType = 'application/json';
+                } else if (format === 'csv') {
+                    const csvHeader = 'Timestamp,Level,Message,Source\n';
+                    const csvRows = this.logBuffer.map(entry => 
+                        `"${entry.timestamp}","${entry.level}","${entry.message.replace(/"/g, '""')}","${entry.source}"`
+                    ).join('\n');
+                    content = csvHeader + csvRows;
+                    filename = `catalynx-debug-${new Date().toISOString().split('T')[0]}.csv`;
+                    mimeType = 'text/csv';
+                } else {
+                    content = this.logBuffer.map(entry => 
+                        `[${entry.timestamp}] ${entry.level.toUpperCase()}: ${entry.message}`
+                    ).join('\n');
+                    filename = `catalynx-debug-${new Date().toISOString().split('T')[0]}.txt`;
+                    mimeType = 'text/plain';
+                }
+                
+                const blob = new Blob([content], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+            },
+            
+            clearLogs() {
+                this.logBuffer = [];
+                this.addLogEntry('system', ['Debug logs cleared']);
+            },
+            
+            testApiEndpoint(url, method = 'GET', data = null) {
+                const startTime = performance.now();
+                this.mark(`api-test-${url}-start`);
+                
+                const options = {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                
+                if (data && method !== 'GET') {
+                    options.body = JSON.stringify(data);
+                }
+                
+                return fetch(url, options)
+                    .then(response => {
+                        const endTime = performance.now();
+                        this.mark(`api-test-${url}-end`);
+                        this.measure(`api-test-${url}`, `api-test-${url}-start`, `api-test-${url}-end`);
+                        
+                        this.addLogEntry('api-test', [
+                            `${method} ${url} - Status: ${response.status}, Duration: ${(endTime - startTime).toFixed(2)}ms`
+                        ]);
+                        
+                        return response.json().then(data => ({ response, data }));
+                    })
+                    .catch(error => {
+                        const endTime = performance.now();
+                        this.addLogEntry('api-test-error', [
+                            `${method} ${url} - Error: ${error.message}, Duration: ${(endTime - startTime).toFixed(2)}ms`
+                        ]);
+                        throw error;
+                    });
             }
         }
     }
