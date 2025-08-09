@@ -413,11 +413,14 @@ async def list_profiles(status: Optional[str] = None, limit: Optional[int] = Non
             limit=limit
         )
         
-        # Add opportunity counts (placeholder for now)
+        # Convert profiles to dict format and add opportunity counts
+        profile_dicts = []
         for profile in profiles:
-            profile.opportunities_count = 0  # TODO: Get actual count from leads
+            profile_dict = profile.model_dump()
+            profile_dict["opportunities_count"] = 0  # TODO: Get actual count from leads
+            profile_dicts.append(profile_dict)
         
-        return {"profiles": [p.dict() for p in profiles]}
+        return {"profiles": profile_dicts}
         
     except Exception as e:
         logger.error(f"Failed to list profiles: {e}")
@@ -428,7 +431,7 @@ async def create_profile(profile_data: Dict[str, Any]):
     """Create a new organization profile."""
     try:
         profile = profile_service.create_profile(profile_data)
-        return {"profile": profile.dict(), "message": "Profile created successfully"}
+        return {"profile": profile.model_dump(), "message": "Profile created successfully"}
         
     except Exception as e:
         logger.error(f"Failed to create profile: {e}")
@@ -442,7 +445,7 @@ async def get_profile(profile_id: str):
         if not profile:
             raise HTTPException(status_code=404, detail="Profile not found")
         
-        return {"profile": profile.dict()}
+        return {"profile": profile.model_dump()}
         
     except HTTPException:
         raise
@@ -458,7 +461,7 @@ async def update_profile(profile_id: str, update_data: Dict[str, Any]):
         if not profile:
             raise HTTPException(status_code=404, detail="Profile not found")
         
-        return {"profile": profile.dict(), "message": "Profile updated successfully"}
+        return {"profile": profile.model_dump(), "message": "Profile updated successfully"}
         
     except HTTPException:
         raise
@@ -493,7 +496,7 @@ async def create_profile_template(template_request: Dict[str, Any]):
             raise HTTPException(status_code=400, detail="template_name and template_data required")
         
         template = profile_service.create_template(template_data, template_name)
-        return {"template": template.dict(), "message": "Template created successfully"}
+        return {"template": template.model_dump(), "message": "Template created successfully"}
         
     except HTTPException:
         raise
@@ -540,7 +543,7 @@ async def get_profile_leads(profile_id: str, stage: Optional[str] = None, min_sc
         return {
             "profile_id": profile_id,
             "total_leads": len(leads),
-            "leads": [lead.dict() for lead in leads],
+            "leads": [lead.model_dump() for lead in leads],
             "filters_applied": {
                 "stage": stage,
                 "min_score": min_score
@@ -598,7 +601,7 @@ async def discover_opportunities(profile_id: str, discovery_params: Dict[str, An
                     # Add lead to profile
                     lead = profile_service.add_opportunity_lead(profile_id, lead_data)
                     if lead:
-                        opportunities.append(lead.dict())
+                        opportunities.append(lead.model_dump())
         
         return {
             "message": f"Discovery completed for profile {profile_id}",
@@ -887,18 +890,29 @@ async def execute_processor(processor_name: str, request: Dict[str, Any]):
         engine = get_workflow_engine()
         
         # Get processor instance
-        processor_class = engine.registry.get_processor(processor_name)
-        if not processor_class:
+        processor = engine.registry.get_processor(processor_name)
+        if not processor:
             raise HTTPException(status_code=404, detail="Processor not found")
-        
-        processor = processor_class()
         
         # Extract parameters from request
         params = request.get("parameters", {})
         input_data = request.get("input_data", [])
         
         # Execute processor
-        result = await processor.process_async(input_data, **params)
+        from src.core.data_models import WorkflowConfig, ProcessorConfig
+        workflow_config = WorkflowConfig(
+            workflow_id=f"api_execution_{processor_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        )
+        processor_config = ProcessorConfig(
+            workflow_id=workflow_config.workflow_id,
+            processor_name=processor_name,
+            workflow_config=workflow_config,
+            input_data={"data": input_data},
+            processor_specific_config=params
+        )
+        
+        processor_result = await processor.execute(processor_config)
+        result = processor_result.data.get("results", processor_result.data)
         
         return {
             "status": "success",
@@ -947,28 +961,54 @@ async def discover_nonprofits(request: Dict[str, Any]):
         
         # Execute BMF filtering if no specific EIN
         if not ein:
-            bmf_processor = engine.registry.get_processor("bmf_filter")
-            if bmf_processor:
-                bmf_instance = bmf_processor()
-                bmf_results = await bmf_instance.process_async(
-                    [], 
-                    state=state, 
-                    max_results=max_results,
-                    focus_areas=focus_areas,
-                    target_populations=target_populations,
-                    profile_context=profile_context
+            bmf_instance = engine.registry.get_processor("bmf_filter")
+            if bmf_instance:
+                
+                # Create proper configuration objects
+                from src.core.data_models import WorkflowConfig, ProcessorConfig
+                workflow_config = WorkflowConfig(
+                    workflow_id=f"nonprofit_discovery_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                    states=[state] if state else ["VA"],
+                    max_results=max_results
                 )
-                results["bmf_results"] = bmf_results
+                processor_config = ProcessorConfig(
+                    workflow_id=workflow_config.workflow_id,
+                    processor_name="bmf_filter",
+                    workflow_config=workflow_config,
+                    processor_specific_config={
+                        "focus_areas": focus_areas,
+                        "target_populations": target_populations,
+                        "profile_context": profile_context
+                    }
+                )
+                
+                bmf_result = await bmf_instance.execute(processor_config)
+                results["bmf_results"] = bmf_result.data.get("results", [])
         
         # Execute ProPublica fetch
-        propublica_processor = engine.registry.get_processor("propublica_fetch")
-        if propublica_processor:
-            pp_instance = propublica_processor()
+        pp_instance = engine.registry.get_processor("propublica_fetch")
+        if pp_instance:
+            
+            workflow_config = WorkflowConfig(
+                workflow_id=f"propublica_fetch_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                target_ein=ein,
+                max_results=max_results
+            )
+            
             if ein:
-                pp_results = await pp_instance.process_async([{"ein": ein}])
+                input_data = [{"ein": ein}]
             else:
-                pp_results = await pp_instance.process_async(results.get("bmf_results", [])[:50])
-            results["propublica_results"] = pp_results
+                input_data = results.get("bmf_results", [])[:50]
+            
+            processor_config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="propublica_fetch",
+                workflow_config=workflow_config,
+                input_data={"organizations": input_data}
+            )
+            
+            pp_result = await pp_instance.execute(processor_config)
+            results["propublica_results"] = pp_result.data.get("results", [])
         
         return {
             "status": "completed",
@@ -1004,23 +1044,46 @@ async def discover_federal_opportunities(request: Dict[str, Any]):
         
         # Execute Grants.gov fetch
         engine = get_workflow_engine()
-        grants_processor = engine.registry.get_processor("grants_gov_fetch")
-        if grants_processor:
-            grants_instance = grants_processor()
-            grants_results = await grants_instance.process_async(
-                [], 
-                keywords=keywords,
-                opportunity_category=opportunity_category,
+        grants_instance = engine.registry.get_processor("grants_gov_fetch")
+        if grants_instance:
+            
+            from src.core.data_models import WorkflowConfig, ProcessorConfig
+            workflow_config = WorkflowConfig(
+                workflow_id=f"grants_gov_fetch_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                 max_results=max_results
             )
-            results["grants_gov_results"] = grants_results
+            processor_config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="grants_gov_fetch",
+                workflow_config=workflow_config,
+                processor_specific_config={
+                    "keywords": keywords,
+                    "opportunity_category": opportunity_category
+                }
+            )
+            
+            grants_result = await grants_instance.execute(processor_config)
+            results["grants_gov_results"] = grants_result.data.get("results", [])
         
         # Execute USASpending fetch for historical context
-        usaspending_processor = engine.registry.get_processor("usaspending_fetch")
-        if usaspending_processor:
-            usa_instance = usaspending_processor()
-            usa_results = await usa_instance.process_async([], keywords=keywords)
-            results["usaspending_results"] = usa_results
+        usa_instance = engine.registry.get_processor("usaspending_fetch")
+        if usa_instance:
+            
+            workflow_config = WorkflowConfig(
+                workflow_id=f"usaspending_fetch_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                max_results=max_results
+            )
+            processor_config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="usaspending_fetch",
+                workflow_config=workflow_config,
+                processor_specific_config={
+                    "keywords": keywords
+                }
+            )
+            
+            usa_result = await usa_instance.execute(processor_config)
+            results["usaspending_results"] = usa_result.data.get("results", [])
         
         return {
             "status": "completed",
@@ -1049,15 +1112,26 @@ async def discover_state_opportunities(request: Dict[str, Any]):
         
         # Execute Virginia state grants fetch
         engine = get_workflow_engine()
-        va_processor = engine.registry.get_processor("va_state_grants_fetch")
-        if va_processor and "VA" in states:
-            va_instance = va_processor()
-            va_results = await va_instance.process_async(
-                [], 
-                focus_areas=focus_areas,
+        va_instance = engine.registry.get_processor("va_state_grants_fetch")
+        if va_instance and "VA" in states:
+            
+            from src.core.data_models import WorkflowConfig, ProcessorConfig
+            workflow_config = WorkflowConfig(
+                workflow_id=f"va_state_grants_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                states=["VA"],
                 max_results=max_results
             )
-            results["virginia_results"] = va_results
+            processor_config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="va_state_grants_fetch",
+                workflow_config=workflow_config,
+                processor_specific_config={
+                    "focus_areas": focus_areas
+                }
+            )
+            
+            va_result = await va_instance.execute(processor_config)
+            results["virginia_results"] = va_result.data.get("results", [])
         
         return {
             "status": "completed", 
@@ -1088,27 +1162,47 @@ async def discover_commercial_enhanced(request: Dict[str, Any]):
         engine = get_workflow_engine()
         
         # Execute Foundation Directory fetch
-        foundation_processor = engine.registry.get_processor("foundation_directory_fetch")
-        if foundation_processor:
-            fd_instance = foundation_processor()
-            fd_results = await fd_instance.process_async(
-                [],
-                industries=industries,
-                funding_range=funding_range,
+        fd_instance = engine.registry.get_processor("foundation_directory_fetch")
+        if fd_instance:
+            
+            from src.core.data_models import WorkflowConfig, ProcessorConfig
+            workflow_config = WorkflowConfig(
+                workflow_id=f"foundation_directory_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                 max_results=max_results
             )
-            results["foundation_results"] = fd_results
+            processor_config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="foundation_directory_fetch",
+                workflow_config=workflow_config,
+                processor_specific_config={
+                    "industries": industries,
+                    "funding_range": funding_range
+                }
+            )
+            
+            fd_result = await fd_instance.execute(processor_config)
+            results["foundation_results"] = fd_result.data.get("results", [])
         
         # Execute CSR Analysis
-        csr_processor = engine.registry.get_processor("corporate_csr_analyzer")
-        if csr_processor:
-            csr_instance = csr_processor()
-            csr_results = await csr_instance.process_async(
-                [],
-                industries=industries,
-                company_sizes=company_sizes
+        csr_instance = engine.registry.get_processor("corporate_csr_analyzer")
+        if csr_instance:
+            
+            workflow_config = WorkflowConfig(
+                workflow_id=f"csr_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                max_results=max_results
             )
-            results["csr_results"] = csr_results
+            processor_config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="corporate_csr_analyzer",
+                workflow_config=workflow_config,
+                processor_specific_config={
+                    "industries": industries,
+                    "company_sizes": company_sizes
+                }
+            )
+            
+            csr_result = await csr_instance.execute(processor_config)
+            results["csr_results"] = csr_result.data.get("results", [])
         
         return {
             "status": "completed",
@@ -1139,25 +1233,56 @@ async def run_scoring_analysis(request: Dict[str, Any]):
         engine = get_workflow_engine()
         
         # Execute Financial Scoring
-        financial_processor = engine.registry.get_processor("financial_scorer")
-        if financial_processor:
-            fs_instance = financial_processor()
-            financial_results = await fs_instance.process_async(organizations)
-            results["results"]["financial_scores"] = financial_results
+        fs_instance = engine.registry.get_processor("financial_scorer")
+        if fs_instance:
+            
+            from src.core.data_models import WorkflowConfig, ProcessorConfig
+            workflow_config = WorkflowConfig(
+                workflow_id=f"financial_scoring_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            )
+            processor_config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="financial_scorer",
+                workflow_config=workflow_config,
+                input_data={"organizations": organizations}
+            )
+            
+            financial_result = await fs_instance.execute(processor_config)
+            results["results"]["financial_scores"] = financial_result.data.get("results", [])
         
         # Execute Risk Assessment
-        risk_processor = engine.registry.get_processor("risk_assessor")
-        if risk_processor:
-            risk_instance = risk_processor()
-            risk_results = await risk_instance.process_async(organizations)
-            results["results"]["risk_assessments"] = risk_results
+        risk_instance = engine.registry.get_processor("risk_assessor")
+        if risk_instance:
+            
+            workflow_config = WorkflowConfig(
+                workflow_id=f"risk_assessment_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            )
+            processor_config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="risk_assessor",
+                workflow_config=workflow_config,
+                input_data={"organizations": organizations}
+            )
+            
+            risk_result = await risk_instance.execute(processor_config)
+            results["results"]["risk_assessments"] = risk_result.data.get("results", [])
         
         # Execute Government Opportunity Scoring
-        gov_scorer = engine.registry.get_processor("government_opportunity_scorer")
-        if gov_scorer:
-            gov_instance = gov_scorer()
-            gov_results = await gov_instance.process_async(organizations)
-            results["results"]["government_scores"] = gov_results
+        gov_instance = engine.registry.get_processor("government_opportunity_scorer")
+        if gov_instance:
+            
+            workflow_config = WorkflowConfig(
+                workflow_id=f"gov_opportunity_scoring_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            )
+            processor_config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="government_opportunity_scorer",
+                workflow_config=workflow_config,
+                input_data={"organizations": organizations}
+            )
+            
+            gov_result = await gov_instance.execute(processor_config)
+            results["results"]["government_scores"] = gov_result.data.get("results", [])
         
         return {
             "status": "completed",
@@ -1189,18 +1314,39 @@ async def run_network_analysis(request: Dict[str, Any]):
         engine = get_workflow_engine()
         
         # Execute Board Network Analysis
-        board_processor = engine.registry.get_processor("board_network_analyzer")
-        if board_processor:
-            board_instance = board_processor()
-            board_results = await board_instance.process_async(organizations)
-            results["results"]["board_networks"] = board_results
+        board_instance = engine.registry.get_processor("board_network_analyzer")
+        if board_instance:
+            
+            from src.core.data_models import WorkflowConfig, ProcessorConfig
+            workflow_config = WorkflowConfig(
+                workflow_id=f"board_network_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            )
+            processor_config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="board_network_analyzer",
+                workflow_config=workflow_config,
+                input_data={"organizations": organizations}
+            )
+            
+            board_result = await board_instance.execute(processor_config)
+            results["results"]["board_networks"] = board_result.data.get("results", [])
         
         # Execute Enhanced Network Analysis
-        enhanced_processor = engine.registry.get_processor("enhanced_network_analyzer")
-        if enhanced_processor:
-            enhanced_instance = enhanced_processor()
-            enhanced_results = await enhanced_instance.process_async(organizations)
-            results["results"]["enhanced_networks"] = enhanced_results
+        enhanced_instance = engine.registry.get_processor("enhanced_network_analyzer")
+        if enhanced_instance:
+            
+            workflow_config = WorkflowConfig(
+                workflow_id=f"enhanced_network_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            )
+            processor_config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="enhanced_network_analyzer",
+                workflow_config=workflow_config,
+                input_data={"organizations": organizations}
+            )
+            
+            enhanced_result = await enhanced_instance.execute(processor_config)
+            results["results"]["enhanced_networks"] = enhanced_result.data.get("results", [])
         
         return {
             "status": "completed",
@@ -1228,11 +1374,9 @@ async def run_export_functions(request: Dict[str, Any]):
         engine = get_workflow_engine()
         
         # Execute Export Processor
-        export_processor = engine.registry.get_processor("export_processor")
-        if not export_processor:
+        export_instance = engine.registry.get_processor("export_processor")
+        if not export_instance:
             raise HTTPException(status_code=500, detail="Export processor not available")
-        
-        export_instance = export_processor()
         export_context = {
             "export_type": export_type,
             **export_params
@@ -1266,11 +1410,9 @@ async def run_report_generation(request: Dict[str, Any]):
         engine = get_workflow_engine()
         
         # Execute Report Generator
-        report_processor = engine.registry.get_processor("report_generator")
-        if not report_processor:
+        report_instance = engine.registry.get_processor("report_generator")
+        if not report_instance:
             raise HTTPException(status_code=500, detail="Report generator not available")
-        
-        report_instance = report_processor()
         report_context = {
             "report_type": report_type,
             **report_params
@@ -1308,15 +1450,26 @@ async def run_intelligent_classification(request: Dict[str, Any]):
         engine = get_workflow_engine()
         
         # Execute Intelligent Classification
-        classifier = engine.registry.get_processor("intelligent_classifier")
-        if classifier:
-            classifier_instance = classifier()
-            classification_results = await classifier_instance.process_async(
-                organizations or [],
-                state=state,
-                min_score=min_score
+        classifier_instance = engine.registry.get_processor("intelligent_classifier")
+        if classifier_instance:
+            
+            from src.core.data_models import WorkflowConfig, ProcessorConfig
+            workflow_config = WorkflowConfig(
+                workflow_id=f"intelligent_classification_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                states=[state] if state else ["VA"]
             )
-            results["results"]["classifications"] = classification_results
+            processor_config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="intelligent_classifier",
+                workflow_config=workflow_config,
+                input_data={"organizations": organizations or []},
+                processor_specific_config={
+                    "min_score": min_score
+                }
+            )
+            
+            classification_result = await classifier_instance.execute(processor_config)
+            results["results"]["classifications"] = classification_result.data.get("results", [])
         
         return {
             "status": "completed",
@@ -1390,24 +1543,12 @@ async def get_all_processor_status():
         for processor_name in processors:
             try:
                 # Get processor info
-                processor_class = engine.registry.get_processor(processor_name)
+                processor_instance = engine.registry.get_processor(processor_name)
                 info = engine.registry.get_processor_info(processor_name) or {}
                 
                 # Determine health status
-                health_status = "healthy"
-                health_details = "Processor ready"
-                
-                # Try to instantiate processor to test health
-                try:
-                    if processor_class:
-                        test_processor = processor_class()
-                        health_status = "healthy"
-                    else:
-                        health_status = "error"
-                        health_details = "Processor class not available"
-                except Exception as e:
-                    health_status = "error"
-                    health_details = f"Initialization failed: {str(e)[:100]}"
+                health_status = "healthy" if processor_instance else "error"
+                health_details = "Processor ready" if processor_instance else "Processor not available"
                 
                 processor_status = {
                     "name": processor_name,
@@ -1416,7 +1557,7 @@ async def get_all_processor_status():
                     "type": info.get("type", "unknown"),
                     "description": info.get("description", "No description available"),
                     "last_check": datetime.now().isoformat(),
-                    "available": processor_class is not None
+                    "available": processor_instance is not None
                 }
                 
                 processor_statuses.append(processor_status)
@@ -1461,12 +1602,10 @@ async def test_processor(processor_name: str, request: Dict[str, Any]):
     """Test execute a processor with sample data."""
     try:
         engine = get_workflow_engine()
-        processor_class = engine.registry.get_processor(processor_name)
+        processor = engine.registry.get_processor(processor_name)
         
-        if not processor_class:
+        if not processor:
             raise HTTPException(status_code=404, detail="Processor not found")
-        
-        processor = processor_class()
         
         # Use sample data or provided test data
         test_data = request.get("test_data", [])
@@ -1480,13 +1619,24 @@ async def test_processor(processor_name: str, request: Dict[str, Any]):
         
         # Execute processor
         try:
-            result = await processor.process_async(test_data, **test_params)
+            from src.core.data_models import WorkflowConfig, ProcessorConfig
+            workflow_config = WorkflowConfig(
+                workflow_id=f"test_{processor_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                max_results=test_params.get("max_results", 10)
+            )
+            processor_config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name=processor_name,
+                workflow_config=workflow_config,
+                input_data={"test_data": test_data},
+                processor_specific_config=test_params
+            )
+            
+            processor_result = await processor.execute(processor_config)
+            result = processor_result.data.get("results", processor_result.data)
+            
         except Exception as e:
-            # If async fails, try sync
-            try:
-                result = processor.process(test_data, **test_params)
-            except Exception as sync_e:
-                raise HTTPException(status_code=500, detail=f"Processor execution failed: {str(sync_e)}")
+            raise HTTPException(status_code=500, detail=f"Processor execution failed: {str(e)}")
         
         execution_time = (datetime.now() - start_time).total_seconds()
         
@@ -1574,6 +1724,164 @@ async def get_system_logs(lines: int = 200):
         logger.error(f"Failed to get system logs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Welcome Stage API endpoints
+@app.get("/api/welcome/status")
+async def get_welcome_status():
+    """Get welcome stage status and system overview."""
+    try:
+        processor_summary = get_processor_summary()
+        
+        return {
+            "status": "ready",
+            "system_health": "operational",
+            "processors_available": processor_summary["total_processors"],
+            "capabilities": [
+                "Multi-track opportunity discovery",
+                "AI-powered organization analysis", 
+                "Strategic network insights",
+                "Comprehensive export system"
+            ],
+            "quick_start_available": True,
+            "sample_data_ready": True,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get welcome status: {e}")
+        return {
+            "status": "error",
+            "system_health": "degraded",
+            "processors_available": 0,
+            "capabilities": [],
+            "quick_start_available": False,
+            "sample_data_ready": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.post("/api/welcome/sample-profile")
+async def create_sample_profile():
+    """Create a sample organization profile for demonstration."""
+    try:
+        sample_profile_data = {
+            "name": "Sample Technology Nonprofit",
+            "description": "A sample organization focused on digital education and community technology access",
+            "mission_statement": "To bridge the digital divide and empower communities through accessible technology education and resources",
+            "organization_type": "nonprofit",
+            "geographic_scope": {
+                "states": ["VA", "MD", "DC"],
+                "regions": ["Mid-Atlantic"]
+            },
+            "focus_areas": [
+                "digital_literacy",
+                "stem_education", 
+                "community_development"
+            ],
+            "target_populations": [
+                "underserved_youth",
+                "seniors",
+                "low_income_families"
+            ],
+            "funding_history": {
+                "previous_grants": ["Federal STEM Grant", "Community Foundation Grant"],
+                "funding_ranges": ["$10000-50000", "$50000-100000"]
+            },
+            "capabilities": [
+                "Program delivery",
+                "Community partnerships",
+                "Technology integration"
+            ],
+            "is_sample": True
+        }
+        
+        profile = profile_service.create_profile(sample_profile_data)
+        
+        return {
+            "status": "success",
+            "message": "Sample profile created successfully",
+            "profile": profile.model_dump(),
+            "next_steps": [
+                "Review profile details in PROFILER stage",
+                "Run multi-track discovery in DISCOVER stage",
+                "Analyze results in ANALYZE stage"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to create sample profile: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/welcome/quick-start")
+async def quick_start_demo():
+    """Execute a quick demonstration of the platform capabilities."""
+    try:
+        # Create sample profile
+        sample_response = await create_sample_profile()
+        profile_data = sample_response["profile"]
+        profile_id = profile_data.get("id") or "sample_profile_demo"
+        
+        # Generate mock discovery results for demonstration
+        mock_discovery_data = {
+            "nonprofit_track": [
+                {
+                    "organization_name": "Tech for Good Foundation",
+                    "opportunity_type": "nonprofit_partnership",
+                    "funding_amount": 75000,
+                    "compatibility_score": 0.89,
+                    "description": "Collaborative technology education initiative"
+                }
+            ],
+            "federal_track": [
+                {
+                    "agency": "Department of Education",
+                    "program": "Community Learning Centers",
+                    "funding_amount": 150000,
+                    "compatibility_score": 0.82,
+                    "deadline": "2025-06-15"
+                }
+            ],
+            "state_track": [
+                {
+                    "agency": "Virginia Department of Social Services",
+                    "program": "Community Technology Access Grant",
+                    "funding_amount": 85000,
+                    "compatibility_score": 0.78,
+                    "deadline": "2025-05-30"
+                }
+            ],
+            "commercial_track": [
+                {
+                    "organization_name": "Microsoft Corporate Foundation", 
+                    "program": "Digital Skills Initiative",
+                    "funding_amount": 100000,
+                    "compatibility_score": 0.85,
+                    "opportunity_type": "corporate_grant"
+                }
+            ]
+        }
+        
+        return {
+            "status": "completed",
+            "message": "Quick start demonstration completed successfully",
+            "profile_created": sample_response["profile"],
+            "mock_opportunities": mock_discovery_data,
+            "total_opportunities": sum(len(track) for track in mock_discovery_data.values()),
+            "recommendations": [
+                "This demo shows potential opportunities across all 4 funding tracks",
+                "Real discovery would analyze thousands of actual funding sources", 
+                "Navigate to PROFILER to customize your organization profile",
+                "Use DISCOVER to run actual multi-track opportunity discovery"
+            ],
+            "next_actions": {
+                "customize_profile": "Edit profile details in PROFILER stage",
+                "run_discovery": "Execute real discovery in DISCOVER stage", 
+                "analyze_results": "Deep dive analysis in ANALYZE stage"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Quick start demo failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Simple test endpoint for debugging
 @app.get("/api/test")
 async def api_test():
@@ -1586,6 +1894,9 @@ async def api_test():
             "/api/system/status", 
             "/api/dashboard/overview",
             "/api/workflows",
+            "/api/welcome/status",
+            "/api/welcome/sample-profile",
+            "/api/welcome/quick-start",
             "/api/test"
         ]
     }
