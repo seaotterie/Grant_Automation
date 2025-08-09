@@ -180,151 +180,55 @@
 
                 <!-- Stage 0: WELCOME (Getting Started) -->
                 <div class="px-2 mb-4 relative">
-                    <!-- Stage Completion Indicator -->
-                    <div x-show="workflowProgress.welcome" class="absolute -left-1 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-indigo-500 rounded-full"></div>
                     <a href="#" @click.prevent="switchStage('welcome')"
-                       :class="{'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg': activeStage === 'welcome', 'text-gray-300 hover:bg-gray-700 hover:text-white border-indigo-500/30': activeStage !== 'welcome'}"
-                       class="flex items-center px-4 py-4 text-sm font-medium rounded-lg transition-all border relative">
-                        <span class="text-2xl mr-3">🎯</span>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg flex items-center">
-                                WELCOME
-                                <span x-show="workflowProgress.welcome" class="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded-full">✓</span>
-                                <span x-show="activeStage === 'welcome'" class="ml-2 text-xs bg-yellow-500 text-white px-2 py-1 rounded-full animate-pulse">Current</span>
-                            </div>
-                            <div class="text-xs opacity-75">Getting Started & Platform Overview</div>
-                        </div>
-                        <div class="flex flex-col items-end space-y-1">
-                            <div x-show="!workflowProgress.welcome && activeStage !== 'welcome'" class="text-xs text-yellow-400">Start Here</div>
-                        </div>
+                       :class="{'bg-indigo-600 text-white shadow-lg': activeStage === 'welcome', 'text-gray-300 hover:bg-gray-700 hover:text-white border-indigo-500/30': activeStage !== 'welcome'}"
+                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
+                        WELCOME
                     </a>
                 </div>
 
                 <!-- Stage 1: PROFILER (Central Hub) -->
                 <div class="px-2 mb-4 relative">
-                    <!-- Stage Completion Indicator -->
-                    <div x-show="workflowProgress.profiler" class="absolute -left-1 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-purple-500 rounded-full"></div>
                     <a href="#" @click.prevent="switchStage('profiler')"
-                       :class="{'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg': activeStage === 'profiler', 'text-gray-300 hover:bg-gray-700 hover:text-white border-purple-500/30': activeStage !== 'profiler'}"
-                       class="flex items-center px-4 py-4 text-sm font-medium rounded-lg transition-all border relative">
-                        <span class="text-2xl mr-3">👤</span>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg flex items-center">
-                                PROFILER
-                                <span x-show="workflowProgress.profiler" class="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded-full">✓</span>
-                                <span x-show="activeStage === 'profiler'" class="ml-2 text-xs bg-yellow-500 text-white px-2 py-1 rounded-full animate-pulse">Current</span>
-                            </div>
-                            <div class="text-xs opacity-75">Organization Profiles & Central Hub</div>
-                        </div>
-                        <div class="flex flex-col items-end space-y-1">
-                            <div x-show="profileCount > 0" class="bg-white/20 text-white text-xs rounded-full px-2 py-1" x-text="profileCount + ' profiles'"></div>
-                            <div x-show="!workflowProgress.profiler && activeStage !== 'profiler'" class="text-xs text-blue-400">Next Step</div>
-                        </div>
+                       :class="{'bg-purple-600 text-white shadow-lg': activeStage === 'profiler', 'text-gray-300 hover:bg-gray-700 hover:text-white border-purple-500/30': activeStage !== 'profiler'}"
+                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
+                        PROFILER
                     </a>
                 </div>
 
                 <!-- Stage 2: DISCOVER (Multi-Track Discovery) -->
                 <div class="px-2 mb-4 relative">
-                    <!-- Stage Completion Indicator -->
-                    <div x-show="workflowProgress.discover" class="absolute -left-1 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-green-500 rounded-full"></div>
                     <a href="#" @click.prevent="switchStage('discover')"
-                       :class="{'bg-gradient-to-r from-green-600 to-teal-600 text-white shadow-lg': activeStage === 'discover', 'text-gray-300 hover:bg-gray-700 hover:text-white border-green-500/30': activeStage !== 'discover'}"
-                       class="flex items-center px-4 py-4 text-sm font-medium rounded-lg transition-all border relative">
-                        <span class="text-2xl mr-3">🔍</span>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg flex items-center">
-                                DISCOVER
-                                <span x-show="workflowProgress.discover" class="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded-full">✓</span>
-                                <span x-show="activeStage === 'discover'" class="ml-2 text-xs bg-yellow-500 text-white px-2 py-1 rounded-full animate-pulse">Current</span>
-                            </div>
-                            <div class="text-xs opacity-75">Multi-Track Opportunity Discovery</div>
-                        </div>
-                        <div class="flex flex-col items-end space-y-1">
-                            <div class="text-xs bg-white/20 rounded px-2 py-1">
-                                <div>4 Sources</div>
-                            </div>
-                            <div x-show="discoveryStats.totalResults > 0" class="text-xs bg-green-500/20 text-green-300 rounded px-2 py-1" x-text="discoveryStats.totalResults + ' found'"></div>
-                            <div x-show="!workflowProgress.profiler && activeStage !== 'discover'" class="text-xs text-gray-400">Complete Profiler First</div>
-                            <div x-show="workflowProgress.profiler && !workflowProgress.discover && activeStage !== 'discover'" class="text-xs text-green-300">Ready to Discover</div>
-                        </div>
+                       :class="{'bg-green-600 text-white shadow-lg': activeStage === 'discover', 'text-gray-300 hover:bg-gray-700 hover:text-white border-green-500/30': activeStage !== 'discover'}"
+                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
+                        DISCOVER
                     </a>
                 </div>
 
                 <!-- Stage 3: ANALYZE (Comprehensive Analysis) -->
                 <div class="px-2 mb-4 relative">
-                    <!-- Stage Completion Indicator -->
-                    <div x-show="workflowProgress.analyze" class="absolute -left-1 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-full"></div>
                     <a href="#" @click.prevent="switchStage('analyze')"
-                       :class="{'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg': activeStage === 'analyze', 'text-gray-300 hover:bg-gray-700 hover:text-white border-blue-500/30': activeStage !== 'analyze'}"
-                       class="flex items-center px-4 py-4 text-sm font-medium rounded-lg transition-all border relative">
-                        <span class="text-2xl mr-3">📊</span>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg flex items-center">
-                                ANALYZE
-                                <span x-show="workflowProgress.analyze" class="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded-full">✓</span>
-                                <span x-show="activeStage === 'analyze'" class="ml-2 text-xs bg-yellow-500 text-white px-2 py-1 rounded-full animate-pulse">Current</span>
-                            </div>
-                            <div class="text-xs opacity-75">Financial, Network & Intelligence Analysis</div>
-                        </div>
-                        <div class="flex flex-col items-end space-y-1">
-                            <div class="text-xs bg-white/20 rounded px-2 py-1">
-                                <div>Analytics</div>
-                            </div>
-                            <div x-show="!workflowProgress.discover && activeStage !== 'analyze'" class="text-xs text-gray-400">Complete Discovery First</div>
-                            <div x-show="workflowProgress.discover && !workflowProgress.analyze && activeStage !== 'analyze'" class="text-xs text-blue-300">Ready to Analyze</div>
-                        </div>
+                       :class="{'bg-cyan-600 text-white shadow-lg': activeStage === 'analyze', 'text-gray-300 hover:bg-gray-700 hover:text-white border-cyan-500/30': activeStage !== 'analyze'}"
+                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
+                        ANALYZE
                     </a>
                 </div>
 
                 <!-- Stage 4: PLAN (Strategic Planning) -->
                 <div class="px-2 mb-4 relative">
-                    <!-- Stage Completion Indicator -->
-                    <div x-show="workflowProgress.plan" class="absolute -left-1 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-orange-500 rounded-full"></div>
                     <a href="#" @click.prevent="switchStage('plan')"
-                       :class="{'bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-lg': activeStage === 'plan', 'text-gray-300 hover:bg-gray-700 hover:text-white border-orange-500/30': activeStage !== 'plan'}"
-                       class="flex items-center px-4 py-4 text-sm font-medium rounded-lg transition-all border relative">
-                        <span class="text-2xl mr-3">🧠</span>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg flex items-center">
-                                PLAN
-                                <span x-show="workflowProgress.plan" class="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded-full">✓</span>
-                                <span x-show="activeStage === 'plan'" class="ml-2 text-xs bg-yellow-500 text-white px-2 py-1 rounded-full animate-pulse">Current</span>
-                            </div>
-                            <div class="text-xs opacity-75">AI Classification & Strategic Recommendations</div>
-                        </div>
-                        <div class="flex flex-col items-end space-y-1">
-                            <div class="text-xs bg-white/20 rounded px-2 py-1">
-                                <div>Smart</div>
-                            </div>
-                            <div x-show="!workflowProgress.analyze && activeStage !== 'plan'" class="text-xs text-gray-400">Complete Analysis First</div>
-                            <div x-show="workflowProgress.analyze && !workflowProgress.plan && activeStage !== 'plan'" class="text-xs text-orange-300">Ready to Plan</div>
-                        </div>
+                       :class="{'bg-orange-600 text-white shadow-lg': activeStage === 'plan', 'text-gray-300 hover:bg-gray-700 hover:text-white border-orange-500/30': activeStage !== 'plan'}"
+                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
+                        PLAN
                     </a>
                 </div>
 
                 <!-- Stage 5: EXECUTE (Implementation & Tracking) -->
                 <div class="px-2 mb-4 relative">
-                    <!-- Stage Completion Indicator -->
-                    <div x-show="workflowProgress.execute" class="absolute -left-1 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-gray-500 rounded-full"></div>
                     <a href="#" @click.prevent="switchStage('execute')"
-                       :class="{'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg': activeStage === 'execute', 'text-gray-300 hover:bg-gray-700 hover:text-white border-gray-500/30': activeStage !== 'execute'}"
-                       class="flex items-center px-4 py-4 text-sm font-medium rounded-lg transition-all border relative">
-                        <span class="text-2xl mr-3">🚀</span>
-                        <div class="flex-1">
-                            <div class="font-bold text-lg flex items-center">
-                                EXECUTE
-                                <span x-show="workflowProgress.execute" class="ml-2 text-xs bg-green-500 text-white px-2 py-1 rounded-full">✓</span>
-                                <span x-show="activeStage === 'execute'" class="ml-2 text-xs bg-yellow-500 text-white px-2 py-1 rounded-full animate-pulse">Current</span>
-                            </div>
-                            <div class="text-xs opacity-75">Export, Reports & Implementation</div>
-                        </div>
-                        <div class="flex flex-col items-end space-y-1">
-                            <div class="text-xs bg-white/20 rounded px-2 py-1">
-                                <div>Action</div>
-                            </div>
-                            <div x-show="!workflowProgress.plan && activeStage !== 'execute'" class="text-xs text-gray-400">Complete Planning First</div>
-                            <div x-show="workflowProgress.plan && !workflowProgress.execute && activeStage !== 'execute'" class="text-xs text-gray-300">Ready to Execute</div>
-                        </div>
+                       :class="{'bg-red-600 text-white shadow-lg': activeStage === 'execute', 'text-gray-300 hover:bg-gray-700 hover:text-white border-red-500/30': activeStage !== 'execute'}"
+                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
+                        EXECUTE
                     </a>
                 </div>
                 
