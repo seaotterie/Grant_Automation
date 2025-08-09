@@ -99,14 +99,13 @@
         <!-- Desktop Sidebar Navigation -->
         <aside class="hidden lg:block bg-gray-900 dark:bg-gray-800 text-white w-80 flex-shrink-0 transition-colors duration-300">
             <!-- Logo Header -->
-            <div class="p-4 border-b border-gray-800 dark:border-gray-700">
+            <div class="p-4">
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="text-xl font-bold flex items-center">
-                            <span class="text-2xl mr-2">🎯</span>
+                            <img src="/static/CatalynxLogo.png" alt="Catalynx" class="h-12 mr-2">
                             <span class="font-bold">Opportunistic Grantmogrifier</span>
                         </h1>
-                        <p class="text-sm text-gray-400 mt-1">Grant Research Automation</p>
                     </div>
                     
                     <!-- Dark Mode Toggle -->
@@ -356,29 +355,6 @@
                             <div class="text-xs font-bold text-white" x-text="getCurrentStageLabel()"></div>
                         </div>
                         
-                        <!-- Stage Progress Mini-Indicators -->
-                        <div class="grid grid-cols-5 gap-1 mb-3">
-                            <div class="text-center">
-                                <div :class="{'bg-purple-500': activeStage === 'profiler', 'bg-gray-600': activeStage !== 'profiler'}" class="w-full h-1 rounded mb-1"></div>
-                                <div class="text-xs text-gray-400">Profile</div>
-                            </div>
-                            <div class="text-center">
-                                <div :class="{'bg-green-500': activeStage === 'discover', 'bg-gray-600': activeStage !== 'discover'}" class="w-full h-1 rounded mb-1"></div>
-                                <div class="text-xs text-gray-400">Discover</div>
-                            </div>
-                            <div class="text-center">
-                                <div :class="{'bg-blue-500': activeStage === 'analyze', 'bg-gray-600': activeStage !== 'analyze'}" class="w-full h-1 rounded mb-1"></div>
-                                <div class="text-xs text-gray-400">Analyze</div>
-                            </div>
-                            <div class="text-center">
-                                <div :class="{'bg-orange-500': activeStage === 'plan', 'bg-gray-600': activeStage !== 'plan'}" class="w-full h-1 rounded mb-1"></div>
-                                <div class="text-xs text-gray-400">Plan</div>
-                            </div>
-                            <div class="text-center">
-                                <div :class="{'bg-gray-500': activeStage === 'execute', 'bg-gray-600': activeStage !== 'execute'}" class="w-full h-1 rounded mb-1"></div>
-                                <div class="text-xs text-gray-400">Execute</div>
-                            </div>
-                        </div>
                         
                         <!-- Quick Stats -->
                         <div class="text-xs text-gray-400 space-y-1">
@@ -420,50 +396,6 @@
             <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 lg:px-6 py-3 lg:py-4 transition-colors duration-300">
                 <div class="flex items-center justify-between">
                     <div class="flex-1">
-                        <!-- Workflow Breadcrumb Navigation -->
-                        <nav class="flex items-center space-x-2 text-sm mb-2">
-                            <a href="#" @click.prevent="switchStage('welcome')" 
-                               :class="activeStage === 'welcome' ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                               class="flex items-center transition-colors">
-                                <span class="w-2 h-2 rounded-full mr-2" :class="workflowProgress.welcome ? 'bg-indigo-500' : 'bg-gray-400'"></span>
-                                WELCOME
-                            </a>
-                            <span class="text-gray-400">→</span>
-                            <a href="#" @click.prevent="switchStage('profiler')" 
-                               :class="activeStage === 'profiler' ? 'text-purple-600 dark:text-purple-400 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                               class="flex items-center transition-colors">
-                                <span class="w-2 h-2 rounded-full mr-2" :class="workflowProgress.profiler ? 'bg-purple-500' : 'bg-gray-400'"></span>
-                                PROFILER
-                            </a>
-                            <span class="text-gray-400">→</span>
-                            <a href="#" @click.prevent="switchStage('discover')" 
-                               :class="activeStage === 'discover' ? 'text-green-600 dark:text-green-400 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                               class="flex items-center transition-colors">
-                                <span class="w-2 h-2 rounded-full mr-2" :class="workflowProgress.discover ? 'bg-green-500' : 'bg-gray-400'"></span>
-                                DISCOVER
-                            </a>
-                            <span class="text-gray-400">→</span>
-                            <a href="#" @click.prevent="switchStage('analyze')" 
-                               :class="activeStage === 'analyze' ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                               class="flex items-center transition-colors">
-                                <span class="w-2 h-2 rounded-full mr-2" :class="workflowProgress.analyze ? 'bg-blue-500' : 'bg-gray-400'"></span>
-                                ANALYZE
-                            </a>
-                            <span class="text-gray-400">→</span>
-                            <a href="#" @click.prevent="switchStage('plan')" 
-                               :class="activeStage === 'plan' ? 'text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                               class="flex items-center transition-colors">
-                                <span class="w-2 h-2 rounded-full mr-2" :class="workflowProgress.plan ? 'bg-orange-500' : 'bg-gray-400'"></span>
-                                PLAN
-                            </a>
-                            <span class="text-gray-400">→</span>
-                            <a href="#" @click.prevent="switchStage('execute')" 
-                               :class="activeStage === 'execute' ? 'text-gray-600 dark:text-gray-400 font-medium' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                               class="flex items-center transition-colors">
-                                <span class="w-2 h-2 rounded-full mr-2" :class="workflowProgress.execute ? 'bg-gray-500' : 'bg-gray-400'"></span>
-                                EXECUTE
-                            </a>
-                        </nav>
                         
                         <!-- Stage Title and Description -->
                         <div>
@@ -530,30 +462,16 @@
                             </div>
                         </div>
                         
-                        <!-- Team Collaboration -->
-                        <div class="flex items-center space-x-2 border-l border-gray-300 dark:border-gray-600 pl-4">
-                            <!-- Online Users -->
-                            <div class="flex -space-x-1">
-                                <template x-for="user in getOnlineUsers().slice(0, 3)" :key="user.id">
-                                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-medium border-2 border-white dark:border-gray-800" 
-                                         :title="user.name" x-text="user.avatar"></div>
-                                </template>
-                                <div x-show="getOnlineUsers().length > 3" 
-                                     class="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs font-medium border-2 border-white dark:border-gray-800"
-                                     x-text="`+${getOnlineUsers().length - 3}`"></div>
-                            </div>
-                            
-                            <!-- Notifications -->
-                            <div class="relative">
-                                <button @click="collaborationModalOpen = true" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 relative">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5-5-5h5V7H9v10z"></path>
-                                    </svg>
-                                    <span x-show="getUnreadNotifications().length > 0" 
-                                          class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center"
-                                          x-text="getUnreadNotifications().length"></span>
-                                </button>
-                            </div>
+                        <!-- Notifications -->
+                        <div class="relative">
+                            <button @click="collaborationModalOpen = true" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 relative">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5-5-5h5V7H9v10z"></path>
+                                </svg>
+                                <span x-show="getUnreadNotifications().length > 0" 
+                                      class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center"
+                                      x-text="getUnreadNotifications().length"></span>
+                            </button>
                         </div>
 
                         <!-- Live Clock -->
