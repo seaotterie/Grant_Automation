@@ -15,7 +15,27 @@
       "Bash(\"grant-research-env/Scripts/streamlit.exe\" run src/dashboard/app.py)",
       "Bash(\"grant-research-env/Scripts/python.exe\" export_results.py)",
       "Bash(\"grant-research-env/Scripts/python.exe\" export_board_network.py)",
-      "Bash(\"grant-research-env/Scripts/python.exe\" test_interactive_network.py)"
+      "Bash(\"grant-research-env/Scripts/python.exe\" test_interactive_network.py)",
+      "Bash(git add:*)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" src/web/main.py)",
+      "Bash(curl:*)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" test_processor_integration.py)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" test_new_processors.py)",
+      "Bash(find:*)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" test_welcome_stage.py)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" test_welcome_stage_simple.py)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" comprehensive_test_suite.py)",
+      "Bash(start:*)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" cleanup_html.py)",
+      "Bash(del cleanup_html.py)",
+      "Bash(rm:*)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" cleanup_html_final.py)",
+      "Bash(copy:*)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" reorganize_stages.py)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" fix_html_end.py)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" remove_orphaned_content.py)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" remove_old_duplicates.py)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }

@@ -5,13 +5,14 @@ function catalynxApp() {
     return {
         // Application state - New workflow-based navigation
         activeTab: 'status', // Legacy compatibility
-        activeStage: 'profiler', // New workflow stage system
+        activeStage: 'welcome', // New workflow stage system - start with welcome
         systemStatus: 'healthy',
         apiStatus: 'healthy',
         currentTime: new Date().toLocaleTimeString(),
         
         // Workflow progress tracking
         workflowProgress: {
+            welcome: false,
             profiler: false,
             discover: false,
             analyze: false,
@@ -22,6 +23,16 @@ function catalynxApp() {
         // Stage-specific data
         profileCount: 0,
         activeWorkflows: 0,
+        
+        // Welcome stage data
+        welcomeStatus: {
+            systemHealth: 'loading',
+            processorsAvailable: 0,
+            capabilities: [],
+            quickStartAvailable: false,
+            sampleDataReady: false
+        },
+        welcomeLoading: false,
         
         // Theme system - Dark mode default
         darkMode: localStorage.getItem('catalynx-dark-mode') !== 'false',
@@ -314,6 +325,7 @@ function catalynxApp() {
             sessionId: Math.random().toString(36).substr(2, 9),
             stageTransitions: [],
             timeSpentInStages: {
+                welcome: 0,
                 profiler: 0,
                 discover: 0,
                 analyze: 0,
@@ -322,6 +334,7 @@ function catalynxApp() {
             },
             stageStartTimes: {},
             completionRates: {
+                welcome: 0,
                 profiler: 0,
                 discover: 0,
                 analyze: 0,
@@ -502,6 +515,11 @@ function catalynxApp() {
         async init() {
             console.log('Initializing Catalynx Web Interface...');
             
+            // Initialize welcome stage if active
+            if (this.activeStage === 'welcome') {
+                await this.loadWelcomeStatus();
+            }
+            
             // Initialize theme
             this.applyTheme();
             
@@ -623,6 +641,106 @@ function catalynxApp() {
                 case 'settings':
                     this.loadSystemSettings();
                     break;
+            }
+        },
+        
+        // WELCOME STAGE FUNCTIONS
+        async loadWelcomeStatus() {
+            try {
+                this.welcomeLoading = true;
+                const response = await fetch('/api/welcome/status');
+                if (response.ok) {
+                    this.welcomeStatus = await response.json();
+                    console.log('Welcome status loaded:', this.welcomeStatus);
+                } else {
+                    console.error('Failed to load welcome status');
+                }
+            } catch (error) {
+                console.error('Error loading welcome status:', error);
+            } finally {
+                this.welcomeLoading = false;
+            }
+        },
+        
+        async createSampleProfile() {
+            try {
+                this.showNotification('Creating Sample Profile', 'Setting up demonstration profile...', 'info');
+                
+                const response = await fetch('/api/welcome/sample-profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    this.showNotification('Sample Profile Created', 'Ready to explore the platform features!', 'success');
+                    
+                    // Update profile count
+                    this.profileCount += 1;
+                    this.workflowProgress.welcome = true;
+                    
+                    // Suggest next step
+                    setTimeout(() => {
+                        this.showNotification('Next Step', 'Visit the PROFILER stage to customize your profile', 'info');
+                    }, 2000);
+                    
+                    return result;
+                } else {
+                    const error = await response.json();
+                    this.showNotification('Error', error.detail || 'Failed to create sample profile', 'error');
+                }
+            } catch (error) {
+                console.error('Error creating sample profile:', error);
+                this.showNotification('Error', 'Failed to create sample profile', 'error');
+            }
+        },
+        
+        async runQuickStartDemo() {
+            try {
+                this.showNotification('Starting Demo', 'Running quick platform demonstration...', 'info');
+                
+                const response = await fetch('/api/welcome/quick-start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    this.showNotification('Demo Complete!', `Found ${result.total_opportunities} sample opportunities`, 'success');
+                    
+                    // Mark welcome and potentially other stages as progressed
+                    this.workflowProgress.welcome = true;
+                    this.profileCount += 1;
+                    
+                    // Show detailed results
+                    console.log('Quick start demo results:', result);
+                    
+                    // Suggest exploring the platform
+                    setTimeout(() => {
+                        this.showNotification('Explore the Platform', 'Navigate through PROFILER → DISCOVER → ANALYZE stages', 'info');
+                    }, 3000);
+                    
+                    return result;
+                } else {
+                    const error = await response.json();
+                    this.showNotification('Demo Failed', error.detail || 'Quick start demo encountered an error', 'error');
+                }
+            } catch (error) {
+                console.error('Error running quick start demo:', error);
+                this.showNotification('Demo Error', 'Failed to complete quick start demonstration', 'error');
+            }
+        },
+        
+        completeWelcomeStage() {
+            this.workflowProgress.welcome = true;
+            this.showNotification('Welcome Complete', 'Ready to begin your grant research journey!', 'success');
+            
+            // Auto-advance to profiler if no profiles exist
+            if (this.profileCount === 0) {
+                setTimeout(() => {
+                    this.switchStage('profiler');
+                    this.showNotification('Next Step', 'Create your organization profile to get started', 'info');
+                }, 2000);
             }
         },
         
@@ -927,7 +1045,9 @@ function catalynxApp() {
         // ENHANCED WORKFLOW NAVIGATION FUNCTIONS
         getNextRecommendedStep() {
             // Determine the next recommended workflow step based on current progress
-            if (!this.workflowProgress.profiler) {
+            if (!this.workflowProgress.welcome) {
+                return 'welcome';
+            } else if (!this.workflowProgress.profiler) {
                 return 'profiler';
             } else if (!this.workflowProgress.discover) {
                 return 'discover';
@@ -944,6 +1064,7 @@ function catalynxApp() {
         getNextRecommendedStepName() {
             const nextStep = this.getNextRecommendedStep();
             const stepNames = {
+                'welcome': '0. Get Started',
                 'profiler': '1. Create Profiles',
                 'discover': '2. Run Discovery',
                 'analyze': '3. Analyze Results',
@@ -1296,6 +1417,7 @@ function catalynxApp() {
         getWorkflowTip() {
             const currentStage = this.activeStage;
             const tips = {
+                'welcome': 'Tip: Use the quick start demo to explore all platform features before creating your first profile.',
                 'profiler': 'Tip: Complete profiles help generate better, more targeted opportunity recommendations.',
                 'discover': 'Tip: Running all tracks simultaneously gives you comprehensive coverage of all funding sources.',
                 'analyze': 'Tip: Focus on financial trends and board connections for the most strategic insights.',
@@ -1678,6 +1800,7 @@ function catalynxApp() {
         
         getCurrentStageLabel() {
             const stageLabels = {
+                'welcome': 'Welcome & Getting Started',
                 'profiler': 'Profile Management',
                 'discover': 'Multi-Track Discovery',
                 'analyze': 'Intelligence Analysis', 
@@ -1698,6 +1821,7 @@ function catalynxApp() {
         getPageTitle() {
             // Workflow stage titles have priority
             const stageNames = {
+                'welcome': 'Welcome',
                 'profiler': 'Profiler',
                 'discover': 'Discover',
                 'analyze': 'Analyze', 
@@ -1733,6 +1857,7 @@ function catalynxApp() {
         getPageDescription() {
             // Workflow stage descriptions
             const stageDescriptions = {
+                'welcome': 'Getting started with Catalynx platform',
                 'profiler': 'Organization profile management and workflow hub',
                 'discover': 'Multi-track opportunity discovery across all funding sources',
                 'analyze': 'Financial intelligence, network analysis, and comprehensive analytics',
