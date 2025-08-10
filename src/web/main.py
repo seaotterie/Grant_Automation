@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 import sys
+import uuid
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional, Any
@@ -32,6 +33,7 @@ from src.profiles.workflow_integration import ProfileWorkflowIntegrator
 from src.pipeline.pipeline_engine import ProcessingPriority
 from src.pipeline.resource_allocator import resource_allocator
 from src.processors.registry import get_processor_summary
+from src.processors.lookup.ein_lookup import EINLookupProcessor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -433,6 +435,72 @@ async def export_workflow(workflow_id: str, format: str = "csv"):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Profile Management API endpoints
+@app.post("/api/profiles/fetch-ein")
+async def fetch_ein_data(request: dict):
+    """
+    Fetch organization data by EIN using ProPublica API.
+    """
+    try:
+        ein = request.get('ein', '').strip()
+        if not ein:
+            raise HTTPException(status_code=400, detail="EIN is required")
+        
+        # Initialize EIN lookup processor
+        ein_processor = EINLookupProcessor()
+        
+        # Create workflow config with EIN
+        from src.core.data_models import WorkflowConfig, ProcessorConfig
+        
+        workflow_config = WorkflowConfig(
+            target_ein=ein,
+            target_state=None,
+            target_tags=[],
+            max_results=1
+        )
+        
+        config = ProcessorConfig(
+            workflow_id=str(uuid.uuid4()),
+            processor_name="ein_lookup",
+            workflow_config=workflow_config,
+            processor_specific_config={}
+        )
+        
+        # Execute EIN lookup
+        result = await ein_processor.execute(config)
+        logger.info(f"EIN lookup result: success={result.success}, data_keys={list(result.data.keys()) if result.data else 'None'}")
+        
+        if result.success and result.data:
+            logger.info(f"Result data structure: {result.data}")
+            org_data = result.data.get('target_organization', {})
+            return {
+                "success": True,
+                "data": {
+                    "name": org_data.get('name', ''),
+                    "ein": org_data.get('ein', ein),
+                    "mission_statement": org_data.get('mission_description', '') or org_data.get('activity_description', ''),
+                    "organization_type": str(org_data.get('organization_type', 'nonprofit')).replace('OrganizationType.', '').lower(),
+                    "ntee_code": org_data.get('ntee_code', ''),
+                    "city": org_data.get('city', ''),
+                    "state": org_data.get('state', ''),
+                    "website": org_data.get('website', ''),
+                    "revenue": org_data.get('revenue', 0),
+                    "assets": org_data.get('assets', 0),
+                    "expenses": org_data.get('expenses', 0),
+                    "most_recent_filing_year": org_data.get('most_recent_filing_year', ''),
+                    "filing_years": org_data.get('filing_years', [])
+                }
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Organization not found or API error",
+                "error": result.error_message if hasattr(result, 'error_message') else "Unknown error"
+            }
+            
+    except Exception as e:
+        logger.error(f"EIN fetch error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch EIN data: {str(e)}")
+
 @app.get("/api/profiles")
 async def list_profiles(status: Optional[str] = None, limit: Optional[int] = None):
     """List all organization profiles."""

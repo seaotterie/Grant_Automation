@@ -533,6 +533,9 @@ function catalynxApp() {
         currentEditingProfile: null,
         showDeleteConfirmation: false,
         deleteConfirmationMessage: '',
+        
+        // EIN fetch functionality
+        einFetchLoading: false,
         pendingDeleteProfileId: null,
         
         // Profile form data - comprehensive structure
@@ -759,6 +762,71 @@ function catalynxApp() {
             this.profileForm.notes = profile.notes || '';
             
             this.showProfileModal = true;
+        },
+
+        async fetchEINData() {
+            console.log('fetchEINData called');
+            console.log('profileForm.ein:', this.profileForm?.ein);
+            
+            if (!this.profileForm?.ein) {
+                this.showNotification('Please enter an EIN first', 'error');
+                return;
+            }
+            
+            this.einFetchLoading = true;
+            try {
+                const response = await fetch('/api/profiles/fetch-ein', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        ein: this.profileForm.ein
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('API Response:', result);
+                
+                if (result.success && result.data) {
+                    console.log('Organization data:', result.data);
+                    // Update profile form with fetched data
+                    if (result.data.name) {
+                        console.log('Setting name:', result.data.name);
+                        this.profileForm.name = result.data.name;
+                    }
+                    if (result.data.mission_statement) {
+                        console.log('Setting mission:', result.data.mission_statement);
+                        this.profileForm.mission_statement = result.data.mission_statement;
+                    }
+                    if (result.data.organization_type) {
+                        console.log('Setting org type:', result.data.organization_type);
+                        this.profileForm.organization_type = result.data.organization_type;
+                    }
+                    
+                    // Additional fields from EIN lookup
+                    if (result.data.state && result.data.city) {
+                        this.profileForm.states_text = result.data.state;
+                        console.log('Setting location:', result.data.city + ', ' + result.data.state);
+                    }
+                    if (result.data.revenue) {
+                        this.profileForm.annual_revenue = result.data.revenue;
+                        console.log('Setting revenue:', result.data.revenue);
+                    }
+                    
+                    this.showNotification(`Organization data fetched: ${result.data.name}${result.data.city ? ' (' + result.data.city + ', ' + result.data.state + ')' : ''}`, 'success');
+                } else {
+                    console.log('API call failed or no data:', result);
+                    this.showNotification(result.message || 'Failed to fetch organization data', 'error');
+                }
+                
+            } catch (error) {
+                console.error('EIN fetch error:', error);
+                console.error('Error details:', error.message, error.stack);
+                this.showNotification(`Error fetching organization data: ${error.message}`, 'error');
+            } finally {
+                this.einFetchLoading = false;
+            }
         },
 
         async saveProfile() {

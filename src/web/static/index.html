@@ -4344,7 +4344,25 @@
                     
                     <!-- Basic Information Section -->
                     <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h4>
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h4>
+                            <button type="button" @click="fetchEINData()" 
+                                    :disabled="!profileForm.ein || einFetchLoading"
+                                    :class="!profileForm.ein || einFetchLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
+                                    class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium transition-colors flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                <span x-show="!einFetchLoading">Fetch from EIN</span>
+                                <span x-show="einFetchLoading" class="flex items-center">
+                                    <svg class="animate-spin h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"></circle>
+                                        <path fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" class="opacity-75"></path>
+                                    </svg>
+                                    Fetching...
+                                </span>
+                            </button>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Name *</label>
