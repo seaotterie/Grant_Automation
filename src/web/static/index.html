@@ -380,9 +380,40 @@
                     
                     <!-- Profile Table -->
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-                        <!-- Table Header -->
-                        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                        <!-- Table Header with Action Buttons -->
+                        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
                             <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Organization Profiles</h4>
+                            
+                            <!-- Action Buttons -->
+                            <div x-show="filteredProfiles.length > 0" class="flex space-x-3">
+                                <button @click="selectedDiscoveryProfile && editProfile(selectedDiscoveryProfile)" 
+                                        :disabled="!selectedDiscoveryProfile"
+                                        :class="!selectedDiscoveryProfile ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'"
+                                        class="px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-md">
+                                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                                    </svg>
+                                    Edit
+                                </button>
+                                <button @click="selectedDiscoveryProfile && deleteProfile(selectedDiscoveryProfile?.profile_id)" 
+                                        :disabled="!selectedDiscoveryProfile"
+                                        :class="!selectedDiscoveryProfile ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'"
+                                        class="px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center text-sm bg-red-600 hover:bg-red-700 text-white shadow-md">
+                                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Delete
+                                </button>
+                                <button @click="selectedDiscoveryProfile && selectProfileForDiscovery(selectedDiscoveryProfile)" 
+                                        :disabled="!selectedDiscoveryProfile"
+                                        :class="!selectedDiscoveryProfile ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'"
+                                        class="px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center text-sm bg-green-600 hover:bg-green-700 text-white shadow-md">
+                                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Discover
+                                </button>
+                            </div>
                         </div>
                         
                         <!-- Table Content -->
@@ -410,31 +441,19 @@
                                 <table x-show="!profilesLoading && filteredProfiles.length > 0" class="w-full">
                                     <thead class="bg-gray-50 dark:bg-gray-700">
                                         <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Select</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Focus Areas</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Opportunities</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Discovery</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Discovery</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                         <template x-for="profile in filteredProfiles" :key="profile.profile_id">
-                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                                                :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedDiscoveryProfile?.profile_id === profile.profile_id}">
-                                                <td class="px-6 py-4 whitespace-nowrap">
-                                                    <div class="flex items-center">
-                                                        <input type="radio" 
-                                                               :name="'discovery_profile_selection'"
-                                                               :value="profile.profile_id"
-                                                               :checked="selectedDiscoveryProfile?.profile_id === profile.profile_id"
-                                                               @change="selectedDiscoveryProfile = profile"
-                                                               class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800">
-                                                        <label :for="'radio_' + profile.profile_id" class="sr-only">Select for discovery</label>
-                                                    </div>
-                                                </td>
+                                            <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                                :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedDiscoveryProfile?.profile_id === profile.profile_id}"
+                                                @click="selectedDiscoveryProfile = profile">
                                                 <td class="px-6 py-4 whitespace-nowrap">
                                                     <div>
                                                         <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="profile.name"></div>
@@ -457,31 +476,18 @@
                                                           x-text="profile.status || 'draft'"></span>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <div class="flex flex-col space-y-2">
-                                                        <span class="px-2 py-1 text-xs font-medium rounded-full"
-                                                              :class="getDiscoveryStatusClass(profile.discovery_status)"
-                                                              x-text="getDiscoveryStatusText(profile.discovery_status)"></span>
-                                                        <button @click="selectProfileForDiscovery(profile)"
-                                                                class="px-3 py-1 text-xs bg-primary-600 hover:bg-primary-700 text-white rounded transition-colors"
-                                                                x-text="getDiscoveryButtonText(profile)"></button>
-                                                    </div>
-                                                </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                    <div class="flex space-x-2">
-                                                        <button @click="editProfile(profile)"
-                                                                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition-colors">
-                                                            Edit
-                                                        </button>
-                                                        <button @click="deleteProfile(profile.profile_id)"
-                                                                class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-colors">
-                                                            Delete
-                                                        </button>
+                                                    <div class="flex flex-col">
+                                                        <span class="text-sm text-gray-900 dark:text-white"
+                                                              x-text="profile.last_discovery_date ? new Date(profile.last_discovery_date).toLocaleDateString() : 'Never'"></span>
+                                                        <span class="text-xs text-gray-500 dark:text-gray-400"
+                                                              x-text="profile.last_discovery_date ? formatTimeAgo(profile.last_discovery_date) : 'Not run'"></span>
                                                     </div>
                                                 </td>
                                             </tr>
                                         </template>
                                     </tbody>
                                 </table>
+                                
                             </div>
                         </div>
                     </div>
@@ -2215,12 +2221,44 @@
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 animate-fade-in">
                         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                             <div class="flex items-center justify-between">
-                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">My Profiles</h3>
                                 <div class="flex items-center space-x-4">
+                                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">My Profiles</h3>
                                     <span class="text-sm text-gray-600 dark:text-gray-400" x-text="`${profiles.length} profiles`"></span>
                                     <input type="text" placeholder="Search profiles..." 
                                            class="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                            x-model="profileSearchQuery" @input="filterProfiles()">
+                                </div>
+                                
+                                <!-- Action Buttons -->
+                                <div x-show="profiles.length > 0" class="flex space-x-3">
+                                    <button @click="selectedDiscoveryProfile && viewProfile(selectedDiscoveryProfile)" 
+                                            :disabled="!selectedDiscoveryProfile"
+                                            :class="!selectedDiscoveryProfile ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'"
+                                            class="px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center text-sm bg-primary-600 hover:bg-primary-700 text-white shadow-md">
+                                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                        View
+                                    </button>
+                                    <button @click="selectedDiscoveryProfile && editProfile(selectedDiscoveryProfile)" 
+                                            :disabled="!selectedDiscoveryProfile"
+                                            :class="!selectedDiscoveryProfile ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'"
+                                            class="px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-md">
+                                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                                        </svg>
+                                        Edit
+                                    </button>
+                                    <button @click="selectedDiscoveryProfile && selectProfileForDiscovery(selectedDiscoveryProfile)" 
+                                            :disabled="!selectedDiscoveryProfile"
+                                            :class="!selectedDiscoveryProfile ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'"
+                                            class="px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center text-sm bg-green-600 hover:bg-green-700 text-white shadow-md">
+                                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+                                        </svg>
+                                        Discover
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -2257,31 +2295,19 @@
                             <table class="w-full">
                                 <thead class="bg-gray-50 dark:bg-gray-700">
                                     <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Select</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Focus Areas</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Opportunities</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Discovery</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Discovery</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                     <template x-for="profile in filteredProfiles" :key="profile.profile_id">
-                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                                            :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedDiscoveryProfile?.profile_id === profile.profile_id}">
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="flex items-center">
-                                                    <input type="radio" 
-                                                           :name="'discovery_profile_selection'"
-                                                           :value="profile.profile_id"
-                                                           :checked="selectedDiscoveryProfile?.profile_id === profile.profile_id"
-                                                           @change="selectedDiscoveryProfile = profile"
-                                                           class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800">
-                                                    <label :for="'radio_' + profile.profile_id" class="sr-only">Select for discovery</label>
-                                                </div>
-                                            </td>
+                                        <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                            :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedDiscoveryProfile?.profile_id === profile.profile_id}"
+                                            @click="selectedDiscoveryProfile = profile">
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div>
                                                     <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="profile.name"></div>
@@ -2306,38 +2332,24 @@
                                                       x-text="profile.status"></span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="flex flex-col space-y-1">
-                                                    <span :class="getDiscoveryStatusClass(profile.discovery_status || 'never_run')"
-                                                          class="px-2 py-1 text-xs font-medium rounded-full w-fit" 
-                                                          x-text="getDiscoveryStatusText(profile.discovery_status || 'never_run')"></span>
-                                                    <div x-show="profile.last_discovery_date" class="text-xs text-gray-500 dark:text-gray-400">
-                                                        Last: <span x-text="formatDate(profile.last_discovery_date)"></span>
-                                                    </div>
-                                                    <div x-show="profile.discovery_count > 0" class="text-xs text-gray-500 dark:text-gray-400">
-                                                        <span x-text="profile.discovery_count"></span> runs
-                                                    </div>
+                                                <div class="flex flex-col">
+                                                    <span class="text-sm text-gray-900 dark:text-white"
+                                                          x-text="profile.last_discovery_date ? new Date(profile.last_discovery_date).toLocaleDateString() : 'Never'"></span>
+                                                    <span class="text-xs text-gray-500 dark:text-gray-400"
+                                                          x-text="profile.last_discovery_date ? formatTimeAgo(profile.last_discovery_date) : 'Not run'"></span>
                                                 </div>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                                                <button @click="viewProfile(profile)" class="text-primary-600 hover:text-primary-800 font-medium">View</button>
-                                                <button @click="editProfile(profile)" class="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
-                                                <button @click="selectProfileForDiscovery(profile)" 
-                                                        class="text-green-600 hover:text-green-800 font-medium flex items-center space-x-1"
-                                                        :class="{'opacity-50 cursor-not-allowed': processorControls.discombobulator.running || processorControls.amplinator.running}">
-                                                    <span x-text="getDiscoveryButtonText(profile)">🚀 Discover</span>
-                                                    <span v-if="processorControls.discombobulator.running || processorControls.amplinator.running" class="text-xs">Running...</span>
-                                                </button>
                                             </td>
                                         </tr>
                                     </template>
                                     <tr x-show="filteredProfiles.length === 0">
-                                        <td colspan="8" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                        <td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                                             <div class="text-4xl mb-4">📝</div>
                                             <div>No profiles found. Create your first organization profile to get started!</div>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
+                            
                         </div>
                     </div>
                     
