@@ -85,6 +85,7 @@ class OrganizationProfile(BaseModel):
     focus_areas: List[str] = Field(..., min_items=1, description="Primary focus areas/keywords")
     program_areas: List[str] = Field(default=[], description="Specific program areas")
     target_populations: List[str] = Field(default=[], description="Populations served")
+    ntee_codes: List[str] = Field(default=[], description="NTEE (National Taxonomy of Exempt Entities) classification codes")
     
     # Geographic and Scope
     geographic_scope: GeographicScope = Field(default_factory=GeographicScope)

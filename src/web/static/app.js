@@ -293,6 +293,759 @@ function catalynxApp() {
             { code: 'F30', name: 'Food Services/Food Banks' },
             { code: 'F32', name: 'Nutrition Programs' }
         ],
+        
+        // Comprehensive NTEE Code Data Structure
+        fullNteeCodeList: {
+            'A': { 
+                category: 'Arts, Culture & Humanities',
+                subcategories: [
+                    { code: 'A01', name: 'Alliances & Advocacy' },
+                    { code: 'A02', name: 'Management & Technical Assistance' },
+                    { code: 'A03', name: 'Professional Societies & Associations' },
+                    { code: 'A05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'A11', name: 'Single Organization Support' },
+                    { code: 'A12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'A19', name: 'Support N.E.C.' },
+                    { code: 'A20', name: 'Arts & Culture' },
+                    { code: 'A23', name: 'Cultural & Ethnic Awareness' },
+                    { code: 'A24', name: 'Folk Arts' },
+                    { code: 'A25', name: 'Arts Education' },
+                    { code: 'A26', name: 'Arts Council/Agency' },
+                    { code: 'A27', name: 'Community Celebrations' },
+                    { code: 'A30', name: 'Media & Communications' },
+                    { code: 'A31', name: 'Film & Video' },
+                    { code: 'A32', name: 'Television' },
+                    { code: 'A33', name: 'Printing & Publishing' },
+                    { code: 'A34', name: 'Radio' },
+                    { code: 'A40', name: 'Visual Arts' },
+                    { code: 'A50', name: 'Museums' },
+                    { code: 'A51', name: 'Art Museums' },
+                    { code: 'A52', name: 'Children\'s Museums' },
+                    { code: 'A54', name: 'History Museums' },
+                    { code: 'A56', name: 'Natural History Museums' },
+                    { code: 'A57', name: 'Science & Technology Museums' },
+                    { code: 'A60', name: 'Performing Arts' },
+                    { code: 'A61', name: 'Performing Arts Centers' },
+                    { code: 'A62', name: 'Dance' },
+                    { code: 'A63', name: 'Ballet' },
+                    { code: 'A65', name: 'Theater' },
+                    { code: 'A68', name: 'Music' },
+                    { code: 'A69', name: 'Symphony Orchestras' },
+                    { code: 'A6A', name: 'Opera' },
+                    { code: 'A70', name: 'Humanities' },
+                    { code: 'A80', name: 'Historical Societies' },
+                    { code: 'A82', name: 'Historical Preservation' },
+                    { code: 'A84', name: 'Commemorative Events' },
+                    { code: 'A90', name: 'Arts Service' }
+                ]
+            },
+            'B': { 
+                category: 'Education',
+                subcategories: [
+                    { code: 'B01', name: 'Alliances & Advocacy' },
+                    { code: 'B02', name: 'Management & Technical Assistance' },
+                    { code: 'B03', name: 'Professional Societies & Associations' },
+                    { code: 'B05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'B11', name: 'Single Organization Support' },
+                    { code: 'B12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'B19', name: 'Support N.E.C.' },
+                    { code: 'B20', name: 'Elementary & Secondary Education' },
+                    { code: 'B21', name: 'Kindergarten, Nursery School, Preschool' },
+                    { code: 'B24', name: 'Primary/Elementary Schools' },
+                    { code: 'B25', name: 'Secondary/High Schools' },
+                    { code: 'B28', name: 'Specialized Education Institutions' },
+                    { code: 'B29', name: 'Charter Schools' },
+                    { code: 'B30', name: 'Vocational & Technical Schools' },
+                    { code: 'B40', name: 'Higher Education Institutions' },
+                    { code: 'B41', name: 'Two-Year Colleges' },
+                    { code: 'B42', name: 'Undergraduate Colleges' },
+                    { code: 'B43', name: 'Universities' },
+                    { code: 'B50', name: 'Graduate & Professional Schools' },
+                    { code: 'B60', name: 'Adult Education Programs & Services' },
+                    { code: 'B70', name: 'Libraries' },
+                    { code: 'B80', name: 'Student Services & Organizations' },
+                    { code: 'B82', name: 'Scholarships & Student Financial Aid' },
+                    { code: 'B83', name: 'Student Sororities & Fraternities' },
+                    { code: 'B84', name: 'Alumni Associations' },
+                    { code: 'B90', name: 'Educational Services' },
+                    { code: 'B92', name: 'Remedial Reading' },
+                    { code: 'B94', name: 'Parent/Teacher Group' },
+                    { code: 'B99', name: 'Education N.E.C.' }
+                ]
+            },
+            'C': { 
+                category: 'Environmental Quality, Protection & Beautification',
+                subcategories: [
+                    { code: 'C01', name: 'Alliances & Advocacy' },
+                    { code: 'C02', name: 'Management & Technical Assistance' },
+                    { code: 'C03', name: 'Professional Societies & Associations' },
+                    { code: 'C05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'C11', name: 'Single Organization Support' },
+                    { code: 'C12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'C19', name: 'Support N.E.C.' },
+                    { code: 'C20', name: 'Pollution Abatement & Control' },
+                    { code: 'C27', name: 'Recycling' },
+                    { code: 'C30', name: 'Natural Resource Conservation & Protection' },
+                    { code: 'C32', name: 'Water Resource, Wetlands Conservation & Management' },
+                    { code: 'C34', name: 'Land Resources Conservation' },
+                    { code: 'C35', name: 'Energy Resources Conservation & Development' },
+                    { code: 'C36', name: 'Forest Conservation' },
+                    { code: 'C40', name: 'Botanical, Horticultural & Landscape Services' },
+                    { code: 'C41', name: 'Botanical Gardens & Arboreta' },
+                    { code: 'C42', name: 'Garden Club' },
+                    { code: 'C50', name: 'Environmental Beautification & Aesthetics' },
+                    { code: 'C60', name: 'Environmental Education & Outdoor Survival Programs' },
+                    { code: 'C99', name: 'Environmental Quality, Protection & Beautification N.E.C.' }
+                ]
+            },
+            'D': { 
+                category: 'Animal-Related',
+                subcategories: [
+                    { code: 'D01', name: 'Alliances & Advocacy' },
+                    { code: 'D02', name: 'Management & Technical Assistance' },
+                    { code: 'D03', name: 'Professional Societies & Associations' },
+                    { code: 'D05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'D11', name: 'Single Organization Support' },
+                    { code: 'D12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'D19', name: 'Support N.E.C.' },
+                    { code: 'D20', name: 'Animal Protection & Welfare' },
+                    { code: 'D30', name: 'Wildlife Preservation & Protection' },
+                    { code: 'D31', name: 'Protection of Endangered Species' },
+                    { code: 'D32', name: 'Bird Preservation' },
+                    { code: 'D33', name: 'Fisheries Resources' },
+                    { code: 'D34', name: 'Wildlife Sanctuaries' },
+                    { code: 'D40', name: 'Veterinary Services' },
+                    { code: 'D50', name: 'Zoos & Aquariums' },
+                    { code: 'D60', name: 'Other Animal-Related' },
+                    { code: 'D61', name: 'Animal Training, Showing & Racing' },
+                    { code: 'D99', name: 'Animal-Related N.E.C.' }
+                ]
+            },
+            'E': { 
+                category: 'Health Care',
+                subcategories: [
+                    { code: 'E01', name: 'Alliances & Advocacy' },
+                    { code: 'E02', name: 'Management & Technical Assistance' },
+                    { code: 'E03', name: 'Professional Societies & Associations' },
+                    { code: 'E05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'E11', name: 'Single Organization Support' },
+                    { code: 'E12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'E19', name: 'Support N.E.C.' },
+                    { code: 'E20', name: 'Hospitals & Related Primary Medical Care Facilities' },
+                    { code: 'E21', name: 'Community Health Centers' },
+                    { code: 'E22', name: 'Home Health Care' },
+                    { code: 'E24', name: 'Primary Health Care Clinics' },
+                    { code: 'E30', name: 'Ambulatory Health Center, Community Clinic' },
+                    { code: 'E31', name: 'Group Health Practice' },
+                    { code: 'E32', name: 'Ambulatory Health Center' },
+                    { code: 'E40', name: 'Reproductive Health Care' },
+                    { code: 'E42', name: 'Family Planning Centers' },
+                    { code: 'E50', name: 'Rehabilitative Medical Services' },
+                    { code: 'E60', name: 'Health Support Services' },
+                    { code: 'E61', name: 'Blood Supply Related' },
+                    { code: 'E62', name: 'Emergency Medical Services & Transport' },
+                    { code: 'E65', name: 'Organ & Tissue Banks' },
+                    { code: 'E70', name: 'Public Health Program' },
+                    { code: 'E80', name: 'Health - General & Financing' },
+                    { code: 'E86', name: 'Patient Services - Entertainment, Recreation' },
+                    { code: 'E90', name: 'Nursing Services' },
+                    { code: 'E91', name: 'Nursing Facility/Long-term Care' },
+                    { code: 'E92', name: 'Home for the Aging' },
+                    { code: 'E99', name: 'Health Care N.E.C.' }
+                ]
+            },
+            'F': { 
+                category: 'Mental Health & Crisis Intervention',
+                subcategories: [
+                    { code: 'F01', name: 'Alliances & Advocacy' },
+                    { code: 'F02', name: 'Management & Technical Assistance' },
+                    { code: 'F03', name: 'Professional Societies & Associations' },
+                    { code: 'F05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'F11', name: 'Single Organization Support' },
+                    { code: 'F12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'F19', name: 'Support N.E.C.' },
+                    { code: 'F20', name: 'Substance Abuse, Dependency, Prevention & Treatment' },
+                    { code: 'F21', name: 'Alcoholism' },
+                    { code: 'F22', name: 'Drug Abuse' },
+                    { code: 'F30', name: 'Mental Health Treatment' },
+                    { code: 'F31', name: 'Psychiatric Hospitals' },
+                    { code: 'F32', name: 'Community Mental Health Centers' },
+                    { code: 'F33', name: 'Group Home - Mental Health' },
+                    { code: 'F40', name: 'Hot Line, Crisis Intervention' },
+                    { code: 'F42', name: 'Rape Victim Services' },
+                    { code: 'F50', name: 'Addictive Disorders' },
+                    { code: 'F52', name: 'Smoking Addiction' },
+                    { code: 'F53', name: 'Eating Addiction' },
+                    { code: 'F54', name: 'Gambling Addiction' },
+                    { code: 'F60', name: 'Counseling Support Groups' },
+                    { code: 'F70', name: 'Mental Health Disorders' },
+                    { code: 'F80', name: 'Mental Health Association' },
+                    { code: 'F99', name: 'Mental Health, Crisis Intervention N.E.C.' }
+                ]
+            },
+            'G': { 
+                category: 'Diseases, Disorders & Medical Disciplines',
+                subcategories: [
+                    { code: 'G01', name: 'Alliances & Advocacy' },
+                    { code: 'G02', name: 'Management & Technical Assistance' },
+                    { code: 'G03', name: 'Professional Societies & Associations' },
+                    { code: 'G05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'G11', name: 'Single Organization Support' },
+                    { code: 'G12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'G19', name: 'Support N.E.C.' },
+                    { code: 'G20', name: 'Birth Defects & Genetic Diseases' },
+                    { code: 'G25', name: 'Down Syndrome' },
+                    { code: 'G30', name: 'Cancer' },
+                    { code: 'G32', name: 'Breast Cancer' },
+                    { code: 'G40', name: 'Diseases of Specific Organs' },
+                    { code: 'G41', name: 'Eye Diseases, Blindness & Vision Impairments' },
+                    { code: 'G42', name: 'Ear & Throat Diseases' },
+                    { code: 'G43', name: 'Heart & Circulatory System Disease & Disorders' },
+                    { code: 'G44', name: 'Kidney Disease' },
+                    { code: 'G45', name: 'Lung Disease' },
+                    { code: 'G48', name: 'Brain Disorders' },
+                    { code: 'G50', name: 'Nerve, Muscle & Bone Diseases' },
+                    { code: 'G51', name: 'Arthritis' },
+                    { code: 'G54', name: 'Epilepsy' },
+                    { code: 'G60', name: 'Allergy-Related Diseases' },
+                    { code: 'G61', name: 'Asthma' },
+                    { code: 'G70', name: 'Digestive Diseases & Disorders' },
+                    { code: 'G80', name: 'Specifically Named Diseases' },
+                    { code: 'G81', name: 'AIDS' },
+                    { code: 'G83', name: 'Alzheimer\'s Disease' },
+                    { code: 'G84', name: 'Autism' },
+                    { code: 'G90', name: 'Medical Disciplines' },
+                    { code: 'G92', name: 'Biomedicine & Bioengineering' },
+                    { code: 'G94', name: 'Geriatrics' },
+                    { code: 'G96', name: 'Pediatrics' },
+                    { code: 'G9B', name: 'Surgical Specialties' },
+                    { code: 'G99', name: 'Diseases, Disorders, Medical Disciplines N.E.C.' }
+                ]
+            },
+            'H': { 
+                category: 'Medical Research',
+                subcategories: [
+                    { code: 'H01', name: 'Alliances & Advocacy' },
+                    { code: 'H02', name: 'Management & Technical Assistance' },
+                    { code: 'H03', name: 'Professional Societies & Associations' },
+                    { code: 'H05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'H11', name: 'Single Organization Support' },
+                    { code: 'H12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'H19', name: 'Support N.E.C.' },
+                    { code: 'H20', name: 'Birth Defects & Genetic Diseases Research' },
+                    { code: 'H25', name: 'Down Syndrome Research' },
+                    { code: 'H30', name: 'Cancer Research' },
+                    { code: 'H32', name: 'Breast Cancer Research' },
+                    { code: 'H40', name: 'Specific Organ Research' },
+                    { code: 'H41', name: 'Eye Research' },
+                    { code: 'H42', name: 'Ear & Throat Research' },
+                    { code: 'H43', name: 'Heart & Circulatory Research' },
+                    { code: 'H44', name: 'Kidney Research' },
+                    { code: 'H45', name: 'Lung Research' },
+                    { code: 'H48', name: 'Brain Disorders Research' },
+                    { code: 'H50', name: 'Nerve, Muscle & Bone Research' },
+                    { code: 'H51', name: 'Arthritis Research' },
+                    { code: 'H54', name: 'Epilepsy Research' },
+                    { code: 'H60', name: 'Allergy-Related Disease Research' },
+                    { code: 'H61', name: 'Asthma Research' },
+                    { code: 'H70', name: 'Digestive Disease Research' },
+                    { code: 'H80', name: 'Specifically Named Disease Research' },
+                    { code: 'H81', name: 'AIDS Research' },
+                    { code: 'H83', name: 'Alzheimer\'s Disease Research' },
+                    { code: 'H84', name: 'Autism Research' },
+                    { code: 'H90', name: 'Medical Disciplines Research' },
+                    { code: 'H92', name: 'Biomedicine & Bioengineering Research' },
+                    { code: 'H94', name: 'Geriatrics Research' },
+                    { code: 'H96', name: 'Pediatrics Research' },
+                    { code: 'H9B', name: 'Surgery Research' },
+                    { code: 'H99', name: 'Medical Research N.E.C.' }
+                ]
+            },
+            'I': { 
+                category: 'Crime & Legal Related',
+                subcategories: [
+                    { code: 'I01', name: 'Alliances & Advocacy' },
+                    { code: 'I02', name: 'Management & Technical Assistance' },
+                    { code: 'I03', name: 'Professional Societies & Associations' },
+                    { code: 'I05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'I11', name: 'Single Organization Support' },
+                    { code: 'I12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'I19', name: 'Support N.E.C.' },
+                    { code: 'I20', name: 'Crime Prevention' },
+                    { code: 'I21', name: 'Youth Violence Prevention' },
+                    { code: 'I23', name: 'Drunk Driving Related' },
+                    { code: 'I30', name: 'Correctional Facilities' },
+                    { code: 'I40', name: 'Rehabilitation Services for Offenders' },
+                    { code: 'I43', name: 'Services to Promote Reintegration' },
+                    { code: 'I44', name: 'Prison Alternatives' },
+                    { code: 'I50', name: 'Administration of Justice/Courts' },
+                    { code: 'I51', name: 'Dispute Resolution & Mediation' },
+                    { code: 'I60', name: 'Law Enforcement' },
+                    { code: 'I70', name: 'Protection Against, Prevention of Negligence, Accidents, Injuries' },
+                    { code: 'I71', name: 'Child Abuse Prevention' },
+                    { code: 'I72', name: 'Domestic Violence' },
+                    { code: 'I73', name: 'Sexual Abuse' },
+                    { code: 'I80', name: 'Legal Services' },
+                    { code: 'I83', name: 'Public Interest Law' },
+                    { code: 'I99', name: 'Crime, Legal Related N.E.C.' }
+                ]
+            },
+            'J': { 
+                category: 'Employment',
+                subcategories: [
+                    { code: 'J01', name: 'Alliances & Advocacy' },
+                    { code: 'J02', name: 'Management & Technical Assistance' },
+                    { code: 'J03', name: 'Professional Societies & Associations' },
+                    { code: 'J05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'J11', name: 'Single Organization Support' },
+                    { code: 'J12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'J19', name: 'Support N.E.C.' },
+                    { code: 'J20', name: 'Employment Procurement Assistance, Job Training' },
+                    { code: 'J21', name: 'Vocational Counseling, Guidance & Testing' },
+                    { code: 'J22', name: 'Vocational Training' },
+                    { code: 'J30', name: 'Vocational Rehabilitation' },
+                    { code: 'J32', name: 'Goodwill Industries' },
+                    { code: 'J33', name: 'Sheltered Employment, Work Activity Centers' },
+                    { code: 'J40', name: 'Labor Unions' },
+                    { code: 'J99', name: 'Employment N.E.C.' }
+                ]
+            },
+            'K': { 
+                category: 'Food, Agriculture & Nutrition',
+                subcategories: [
+                    { code: 'K01', name: 'Alliances & Advocacy' },
+                    { code: 'K02', name: 'Management & Technical Assistance' },
+                    { code: 'K03', name: 'Professional Societies & Associations' },
+                    { code: 'K05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'K11', name: 'Single Organization Support' },
+                    { code: 'K12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'K19', name: 'Support N.E.C.' },
+                    { code: 'K20', name: 'Agricultural Programs' },
+                    { code: 'K25', name: 'Farmland Preservation' },
+                    { code: 'K26', name: 'Animal Husbandry' },
+                    { code: 'K28', name: 'Farm Bureau' },
+                    { code: 'K30', name: 'Food Service, Free Food Distribution Programs' },
+                    { code: 'K31', name: 'Food Banks, Food Pantries' },
+                    { code: 'K34', name: 'Congregate Meals' },
+                    { code: 'K35', name: 'Meals on Wheels' },
+                    { code: 'K36', name: 'Nutrition Programs' },
+                    { code: 'K99', name: 'Food, Agriculture & Nutrition N.E.C.' }
+                ]
+            },
+            'L': { 
+                category: 'Housing & Shelter',
+                subcategories: [
+                    { code: 'L01', name: 'Alliances & Advocacy' },
+                    { code: 'L02', name: 'Management & Technical Assistance' },
+                    { code: 'L03', name: 'Professional Societies & Associations' },
+                    { code: 'L05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'L11', name: 'Single Organization Support' },
+                    { code: 'L12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'L19', name: 'Support N.E.C.' },
+                    { code: 'L20', name: 'Housing Development, Construction, Management' },
+                    { code: 'L21', name: 'Low-Cost Temporary Housing' },
+                    { code: 'L22', name: 'Senior Citizens Housing/Retirement Communities' },
+                    { code: 'L24', name: 'Senior Continuing Care Communities' },
+                    { code: 'L25', name: 'Residential Care for Children & Adolescents' },
+                    { code: 'L30', name: 'Housing Search Assistance' },
+                    { code: 'L40', name: 'Temporary Housing' },
+                    { code: 'L41', name: 'Homeless, Temporary Shelter' },
+                    { code: 'L50', name: 'Housing Rehabilitation' },
+                    { code: 'L80', name: 'Housing Support' },
+                    { code: 'L81', name: 'Home Improvement & Repairs' },
+                    { code: 'L82', name: 'Housing Expense Reduction Support' },
+                    { code: 'L99', name: 'Housing, Shelter N.E.C.' }
+                ]
+            },
+            'M': { 
+                category: 'Public Safety, Disaster Preparedness & Relief',
+                subcategories: [
+                    { code: 'M01', name: 'Alliances & Advocacy' },
+                    { code: 'M02', name: 'Management & Technical Assistance' },
+                    { code: 'M03', name: 'Professional Societies & Associations' },
+                    { code: 'M05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'M11', name: 'Single Organization Support' },
+                    { code: 'M12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'M19', name: 'Support N.E.C.' },
+                    { code: 'M20', name: 'Disaster Preparedness & Relief Services' },
+                    { code: 'M23', name: 'Search & Rescue Squads' },
+                    { code: 'M24', name: 'Fire Prevention & Protection' },
+                    { code: 'M40', name: 'Safety, Accident Prevention' },
+                    { code: 'M41', name: 'First Aid Training & Services' },
+                    { code: 'M42', name: 'Automotive Safety' },
+                    { code: 'M99', name: 'Public Safety, Disaster Preparedness & Relief N.E.C.' }
+                ]
+            },
+            'N': { 
+                category: 'Recreation & Sports',
+                subcategories: [
+                    { code: 'N01', name: 'Alliances & Advocacy' },
+                    { code: 'N02', name: 'Management & Technical Assistance' },
+                    { code: 'N03', name: 'Professional Societies & Associations' },
+                    { code: 'N05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'N11', name: 'Single Organization Support' },
+                    { code: 'N12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'N19', name: 'Support N.E.C.' },
+                    { code: 'N20', name: 'Camps' },
+                    { code: 'N30', name: 'Physical Fitness & Community Recreational Facilities' },
+                    { code: 'N31', name: 'Swimming, Pool' },
+                    { code: 'N32', name: 'Parks & Playgrounds' },
+                    { code: 'N40', name: 'Sports Training Facilities, Agencies' },
+                    { code: 'N50', name: 'Recreational, Pleasure, or Social Club' },
+                    { code: 'N52', name: 'Fairs' },
+                    { code: 'N60', name: 'Amateur Sports Clubs, Leagues, N.E.C.' },
+                    { code: 'N61', name: 'Fishing, Hunting Clubs' },
+                    { code: 'N62', name: 'Basketball' },
+                    { code: 'N63', name: 'Baseball, Softball' },
+                    { code: 'N64', name: 'Soccer Clubs, Leagues' },
+                    { code: 'N65', name: 'Football Clubs, Leagues' },
+                    { code: 'N66', name: 'Skiing Clubs, Leagues' },
+                    { code: 'N67', name: 'Swimming, Water Recreation' },
+                    { code: 'N68', name: 'Winter Sports' },
+                    { code: 'N69', name: 'Equestrian, Riding Clubs' },
+                    { code: 'N6A', name: 'Golf' },
+                    { code: 'N70', name: 'Amateur Athletic Competition' },
+                    { code: 'N71', name: 'Olympics' },
+                    { code: 'N72', name: 'Special Olympics' },
+                    { code: 'N80', name: 'Professional Athletic Leagues' },
+                    { code: 'N99', name: 'Recreation, Sports, Leisure, Athletics N.E.C.' }
+                ]
+            },
+            'O': { 
+                category: 'Youth Development',
+                subcategories: [
+                    { code: 'O01', name: 'Alliances & Advocacy' },
+                    { code: 'O02', name: 'Management & Technical Assistance' },
+                    { code: 'O03', name: 'Professional Societies & Associations' },
+                    { code: 'O05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'O11', name: 'Single Organization Support' },
+                    { code: 'O12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'O19', name: 'Support N.E.C.' },
+                    { code: 'O20', name: 'Youth Centers, Clubs, Multipurpose' },
+                    { code: 'O21', name: 'Boys & Girls Clubs' },
+                    { code: 'O22', name: 'Boys Scouts' },
+                    { code: 'O23', name: 'Girl Scouts' },
+                    { code: 'O24', name: 'Little League, Youth Baseball' },
+                    { code: 'O30', name: 'Adult, Child Matching Programs' },
+                    { code: 'O31', name: 'Big Brothers, Big Sisters' },
+                    { code: 'O40', name: 'Scouting Organizations' },
+                    { code: 'O41', name: 'Girl Guides' },
+                    { code: 'O42', name: 'Scouts - Coed' },
+                    { code: 'O43', name: 'Boy Scouts of America' },
+                    { code: 'O50', name: 'Youth Development Programs, Other' },
+                    { code: 'O51', name: 'Youth Community Service Clubs' },
+                    { code: 'O52', name: 'Youth Development - Agricultural' },
+                    { code: 'O53', name: 'Youth Development - Business' },
+                    { code: 'O54', name: 'Youth Development - Citizenship Programs' },
+                    { code: 'O55', name: 'Youth Development - Religious Leadership' },
+                    { code: 'O99', name: 'Youth Development N.E.C.' }
+                ]
+            },
+            'P': { 
+                category: 'Human Services',
+                subcategories: [
+                    { code: 'P01', name: 'Alliances & Advocacy' },
+                    { code: 'P02', name: 'Management & Technical Assistance' },
+                    { code: 'P03', name: 'Professional Societies & Associations' },
+                    { code: 'P05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'P11', name: 'Single Organization Support' },
+                    { code: 'P12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'P19', name: 'Support N.E.C.' },
+                    { code: 'P20', name: 'Human Service Organizations' },
+                    { code: 'P21', name: 'American Red Cross' },
+                    { code: 'P22', name: 'Urban League' },
+                    { code: 'P24', name: 'Salvation Army' },
+                    { code: 'P26', name: 'Volunteers of America' },
+                    { code: 'P27', name: 'Young Men\'s or Women\'s Associations' },
+                    { code: 'P28', name: 'Neighborhood Centers, Settlement Houses, Community' },
+                    { code: 'P30', name: 'Children & Youth Services' },
+                    { code: 'P31', name: 'Adoption' },
+                    { code: 'P32', name: 'Foster Care' },
+                    { code: 'P33', name: 'Child Day Care' },
+                    { code: 'P40', name: 'Family Services' },
+                    { code: 'P42', name: 'Single Parent Agencies' },
+                    { code: 'P43', name: 'Family Violence Shelters' },
+                    { code: 'P44', name: 'In-Home for Elderly' },
+                    { code: 'P45', name: 'Family Services for Adolescent Parents' },
+                    { code: 'P46', name: 'Family Counseling' },
+                    { code: 'P47', name: 'Pregnancy Centers' },
+                    { code: 'P50', name: 'Personal Social Services' },
+                    { code: 'P51', name: 'Financial Counseling, Money Management' },
+                    { code: 'P52', name: 'Transportation, Free or Subsidized' },
+                    { code: 'P58', name: 'Gift Distribution' },
+                    { code: 'P60', name: 'Emergency Assistance' },
+                    { code: 'P61', name: 'Travelers Aid' },
+                    { code: 'P62', name: 'Victims Services' },
+                    { code: 'P70', name: 'Residential, Custodial Care' },
+                    { code: 'P71', name: 'Adult, Continuing Care' },
+                    { code: 'P73', name: 'Group Home, Halfway House' },
+                    { code: 'P74', name: 'Hospices' },
+                    { code: 'P75', name: 'Senior Centers, Services' },
+                    { code: 'P76', name: 'Blind, Visually Impaired Centers, Services' },
+                    { code: 'P80', name: 'Centers to Support Independence of Specific Populations' },
+                    { code: 'P81', name: 'Senior Continuing Care Communities' },
+                    { code: 'P82', name: 'Developmentally Disabled Centers, Services' },
+                    { code: 'P84', name: 'Ethnic, Immigrant Centers, Services' },
+                    { code: 'P85', name: 'Homeless Centers, Services' },
+                    { code: 'P86', name: 'Deaf, Hearing Impaired Centers, Services' },
+                    { code: 'P87', name: 'Disability Centers, Services' },
+                    { code: 'P99', name: 'Human Services N.E.C.' }
+                ]
+            },
+            'Q': { 
+                category: 'International, Foreign Affairs & National Security',
+                subcategories: [
+                    { code: 'Q01', name: 'Alliances & Advocacy' },
+                    { code: 'Q02', name: 'Management & Technical Assistance' },
+                    { code: 'Q03', name: 'Professional Societies & Associations' },
+                    { code: 'Q05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'Q11', name: 'Single Organization Support' },
+                    { code: 'Q12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'Q19', name: 'Support N.E.C.' },
+                    { code: 'Q20', name: 'Promotion of International Understanding' },
+                    { code: 'Q21', name: 'International Cultural Exchange' },
+                    { code: 'Q22', name: 'International Academic Exchange' },
+                    { code: 'Q23', name: 'International Exchange N.E.C.' },
+                    { code: 'Q30', name: 'International Development, Relief Services' },
+                    { code: 'Q31', name: 'International Agricultural Development' },
+                    { code: 'Q32', name: 'International Economic Development' },
+                    { code: 'Q33', name: 'International Relief' },
+                    { code: 'Q40', name: 'International Peace & Security' },
+                    { code: 'Q41', name: 'Arms Control, Peace' },
+                    { code: 'Q42', name: 'United Nations Association' },
+                    { code: 'Q43', name: 'National Security' },
+                    { code: 'Q50', name: 'International Affairs, Foreign Policy, & Globalization' },
+                    { code: 'Q51', name: 'International Economic & Trade Policy' },
+                    { code: 'Q70', name: 'International Human Rights' },
+                    { code: 'Q71', name: 'International Migration, Refugee Issues' },
+                    { code: 'Q99', name: 'International, Foreign Affairs & National Security N.E.C.' }
+                ]
+            },
+            'R': { 
+                category: 'Civil Rights, Social Action & Advocacy',
+                subcategories: [
+                    { code: 'R01', name: 'Alliances & Advocacy' },
+                    { code: 'R02', name: 'Management & Technical Assistance' },
+                    { code: 'R03', name: 'Professional Societies & Associations' },
+                    { code: 'R05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'R11', name: 'Single Organization Support' },
+                    { code: 'R12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'R19', name: 'Support N.E.C.' },
+                    { code: 'R20', name: 'Civil Rights' },
+                    { code: 'R22', name: 'Minority Rights' },
+                    { code: 'R23', name: 'Disabled Persons Rights' },
+                    { code: 'R24', name: 'Women\'s Rights' },
+                    { code: 'R25', name: 'Seniors\' Rights' },
+                    { code: 'R26', name: 'Lesbian, Gay Rights' },
+                    { code: 'R27', name: 'Immigrants\' Rights' },
+                    { code: 'R28', name: 'AIDS, HIV Issues' },
+                    { code: 'R29', name: 'Reproductive Rights' },
+                    { code: 'R30', name: 'Intergroup, Race Relations' },
+                    { code: 'R40', name: 'Voter Education, Registration' },
+                    { code: 'R60', name: 'Civil Liberties Advocacy' },
+                    { code: 'R61', name: 'Reproductive Freedom' },
+                    { code: 'R62', name: 'Right to Life' },
+                    { code: 'R63', name: 'Censorship, Freedom of Speech and Press' },
+                    { code: 'R67', name: 'Right to Die & Euthanasia' },
+                    { code: 'R99', name: 'Civil Rights, Social Action, Advocacy N.E.C.' }
+                ]
+            },
+            'S': { 
+                category: 'Community Improvement & Capacity Building',
+                subcategories: [
+                    { code: 'S01', name: 'Alliances & Advocacy' },
+                    { code: 'S02', name: 'Management & Technical Assistance' },
+                    { code: 'S03', name: 'Professional Societies & Associations' },
+                    { code: 'S05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'S11', name: 'Single Organization Support' },
+                    { code: 'S12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'S19', name: 'Support N.E.C.' },
+                    { code: 'S20', name: 'Community, Neighborhood Development, Improvement' },
+                    { code: 'S21', name: 'Community Coalitions' },
+                    { code: 'S22', name: 'Neighborhood, Block Associations' },
+                    { code: 'S30', name: 'Economic Development' },
+                    { code: 'S31', name: 'Urban, Community Economic Development' },
+                    { code: 'S32', name: 'Rural Development' },
+                    { code: 'S40', name: 'Business & Professional Organizations' },
+                    { code: 'S41', name: 'Promotion of Business' },
+                    { code: 'S43', name: 'Management Services for Professional Fundraising' },
+                    { code: 'S46', name: 'Boards of Trade' },
+                    { code: 'S47', name: 'Real Estate Organizations' },
+                    { code: 'S50', name: 'Nonprofit Management' },
+                    { code: 'S80', name: 'Community Service Clubs' },
+                    { code: 'S81', name: 'Women\'s Service Clubs' },
+                    { code: 'S82', name: 'Men\'s Service Clubs' },
+                    { code: 'S99', name: 'Community Improvement, Capacity Building N.E.C.' }
+                ]
+            },
+            'T': { 
+                category: 'Philanthropy, Voluntarism & Grantmaking Foundations',
+                subcategories: [
+                    { code: 'T01', name: 'Alliances & Advocacy' },
+                    { code: 'T02', name: 'Management & Technical Assistance' },
+                    { code: 'T03', name: 'Professional Societies & Associations' },
+                    { code: 'T05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'T11', name: 'Single Organization Support' },
+                    { code: 'T12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'T19', name: 'Support N.E.C.' },
+                    { code: 'T20', name: 'Private Grantmaking Foundations' },
+                    { code: 'T21', name: 'Corporate Foundations' },
+                    { code: 'T22', name: 'Private Independent Foundations' },
+                    { code: 'T23', name: 'Private Operating Foundations' },
+                    { code: 'T30', name: 'Public Foundations' },
+                    { code: 'T31', name: 'Community Foundations' },
+                    { code: 'T40', name: 'Voluntarism Promotion' },
+                    { code: 'T50', name: 'Philanthropy, Charity, Voluntarism Promotion, General' },
+                    { code: 'T70', name: 'Federated Giving Programs' },
+                    { code: 'T90', name: 'Named Trusts/Foundations N.E.C.' },
+                    { code: 'T99', name: 'Philanthropy, Voluntarism & Grantmaking N.E.C.' }
+                ]
+            },
+            'U': { 
+                category: 'Science & Technology',
+                subcategories: [
+                    { code: 'U01', name: 'Alliances & Advocacy' },
+                    { code: 'U02', name: 'Management & Technical Assistance' },
+                    { code: 'U03', name: 'Professional Societies & Associations' },
+                    { code: 'U05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'U11', name: 'Single Organization Support' },
+                    { code: 'U12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'U19', name: 'Support N.E.C.' },
+                    { code: 'U20', name: 'General Science' },
+                    { code: 'U21', name: 'Marine Science & Oceanography' },
+                    { code: 'U30', name: 'Physical Sciences, Earth Sciences' },
+                    { code: 'U31', name: 'Astronomy' },
+                    { code: 'U33', name: 'Chemistry, Chemical Engineering' },
+                    { code: 'U34', name: 'Mathematics' },
+                    { code: 'U36', name: 'Geology' },
+                    { code: 'U40', name: 'Engineering & Technology' },
+                    { code: 'U41', name: 'Computer Science' },
+                    { code: 'U42', name: 'Engineering' },
+                    { code: 'U50', name: 'Biological, Life Sciences' },
+                    { code: 'U99', name: 'Science & Technology N.E.C.' }
+                ]
+            },
+            'V': { 
+                category: 'Social Science',
+                subcategories: [
+                    { code: 'V01', name: 'Alliances & Advocacy' },
+                    { code: 'V02', name: 'Management & Technical Assistance' },
+                    { code: 'V03', name: 'Professional Societies & Associations' },
+                    { code: 'V05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'V11', name: 'Single Organization Support' },
+                    { code: 'V12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'V19', name: 'Support N.E.C.' },
+                    { code: 'V20', name: 'Social Science Research' },
+                    { code: 'V21', name: 'Anthropology, Sociology' },
+                    { code: 'V22', name: 'Economics' },
+                    { code: 'V23', name: 'Behavioral Science' },
+                    { code: 'V24', name: 'Political Science' },
+                    { code: 'V25', name: 'Population Studies' },
+                    { code: 'V26', name: 'Law, Jurisprudence' },
+                    { code: 'V30', name: 'Interdisciplinary Research' },
+                    { code: 'V31', name: 'Black Studies' },
+                    { code: 'V32', name: 'Women\'s Studies' },
+                    { code: 'V33', name: 'Ethnic Studies' },
+                    { code: 'V34', name: 'Urban Studies' },
+                    { code: 'V35', name: 'International Studies' },
+                    { code: 'V36', name: 'Gerontology' },
+                    { code: 'V37', name: 'Labor Studies' },
+                    { code: 'V99', name: 'Social Science N.E.C.' }
+                ]
+            },
+            'W': { 
+                category: 'Public & Societal Benefit',
+                subcategories: [
+                    { code: 'W01', name: 'Alliances & Advocacy' },
+                    { code: 'W02', name: 'Management & Technical Assistance' },
+                    { code: 'W03', name: 'Professional Societies & Associations' },
+                    { code: 'W05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'W11', name: 'Single Organization Support' },
+                    { code: 'W12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'W19', name: 'Support N.E.C.' },
+                    { code: 'W20', name: 'Government & Public Administration' },
+                    { code: 'W22', name: 'Public Finance, Taxation & Monetary Policy' },
+                    { code: 'W24', name: 'Citizen Participation' },
+                    { code: 'W30', name: 'Military, Veterans\' Organizations' },
+                    { code: 'W40', name: 'Public Transportation Systems, Services' },
+                    { code: 'W50', name: 'Telephone, Telegraph & Telecommunication Services' },
+                    { code: 'W60', name: 'Financial Institutions, Services' },
+                    { code: 'W61', name: 'Credit Unions' },
+                    { code: 'W70', name: 'Leadership Development' },
+                    { code: 'W80', name: 'Public Utilities' },
+                    { code: 'W90', name: 'Consumer Protection, Safety' },
+                    { code: 'W99', name: 'Public, Societal Benefit N.E.C.' }
+                ]
+            },
+            'X': { 
+                category: 'Religion-Related',
+                subcategories: [
+                    { code: 'X01', name: 'Alliances & Advocacy' },
+                    { code: 'X02', name: 'Management & Technical Assistance' },
+                    { code: 'X03', name: 'Professional Societies & Associations' },
+                    { code: 'X05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'X11', name: 'Single Organization Support' },
+                    { code: 'X12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'X19', name: 'Support N.E.C.' },
+                    { code: 'X20', name: 'Christian' },
+                    { code: 'X21', name: 'Protestant' },
+                    { code: 'X22', name: 'Roman Catholic' },
+                    { code: 'X30', name: 'Jewish' },
+                    { code: 'X40', name: 'Islamic' },
+                    { code: 'X50', name: 'Buddhist' },
+                    { code: 'X70', name: 'Hindu' },
+                    { code: 'X80', name: 'Religious Media, Communications Organizations' },
+                    { code: 'X81', name: 'Religious Film, Video' },
+                    { code: 'X82', name: 'Religious Television' },
+                    { code: 'X83', name: 'Religious Printing, Publishing' },
+                    { code: 'X84', name: 'Religious Radio' },
+                    { code: 'X90', name: 'Interfaith Issues' },
+                    { code: 'X99', name: 'Religion Related, Spiritual Development N.E.C.' }
+                ]
+            },
+            'Y': { 
+                category: 'Mutual & Membership Benefit',
+                subcategories: [
+                    { code: 'Y01', name: 'Alliances & Advocacy' },
+                    { code: 'Y02', name: 'Management & Technical Assistance' },
+                    { code: 'Y03', name: 'Professional Societies & Associations' },
+                    { code: 'Y05', name: 'Research Institutes & Public Policy Analysis' },
+                    { code: 'Y11', name: 'Single Organization Support' },
+                    { code: 'Y12', name: 'Fund Raising & Fund Distribution' },
+                    { code: 'Y19', name: 'Support N.E.C.' },
+                    { code: 'Y20', name: 'Insurance Providers' },
+                    { code: 'Y22', name: 'Local Benevolent Life Insurance Associations' },
+                    { code: 'Y23', name: 'Mutual Insurance Companies' },
+                    { code: 'Y24', name: 'Supplemental Unemployment Compensation' },
+                    { code: 'Y25', name: 'State-Sponsored Workers Compensation Reinsurance Organizations' },
+                    { code: 'Y30', name: 'Pension & Retirement Funds' },
+                    { code: 'Y33', name: 'Teachers Retirement Fund Associations' },
+                    { code: 'Y34', name: 'Employee Funded Pension Trusts' },
+                    { code: 'Y35', name: 'Multi-Employer Pension Plans' },
+                    { code: 'Y40', name: 'Fraternal Organizations' },
+                    { code: 'Y41', name: 'Masonic, Lodge' },
+                    { code: 'Y42', name: 'Elks Lodge' },
+                    { code: 'Y43', name: 'Veterans\' Posts' },
+                    { code: 'Y44', name: 'Ethnic, Nationality Organizations' },
+                    { code: 'Y50', name: 'Cemeteries, Burial Services' },
+                    { code: 'Y99', name: 'Mutual, Membership Benefit Organizations, Other N.E.C.' }
+                ]
+            },
+            'Z': { 
+                category: 'Unknown',
+                subcategories: [
+                    { code: 'Z99', name: 'Unknown, Unclassified' }
+                ]
+            }
+        },
+        
+        // NTEE Modal State
+        nteeModal: {
+            isOpen: false,
+            selectedMainCategory: null,
+            selectedNteeCodes: [],
+            tempSelectedCodes: []
+        },
         activeWorkflowsList: [],
         workflowHistory: [],
         isRunningWorkflow: false,
@@ -2085,6 +2838,103 @@ function catalynxApp() {
             });
             
             console.log('Workflow analytics tracking initialized');
+        },
+        
+        // NTEE CODE MODAL FUNCTIONS
+        openNteeModal() {
+            // Initialize temp selection with current selected codes
+            this.nteeModal.tempSelectedCodes = [...this.nteeModal.selectedNteeCodes];
+            this.nteeModal.selectedMainCategory = null;
+            this.nteeModal.isOpen = true;
+        },
+        
+        closeNteeModal() {
+            this.nteeModal.isOpen = false;
+            this.nteeModal.selectedMainCategory = null;
+            // Don't save temp selections when closing
+        },
+        
+        selectMainCategory(categoryKey) {
+            this.nteeModal.selectedMainCategory = categoryKey;
+        },
+        
+        saveNteeSelection() {
+            // Save the temporary selections to the main selection
+            this.nteeModal.selectedNteeCodes = [...this.nteeModal.tempSelectedCodes];
+            
+            // Update the current profile if one is selected
+            if (this.selectedProfile && this.selectedProfile.profile_id) {
+                // Add NTEE codes to profile data if not already present
+                if (!this.selectedProfile.ntee_codes) {
+                    this.selectedProfile.ntee_codes = [];
+                }
+                this.selectedProfile.ntee_codes = [...this.nteeModal.selectedNteeCodes];
+            }
+            
+            this.closeNteeModal();
+            this.showEnhancedNotification(`Selected ${this.nteeModal.selectedNteeCodes.length} NTEE codes`, 'success');
+        },
+        
+        // Get selected NTEE codes with their full information
+        getSelectedNteeCodesInfo() {
+            const selectedInfo = [];
+            
+            this.nteeModal.selectedNteeCodes.forEach(code => {
+                // Find the code in the full list
+                Object.keys(this.fullNteeCodeList).forEach(categoryKey => {
+                    const category = this.fullNteeCodeList[categoryKey];
+                    const subcategory = category.subcategories.find(sub => sub.code === code);
+                    
+                    if (subcategory) {
+                        selectedInfo.push({
+                            code: subcategory.code,
+                            name: subcategory.name,
+                            category: categoryKey,
+                            categoryName: category.category
+                        });
+                    }
+                });
+            });
+            
+            // Sort alphabetically by code
+            return selectedInfo.sort((a, b) => a.code.localeCompare(b.code));
+        },
+        
+        // Remove an NTEE code from selection
+        removeNteeCode(codeToRemove) {
+            this.nteeModal.selectedNteeCodes = this.nteeModal.selectedNteeCodes.filter(code => code !== codeToRemove);
+            
+            // Update the current profile if one is selected
+            if (this.selectedProfile && this.selectedProfile.ntee_codes) {
+                this.selectedProfile.ntee_codes = this.selectedProfile.ntee_codes.filter(code => code !== codeToRemove);
+            }
+        },
+        
+        // Check if a main category has any selected subcategories
+        categoryHasSelections(categoryKey) {
+            if (!this.fullNteeCodeList[categoryKey]) return false;
+            
+            const categorySubcodes = this.fullNteeCodeList[categoryKey].subcategories.map(sub => sub.code);
+            return this.nteeModal.tempSelectedCodes.some(selectedCode => 
+                categorySubcodes.includes(selectedCode)
+            );
+        },
+        
+        // Toggle subcategory selection (for click without checkbox)
+        toggleSubcategorySelection(subcategoryCode) {
+            const index = this.nteeModal.tempSelectedCodes.indexOf(subcategoryCode);
+            if (index > -1) {
+                // Remove if already selected
+                this.nteeModal.tempSelectedCodes.splice(index, 1);
+            } else {
+                // Add if not selected
+                this.nteeModal.tempSelectedCodes.push(subcategoryCode);
+            }
+        },
+        
+        // Check if a subcategory is selected
+        isSubcategorySelected(subcategoryCode) {
+            return this.nteeModal.tempSelectedCodes.includes(subcategoryCode);
         },
         
         // AI WORKFLOW GUIDANCE FUNCTIONS
