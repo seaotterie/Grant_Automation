@@ -26,6 +26,15 @@ class OrganizationType(str, Enum):
     FOUNDATION = "foundation"
 
 
+class GrantsGovCategory(str, Enum):
+    """Grants.gov funding categories for opportunity matching"""
+    DISCRETIONARY = "discretionary"
+    MANDATORY = "mandatory"  
+    EARMARK = "earmark"
+    CONTINUATION = "continuation"
+    OTHER = "other"
+
+
 class PipelineStage(str, Enum):
     """Processing pipeline stages"""
     DISCOVERY = "discovery"
@@ -57,6 +66,9 @@ class FundingPreferences(BaseModel):
     funding_types: List[FundingType] = Field(default=[FundingType.GRANTS], description="Preferred funding types")
     recurring: bool = Field(default=False, description="Seeks recurring funding")
     multi_year: bool = Field(default=False, description="Multi-year funding acceptable")
+    
+    # Grants.gov Classifications
+    grants_gov_categories: List[GrantsGovCategory] = Field(default=[], description="Preferred Grants.gov funding categories")
 
 
 class OrganizationProfile(BaseModel):

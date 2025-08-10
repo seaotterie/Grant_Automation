@@ -497,9 +497,12 @@ function catalynxApp() {
             focus_areas: '',
             target_populations: '',
             states: '',
+            location: '', // Primary organization location
+            notes: '', // Additional notes
             nationwide: false,
             international: false,
             min_amount: null,
+            grants_gov_categories: [], // Grants.gov classification checkboxes
             max_amount: null,
             annual_revenue: null,
             funding_types: []
@@ -548,6 +551,9 @@ function catalynxApp() {
             focus_areas_text: '',
             target_populations_text: '',
             states_text: '',
+            location: '', // Primary organization location
+            notes: '', // Additional notes
+            grants_gov_categories: [], // Grants.gov classification preferences
             geographic_scope: {
                 nationwide: false,
                 international: false
@@ -848,12 +854,14 @@ function catalynxApp() {
                     funding_preferences: {
                         min_amount: this.profileForm.funding_preferences.min_amount ? parseInt(this.profileForm.funding_preferences.min_amount) : null,
                         max_amount: this.profileForm.funding_preferences.max_amount ? parseInt(this.profileForm.funding_preferences.max_amount) : null,
-                        funding_types: ['grants']
+                        funding_types: ['grants'],
+                        grants_gov_categories: this.profileForm.grants_gov_categories || []
                     },
                     annual_revenue: this.profileForm.annual_revenue ? parseInt(this.profileForm.annual_revenue) : null,
                     staff_size: this.profileForm.staff_size ? parseInt(this.profileForm.staff_size) : null,
                     volunteer_count: this.profileForm.volunteer_count ? parseInt(this.profileForm.volunteer_count) : null,
                     board_size: this.profileForm.board_size ? parseInt(this.profileForm.board_size) : null,
+                    location: this.profileForm.location || null,
                     notes: this.profileForm.notes || null
                 };
 
@@ -3789,9 +3797,12 @@ function catalynxApp() {
                     funding_preferences: {
                         min_amount: this.profileForm.min_amount,
                         max_amount: this.profileForm.max_amount,
-                        funding_types: this.profileForm.funding_types
+                        funding_types: this.profileForm.funding_types,
+                        grants_gov_categories: this.profileForm.grants_gov_categories || []
                     },
-                    annual_revenue: this.profileForm.annual_revenue
+                    annual_revenue: this.profileForm.annual_revenue,
+                    location: this.profileForm.location || null,
+                    notes: this.profileForm.notes || null
                 };
                 
                 const response = await this.apiCall('/profiles', {

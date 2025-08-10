@@ -2058,9 +2058,9 @@
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Organization Type *
+                                            Organization Type
                                         </label>
-                                        <select x-model="profileForm.organization_type" required
+                                        <select x-model="profileForm.organization_type"
                                                 class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
                                             <option value="">Select type</option>
                                             <option value="nonprofit">Nonprofit</option>
@@ -2082,12 +2082,40 @@
                                            placeholder="XX-XXXXXXX (optional)">
                                 </div>
                                 
-                                <!-- Mission and Focus -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Primary Location
+                                        </label>
+                                        <input type="text" x-model="profileForm.location"
+                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                               placeholder="City, State">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                            Annual Revenue
+                                        </label>
+                                        <input type="number" x-model="profileForm.annual_revenue"
+                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                               placeholder="0">
+                                    </div>
+                                </div>
+                                
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Mission Statement *
+                                        Additional Notes
                                     </label>
-                                    <textarea x-model="profileForm.mission_statement" required rows="3"
+                                    <textarea x-model="profileForm.notes" rows="2"
+                                              class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                              placeholder="Any additional information about the organization"></textarea>
+                                </div>
+                                
+                                <!-- Mission Statement -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                        Mission Statement
+                                    </label>
+                                    <textarea x-model="profileForm.mission_statement" rows="3"
                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
                                               placeholder="Describe your organization's mission and purpose"></textarea>
                                 </div>
@@ -2095,19 +2123,19 @@
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Focus Areas * (comma-separated)
+                                            Focus Areas *
                                         </label>
                                         <input type="text" x-model="profileForm.focus_areas" required
                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
-                                               placeholder="health, education, community development">
+                                               placeholder="Healthcare, Education, Community Development">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Target Populations (comma-separated)
+                                            Target Populations
                                         </label>
                                         <input type="text" x-model="profileForm.target_populations"
                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
-                                               placeholder="youth, seniors, low-income families">
+                                               placeholder="Youth, Seniors, Low-income families">
                                     </div>
                                 </div>
                                 
@@ -4326,7 +4354,7 @@
                  x-transition:leave="ease-in duration-200"
                  x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                 class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
+                 class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-4 sm:align-middle max-w-[92vw] w-[92vw] sm:p-8">
                 
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between mb-6">
@@ -4340,177 +4368,136 @@
                 </div>
                 
                 <!-- Profile Form -->
-                <form @submit.prevent="saveProfile()" class="space-y-8">
+                <form @submit.prevent="saveProfile()" class="h-[720px]">
                     
-                    <!-- Basic Information Section -->
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h4>
-                            <button type="button" @click="fetchEINData()" 
-                                    :disabled="!profileForm.ein || einFetchLoading"
-                                    :class="!profileForm.ein || einFetchLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
-                                    class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium transition-colors flex items-center">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                </svg>
-                                <span x-show="!einFetchLoading">Fetch from EIN</span>
-                                <span x-show="einFetchLoading" class="flex items-center">
-                                    <svg class="animate-spin h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24">
-                                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"></circle>
-                                        <path fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" class="opacity-75"></path>
+                    <!-- 3-Column Layout -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[650px]">
+                        
+                        <!-- Column 1: Basic Information -->
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h4>
+                                <button type="button" @click="fetchEINData()" 
+                                        :disabled="!profileForm.ein || einFetchLoading"
+                                        :class="!profileForm.ein || einFetchLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
+                                        class="px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium transition-colors flex items-center">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                     </svg>
-                                    Fetching...
-                                </span>
+                                    <span x-show="!einFetchLoading">Fetch EIN</span>
+                                    <span x-show="einFetchLoading">...</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Fields stacked vertically -->
+                            <div class="space-y-4 flex-1">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Name *</label>
+                                    <input type="text" 
+                                           x-model="profileForm.name"
+                                           required
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                           placeholder="Enter organization name">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">EIN (Tax ID) *</label>
+                                    <input type="text" 
+                                           x-model="profileForm.ein"
+                                           pattern="^\d{2}-?\d{7}$"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                           placeholder="12-3456789">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Type</label>
+                                    <select x-model="profileForm.organization_type" 
+                                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                                        <option value="">Select type...</option>
+                                        <option value="nonprofit">Nonprofit</option>
+                                        <option value="for_profit">For-Profit</option>
+                                        <option value="government">Government</option>
+                                        <option value="academic">Academic</option>
+                                        <option value="healthcare">Healthcare</option>
+                                        <option value="foundation">Foundation</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mission Statement</label>
+                                    <textarea x-model="profileForm.mission_statement" 
+                                              rows="3"
+                                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                              placeholder="Describe your organization's mission and purpose"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Column 2: NTEE Codes -->
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">NTEE Codes</h4>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">Phase 2</span>
+                            </div>
+                            
+                            <button type="button" disabled
+                                    class="w-full px-4 py-2 mb-4 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 rounded-md cursor-not-allowed text-sm">
+                                Select NTEE Codes
                             </button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Name *</label>
-                                <input type="text" 
-                                       x-model="profileForm.name"
-                                       required
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                       placeholder="Enter organization name">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">EIN (Tax ID)</label>
-                                <input type="text" 
-                                       x-model="profileForm.ein"
-                                       pattern="^\d{2}-?\d{7}$"
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                       placeholder="12-3456789">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Type *</label>
-                                <select x-model="profileForm.organization_type" 
-                                        required
-                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
-                                    <option value="">Select type...</option>
-                                    <option value="nonprofit">Nonprofit</option>
-                                    <option value="for_profit">For-Profit</option>
-                                    <option value="government">Government</option>
-                                    <option value="academic">Academic</option>
-                                    <option value="healthcare">Healthcare</option>
-                                    <option value="foundation">Foundation</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Annual Revenue</label>
-                                <input type="number" 
-                                       x-model="profileForm.annual_revenue"
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                       placeholder="0">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Mission & Focus Section -->
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Mission & Focus</h4>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mission Statement *</label>
-                                <textarea x-model="profileForm.mission_statement" 
-                                          required
-                                          rows="3"
-                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                          placeholder="Describe your organization's mission and purpose"></textarea>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Focus Areas * (one per line)</label>
-                                <textarea x-model="profileForm.focus_areas_text" 
-                                          required
-                                          rows="3"
-                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                          placeholder="Healthcare&#10;Education&#10;Community Development"></textarea>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Populations (one per line)</label>
-                                <textarea x-model="profileForm.target_populations_text" 
-                                          rows="2"
-                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                          placeholder="Low-income families&#10;Senior citizens&#10;Veterans"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Geographic & Funding Section -->
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Geographic & Funding</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target States (comma-separated)</label>
-                                <input type="text" 
-                                       x-model="profileForm.states_text"
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                       placeholder="VA, MD, DC">
-                            </div>
-                            <div class="space-y-3">
-                                <div class="flex items-center">
-                                    <input type="checkbox" 
-                                           x-model="profileForm.geographic_scope.nationwide"
-                                           class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                                    <label class="ml-2 text-sm text-gray-700 dark:text-gray-300">Nationwide</label>
+                            
+                            <!-- Scrollable Selected Codes Table -->
+                            <div class="flex-1 border border-gray-200 dark:border-gray-600 rounded-md">
+                                <div class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-600">
+                                    <h5 class="text-sm font-medium text-gray-900 dark:text-white">Selected Codes</h5>
                                 </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" 
-                                           x-model="profileForm.geographic_scope.international"
-                                           class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                                    <label class="ml-2 text-sm text-gray-700 dark:text-gray-300">International</label>
+                                <div class="p-4 h-48 overflow-y-auto">
+                                    <div class="text-sm text-gray-500 dark:text-gray-400 text-center">
+                                        No NTEE codes selected
+                                    </div>
+                                    <!-- Future: Dynamic list of selected codes -->
+                                    <!-- <div class="space-y-2">
+                                        <div class="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded border">
+                                            <span class="text-sm">A12 - Performing Arts</span>
+                                            <button class="text-red-500 hover:text-red-700 text-xs">Remove</button>
+                                        </div>
+                                    </div> -->
                                 </div>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Min Funding Amount</label>
-                                <input type="number" 
-                                       x-model="profileForm.funding_preferences.min_amount"
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                       placeholder="10000">
+                        </div>
+                        
+                        <!-- Column 3: Government Criteria -->
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Government Criteria</h4>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">Phase 3</span>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Max Funding Amount</label>
-                                <input type="number" 
-                                       x-model="profileForm.funding_preferences.max_amount"
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                       placeholder="500000">
+                            
+                            <button type="button" disabled
+                                    class="w-full px-4 py-2 mb-4 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 rounded-md cursor-not-allowed text-sm">
+                                Select Criteria
+                            </button>
+                            
+                            <!-- Scrollable Selected Criteria Table -->
+                            <div class="flex-1 border border-gray-200 dark:border-gray-600 rounded-md">
+                                <div class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-600">
+                                    <h5 class="text-sm font-medium text-gray-900 dark:text-white">Selected Criteria</h5>
+                                </div>
+                                <div class="p-4 h-48 overflow-y-auto">
+                                    <div class="text-sm text-gray-500 dark:text-gray-400 text-center">
+                                        No government criteria selected
+                                    </div>
+                                    <!-- Future: Dynamic list of selected criteria -->
+                                    <!-- <div class="space-y-2">
+                                        <div class="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded border">
+                                            <span class="text-sm">HHS Agency</span>
+                                            <button class="text-red-500 hover:text-red-700 text-xs">Remove</button>
+                                        </div>
+                                        <div class="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded border">
+                                            <span class="text-sm">Health Category</span>
+                                            <button class="text-red-500 hover:text-red-700 text-xs">Remove</button>
+                                        </div>
+                                    </div> -->
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Organizational Details Section -->
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Organizational Details</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Staff Size</label>
-                                <input type="number" 
-                                       x-model="profileForm.staff_size"
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                       placeholder="0">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Volunteer Count</label>
-                                <input type="number" 
-                                       x-model="profileForm.volunteer_count"
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                       placeholder="0">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Board Size</label>
-                                <input type="number" 
-                                       x-model="profileForm.board_size"
-                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                       placeholder="0">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Notes Section -->
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Additional Notes</h4>
-                        <textarea x-model="profileForm.notes" 
-                                  rows="3"
-                                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                  placeholder="Any additional information about this organization"></textarea>
+                        
                     </div>
                     
                     <!-- Form Actions -->
