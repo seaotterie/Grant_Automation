@@ -683,9 +683,9 @@ function catalynxApp() {
                 const response = await fetch('/api/profiles');
                 if (response.ok) {
                     const data = await response.json();
-                    // Filter out archived profiles - only show active ones
+                    // Load all profiles (except archived ones if they exist)
                     const allProfiles = data.profiles ? data.profiles : data;
-                    this.profiles = allProfiles.filter(profile => profile.status === 'active');
+                    this.profiles = allProfiles.filter(profile => profile.status !== 'archived');
                     this.filteredProfiles = [...this.profiles];
                     this.profileCount = this.profiles.length;
                 } else {
@@ -722,6 +722,7 @@ function catalynxApp() {
                 board_size: null,
                 notes: ''
             };
+            this.isEditingProfile = false;
             this.currentEditingProfile = null;
         },
 
@@ -738,8 +739,17 @@ function catalynxApp() {
             this.profileForm.focus_areas_text = (profile.focus_areas || []).join('\n');
             this.profileForm.target_populations_text = (profile.target_populations || []).join('\n');
             this.profileForm.states_text = (profile.geographic_scope?.states || []).join(', ');
+            
+            // Ensure nested objects exist before setting properties
+            if (!this.profileForm.geographic_scope) {
+                this.profileForm.geographic_scope = {};
+            }
             this.profileForm.geographic_scope.nationwide = profile.geographic_scope?.nationwide || false;
             this.profileForm.geographic_scope.international = profile.geographic_scope?.international || false;
+            
+            if (!this.profileForm.funding_preferences) {
+                this.profileForm.funding_preferences = {};
+            }
             this.profileForm.funding_preferences.min_amount = profile.funding_preferences?.min_amount || null;
             this.profileForm.funding_preferences.max_amount = profile.funding_preferences?.max_amount || null;
             this.profileForm.annual_revenue = profile.annual_revenue || null;
@@ -804,6 +814,9 @@ function catalynxApp() {
                     this.showProfileModal = false;
                     this.resetProfileForm();
                     await this.loadProfiles(); // Reload profiles
+                    
+                    // Switch back to profiler stage to show updated profiles
+                    this.switchStage('profiler');
                     
                     // Show success message
                     this.showNotification(
@@ -930,6 +943,50 @@ function catalynxApp() {
         formatDate(dateStr) {
             if (!dateStr) return 'N/A';
             return new Date(dateStr).toLocaleDateString();
+        },
+
+        getDiscoveryStatusText(status) {
+            const statusText = {
+                'never_run': 'Never Run',
+                'in_progress': 'In Progress',
+                'completed': 'Completed',
+                'failed': 'Failed',
+                'needs_update': 'Needs Update'
+            };
+            return statusText[status] || 'Unknown';
+        },
+
+        getDiscoveryStatusClass(status) {
+            const classes = {
+                'never_run': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300',
+                'in_progress': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+                'completed': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+                'failed': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+                'needs_update': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+            };
+            return classes[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+        },
+
+        getDiscoveryButtonText(profile) {
+            const status = profile.discovery_status || 'never_run';
+            if (status === 'never_run') {
+                return '🚀 Start Discovery';
+            } else if (status === 'completed') {
+                return '🔄 Update Discovery';
+            } else if (status === 'needs_update') {
+                return '⚠️ Update Discovery';
+            } else if (status === 'in_progress') {
+                return '⏳ In Progress';
+            } else if (status === 'failed') {
+                return '🔁 Retry Discovery';
+            }
+            return '🚀 Discover';
+        },
+
+        selectProfileForDiscovery(profile) {
+            this.selectedDiscoveryProfile = profile;
+            this.showNotification('Profile Selected', `Selected ${profile.name} for discovery`, 'info');
+            this.switchStage('discover');
         },
         
         loadStageData(stage) {
@@ -3633,6 +3690,8 @@ function catalynxApp() {
                 annual_revenue: null,
                 funding_types: []
             };
+            this.isEditingProfile = false;
+            this.currentEditingProfile = null;
         },
         
         async createProfile() {
@@ -6237,6 +6296,7 @@ function catalynxApp() {
                     board_size: null,
                     notes: ''
                 };
+                this.isEditingProfile = false;
                 this.currentEditingProfile = null;
             }
         }

@@ -106,6 +106,13 @@ class OrganizationProfile(BaseModel):
     created_by: Optional[str] = Field(default=None, description="Profile creator")
     tags: List[str] = Field(default=[], description="Profile tags for organization")
     notes: Optional[str] = Field(default=None, max_length=2000, description="Additional notes")
+    
+    # Discovery Tracking
+    last_discovery_date: Optional[datetime] = Field(default=None, description="Date of most recent discovery run")
+    discovery_count: int = Field(default=0, description="Total number of discovery sessions conducted")
+    discovery_status: str = Field(default="never_run", description="Current discovery status (never_run, in_progress, completed, needs_update)")
+    next_recommended_discovery: Optional[datetime] = Field(default=None, description="Suggested date for next discovery update")
+    opportunities_count: int = Field(default=0, description="Total opportunities discovered")
 
     @validator('focus_areas', 'program_areas', 'target_populations')
     def validate_string_lists(cls, v):
@@ -119,6 +126,31 @@ class OrganizationProfile(BaseModel):
 
     class Config:
         """Pydantic configuration"""
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+
+class DiscoverySession(BaseModel):
+    """Individual discovery session record"""
+    
+    session_id: str = Field(..., description="Unique session identifier")
+    profile_id: str = Field(..., description="Associated profile ID")
+    started_at: datetime = Field(default_factory=datetime.now, description="Session start timestamp")
+    completed_at: Optional[datetime] = Field(default=None, description="Session completion timestamp")
+    status: str = Field(default="in_progress", description="Session status (in_progress, completed, failed)")
+    
+    # Track execution details
+    tracks_executed: List[str] = Field(default=[], description="Discovery tracks run (nonprofit, government, commercial, state)")
+    opportunities_found: Dict[str, int] = Field(default_factory=dict, description="Opportunities found per track")
+    total_opportunities: int = Field(default=0, description="Total opportunities discovered in session")
+    
+    # Session metadata
+    execution_time_seconds: Optional[int] = Field(default=None, description="Total execution time")
+    error_messages: List[str] = Field(default=[], description="Any errors encountered")
+    notes: Optional[str] = Field(default=None, description="Session notes")
+
+    class Config:
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }

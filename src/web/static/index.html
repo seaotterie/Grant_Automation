@@ -51,8 +51,13 @@
             }
         }
     </script>
+    
+    <!-- Alpine.js cloaking -->
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 font-sans antialiased transition-colors duration-300 flex flex-col min-h-screen" x-data="catalynxApp()">
+<body class="bg-gray-100 dark:bg-gray-900 font-sans antialiased transition-colors duration-300 flex flex-col min-h-screen" x-data="catalynxApp()" x-cloak>
     
     <!-- SECTION 1: Header -->
     <header class="flex-shrink-0">
@@ -401,70 +406,65 @@
                                     </button>
                                 </div>
                                 
-                                <!-- Profile Table -->
-                                <table x-show="!profilesLoading && filteredProfiles.length > 0" 
-                                       class="w-full">
-                                    <thead class="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                                <!-- Profiles Table with Discovery Column -->
+                                <table x-show="!profilesLoading && filteredProfiles.length > 0" class="w-full">
+                                    <thead class="bg-gray-50 dark:bg-gray-700">
                                         <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                                                @click="sortProfiles('name')">
-                                                Organization Name
-                                                <span x-show="profileSort.field === 'name'" class="ml-1">
-                                                    <span x-show="profileSort.direction === 'asc'">↑</span>
-                                                    <span x-show="profileSort.direction === 'desc'">↓</span>
-                                                </span>
-                                            </th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                EIN
-                                            </th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                                                @click="sortProfiles('organization_type')">
-                                                Type
-                                                <span x-show="profileSort.field === 'organization_type'" class="ml-1">
-                                                    <span x-show="profileSort.direction === 'asc'">↑</span>
-                                                    <span x-show="profileSort.direction === 'desc'">↓</span>
-                                                </span>
-                                            </th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Focus Areas
-                                            </th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                                                @click="sortProfiles('updated_at')">
-                                                Last Updated
-                                                <span x-show="profileSort.field === 'updated_at'" class="ml-1">
-                                                    <span x-show="profileSort.direction === 'asc'">↑</span>
-                                                    <span x-show="profileSort.direction === 'desc'">↓</span>
-                                                </span>
-                                            </th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                Actions
-                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Select</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Focus Areas</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Opportunities</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Discovery</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                         <template x-for="profile in filteredProfiles" :key="profile.profile_id">
-                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                                :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedDiscoveryProfile?.profile_id === profile.profile_id}">
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <div class="text-sm font-medium text-gray-900 dark:text-white" 
-                                                         x-text="profile.name"></div>
+                                                    <div class="flex items-center">
+                                                        <input type="radio" 
+                                                               :name="'discovery_profile_selection'"
+                                                               :value="profile.profile_id"
+                                                               :checked="selectedDiscoveryProfile?.profile_id === profile.profile_id"
+                                                               @change="selectedDiscoveryProfile = profile"
+                                                               class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800">
+                                                        <label :for="'radio_' + profile.profile_id" class="sr-only">Select for discovery</label>
+                                                    </div>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <div class="text-sm text-gray-600 dark:text-gray-300"
-                                                         x-text="profile.ein ? maskEIN(profile.ein) : 'N/A'"></div>
+                                                    <div>
+                                                        <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="profile.name"></div>
+                                                        <div class="text-sm text-gray-500 dark:text-gray-400" x-text="profile.ein || 'No EIN'"></div>
+                                                    </div>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
-                                                          :class="getOrgTypeClass(profile.organization_type)"
-                                                          x-text="formatOrgType(profile.organization_type)"></span>
+                                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200" 
+                                                          x-text="profile.organization_type"></span>
                                                 </td>
                                                 <td class="px-6 py-4">
-                                                    <div class="text-sm text-gray-600 dark:text-gray-300 max-w-xs truncate"
-                                                         :title="profile.focus_areas.join(', ')"
-                                                         x-text="profile.focus_areas.slice(0, 3).join(', ') + (profile.focus_areas.length > 3 ? '...' : '')"></div>
+                                                    <div class="text-sm text-gray-900 dark:text-white" x-text="profile.focus_areas?.join(', ') || 'None specified'"></div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                                    <span x-text="profile.opportunities_count || 0"></span> leads
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <div class="text-sm text-gray-600 dark:text-gray-300"
-                                                         x-text="formatDate(profile.updated_at)"></div>
+                                                    <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                                          :class="profile.status === 'active' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200'"
+                                                          x-text="profile.status || 'draft'"></span>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="flex flex-col space-y-2">
+                                                        <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                                              :class="getDiscoveryStatusClass(profile.discovery_status)"
+                                                              x-text="getDiscoveryStatusText(profile.discovery_status)"></span>
+                                                        <button @click="selectProfileForDiscovery(profile)"
+                                                                class="px-3 py-1 text-xs bg-primary-600 hover:bg-primary-700 text-white rounded transition-colors"
+                                                                x-text="getDiscoveryButtonText(profile)"></button>
+                                                    </div>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                     <div class="flex space-x-2">
@@ -489,6 +489,64 @@
 
                 <!-- STAGE 2: DISCOVER (Multi-Track Discovery) -->
                 <div x-show="activeStage === 'discover'" class="space-y-6">
+                    <!-- Selected Profile Information -->
+                    <div x-show="selectedDiscoveryProfile" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-primary-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Selected Profile for Discovery</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Organization ready for opportunity discovery</p>
+                            </div>
+                            <button @click="selectedDiscoveryProfile = null" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Organization</div>
+                                <div class="font-medium text-gray-900 dark:text-white" x-text="selectedDiscoveryProfile?.name">-</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400" x-text="selectedDiscoveryProfile?.ein || 'No EIN'">-</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Discovery Status</div>
+                                <span :class="getDiscoveryStatusClass(selectedDiscoveryProfile?.discovery_status || 'never_run')"
+                                      class="px-2 py-1 text-xs font-medium rounded-full" 
+                                      x-text="getDiscoveryStatusText(selectedDiscoveryProfile?.discovery_status || 'never_run')">Never Run</span>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Last Discovery</div>
+                                <div class="font-medium text-gray-900 dark:text-white" x-text="selectedDiscoveryProfile?.last_discovery_date ? formatDate(selectedDiscoveryProfile.last_discovery_date) : 'Never'">Never</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400" x-text="selectedDiscoveryProfile?.discovery_count > 0 ? `${selectedDiscoveryProfile.discovery_count} total runs` : 'First run'">First run</div>
+                            </div>
+                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                <div class="text-sm text-gray-600 dark:text-gray-400">Current Opportunities</div>
+                                <div class="font-medium text-gray-900 dark:text-white" x-text="selectedDiscoveryProfile?.opportunities_count || 0">0</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">leads found</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- No Profile Selected State -->
+                    <div x-show="!selectedDiscoveryProfile" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">No Profile Selected</h3>
+                                <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">Select an organization profile from the Profiler tab to start discovery.</p>
+                                <div class="mt-2">
+                                    <button @click="switchStage('profiler')" class="text-sm bg-yellow-100 dark:bg-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-700 text-yellow-800 dark:text-yellow-200 px-3 py-1 rounded">
+                                        Go to Profiler
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="bg-gradient-to-r from-green-600 to-teal-600 rounded-lg p-6 text-white">
                         <h3 class="text-2xl font-bold">Discovery Hub</h3>
                         <p class="mt-2 opacity-90">Multi-track opportunity discovery across all funding sources</p>
@@ -2199,17 +2257,31 @@
                             <table class="w-full">
                                 <thead class="bg-gray-50 dark:bg-gray-700">
                                     <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Select</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Focus Areas</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Opportunities</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Discovery</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                     <template x-for="profile in filteredProfiles" :key="profile.profile_id">
-                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                            :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedDiscoveryProfile?.profile_id === profile.profile_id}">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="flex items-center">
+                                                    <input type="radio" 
+                                                           :name="'discovery_profile_selection'"
+                                                           :value="profile.profile_id"
+                                                           :checked="selectedDiscoveryProfile?.profile_id === profile.profile_id"
+                                                           @change="selectedDiscoveryProfile = profile"
+                                                           class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 dark:bg-gray-800">
+                                                    <label :for="'radio_' + profile.profile_id" class="sr-only">Select for discovery</label>
+                                                </div>
+                                            </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div>
                                                     <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="profile.name"></div>
@@ -2233,20 +2305,33 @@
                                                       class="px-2 py-1 text-xs font-medium rounded-full" 
                                                       x-text="profile.status"></span>
                                             </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="flex flex-col space-y-1">
+                                                    <span :class="getDiscoveryStatusClass(profile.discovery_status || 'never_run')"
+                                                          class="px-2 py-1 text-xs font-medium rounded-full w-fit" 
+                                                          x-text="getDiscoveryStatusText(profile.discovery_status || 'never_run')"></span>
+                                                    <div x-show="profile.last_discovery_date" class="text-xs text-gray-500 dark:text-gray-400">
+                                                        Last: <span x-text="formatDate(profile.last_discovery_date)"></span>
+                                                    </div>
+                                                    <div x-show="profile.discovery_count > 0" class="text-xs text-gray-500 dark:text-gray-400">
+                                                        <span x-text="profile.discovery_count"></span> runs
+                                                    </div>
+                                                </div>
+                                            </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                                                 <button @click="viewProfile(profile)" class="text-primary-600 hover:text-primary-800 font-medium">View</button>
                                                 <button @click="editProfile(profile)" class="text-blue-600 hover:text-blue-800 font-medium">Edit</button>
-                                                <button @click="discoverOpportunities(profile)" 
+                                                <button @click="selectProfileForDiscovery(profile)" 
                                                         class="text-green-600 hover:text-green-800 font-medium flex items-center space-x-1"
                                                         :class="{'opacity-50 cursor-not-allowed': processorControls.discombobulator.running || processorControls.amplinator.running}">
-                                                    <span>🚀 Discover</span>
+                                                    <span x-text="getDiscoveryButtonText(profile)">🚀 Discover</span>
                                                     <span v-if="processorControls.discombobulator.running || processorControls.amplinator.running" class="text-xs">Running...</span>
                                                 </button>
                                             </td>
                                         </tr>
                                     </template>
                                     <tr x-show="filteredProfiles.length === 0">
-                                        <td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                        <td colspan="8" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                                             <div class="text-4xl mb-4">📝</div>
                                             <div>No profiles found. Create your first organization profile to get started!</div>
                                         </td>
@@ -4419,6 +4504,7 @@
 
     <!-- Delete Confirmation Modal -->
     <div x-show="showDeleteConfirmation" 
+         x-cloak
          x-transition:enter="ease-out duration-300"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"

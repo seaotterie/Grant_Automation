@@ -12,7 +12,8 @@ from .models import (
     OpportunityLead, 
     ProfileSearchParams,
     ProfileStatus,
-    PipelineStage
+    PipelineStage,
+    DiscoverySession
 )
 
 
@@ -24,10 +25,12 @@ class ProfileService:
         self.data_dir = Path(data_dir)
         self.profiles_dir = self.data_dir / "profiles"
         self.leads_dir = self.data_dir / "leads"
+        self.sessions_dir = self.data_dir / "sessions"
         
         # Create directories if they don't exist
         self.profiles_dir.mkdir(parents=True, exist_ok=True)
         self.leads_dir.mkdir(parents=True, exist_ok=True)
+        self.sessions_dir.mkdir(parents=True, exist_ok=True)
     
     # Profile CRUD Operations
     
@@ -308,6 +311,165 @@ class ProfileService:
                 with open(lead_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 return OpportunityLead(**data)
+            except (json.JSONDecodeError, ValueError):
+                continue
+        
+        return None
+    
+    # Discovery Session Management
+    
+    def start_discovery_session(self, profile_id: str, tracks: List[str] = None) -> Optional[DiscoverySession]:
+        """Start a new discovery session for a profile"""
+        profile = self.get_profile(profile_id)
+        if not profile:
+            return None
+        
+        # Generate session ID
+        session_id = f"session_{uuid.uuid4().hex[:12]}"
+        
+        session = DiscoverySession(
+            session_id=session_id,
+            profile_id=profile_id,
+            tracks_executed=tracks or []
+        )
+        
+        # Update profile discovery status
+        profile.discovery_status = "in_progress"
+        self._save_profile(profile)
+        
+        # Save session
+        self._save_session(session)
+        
+        return session
+    
+    def complete_discovery_session(
+        self, 
+        session_id: str, 
+        opportunities_found: Dict[str, int] = None,
+        total_opportunities: int = 0,
+        execution_time: int = None,
+        error_messages: List[str] = None
+    ) -> bool:
+        """Complete a discovery session and update profile"""
+        session = self._get_session(session_id)
+        if not session:
+            return False
+        
+        # Update session
+        session.completed_at = datetime.now()
+        session.status = "completed"
+        session.opportunities_found = opportunities_found or {}
+        session.total_opportunities = total_opportunities
+        session.execution_time_seconds = execution_time
+        session.error_messages = error_messages or []
+        
+        # Update profile discovery tracking
+        profile = self.get_profile(session.profile_id)
+        if profile:
+            profile.last_discovery_date = datetime.now()
+            profile.discovery_count += 1
+            profile.discovery_status = "completed"
+            profile.opportunities_count = total_opportunities
+            
+            # Calculate next recommended discovery (30 days from now)
+            from datetime import timedelta
+            profile.next_recommended_discovery = datetime.now() + timedelta(days=30)
+            
+            self._save_profile(profile)
+        
+        self._save_session(session)
+        return True
+    
+    def fail_discovery_session(self, session_id: str, error_messages: List[str]) -> bool:
+        """Mark discovery session as failed"""
+        session = self._get_session(session_id)
+        if not session:
+            return False
+        
+        session.completed_at = datetime.now()
+        session.status = "failed"
+        session.error_messages = error_messages
+        
+        # Update profile status
+        profile = self.get_profile(session.profile_id)
+        if profile:
+            profile.discovery_status = "failed"
+            self._save_profile(profile)
+        
+        self._save_session(session)
+        return True
+    
+    def get_profile_sessions(self, profile_id: str, limit: Optional[int] = None) -> List[DiscoverySession]:
+        """Get discovery sessions for a profile"""
+        sessions = []
+        
+        # Load session files for this profile
+        for session_file in self.sessions_dir.glob(f"*_{profile_id}_*.json"):
+            try:
+                with open(session_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                session = DiscoverySession(**data)
+                sessions.append(session)
+            except (json.JSONDecodeError, ValueError):
+                continue
+        
+        # Sort by start time descending
+        sessions.sort(key=lambda s: s.started_at, reverse=True)
+        
+        if limit:
+            sessions = sessions[:limit]
+        
+        return sessions
+    
+    def get_discovery_analytics(self, profile_id: str) -> Dict[str, Any]:
+        """Get discovery analytics for a profile"""
+        profile = self.get_profile(profile_id)
+        if not profile:
+            return {}
+        
+        sessions = self.get_profile_sessions(profile_id)
+        
+        completed_sessions = [s for s in sessions if s.status == "completed"]
+        total_opportunities = sum(s.total_opportunities for s in completed_sessions)
+        avg_execution_time = 0
+        
+        if completed_sessions:
+            execution_times = [s.execution_time_seconds for s in completed_sessions if s.execution_time_seconds]
+            if execution_times:
+                avg_execution_time = sum(execution_times) // len(execution_times)
+        
+        return {
+            "profile_id": profile_id,
+            "discovery_status": profile.discovery_status,
+            "last_discovery": profile.last_discovery_date.isoformat() if profile.last_discovery_date else None,
+            "total_sessions": len(sessions),
+            "completed_sessions": len(completed_sessions),
+            "failed_sessions": len([s for s in sessions if s.status == "failed"]),
+            "total_opportunities_found": total_opportunities,
+            "avg_execution_time_seconds": avg_execution_time,
+            "next_recommended": profile.next_recommended_discovery.isoformat() if profile.next_recommended_discovery else None,
+            "needs_update": profile.discovery_status == "needs_update" or (
+                profile.next_recommended_discovery and 
+                profile.next_recommended_discovery < datetime.now()
+            )
+        }
+    
+    # Private helper methods for sessions
+    
+    def _save_session(self, session: DiscoverySession):
+        """Save discovery session to storage"""
+        session_file = self.sessions_dir / f"{session.session_id}_{session.profile_id}_{session.started_at.strftime('%Y%m%d_%H%M%S')}.json"
+        
+        with open(session_file, 'w', encoding='utf-8') as f:
+            json.dump(session.dict(), f, indent=2, default=str, ensure_ascii=False)
+    
+    def _get_session(self, session_id: str) -> Optional[DiscoverySession]:
+        """Get session by ID"""
+        for session_file in self.sessions_dir.glob(f"{session_id}_*.json"):
+            try:
+                with open(session_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                return DiscoverySession(**data)
             except (json.JSONDecodeError, ValueError):
                 continue
         

@@ -61,7 +61,30 @@ progress_service = ProgressService()
 profile_service = ProfileService()
 profile_integrator = ProfileWorkflowIntegrator()
 
-# Serve static files
+# Custom static file handler with cache control
+@app.get("/static/{file_path:path}")
+async def serve_static(file_path: str):
+    """Serve static files with cache control headers."""
+    static_path = Path(__file__).parent / "static"
+    full_path = static_path / file_path
+    
+    if full_path.exists() and full_path.is_file():
+        # Add cache-busting headers for CSS and JS files
+        if file_path.endswith(('.css', '.js')):
+            headers = {
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        else:
+            # Allow caching for images and other assets
+            headers = {"Cache-Control": "public, max-age=3600"}
+        
+        return FileResponse(full_path, headers=headers)
+    else:
+        raise HTTPException(status_code=404, detail="File not found")
+
+# Serve static files (fallback for non-cached files)
 static_path = Path(__file__).parent / "static"
 if static_path.exists():
     app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
@@ -72,7 +95,13 @@ async def root():
     """Serve the main dashboard interface."""
     html_file = Path(__file__).parent / "static" / "index.html"
     if html_file.exists():
-        return FileResponse(html_file)
+        # Add cache-busting headers to ensure latest version
+        headers = {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+        return FileResponse(html_file, headers=headers)
     else:
         return HTMLResponse("""
         <html>
