@@ -184,206 +184,12 @@
                     </a>
                 </div>
                 
-                <!-- AI Workflow Assistant -->
-                <div class="px-2 mb-6 mt-6">
-                    <div class="bg-gradient-to-br from-blue-900/20 to-indigo-900/20 border border-blue-500/30 rounded-lg p-4">
-                        <h3 class="text-sm font-bold text-blue-400 mb-3 flex items-center">
-                            <span class="text-lg mr-2">🤖</span>
-                            AI Assistant
-                        </h3>
-                        
-                        <!-- Contextual Guidance Based on Current Stage -->
-                        <div class="space-y-3 text-xs">
-                            <!-- Profiler Stage Guidance -->
-                            <div x-show="activeStage === 'profiler'">
-                                <div class="bg-purple-900/30 border border-purple-500/30 rounded p-2">
-                                    <div class="font-medium text-purple-300 mb-1">Profile Setup</div>
-                                    <p class="text-gray-300 mb-2" x-show="profileCount === 0">
-                                        Create your first organization profile to get personalized opportunity recommendations.
-                                    </p>
-                                    <p class="text-green-300 mb-2" x-show="profileCount > 0">
-                                        ✓ Profile ready! Time to discover opportunities tailored to your mission.
-                                    </p>
-                                    <button x-show="profileCount === 0" @click="showCreateProfile = true" 
-                                            class="bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded text-xs">
-                                        Create Profile
-                                    </button>
-                                    <button x-show="profileCount > 0" @click="switchStage('discover')" 
-                                            class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs">
-                                        Start Discovery →
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- Discover Stage Guidance -->
-                            <div x-show="activeStage === 'discover'">
-                                <div class="bg-green-900/30 border border-green-500/30 rounded p-2">
-                                    <div class="font-medium text-green-300 mb-1">Discovery Strategy</div>
-                                    <div x-show="discoveryStats.totalResults === 0">
-                                        <p class="text-gray-300 mb-2">Run multi-track discovery for comprehensive results:</p>
-                                        <div class="text-xs space-y-1 mb-2">
-                                            <div>• <span class="text-blue-300">Nonprofits</span> - Find similar organizations</div>
-                                            <div>• <span class="text-green-300">Federal</span> - Government grants</div>
-                                            <div>• <span class="text-purple-300">State</span> - Local opportunities</div>
-                                            <div>• <span class="text-orange-300">Commercial</span> - Corporate foundations</div>
-                                        </div>
-                                        <button @click="runMultiTrackDiscovery()" 
-                                                class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs">
-                                            Run All Tracks
-                                        </button>
-                                    </div>
-                                    <div x-show="discoveryStats.totalResults > 0">
-                                        <p class="text-green-300 mb-2">
-                                            ✓ Found <span x-text="discoveryStats.totalResults"></span> opportunities! Ready for analysis.
-                                        </p>
-                                        <button @click="switchStage('analyze')" 
-                                                class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs">
-                                            Analyze Results →
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Analysis Stage Guidance -->
-                            <div x-show="activeStage === 'analyze'">
-                                <div class="bg-blue-900/30 border border-blue-500/30 rounded p-2">
-                                    <div class="font-medium text-blue-300 mb-1">Analysis Focus</div>
-                                    <p class="text-gray-300 mb-2">Key areas to analyze:</p>
-                                    <div class="text-xs space-y-1 mb-2">
-                                        <div>• Financial health & trends</div>
-                                        <div>• Board member networks</div>
-                                        <div>• Success probability scoring</div>
-                                        <div>• Competitive positioning</div>
-                                    </div>
-                                    <button @click="switchStage('plan')" 
-                                            class="bg-orange-600 hover:bg-orange-700 text-white px-2 py-1 rounded text-xs">
-                                        Start Planning →
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- Planning Stage Guidance -->
-                            <div x-show="activeStage === 'plan'">
-                                <div class="bg-orange-900/30 border border-orange-500/30 rounded p-2">
-                                    <div class="font-medium text-orange-300 mb-1">Strategic Planning</div>
-                                    <p class="text-gray-300 mb-2">AI-powered recommendations:</p>
-                                    <div class="text-xs space-y-1 mb-2">
-                                        <div>• Priority opportunity ranking</div>
-                                        <div>• Partnership identification</div>
-                                        <div>• Application timeline</div>
-                                        <div>• Mission alignment scoring</div>
-                                    </div>
-                                    <button @click="switchStage('execute')" 
-                                            class="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded text-xs">
-                                            Ready to Execute →
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- Execute Stage Guidance -->
-                            <div x-show="activeStage === 'execute'">
-                                <div class="bg-gray-900/30 border border-gray-500/30 rounded p-2">
-                                    <div class="font-medium text-gray-300 mb-1">Implementation</div>
-                                    <p class="text-gray-300 mb-2">Export comprehensive reports:</p>
-                                    <div class="text-xs space-y-1 mb-2">
-                                        <div>• Opportunity summaries</div>
-                                        <div>• Contact databases</div>
-                                        <div>• Application tracking</div>
-                                        <div>• Follow-up schedules</div>
-                                    </div>
-                                    <button class="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded text-xs">
-                                        Export Results
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- Progress Encouragement -->
-                            <div class="mt-3 p-2 bg-blue-600 text-white rounded text-xs">
-                                <div class="font-medium" x-text="getWorkflowEncouragement()"></div>
-                                <div class="opacity-90 mt-1" x-text="getWorkflowTip()"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- System Controls Section -->
-                <div class="px-2 mb-4 mt-8">
-                    <h3 class="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">System Controls</h3>
-                    
-                    <!-- Live Pipeline Control -->
-                    <a href="#" @click.prevent="switchStage('pipeline')"
-                       :class="{'bg-blue-600 text-white': activeStage === 'pipeline', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeStage !== 'pipeline'}"
-                       class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors border border-blue-500/30 mb-2">
-                        <span class="text-lg mr-3">⚡</span>
-                        <div class="flex-1">
-                            <div class="font-semibold">Live Pipeline</div>
-                            <div class="text-xs opacity-75">Real-time Processing Control</div>
-                        </div>
-                        <div x-show="activeWorkflows > 0" class="bg-orange-500 text-white text-xs rounded-full px-2 py-1 animate-pulse" x-text="activeWorkflows"></div>
-                    </a>
-
-                    <!-- Testing Interface -->
-                    <a href="#" @click.prevent="switchStage('testing')"
-                       :class="{'bg-orange-600 text-white': activeStage === 'testing', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeStage !== 'testing'}"
-                       class="flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors mb-2">
-                        <span class="text-lg mr-3">🧪</span>
-                        <div class="flex-1">
-                            <div>Testing Interface</div>
-                            <div class="text-xs opacity-75">System Diagnostics</div>
-                        </div>
-                    </a>
-
-                    <!-- System Settings -->
-                    <a href="#" @click.prevent="switchStage('settings')"
-                       :class="{'bg-gray-600 text-white': activeStage === 'settings', 'text-gray-300 hover:bg-gray-700 hover:text-white': activeStage !== 'settings'}"
-                       class="flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors">
-                        <span class="text-lg mr-3">⚙️</span>
-                        <div class="flex-1">
-                            <div>Settings</div>
-                            <div class="text-xs opacity-75">System Configuration</div>
-                        </div>
-                    </a>
-                </div>
-
-                <!-- Workflow Status Mini-Dashboard -->
-                <div class="px-2 mb-4 mt-8">
-                    <h3 class="px-3 text-xs font-bold text-blue-400 uppercase tracking-wider mb-3">Workflow Status</h3>
-                    <div class="bg-gray-800 dark:bg-gray-700 rounded-lg p-3 border border-gray-600">
-                        <!-- Current Stage Indicator -->
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="text-xs text-gray-400">Current Stage:</div>
-                            <div class="text-xs font-bold text-white" x-text="getCurrentStageLabel()"></div>
-                        </div>
-                        
-                        
-                        <!-- Quick Stats -->
-                        <div class="text-xs text-gray-400 space-y-1">
-                            <div class="flex justify-between">
-                                <span>Processors Active:</span>
-                                <span class="text-white" x-text="getActiveProcessorCount()"></span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span>System Health:</span>
-                                <span :class="{'text-green-400': systemStatus === 'healthy', 'text-yellow-400': systemStatus === 'warning', 'text-red-400': systemStatus === 'error'}" 
-                                      x-text="systemStatus.toUpperCase()"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Activity -->
-                <div class="mt-8 px-2">
-                    <h3 class="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent</h3>
-                    <div class="mt-2 space-y-1" x-show="recentActivity.length > 0">
-                        <template x-for="activity in recentActivity.slice(0, 3)" :key="activity.id">
-                            <div class="px-4 py-2 text-sm text-gray-300">
-                                <div class="font-medium" x-text="activity.name"></div>
-                                <div class="text-gray-400 text-xs" x-text="activity.time"></div>
-                            </div>
-                        </template>
-                    </div>
-                    <div x-show="recentActivity.length === 0" class="px-4 py-2 text-sm text-gray-400">
-                        No recent activity
+                
+                <!-- Simple Footer -->
+                <div class="mt-auto px-2 py-4 border-t border-gray-700">
+                    <div class="text-center">
+                        <div class="text-xs text-gray-400 font-medium">Catalynx</div>
+                        <div class="text-xs text-gray-500 mt-1">Opportunity Intelligence Platform</div>
                     </div>
                 </div>
             </nav>
@@ -524,34 +330,160 @@
                 </div>
                 
                 
-                <!-- STAGE 1: PROFILER (Central Hub) -->
+                <!-- STAGE 1: PROFILER (Profile Management) -->
                 <div x-show="activeStage === 'profiler'" class="space-y-6">
                     <!-- Profiler Header -->
                     <div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-6 text-white">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-2xl font-bold">Organization Profiler</h3>
-                                <p class="mt-2 opacity-90">Define your organization profile and research objectives</p>
+                                <h3 class="text-2xl font-bold">Organization Profile Management</h3>
+                                <p class="mt-2 opacity-90">Create and manage organization profiles for opportunity discovery</p>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Profile Creation Form -->
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create Organization Profile</h3>
-                        <form class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Name</label>
-                                <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Enter organization name">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Focus Areas</label>
-                                <textarea class="w-full px-3 py-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white" rows="3" placeholder="Describe your organization's focus areas and mission"></textarea>
-                            </div>
-                            <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-md transition-colors">
+                    <!-- Action Button Bar -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
+                        <div class="flex flex-wrap items-center gap-4">
+                            <!-- Create Profile Button -->
+                            <button @click="showProfileModal = true; isEditingProfile = false; resetProfileForm()"
+                                    class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
+                                <span class="text-lg">+</span>
                                 Create Profile
                             </button>
-                        </form>
+                            
+                            <!-- Manage Profiles Button -->
+                            <button class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors font-medium">
+                                Manage Profiles
+                            </button>
+                            
+                            <!-- Search Input -->
+                            <div class="flex-grow max-w-md">
+                                <input type="text" 
+                                       x-model="profileSearchTerm"
+                                       @input="filterProfiles()"
+                                       placeholder="Search profiles by name, EIN, or focus areas..."
+                                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+                            
+                            <!-- Profile Count -->
+                            <div class="text-sm text-gray-600 dark:text-gray-400">
+                                <span x-text="filteredProfiles.length"></span> profiles
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Profile Table -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+                        <!-- Table Header -->
+                        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Organization Profiles</h4>
+                        </div>
+                        
+                        <!-- Table Content -->
+                        <div class="overflow-x-auto">
+                            <div class="max-h-96 overflow-y-auto">
+                                <!-- Loading State -->
+                                <div x-show="profilesLoading" class="p-8 text-center text-gray-500 dark:text-gray-400">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                                    Loading profiles...
+                                </div>
+                                
+                                <!-- Empty State -->
+                                <div x-show="!profilesLoading && filteredProfiles.length === 0" 
+                                     class="p-8 text-center text-gray-500 dark:text-gray-400">
+                                    <div class="text-4xl mb-4">📋</div>
+                                    <p class="text-lg font-medium mb-2">No profiles found</p>
+                                    <p class="text-sm mb-4">Create your first organization profile to get started</p>
+                                    <button @click="showProfileModal = true; isEditingProfile = false; resetProfileForm()"
+                                            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors">
+                                        Create Profile
+                                    </button>
+                                </div>
+                                
+                                <!-- Profile Table -->
+                                <table x-show="!profilesLoading && filteredProfiles.length > 0" 
+                                       class="w-full">
+                                    <thead class="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                                                @click="sortProfiles('name')">
+                                                Organization Name
+                                                <span x-show="profileSort.field === 'name'" class="ml-1">
+                                                    <span x-show="profileSort.direction === 'asc'">↑</span>
+                                                    <span x-show="profileSort.direction === 'desc'">↓</span>
+                                                </span>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                EIN
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                                                @click="sortProfiles('organization_type')">
+                                                Type
+                                                <span x-show="profileSort.field === 'organization_type'" class="ml-1">
+                                                    <span x-show="profileSort.direction === 'asc'">↑</span>
+                                                    <span x-show="profileSort.direction === 'desc'">↓</span>
+                                                </span>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                Focus Areas
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                                                @click="sortProfiles('updated_at')">
+                                                Last Updated
+                                                <span x-show="profileSort.field === 'updated_at'" class="ml-1">
+                                                    <span x-show="profileSort.direction === 'asc'">↑</span>
+                                                    <span x-show="profileSort.direction === 'desc'">↓</span>
+                                                </span>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                Actions
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                        <template x-for="profile in filteredProfiles" :key="profile.profile_id">
+                                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="text-sm font-medium text-gray-900 dark:text-white" 
+                                                         x-text="profile.name"></div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="text-sm text-gray-600 dark:text-gray-300"
+                                                         x-text="profile.ein ? maskEIN(profile.ein) : 'N/A'"></div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                                                          :class="getOrgTypeClass(profile.organization_type)"
+                                                          x-text="formatOrgType(profile.organization_type)"></span>
+                                                </td>
+                                                <td class="px-6 py-4">
+                                                    <div class="text-sm text-gray-600 dark:text-gray-300 max-w-xs truncate"
+                                                         :title="profile.focus_areas.join(', ')"
+                                                         x-text="profile.focus_areas.slice(0, 3).join(', ') + (profile.focus_areas.length > 3 ? '...' : '')"></div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="text-sm text-gray-600 dark:text-gray-300"
+                                                         x-text="formatDate(profile.updated_at)"></div>
+                                                </td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                    <div class="flex space-x-2">
+                                                        <button @click="editProfile(profile)"
+                                                                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition-colors">
+                                                            Edit
+                                                        </button>
+                                                        <button @click="deleteProfile(profile.profile_id)"
+                                                                class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-colors">
+                                                            Delete
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -4273,6 +4205,273 @@
 
             </div>
         </main>
+    </div>
+
+    <!-- Profile Creation/Edit Modal -->
+    <div x-show="showProfileModal" 
+         x-transition:enter="ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto">
+        
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+             @click="showProfileModal = false"></div>
+        
+        <!-- Modal content -->
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+            <div x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
+                
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+                        <span x-text="isEditingProfile ? 'Edit Organization Profile' : 'Create Organization Profile'"></span>
+                    </h3>
+                    <button @click="showProfileModal = false" 
+                            class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+                        <span class="text-2xl">&times;</span>
+                    </button>
+                </div>
+                
+                <!-- Profile Form -->
+                <form @submit.prevent="saveProfile()" class="space-y-8">
+                    
+                    <!-- Basic Information Section -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Name *</label>
+                                <input type="text" 
+                                       x-model="profileForm.name"
+                                       required
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                       placeholder="Enter organization name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">EIN (Tax ID)</label>
+                                <input type="text" 
+                                       x-model="profileForm.ein"
+                                       pattern="^\d{2}-?\d{7}$"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                       placeholder="12-3456789">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Type *</label>
+                                <select x-model="profileForm.organization_type" 
+                                        required
+                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                    <option value="">Select type...</option>
+                                    <option value="nonprofit">Nonprofit</option>
+                                    <option value="for_profit">For-Profit</option>
+                                    <option value="government">Government</option>
+                                    <option value="academic">Academic</option>
+                                    <option value="healthcare">Healthcare</option>
+                                    <option value="foundation">Foundation</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Annual Revenue</label>
+                                <input type="number" 
+                                       x-model="profileForm.annual_revenue"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                       placeholder="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Mission & Focus Section -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Mission & Focus</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mission Statement *</label>
+                                <textarea x-model="profileForm.mission_statement" 
+                                          required
+                                          rows="3"
+                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                          placeholder="Describe your organization's mission and purpose"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Focus Areas * (one per line)</label>
+                                <textarea x-model="profileForm.focus_areas_text" 
+                                          required
+                                          rows="3"
+                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                          placeholder="Healthcare&#10;Education&#10;Community Development"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Populations (one per line)</label>
+                                <textarea x-model="profileForm.target_populations_text" 
+                                          rows="2"
+                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                          placeholder="Low-income families&#10;Senior citizens&#10;Veterans"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Geographic & Funding Section -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Geographic & Funding</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target States (comma-separated)</label>
+                                <input type="text" 
+                                       x-model="profileForm.states_text"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                       placeholder="VA, MD, DC">
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex items-center">
+                                    <input type="checkbox" 
+                                           x-model="profileForm.geographic_scope.nationwide"
+                                           class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                    <label class="ml-2 text-sm text-gray-700 dark:text-gray-300">Nationwide</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" 
+                                           x-model="profileForm.geographic_scope.international"
+                                           class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                    <label class="ml-2 text-sm text-gray-700 dark:text-gray-300">International</label>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Min Funding Amount</label>
+                                <input type="number" 
+                                       x-model="profileForm.funding_preferences.min_amount"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                       placeholder="10000">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Max Funding Amount</label>
+                                <input type="number" 
+                                       x-model="profileForm.funding_preferences.max_amount"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                       placeholder="500000">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Organizational Details Section -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Organizational Details</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Staff Size</label>
+                                <input type="number" 
+                                       x-model="profileForm.staff_size"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                       placeholder="0">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Volunteer Count</label>
+                                <input type="number" 
+                                       x-model="profileForm.volunteer_count"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                       placeholder="0">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Board Size</label>
+                                <input type="number" 
+                                       x-model="profileForm.board_size"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                       placeholder="0">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Notes Section -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Additional Notes</h4>
+                        <textarea x-model="profileForm.notes" 
+                                  rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                  placeholder="Any additional information about this organization"></textarea>
+                    </div>
+                    
+                    <!-- Form Actions -->
+                    <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200 dark:border-gray-600">
+                        <button type="button" 
+                                @click="showProfileModal = false"
+                                class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                :disabled="profileSaving"
+                                class="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors flex items-center gap-2">
+                            <div x-show="profileSaving" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span x-text="profileSaving ? 'Saving...' : (isEditingProfile ? 'Update Profile' : 'Create Profile')"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div x-show="showDeleteConfirmation" 
+         x-transition:enter="ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto">
+        
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity"
+             @click="cancelDeleteProfile()"></div>
+        
+        <!-- Modal content -->
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+            <div x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                
+                <!-- Warning Icon -->
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 sm:mx-0 sm:h-10 sm:w-10">
+                        <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                            Delete Profile
+                        </h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500 dark:text-gray-300" x-text="deleteConfirmationMessage">
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action buttons -->
+                <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                    <button @click="confirmDeleteProfile()"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
+                        Delete
+                    </button>
+                    <button @click="cancelDeleteProfile()"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 sm:mt-0 sm:w-auto sm:text-sm transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- SECTION 3: Footer -->

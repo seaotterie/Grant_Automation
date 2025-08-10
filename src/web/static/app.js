@@ -511,6 +511,61 @@ function catalynxApp() {
         profileSearchQuery: '',
         totalProfiles: 0,
         
+        // New profile form data
+        newProfile: {
+            name: '',
+            focus_areas: '',
+            geographic_scope: '',
+            budget_range: '',
+            organization_type: ''
+        },
+        profileCreating: false,
+        profileCount: 0,
+        
+        // Profile Management System
+        profiles: [],
+        filteredProfiles: [],
+        profilesLoading: false,
+        showProfileModal: false,
+        isEditingProfile: false,
+        profileSaving: false,
+        profileSearchTerm: '',
+        currentEditingProfile: null,
+        showDeleteConfirmation: false,
+        deleteConfirmationMessage: '',
+        pendingDeleteProfileId: null,
+        
+        // Profile form data - comprehensive structure
+        profileForm: {
+            profile_id: '',
+            name: '',
+            organization_type: '',
+            ein: '',
+            mission_statement: '',
+            focus_areas_text: '',
+            target_populations_text: '',
+            states_text: '',
+            geographic_scope: {
+                nationwide: false,
+                international: false
+            },
+            funding_preferences: {
+                min_amount: null,
+                max_amount: null
+            },
+            annual_revenue: null,
+            staff_size: null,
+            volunteer_count: null,
+            board_size: null,
+            notes: ''
+        },
+        
+        // Profile sorting and filtering
+        profileSort: {
+            field: 'updated_at',
+            direction: 'desc'
+        },
+        
         // Initialization
         async init() {
             console.log('Initializing Catalynx Web Interface...');
@@ -582,12 +637,20 @@ function catalynxApp() {
         },
         
         // NEW: Workflow Stage Management
-        switchStage(stage) {
+        async switchStage(stage) {
             // Track stage transition for analytics
             this.trackStageTransition(this.activeStage, stage);
             
             this.activeStage = stage;
             console.log('Switched to workflow stage:', stage);
+            
+            // Load profiles when switching to profiler stage
+            if (stage === 'profiler' && this.profiles.length === 0) {
+                await this.loadProfiles();
+            }
+            
+            // Close mobile menu if open
+            this.mobileMenuOpen = false;
             
             // Map stages to corresponding legacy tabs for backward compatibility
             const stageToTabMapping = {
@@ -612,9 +675,269 @@ function catalynxApp() {
             // Update workflow progress
             this.updateWorkflowProgress(stage);
         },
+
+        // Profile Management Functions
+        async loadProfiles() {
+            this.profilesLoading = true;
+            try {
+                const response = await fetch('/api/profiles');
+                if (response.ok) {
+                    const data = await response.json();
+                    // Filter out archived profiles - only show active ones
+                    const allProfiles = data.profiles ? data.profiles : data;
+                    this.profiles = allProfiles.filter(profile => profile.status === 'active');
+                    this.filteredProfiles = [...this.profiles];
+                    this.profileCount = this.profiles.length;
+                } else {
+                    console.error('Failed to load profiles:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error loading profiles:', error);
+            } finally {
+                this.profilesLoading = false;
+            }
+        },
+
+        resetProfileForm() {
+            this.profileForm = {
+                profile_id: '',
+                name: '',
+                organization_type: '',
+                ein: '',
+                mission_statement: '',
+                focus_areas_text: '',
+                target_populations_text: '',
+                states_text: '',
+                geographic_scope: {
+                    nationwide: false,
+                    international: false
+                },
+                funding_preferences: {
+                    min_amount: null,
+                    max_amount: null
+                },
+                annual_revenue: null,
+                staff_size: null,
+                volunteer_count: null,
+                board_size: null,
+                notes: ''
+            };
+            this.currentEditingProfile = null;
+        },
+
+        editProfile(profile) {
+            this.isEditingProfile = true;
+            this.currentEditingProfile = profile.profile_id;
+            
+            // Populate form with profile data
+            this.profileForm.profile_id = profile.profile_id;
+            this.profileForm.name = profile.name || '';
+            this.profileForm.organization_type = profile.organization_type || '';
+            this.profileForm.ein = profile.ein || '';
+            this.profileForm.mission_statement = profile.mission_statement || '';
+            this.profileForm.focus_areas_text = (profile.focus_areas || []).join('\n');
+            this.profileForm.target_populations_text = (profile.target_populations || []).join('\n');
+            this.profileForm.states_text = (profile.geographic_scope?.states || []).join(', ');
+            this.profileForm.geographic_scope.nationwide = profile.geographic_scope?.nationwide || false;
+            this.profileForm.geographic_scope.international = profile.geographic_scope?.international || false;
+            this.profileForm.funding_preferences.min_amount = profile.funding_preferences?.min_amount || null;
+            this.profileForm.funding_preferences.max_amount = profile.funding_preferences?.max_amount || null;
+            this.profileForm.annual_revenue = profile.annual_revenue || null;
+            this.profileForm.staff_size = profile.staff_size || null;
+            this.profileForm.volunteer_count = profile.volunteer_count || null;
+            this.profileForm.board_size = profile.board_size || null;
+            this.profileForm.notes = profile.notes || '';
+            
+            this.showProfileModal = true;
+        },
+
+        async saveProfile() {
+            this.profileSaving = true;
+            try {
+                // Prepare profile data for API
+                const profileData = {
+                    name: this.profileForm.name,
+                    organization_type: this.profileForm.organization_type,
+                    ein: this.profileForm.ein || null,
+                    mission_statement: this.profileForm.mission_statement,
+                    focus_areas: this.profileForm.focus_areas_text.split('\n').filter(area => area.trim()),
+                    target_populations: this.profileForm.target_populations_text.split('\n').filter(pop => pop.trim()),
+                    geographic_scope: {
+                        states: this.profileForm.states_text.split(',').map(s => s.trim().toUpperCase()).filter(s => s),
+                        nationwide: this.profileForm.geographic_scope.nationwide,
+                        international: this.profileForm.geographic_scope.international
+                    },
+                    funding_preferences: {
+                        min_amount: this.profileForm.funding_preferences.min_amount ? parseInt(this.profileForm.funding_preferences.min_amount) : null,
+                        max_amount: this.profileForm.funding_preferences.max_amount ? parseInt(this.profileForm.funding_preferences.max_amount) : null,
+                        funding_types: ['grants']
+                    },
+                    annual_revenue: this.profileForm.annual_revenue ? parseInt(this.profileForm.annual_revenue) : null,
+                    staff_size: this.profileForm.staff_size ? parseInt(this.profileForm.staff_size) : null,
+                    volunteer_count: this.profileForm.volunteer_count ? parseInt(this.profileForm.volunteer_count) : null,
+                    board_size: this.profileForm.board_size ? parseInt(this.profileForm.board_size) : null,
+                    notes: this.profileForm.notes || null
+                };
+
+                let response;
+                if (this.isEditingProfile) {
+                    // Update existing profile
+                    response = await fetch(`/api/profiles/${this.currentEditingProfile}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(profileData)
+                    });
+                } else {
+                    // Create new profile
+                    response = await fetch('/api/profiles', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(profileData)
+                    });
+                }
+
+                if (response.ok) {
+                    this.showProfileModal = false;
+                    this.resetProfileForm();
+                    await this.loadProfiles(); // Reload profiles
+                    
+                    // Show success message
+                    this.showNotification(
+                        this.isEditingProfile ? 'Profile updated successfully!' : 'Profile created successfully!',
+                        'success'
+                    );
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to save profile');
+                }
+            } catch (error) {
+                console.error('Error saving profile:', error);
+                this.showNotification(`Error saving profile: ${error.message}`, 'error');
+            } finally {
+                this.profileSaving = false;
+            }
+        },
+
+        async deleteProfile(profileId) {
+            // Find the profile to get its name
+            const profile = this.profiles.find(p => p.profile_id === profileId);
+            const profileName = profile ? profile.name : 'this profile';
+            
+            // Show custom confirmation dialog
+            this.showDeleteConfirmation = true;
+            this.deleteConfirmationMessage = `Are you sure you want to delete "${profileName}"? This action cannot be undone.`;
+            this.pendingDeleteProfileId = profileId;
+        },
+
+        async confirmDeleteProfile() {
+            try {
+                const response = await fetch(`/api/profiles/${this.pendingDeleteProfileId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    await this.loadProfiles(); // Reload profiles
+                    this.showNotification('Profile deleted successfully!', 'success');
+                } else {
+                    throw new Error('Failed to delete profile');
+                }
+            } catch (error) {
+                console.error('Error deleting profile:', error);
+                this.showNotification(`Error deleting profile: ${error.message}`, 'error');
+            } finally {
+                this.showDeleteConfirmation = false;
+                this.pendingDeleteProfileId = null;
+            }
+        },
+
+        cancelDeleteProfile() {
+            this.showDeleteConfirmation = false;
+            this.pendingDeleteProfileId = null;
+        },
+
+        filterProfiles() {
+            if (!this.profileSearchTerm) {
+                this.filteredProfiles = [...this.profiles];
+                return;
+            }
+
+            const searchTerm = this.profileSearchTerm.toLowerCase();
+            this.filteredProfiles = this.profiles.filter(profile => 
+                profile.name.toLowerCase().includes(searchTerm) ||
+                (profile.ein && profile.ein.includes(searchTerm)) ||
+                (profile.focus_areas && profile.focus_areas.some(area => 
+                    area.toLowerCase().includes(searchTerm)
+                ))
+            );
+        },
+
+        sortProfiles(field) {
+            if (this.profileSort.field === field) {
+                this.profileSort.direction = this.profileSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.profileSort.field = field;
+                this.profileSort.direction = 'asc';
+            }
+
+            this.filteredProfiles.sort((a, b) => {
+                let valueA = a[field];
+                let valueB = b[field];
+
+                // Handle different data types
+                if (field === 'updated_at' || field === 'created_at') {
+                    valueA = new Date(valueA);
+                    valueB = new Date(valueB);
+                } else if (typeof valueA === 'string') {
+                    valueA = valueA.toLowerCase();
+                    valueB = valueB.toLowerCase();
+                }
+
+                if (valueA < valueB) return this.profileSort.direction === 'asc' ? -1 : 1;
+                if (valueA > valueB) return this.profileSort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        },
+
+        // Profile display helper functions
+        maskEIN(ein) {
+            if (!ein) return 'N/A';
+            return ein.replace(/(\d{2})-?(\d{3})(\d{4})/, 'XX-XXX$3');
+        },
+
+        formatOrgType(type) {
+            if (!type) return 'Unknown';
+            return type.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        },
+
+        getOrgTypeClass(type) {
+            const classes = {
+                'nonprofit': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+                'for_profit': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+                'government': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+                'academic': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300',
+                'healthcare': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+                'foundation': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+            };
+            return classes[type] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+        },
+
+        formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            return new Date(dateStr).toLocaleDateString();
+        },
         
         loadStageData(stage) {
             switch(stage) {
+                case 'welcome':
+                    this.loadWelcomeStatus();
+                    console.log('Loading welcome stage data - system status');
+                    break;
                 case 'profiler':
                     this.loadProfiles();
                     this.loadProfileStats();
@@ -744,14 +1067,147 @@ function catalynxApp() {
             }
         },
         
+        // New Profile Management Functions
+        async createNewProfile() {
+            if (this.profileCreating) return;
+            
+            try {
+                this.profileCreating = true;
+                
+                const profileData = {
+                    name: this.newProfile.name,
+                    focus_areas: this.newProfile.focus_areas,
+                    geographic_scope: this.newProfile.geographic_scope,
+                    budget_range: this.newProfile.budget_range,
+                    organization_type: this.newProfile.organization_type
+                };
+                
+                const response = await fetch('/api/profiles', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(profileData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    this.showNotification('Profile Created', `${profileData.name} has been created successfully`, 'success');
+                    
+                    // Reset form and refresh data
+                    this.resetNewProfile();
+                    this.showCreateProfile = false;
+                    await this.loadProfiles();
+                    await this.loadProfileStats();
+                    
+                    // Update progress
+                    this.workflowProgress.profiler = true;
+                } else {
+                    const error = await response.json();
+                    this.showNotification('Creation Failed', error.detail || 'Failed to create profile', 'error');
+                }
+            } catch (error) {
+                console.error('Failed to create profile:', error);
+                this.showNotification('Creation Failed', 'An error occurred while creating the profile', 'error');
+            } finally {
+                this.profileCreating = false;
+            }
+        },
+        
+        resetNewProfile() {
+            this.newProfile = {
+                name: '',
+                focus_areas: '',
+                geographic_scope: '',
+                budget_range: '',
+                organization_type: ''
+            };
+        },
+        
+        selectProfile(profile) {
+            this.selectedProfile = profile;
+            // Could open a modal or navigate to profile details
+            this.showNotification('Profile Selected', `Viewing ${profile.name}`, 'info');
+        },
+        
+        async loadProfileTemplates() {
+            this.showNotification('Templates', 'Loading profile templates...', 'info');
+            // Implementation would load predefined templates
+        },
+        
+        async exportProfiles() {
+            try {
+                const response = await fetch('/api/profiles');
+                if (response.ok) {
+                    const data = await response.json();
+                    const profiles = data.profiles || [];
+                    
+                    const csvContent = this.convertProfilesToCSV(profiles);
+                    this.downloadCSV(csvContent, 'organization_profiles.csv');
+                    
+                    this.showNotification('Export Complete', `Exported ${profiles.length} profiles`, 'success');
+                } else {
+                    this.showNotification('Export Failed', 'Failed to export profiles', 'error');
+                }
+            } catch (error) {
+                console.error('Failed to export profiles:', error);
+                this.showNotification('Export Failed', 'An error occurred during export', 'error');
+            }
+        },
+        
+        convertProfilesToCSV(profiles) {
+            if (!profiles.length) return 'No profiles to export';
+            
+            const headers = ['Name', 'Focus Areas', 'Geographic Scope', 'Budget Range', 'Organization Type', 'Created'];
+            const rows = profiles.map(profile => [
+                profile.name || '',
+                profile.focus_areas || '',
+                profile.geographic_scope || '',
+                profile.budget_range || '',
+                profile.organization_type || '',
+                profile.created_at || ''
+            ]);
+            
+            return [headers, ...rows].map(row => 
+                row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+            ).join('\n');
+        },
+        
+        downloadCSV(content, filename) {
+            const blob = new Blob([content], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        },
+        
         // DISCOVERY STAGE DATA AND FUNCTIONS
         // Multi-track discovery system state
         selectedDiscoveryTrack: 'nonprofit',
         multiTrackInProgress: false,
         discoveryStats: {
             activeTracks: 4,
-            totalResults: 0
+            totalResults: 0,
+            nonprofit: 0,
+            federal: 0,
+            state: 0,
+            commercial: 0
         },
+        
+        // Discovery progress tracking
+        discoveryProgress: {
+            nonprofit: false,
+            federal: false,
+            state: false,
+            commercial: false
+        },
+        
+        // Selected profile for discovery
+        selectedDiscoveryProfile: null,
         
         // Track status tracking
         nonprofitTrackStatus: {
@@ -964,6 +1420,109 @@ function catalynxApp() {
             } finally {
                 this.commercialTrackStatus.processing = false;
             }
+        },
+        
+        // New Discovery Functions
+        async startDiscovery(track) {
+            if (!this.selectedDiscoveryProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile before starting discovery', 'warning');
+                return;
+            }
+            
+            if (this.discoveryProgress[track]) return;
+            
+            this.discoveryProgress[track] = true;
+            
+            try {
+                this.showNotification(`${track.toUpperCase()} Discovery`, 'Starting discovery...', 'info');
+                
+                const response = await fetch(`/api/discovery/${track}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        profile_id: this.selectedDiscoveryProfile.profile_id,
+                        state: 'VA',
+                        limit: 50
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    const count = result.results ? result.results.length : 0;
+                    this.discoveryStats[track] = count;
+                    this.updateDiscoveryTotalResults();
+                    
+                    this.showNotification('Discovery Complete', `Found ${count} ${track} opportunities`, 'success');
+                    this.workflowProgress.discover = true;
+                } else {
+                    const error = await response.json();
+                    this.showNotification('Discovery Failed', error.detail || `${track} discovery failed`, 'error');
+                }
+            } catch (error) {
+                console.error(`Failed to run ${track} discovery:`, error);
+                this.showNotification('Discovery Error', `An error occurred during ${track} discovery`, 'error');
+            } finally {
+                this.discoveryProgress[track] = false;
+            }
+        },
+        
+        async startAllDiscovery() {
+            if (!this.selectedDiscoveryProfile || this.multiTrackInProgress) return;
+            
+            this.multiTrackInProgress = true;
+            
+            try {
+                this.showNotification('Multi-Track Discovery', 'Running all discovery tracks...', 'info');
+                
+                const tracks = ['nonprofit', 'federal', 'state', 'commercial'];
+                const promises = tracks.map(track => this.startDiscovery(track));
+                
+                await Promise.all(promises);
+                
+                this.showNotification('All Tracks Complete', `Discovery complete across all tracks`, 'success');
+            } catch (error) {
+                console.error('Failed to run multi-track discovery:', error);
+                this.showNotification('Discovery Error', 'An error occurred during multi-track discovery', 'error');
+            } finally {
+                this.multiTrackInProgress = false;
+            }
+        },
+        
+        updateDiscoveryTotalResults() {
+            this.discoveryStats.totalResults = 
+                this.discoveryStats.nonprofit + 
+                this.discoveryStats.federal + 
+                this.discoveryStats.state + 
+                this.discoveryStats.commercial;
+        },
+        
+        viewDiscoveryResults() {
+            if (this.discoveryStats.totalResults === 0) return;
+            
+            this.showNotification('Discovery Results', `Viewing ${this.discoveryStats.totalResults} total results`, 'info');
+            // Could switch to a results view or open a modal
+        },
+        
+        clearDiscoveryResults() {
+            this.discoveryStats = {
+                activeTracks: 4,
+                totalResults: 0,
+                nonprofit: 0,
+                federal: 0,
+                state: 0,
+                commercial: 0
+            };
+            
+            this.discoveryProgress = {
+                nonprofit: false,
+                federal: false,
+                state: false,
+                commercial: false
+            };
+            
+            this.showNotification('Results Cleared', 'All discovery results have been cleared', 'info');
         },
         
         // Discovery utility functions
@@ -3026,19 +3585,6 @@ function catalynxApp() {
         },
         
         // Profile Management Functions
-        async loadProfiles() {
-            try {
-                const response = await this.apiCall('/profiles');
-                this.profiles = response.profiles || [];
-                this.filteredProfiles = [...this.profiles];
-                this.updateProfileStats();
-                this.totalProfiles = this.profiles.length;
-            } catch (error) {
-                console.error('Failed to load profiles:', error);
-                this.profiles = [];
-                this.filteredProfiles = [];
-            }
-        },
         
         updateProfileStats() {
             this.profileStats = {
@@ -3187,11 +3733,6 @@ function catalynxApp() {
             console.log('Opening view modal for profile:', profile.name);
         },
         
-        editProfile(profile) {
-            this.selectedProfile = profile;
-            this.showEditProfile = true;
-            console.log('Opening edit modal for profile:', profile.name);
-        },
         
         closeViewProfile() {
             this.showViewProfile = false;
@@ -3216,23 +3757,6 @@ function catalynxApp() {
             }
         },
         
-        async deleteProfile() {
-            if (!this.selectedProfile) return;
-            
-            const confirmDelete = confirm(`Are you sure you want to delete the profile "${this.selectedProfile.name}"?`);
-            if (!confirmDelete) return;
-            
-            try {
-                console.log('Deleting profile:', this.selectedProfile.name);
-                // TODO: Implement actual delete API call
-                this.showEnhancedNotification('Profile deleted successfully!', 'success');
-                this.closeEditProfile();
-                await this.loadProfiles(); // Refresh profile list
-            } catch (error) {
-                console.error('Failed to delete profile:', error);
-                this.showEnhancedNotification('Failed to delete profile', 'error');
-            }
-        },
         
         async discoverOpportunities(profile) {
             try {
@@ -5685,6 +6209,35 @@ function catalynxApp() {
                         ]);
                         throw error;
                     });
+            },
+
+            // Profile Management Functions
+
+            resetProfileForm() {
+                this.profileForm = {
+                    profile_id: '',
+                    name: '',
+                    organization_type: '',
+                    ein: '',
+                    mission_statement: '',
+                    focus_areas_text: '',
+                    target_populations_text: '',
+                    states_text: '',
+                    geographic_scope: {
+                        nationwide: false,
+                        international: false
+                    },
+                    funding_preferences: {
+                        min_amount: null,
+                        max_amount: null
+                    },
+                    annual_revenue: null,
+                    staff_size: null,
+                    volunteer_count: null,
+                    board_size: null,
+                    notes: ''
+                };
+                this.currentEditingProfile = null;
             }
         }
     }
