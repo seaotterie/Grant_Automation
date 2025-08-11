@@ -1038,6 +1038,87 @@ function catalynxApp() {
                 ]
             }
         },
+
+        // Government Criteria Data Structure
+        governmentCriteriaList: {
+            'funding_instruments': {
+                category: 'Funding Instruments',
+                description: 'Types of federal funding mechanisms',
+                criteria: [
+                    { id: 'grant', name: 'Grants', description: 'Direct financial assistance for specific projects', sources: ['Federal', 'State', 'Local'] },
+                    { id: 'cooperative_agreement', name: 'Cooperative Agreements', description: 'Partnerships with substantial federal involvement', sources: ['Federal'] },
+                    { id: 'contract', name: 'Contracts', description: 'Procurement contracts for goods/services', sources: ['Federal', 'State', 'Local'] },
+                    { id: 'other', name: 'Other Instruments', description: 'Alternative funding mechanisms', sources: ['Federal', 'State'] }
+                ]
+            },
+            'eligibility': {
+                category: 'Applicant Eligibility',
+                description: 'Types of organizations eligible to apply',
+                criteria: [
+                    { id: 'nonprofit', name: 'Nonprofit Organizations', description: '501(c)(3) and other nonprofits', sources: ['Federal', 'State', 'Local'] },
+                    { id: 'state_government', name: 'State Governments', description: 'State-level government entities', sources: ['Federal'] },
+                    { id: 'local_government', name: 'Local Governments', description: 'Cities, counties, municipalities', sources: ['Federal', 'State'] },
+                    { id: 'tribal_government', name: 'Tribal Governments', description: 'Native American tribal organizations', sources: ['Federal'] },
+                    { id: 'university', name: 'Universities', description: 'Higher education institutions', sources: ['Federal', 'State'] },
+                    { id: 'for_profit', name: 'For-Profit Companies', description: 'Commercial businesses', sources: ['Federal', 'State', 'Local'] },
+                    { id: 'individual', name: 'Individuals', description: 'Individual applicants', sources: ['Federal', 'State'] }
+                ]
+            },
+            'agencies': {
+                category: 'Federal Agencies',
+                description: 'Preferred federal funding agencies',
+                criteria: [
+                    { id: 'HHS', name: 'Health & Human Services', description: 'CDC, NIH, HRSA, ACF, etc.', sources: ['Federal'] },
+                    { id: 'ED', name: 'Department of Education', description: 'Education programs and research', sources: ['Federal'] },
+                    { id: 'USDA', name: 'Agriculture Department', description: 'Rural development, nutrition programs', sources: ['Federal'] },
+                    { id: 'DOL', name: 'Department of Labor', description: 'Workforce development programs', sources: ['Federal'] },
+                    { id: 'HUD', name: 'Housing & Urban Development', description: 'Community development, housing', sources: ['Federal'] },
+                    { id: 'EPA', name: 'Environmental Protection Agency', description: 'Environmental programs', sources: ['Federal'] },
+                    { id: 'NSF', name: 'National Science Foundation', description: 'Scientific research funding', sources: ['Federal'] },
+                    { id: 'DOD', name: 'Department of Defense', description: 'Defense-related research', sources: ['Federal'] },
+                    { id: 'DHS', name: 'Homeland Security', description: 'Security and emergency programs', sources: ['Federal'] },
+                    { id: 'DOT', name: 'Transportation', description: 'Transportation infrastructure', sources: ['Federal'] }
+                ]
+            },
+            'award_amounts': {
+                category: 'Award Amount Ranges',
+                description: 'Preferred funding amount ranges',
+                criteria: [
+                    { id: 'small', name: 'Small Awards ($1K - $25K)', description: 'Small project funding', sources: ['Federal', 'State', 'Local'] },
+                    { id: 'medium', name: 'Medium Awards ($25K - $100K)', description: 'Standard program funding', sources: ['Federal', 'State', 'Local'] },
+                    { id: 'large', name: 'Large Awards ($100K - $500K)', description: 'Major initiative funding', sources: ['Federal', 'State'] },
+                    { id: 'very_large', name: 'Very Large Awards ($500K+)', description: 'Large-scale programs', sources: ['Federal'] }
+                ]
+            },
+            'geographic_scope': {
+                category: 'Geographic Eligibility',
+                description: 'Geographic limitations and preferences',
+                criteria: [
+                    { id: 'national', name: 'National Eligibility', description: 'Open to all US organizations', sources: ['Federal'] },
+                    { id: 'regional', name: 'Regional Programs', description: 'Multi-state regional initiatives', sources: ['Federal', 'State'] },
+                    { id: 'state_specific', name: 'State-Specific', description: 'Limited to specific states', sources: ['State'] },
+                    { id: 'local_focus', name: 'Local Focus', description: 'Community-level programs', sources: ['Local', 'State'] },
+                    { id: 'rural_priority', name: 'Rural Priority', description: 'Preference for rural areas', sources: ['Federal', 'State'] },
+                    { id: 'urban_priority', name: 'Urban Priority', description: 'Focus on urban communities', sources: ['Federal', 'State', 'Local'] }
+                ]
+            },
+            'program_categories': {
+                category: 'Program Categories',
+                description: 'CFDA and program focus areas',
+                criteria: [
+                    { id: 'health', name: 'Health Programs', description: 'Public health, medical research', sources: ['Federal', 'State', 'Local'] },
+                    { id: 'education', name: 'Education', description: 'K-12, higher education, training', sources: ['Federal', 'State', 'Local'] },
+                    { id: 'social_services', name: 'Social Services', description: 'Human services, community support', sources: ['Federal', 'State', 'Local'] },
+                    { id: 'environment', name: 'Environmental', description: 'Conservation, sustainability', sources: ['Federal', 'State', 'Local'] },
+                    { id: 'economic_development', name: 'Economic Development', description: 'Job creation, business support', sources: ['Federal', 'State', 'Local'] },
+                    { id: 'research', name: 'Research & Development', description: 'Scientific research programs', sources: ['Federal'] },
+                    { id: 'infrastructure', name: 'Infrastructure', description: 'Transportation, utilities, facilities', sources: ['Federal', 'State', 'Local'] },
+                    { id: 'technology', name: 'Technology', description: 'IT, innovation, digital programs', sources: ['Federal', 'State'] },
+                    { id: 'arts_culture', name: 'Arts & Culture', description: 'Cultural programs, humanities', sources: ['Federal', 'State', 'Local'] },
+                    { id: 'disaster_relief', name: 'Disaster Relief', description: 'Emergency response, recovery', sources: ['Federal', 'State', 'Local'] }
+                ]
+            }
+        },
         
         // NTEE Modal State
         nteeModal: {
@@ -1045,6 +1126,13 @@ function catalynxApp() {
             selectedMainCategory: null,
             selectedNteeCodes: [],
             tempSelectedCodes: []
+        },
+
+        // Government Criteria Modal State
+        governmentCriteriaModal: {
+            isOpen: false,
+            selectedCategory: null,
+            tempSelectedCriteria: []
         },
         activeWorkflowsList: [],
         workflowHistory: [],
@@ -1301,6 +1389,7 @@ function catalynxApp() {
             organization_type: '',
             ein: '',
             mission_statement: '',
+            keywords: '',
             focus_areas_text: '',
             target_populations_text: '',
             states_text: '',
@@ -1319,7 +1408,8 @@ function catalynxApp() {
             staff_size: null,
             volunteer_count: null,
             board_size: null,
-            notes: ''
+            notes: '',
+            government_criteria: []
         },
         
         // Profile sorting and filtering
@@ -1450,6 +1540,24 @@ function catalynxApp() {
                     this.profiles = allProfiles.filter(profile => profile.status !== 'archived');
                     this.filteredProfiles = [...this.profiles];
                     this.profileCount = this.profiles.length;
+                    
+                    // Debug: Check what data we loaded for profiles
+                    console.log('Loaded profiles:', this.profiles.map(p => ({
+                        id: p.profile_id,
+                        name: p.name,
+                        ntee_codes: p.ntee_codes,
+                        government_criteria: p.government_criteria,
+                        keywords: p.keywords,
+                        has_data: !!(p.ntee_codes || p.government_criteria || p.keywords)
+                    })));
+                    
+                    // Debug: Show first profile with data
+                    const profileWithData = this.profiles.find(p => p.ntee_codes || p.government_criteria || p.keywords);
+                    if (profileWithData) {
+                        console.log('Sample profile with data:', profileWithData);
+                    } else {
+                        console.log('No profiles found with NTEE codes, government criteria, or keywords');
+                    }
                 } else {
                     console.error('Failed to load profiles:', response.statusText);
                 }
@@ -1460,6 +1568,12 @@ function catalynxApp() {
             }
         },
 
+        async loadProfileStats() {
+            // Stub function to prevent JavaScript errors
+            console.log('Loading profile statistics...');
+            // TODO: Implement profile statistics loading if needed
+        },
+
         resetProfileForm() {
             this.profileForm = {
                 profile_id: '',
@@ -1467,6 +1581,7 @@ function catalynxApp() {
                 organization_type: '',
                 ein: '',
                 mission_statement: '',
+                keywords: '',
                 focus_areas_text: '',
                 target_populations_text: '',
                 states_text: '',
@@ -1482,8 +1597,11 @@ function catalynxApp() {
                 staff_size: null,
                 volunteer_count: null,
                 board_size: null,
-                notes: ''
+                notes: '',
+                government_criteria: []
             };
+            // Reset modal states
+            this.nteeModal.selectedNteeCodes = [];
             this.isEditingProfile = false;
             this.currentEditingProfile = null;
         },
@@ -1498,6 +1616,7 @@ function catalynxApp() {
             this.profileForm.organization_type = profile.organization_type || '';
             this.profileForm.ein = profile.ein || '';
             this.profileForm.mission_statement = profile.mission_statement || '';
+            this.profileForm.keywords = profile.keywords || '';
             this.profileForm.focus_areas_text = (profile.focus_areas || []).join('\n');
             this.profileForm.target_populations_text = (profile.target_populations || []).join('\n');
             this.profileForm.states_text = (profile.geographic_scope?.states || []).join(', ');
@@ -1519,6 +1638,19 @@ function catalynxApp() {
             this.profileForm.volunteer_count = profile.volunteer_count || null;
             this.profileForm.board_size = profile.board_size || null;
             this.profileForm.notes = profile.notes || '';
+            
+            // Load NTEE codes and government criteria
+            this.nteeModal.selectedNteeCodes = profile.ntee_codes || [];
+            this.profileForm.government_criteria = profile.government_criteria || [];
+            
+            // Debug: Log what we loaded from the profile
+            console.log('Loading profile for edit:', {
+                profile_id: profile.profile_id,
+                ntee_codes: profile.ntee_codes,
+                government_criteria: profile.government_criteria,
+                loaded_ntee: this.nteeModal.selectedNteeCodes,
+                loaded_govt: this.profileForm.government_criteria
+            });
             
             this.showProfileModal = true;
         },
@@ -1597,6 +1729,7 @@ function catalynxApp() {
                     organization_type: this.profileForm.organization_type,
                     ein: this.profileForm.ein || null,
                     mission_statement: this.profileForm.mission_statement,
+                    keywords: this.profileForm.keywords || '',
                     focus_areas: this.profileForm.focus_areas_text.split('\n').filter(area => area.trim()),
                     target_populations: this.profileForm.target_populations_text.split('\n').filter(pop => pop.trim()),
                     geographic_scope: {
@@ -1615,8 +1748,17 @@ function catalynxApp() {
                     volunteer_count: this.profileForm.volunteer_count ? parseInt(this.profileForm.volunteer_count) : null,
                     board_size: this.profileForm.board_size ? parseInt(this.profileForm.board_size) : null,
                     location: this.profileForm.location || null,
-                    notes: this.profileForm.notes || null
+                    notes: this.profileForm.notes || null,
+                    ntee_codes: this.nteeModal.selectedNteeCodes || [],
+                    government_criteria: this.profileForm.government_criteria || []
                 };
+
+                // Debug: Log what we're about to save
+                console.log('Saving profile data:', {
+                    ntee_codes: profileData.ntee_codes,
+                    government_criteria: profileData.government_criteria,
+                    keywords: profileData.keywords
+                });
 
                 let response;
                 if (this.isEditingProfile) {
@@ -1640,6 +1782,13 @@ function catalynxApp() {
                 }
 
                 if (response.ok) {
+                    const savedProfile = await response.json();
+                    console.log('Profile saved successfully, server returned:', {
+                        full_response: savedProfile,
+                        ntee_codes: savedProfile.profile?.ntee_codes,
+                        government_criteria: savedProfile.profile?.government_criteria
+                    });
+                    
                     this.showProfileModal = false;
                     this.resetProfileForm();
                     await this.loadProfiles(); // Reload profiles
@@ -2935,6 +3084,101 @@ function catalynxApp() {
         // Check if a subcategory is selected
         isSubcategorySelected(subcategoryCode) {
             return this.nteeModal.tempSelectedCodes.includes(subcategoryCode);
+        },
+
+        // GOVERNMENT CRITERIA MODAL FUNCTIONS
+        openGovernmentCriteriaModal() {
+            // Initialize temp selection with current selected criteria
+            this.governmentCriteriaModal.tempSelectedCriteria = [...this.profileForm.government_criteria];
+            this.governmentCriteriaModal.selectedCategory = null;
+            this.governmentCriteriaModal.isOpen = true;
+        },
+
+        closeGovernmentCriteriaModal() {
+            this.governmentCriteriaModal.isOpen = false;
+            this.governmentCriteriaModal.selectedCategory = null;
+            // Don't save temp selections when closing
+        },
+
+        selectCriteriaCategory(categoryKey) {
+            this.governmentCriteriaModal.selectedCategory = categoryKey;
+        },
+
+        saveGovernmentCriteriaSelection() {
+            // Save the temporary selections to the main list
+            this.profileForm.government_criteria = [...this.governmentCriteriaModal.tempSelectedCriteria];
+            this.closeGovernmentCriteriaModal();
+            this.showNotification(`Selected ${this.profileForm.government_criteria.length} government criteria`, 'success');
+        },
+
+        // Get selected government criteria with their full information
+        getSelectedGovernmentCriteriaInfo() {
+            const selectedInfo = [];
+            
+            if (!this.profileForm?.government_criteria) {
+                return selectedInfo;
+            }
+            
+            this.profileForm.government_criteria.forEach(criteriaId => {
+                // Find the criteria in the full list
+                Object.keys(this.governmentCriteriaList).forEach(categoryKey => {
+                    const category = this.governmentCriteriaList[categoryKey];
+                    const criteria = category.criteria.find(c => c.id === criteriaId);
+                    
+                    if (criteria) {
+                        selectedInfo.push({
+                            id: criteriaId,
+                            name: criteria.name,
+                            category: category.category,
+                            description: criteria.description,
+                            sources: criteria.sources || []
+                        });
+                    }
+                });
+            });
+            
+            // Sort alphabetically by name
+            return selectedInfo.sort((a, b) => a.name.localeCompare(b.name));
+        },
+
+        // Remove government criteria from selection
+        removeGovernmentCriteria(criteriaId) {
+            const index = this.profileForm.government_criteria.indexOf(criteriaId);
+            if (index > -1) {
+                this.profileForm.government_criteria.splice(index, 1);
+            }
+            
+            // Update the current profile if one is selected
+            if (this.selectedProfile && this.selectedProfile.government_criteria) {
+                this.selectedProfile.government_criteria = this.selectedProfile.government_criteria.filter(c => c !== criteriaId);
+            }
+        },
+
+        // Check if a criteria category has any selected items
+        categoryHasCriteriaSelections(categoryKey) {
+            if (!this.governmentCriteriaList[categoryKey]) return false;
+            
+            const categoryCriteriaIds = this.governmentCriteriaList[categoryKey].criteria.map(c => c.id);
+            return this.governmentCriteriaModal.tempSelectedCriteria.some(selectedId => 
+                categoryCriteriaIds.includes(selectedId)
+            );
+        },
+
+        // Toggle criteria selection
+        toggleCriteriaSelection(criteriaId) {
+            const index = this.governmentCriteriaModal.tempSelectedCriteria.indexOf(criteriaId);
+            if (index > -1) {
+                // Remove if already selected
+                this.governmentCriteriaModal.tempSelectedCriteria.splice(index, 1);
+            } else {
+                // Add if not selected
+                this.governmentCriteriaModal.tempSelectedCriteria.push(criteriaId);
+            }
+        },
+
+        // Check if a criteria is selected
+        isCriteriaSelected(criteriaId) {
+            return this.governmentCriteriaModal.tempSelectedCriteria.includes(criteriaId);
         },
         
         // AI WORKFLOW GUIDANCE FUNCTIONS

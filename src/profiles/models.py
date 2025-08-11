@@ -82,10 +82,12 @@ class OrganizationProfile(BaseModel):
     
     # Mission and Focus
     mission_statement: str = Field(..., min_length=10, max_length=1000, description="Organization mission")
+    keywords: Optional[str] = Field(default=None, max_length=500, description="Key terms and phrases describing the organization's work")
     focus_areas: List[str] = Field(..., min_items=1, description="Primary focus areas/keywords")
     program_areas: List[str] = Field(default=[], description="Specific program areas")
     target_populations: List[str] = Field(default=[], description="Populations served")
     ntee_codes: List[str] = Field(default=[], description="NTEE (National Taxonomy of Exempt Entities) classification codes")
+    government_criteria: List[str] = Field(default=[], description="Government funding criteria preferences (agencies, funding types, etc.)")
     
     # Geographic and Scope
     geographic_scope: GeographicScope = Field(default_factory=GeographicScope)

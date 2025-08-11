@@ -70,7 +70,7 @@ class ProfileService:
             return None
         
         # Update fields
-        profile_dict = profile.dict()
+        profile_dict = profile.model_dump()
         profile_dict.update(update_data)
         profile_dict['updated_at'] = datetime.now()
         
@@ -159,7 +159,7 @@ class ProfileService:
             return None
         
         # Start with template data
-        new_profile_data = template.dict()
+        new_profile_data = template.model_dump()
         
         # Override with provided data
         new_profile_data.update(profile_data)
@@ -294,14 +294,14 @@ class ProfileService:
         profile_file = self.profiles_dir / f"{profile.profile_id}.json"
         
         with open(profile_file, 'w', encoding='utf-8') as f:
-            json.dump(profile.dict(), f, indent=2, default=str, ensure_ascii=False)
+            json.dump(profile.model_dump(), f, indent=2, default=str, ensure_ascii=False)
     
     def _save_lead(self, lead: OpportunityLead):
         """Save lead to storage"""
         lead_file = self.leads_dir / f"{lead.lead_id}_{lead.profile_id}_{lead.pipeline_stage.value}.json"
         
         with open(lead_file, 'w', encoding='utf-8') as f:
-            json.dump(lead.dict(), f, indent=2, default=str, ensure_ascii=False)
+            json.dump(lead.model_dump(), f, indent=2, default=str, ensure_ascii=False)
     
     def _get_lead(self, lead_id: str) -> Optional[OpportunityLead]:
         """Get lead by ID"""
@@ -461,7 +461,7 @@ class ProfileService:
         session_file = self.sessions_dir / f"{session.session_id}_{session.profile_id}_{session.started_at.strftime('%Y%m%d_%H%M%S')}.json"
         
         with open(session_file, 'w', encoding='utf-8') as f:
-            json.dump(session.dict(), f, indent=2, default=str, ensure_ascii=False)
+            json.dump(session.model_dump(), f, indent=2, default=str, ensure_ascii=False)
     
     def _get_session(self, session_id: str) -> Optional[DiscoverySession]:
         """Get session by ID"""

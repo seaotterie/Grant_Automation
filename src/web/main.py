@@ -510,12 +510,23 @@ async def list_profiles(status: Optional[str] = None, limit: Optional[int] = Non
             limit=limit
         )
         
+        # Debug: Log what profiles we got from the service
+        logger.info(f"ProfileService returned {len(profiles)} profiles")
+        if profiles:
+            sample_profile = profiles[0]
+            logger.info(f"Sample profile data: ntee_codes={getattr(sample_profile, 'ntee_codes', 'NOT_FOUND')}, government_criteria={getattr(sample_profile, 'government_criteria', 'NOT_FOUND')}, keywords={getattr(sample_profile, 'keywords', 'NOT_FOUND')}")
+        
         # Convert profiles to dict format and add opportunity counts
         profile_dicts = []
         for profile in profiles:
             profile_dict = profile.model_dump()
             profile_dict["opportunities_count"] = 0  # TODO: Get actual count from leads
             profile_dicts.append(profile_dict)
+        
+        # Debug: Log what we're returning
+        if profile_dicts:
+            sample_dict = profile_dicts[0]
+            logger.info(f"Sample profile dict: ntee_codes={sample_dict.get('ntee_codes', 'NOT_FOUND')}, government_criteria={sample_dict.get('government_criteria', 'NOT_FOUND')}, keywords={sample_dict.get('keywords', 'NOT_FOUND')}")
         
         return {"profiles": profile_dicts}
         
@@ -527,7 +538,14 @@ async def list_profiles(status: Optional[str] = None, limit: Optional[int] = Non
 async def create_profile(profile_data: Dict[str, Any]):
     """Create a new organization profile."""
     try:
+        # Debug: Log the profile data received
+        logger.info(f"Creating profile with data: ntee_codes={profile_data.get('ntee_codes')}, government_criteria={profile_data.get('government_criteria')}, keywords={profile_data.get('keywords')}")
+        
         profile = profile_service.create_profile(profile_data)
+        
+        # Debug: Log the profile after creation
+        logger.info(f"Profile after creation: ntee_codes={profile.ntee_codes}, government_criteria={profile.government_criteria}, keywords={profile.keywords}")
+        
         return {"profile": profile.model_dump(), "message": "Profile created successfully"}
         
     except Exception as e:
@@ -554,9 +572,15 @@ async def get_profile(profile_id: str):
 async def update_profile(profile_id: str, update_data: Dict[str, Any]):
     """Update an existing organization profile."""
     try:
+        # Debug: Log the update data received
+        logger.info(f"Updating profile {profile_id} with data: ntee_codes={update_data.get('ntee_codes')}, government_criteria={update_data.get('government_criteria')}, keywords={update_data.get('keywords')}")
+        
         profile = profile_service.update_profile(profile_id, update_data)
         if not profile:
             raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Debug: Log the profile after update
+        logger.info(f"Profile after update: ntee_codes={profile.ntee_codes}, government_criteria={profile.government_criteria}, keywords={profile.keywords}")
         
         return {"profile": profile.model_dump(), "message": "Profile updated successfully"}
         
