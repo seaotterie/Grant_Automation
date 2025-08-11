@@ -144,48 +144,57 @@
                     </a>
                 </div>
 
-                <!-- Stage 2: DISCOVER (Multi-Track Discovery) -->
+                <!-- Stage 2: DISCOVER (PROSPECTS) -->
                 <div class="px-2 mb-4 relative">
                     <a href="#" @click.prevent="switchStage('discover')"
-                       :class="{'bg-green-600 text-white shadow-lg': activeStage === 'discover', 'text-gray-300 hover:bg-gray-700 hover:text-white border-green-500/30': activeStage !== 'discover'}"
+                       :class="{'bg-teal-600 text-white shadow-lg': activeStage === 'discover', 'text-gray-300 hover:bg-gray-700 hover:text-white border-teal-500/30': activeStage !== 'discover'}"
                        class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
                         DISCOVER
                     </a>
                 </div>
 
-                <!-- Stage 3: ANALYZE (Comprehensive Analysis) -->
-                <div class="px-2 mb-4 relative">
-                    <a href="#" @click.prevent="switchStage('analyze')"
-                       :class="{'bg-cyan-600 text-white shadow-lg': activeStage === 'analyze', 'text-gray-300 hover:bg-gray-700 hover:text-white border-cyan-500/30': activeStage !== 'analyze'}"
-                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
-                        ANALYZE
-                    </a>
-                </div>
-
-                <!-- Stage 4: PLAN (Strategic Planning) -->
+                <!-- Stage 3: PLAN (QUALIFIED PROSPECTS) -->
                 <div class="px-2 mb-4 relative">
                     <a href="#" @click.prevent="switchStage('plan')"
-                       :class="{'bg-orange-600 text-white shadow-lg': activeStage === 'plan', 'text-gray-300 hover:bg-gray-700 hover:text-white border-orange-500/30': activeStage !== 'plan'}"
+                       :class="{'bg-yellow-600 text-white shadow-lg': activeStage === 'plan', 'text-gray-300 hover:bg-gray-700 hover:text-white border-yellow-500/30': activeStage !== 'plan'}"
                        class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
                         PLAN
                     </a>
                 </div>
 
-                <!-- Stage 5: EXECUTE (Implementation & Tracking) -->
+                <!-- Stage 4: ANALYZE (CANDIDATES) -->
                 <div class="px-2 mb-4 relative">
-                    <a href="#" @click.prevent="switchStage('execute')"
-                       :class="{'bg-red-600 text-white shadow-lg': activeStage === 'execute', 'text-gray-300 hover:bg-gray-700 hover:text-white border-red-500/30': activeStage !== 'execute'}"
+                    <a href="#" @click.prevent="switchStage('analyze')"
+                       :class="{'bg-orange-600 text-white shadow-lg': activeStage === 'analyze', 'text-gray-300 hover:bg-gray-700 hover:text-white border-orange-500/30': activeStage !== 'analyze'}"
                        class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
-                        EXECUTE
+                        ANALYZE
                     </a>
                 </div>
 
-                <!-- Stage 6: SYSTEM (System Controls) -->
+                <!-- Stage 5: EXAMINE (TARGETS) -->
                 <div class="px-2 mb-4 relative">
-                    <a href="#" @click.prevent="switchStage('system-controls')"
-                       :class="{'bg-teal-600 text-white shadow-lg': activeStage === 'system-controls', 'text-gray-300 hover:bg-gray-700 hover:text-white border-teal-500/30': activeStage !== 'system-controls'}"
+                    <a href="#" @click.prevent="switchStage('examine')"
+                       :class="{'bg-blue-600 text-white shadow-lg': activeStage === 'examine', 'text-gray-300 hover:bg-gray-700 hover:text-white border-blue-500/30': activeStage !== 'examine'}"
                        class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
-                        SYSTEM
+                        EXAMINE
+                    </a>
+                </div>
+
+                <!-- Stage 6: APPROACH (OPPORTUNITIES) -->
+                <div class="px-2 mb-4 relative">
+                    <a href="#" @click.prevent="switchStage('approach')"
+                       :class="{'bg-green-600 text-white shadow-lg': activeStage === 'approach', 'text-gray-300 hover:bg-gray-700 hover:text-white border-green-500/30': activeStage !== 'approach'}"
+                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
+                        APPROACH
+                    </a>
+                </div>
+
+                <!-- Stage 7: SETTINGS (System Configuration) -->
+                <div class="px-2 mb-4 relative">
+                    <a href="#" @click.prevent="switchStage('settings')"
+                       :class="{'bg-gray-600 text-white shadow-lg': activeStage === 'settings', 'text-gray-300 hover:bg-gray-700 hover:text-white border-gray-500/30': activeStage !== 'settings'}"
+                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
+                        SETTINGS
                     </a>
                 </div>
                 
@@ -338,7 +347,7 @@
                 <!-- STAGE 1: PROFILER (Profile Management) -->
                 <div x-show="activeStage === 'profiler'" class="space-y-6">
                     <!-- Profiler Header -->
-                    <div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-6 text-white">
+                    <div class="bg-gradient-to-r from-purple-600 to-teal-600 rounded-lg p-6 text-white">
                         <div class="flex items-center justify-between">
                             <div>
                                 <h3 class="text-2xl font-bold">Organization Profile Management</h3>
@@ -443,7 +452,6 @@
                                         <tr>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Focus Areas</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Opportunities</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Discovery</th>
@@ -463,9 +471,6 @@
                                                 <td class="px-6 py-4 whitespace-nowrap">
                                                     <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200" 
                                                           x-text="profile.organization_type"></span>
-                                                </td>
-                                                <td class="px-6 py-4">
-                                                    <div class="text-sm text-gray-900 dark:text-white" x-text="profile.focus_areas?.join(', ') || 'None specified'"></div>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                     <span x-text="profile.opportunities_count || 0"></span> leads
@@ -495,116 +500,237 @@
 
                 <!-- STAGE 2: DISCOVER (Multi-Track Discovery) -->
                 <div x-show="activeStage === 'discover'" class="space-y-6">
-                    <!-- Selected Profile Information -->
-                    <div x-show="selectedDiscoveryProfile" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-primary-500">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Selected Profile for Discovery</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Organization ready for opportunity discovery</p>
-                            </div>
-                            <button @click="selectedDiscoveryProfile = null" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                <div class="text-sm text-gray-600 dark:text-gray-400">Organization</div>
-                                <div class="font-medium text-gray-900 dark:text-white" x-text="selectedDiscoveryProfile?.name">-</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400" x-text="selectedDiscoveryProfile?.ein || 'No EIN'">-</div>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                <div class="text-sm text-gray-600 dark:text-gray-400">Discovery Status</div>
-                                <span :class="getDiscoveryStatusClass(selectedDiscoveryProfile?.discovery_status || 'never_run')"
-                                      class="px-2 py-1 text-xs font-medium rounded-full" 
-                                      x-text="getDiscoveryStatusText(selectedDiscoveryProfile?.discovery_status || 'never_run')">Never Run</span>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                <div class="text-sm text-gray-600 dark:text-gray-400">Last Discovery</div>
-                                <div class="font-medium text-gray-900 dark:text-white" x-text="selectedDiscoveryProfile?.last_discovery_date ? formatDate(selectedDiscoveryProfile.last_discovery_date) : 'Never'">Never</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400" x-text="selectedDiscoveryProfile?.discovery_count > 0 ? `${selectedDiscoveryProfile.discovery_count} total runs` : 'First run'">First run</div>
-                            </div>
-                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                <div class="text-sm text-gray-600 dark:text-gray-400">Current Opportunities</div>
-                                <div class="font-medium text-gray-900 dark:text-white" x-text="selectedDiscoveryProfile?.opportunities_count || 0">0</div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">leads found</div>
-                            </div>
-                        </div>
+                    <!-- Prospects Discovery Header -->
+                    <div class="bg-gradient-to-r from-teal-600 to-yellow-500 rounded-lg p-6 text-white">
+                        <h3 class="text-2xl font-bold">Prospects Discovery</h3>
+                        <p class="mt-2 opacity-90">Initial broad discovery and filtering across all funding sources</p>
                     </div>
 
-                    <!-- No Profile Selected State -->
-                    <div x-show="!selectedDiscoveryProfile" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                </svg>
+                    <!-- Discovery Tracks -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                        
+                        <!-- Current Profile Information -->
+                        <div x-show="selectedDiscoveryProfile" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 border-primary-500">
+                            <div class="flex items-center justify-between mb-3">
+                                <h5 class="font-semibold text-gray-900 dark:text-white">Current Profile</h5>
+                                <div class="flex space-x-2">
+                                    <button @click="selectedDiscoveryProfile = null" class="px-2 py-1 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded">
+                                        Close Profile
+                                    </button>
+                                    <button @click="switchStage('profiler')" class="px-2 py-1 text-xs bg-purple-600 hover:bg-purple-700 text-white rounded">
+                                        Select Profile
+                                    </button>
+                                </div>
                             </div>
-                            <div class="ml-3">
-                                <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">No Profile Selected</h3>
-                                <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">Select an organization profile from the Profiler tab to start discovery.</p>
-                                <div class="mt-2">
-                                    <button @click="switchStage('profiler')" class="text-sm bg-yellow-100 dark:bg-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-700 text-yellow-800 dark:text-yellow-200 px-3 py-1 rounded">
+                            <div class="grid grid-cols-4 gap-3">
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Organization</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedDiscoveryProfile?.name">-</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">EIN</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedDiscoveryProfile?.ein || 'Not Available'">-</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Discovery Status</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedDiscoveryProfile?.last_discovery_date ? formatDate(selectedDiscoveryProfile.last_discovery_date) : 'Not Run'">Not Run</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Current Opportunities</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedDiscoveryProfile?.opportunities_count || 0">0</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No Profile Selected State -->
+                        <div x-show="!selectedDiscoveryProfile" class="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h5 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">No Profile Selected</h5>
+                                    <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">Select an organization profile from the Profiler tab to start discovery.</p>
+                                    <button @click="switchStage('profiler')" class="mt-2 text-xs bg-yellow-100 dark:bg-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-700 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded">
                                         Go to Profiler
                                     </button>
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="bg-gradient-to-r from-green-600 to-teal-600 rounded-lg p-6 text-white">
-                        <h3 class="text-2xl font-bold">Discovery Hub</h3>
-                        <p class="mt-2 opacity-90">Multi-track opportunity discovery across all funding sources</p>
-                    </div>
-                    <!-- Discovery Tracks -->
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                        <h4 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Discovery Tracks</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                                <h5 class="font-medium text-blue-900 dark:text-blue-100 mb-2">Nonprofits</h5>
-                                <p class="text-sm text-blue-700 dark:text-blue-300 mb-3">IRS data & 990 filings</p>
-                                <button class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">Start Discovery</button>
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-medium text-blue-900 dark:text-blue-100">Nonprofits</h5>
+                                    <button @click="startDiscovery('nonprofit')" 
+                                            :disabled="discoveryProgress.nonprofit" 
+                                            class="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
+                                        <span x-show="!discoveryProgress.nonprofit">Start Discovery</span>
+                                        <span x-show="discoveryProgress.nonprofit">Running...</span>
+                                    </button>
+                                </div>
+                                <p class="text-sm text-blue-700 dark:text-blue-300">IRS data & 990 filings</p>
                             </div>
                             <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-                                <h5 class="font-medium text-green-900 dark:text-green-100 mb-2">Federal Grants</h5>
-                                <p class="text-sm text-green-700 dark:text-green-300 mb-3">Grants.gov opportunities</p>
-                                <button class="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">Start Discovery</button>
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-medium text-green-900 dark:text-green-100">Federal Grants</h5>
+                                    <button @click="startDiscovery('federal')" 
+                                            :disabled="discoveryProgress.federal" 
+                                            class="text-xs bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
+                                        <span x-show="!discoveryProgress.federal">Start Discovery</span>
+                                        <span x-show="discoveryProgress.federal">Running...</span>
+                                    </button>
+                                </div>
+                                <p class="text-sm text-green-700 dark:text-green-300">Grants.gov opportunities</p>
                             </div>
                             <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-                                <h5 class="font-medium text-purple-900 dark:text-purple-100 mb-2">State Agencies</h5>
-                                <p class="text-sm text-purple-700 dark:text-purple-300 mb-3">Virginia state grants</p>
-                                <button class="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded">Start Discovery</button>
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-medium text-purple-900 dark:text-purple-100">State Agencies</h5>
+                                    <button @click="startDiscovery('state')" 
+                                            :disabled="discoveryProgress.state" 
+                                            class="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
+                                        <span x-show="!discoveryProgress.state">Start Discovery</span>
+                                        <span x-show="discoveryProgress.state">Running...</span>
+                                    </button>
+                                </div>
+                                <p class="text-sm text-purple-700 dark:text-purple-300">Virginia state grants</p>
                             </div>
                             <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
-                                <h5 class="font-medium text-orange-900 dark:text-orange-100 mb-2">Commercial</h5>
-                                <p class="text-sm text-orange-700 dark:text-orange-300 mb-3">Corporate foundations</p>
-                                <button class="text-xs bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded">Start Discovery</button>
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-medium text-orange-900 dark:text-orange-100">Commercial</h5>
+                                    <button @click="startDiscovery('commercial')" 
+                                            :disabled="discoveryProgress.commercial" 
+                                            class="text-xs bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
+                                        <span x-show="!discoveryProgress.commercial">Start Discovery</span>
+                                        <span x-show="discoveryProgress.commercial">Running...</span>
+                                    </button>
+                                </div>
+                                <p class="text-sm text-orange-700 dark:text-orange-300">Corporate foundations</p>
                             </div>
                         </div>
                         
-                        <!-- Quick Actions -->
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                            <h5 class="font-medium text-gray-900 dark:text-white mb-3">Quick Actions</h5>
-                            <div class="flex flex-wrap gap-2">
-                                <button class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm">
-                                    Run All Tracks
+                        <!-- Action Buttons -->
+                        <div class="flex justify-center gap-2">
+                            <button class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm">
+                                Run All Tracks
+                            </button>
+                            <button class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm">
+                                View Recent Results
+                            </button>
+                            <button class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm">
+                                Configure Settings
+                            </button>
+                        </div>
+                    </div>
+                    
+                    
+                    <!-- Prospects Results Table -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg" x-show="true">
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                            <div>
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Discovery Results</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400" x-text="`${prospectsData?.length || 0} prospects found`">0 prospects found</p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <!-- Stage Filter -->
+                                <select class="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" x-model="prospectsStageFilter">
+                                    <option value="">All Stages</option>
+                                    <option value="prospects">Prospects</option>
+                                    <option value="qualified_prospects">Qualified</option>
+                                    <option value="candidates">Candidates</option>
+                                    <option value="targets">Targets</option>
+                                    <option value="opportunities">Opportunities</option>
+                                </select>
+                                <!-- Refresh Button -->
+                                <button @click="loadProspectsData()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm">
+                                    Refresh
                                 </button>
-                                <button class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm">
-                                    View Recent Results
-                                </button>
-                                <button class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm">
-                                    Configure Settings
-                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stage</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Score</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Source</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Funding</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    <template x-for="prospect in prospectsData" :key="prospect.opportunity_id">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="prospect.organization_name"></div>
+                                                <div class="text-sm text-gray-500 dark:text-gray-400" x-text="prospect.discovery_source"></div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full" 
+                                                      :class="{
+                                                          'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200': prospect.funnel_stage === 'prospects',
+                                                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200': prospect.funnel_stage === 'qualified_prospects',
+                                                          'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-200': prospect.funnel_stage === 'candidates',
+                                                          'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200': prospect.funnel_stage === 'targets',
+                                                          'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200': prospect.funnel_stage === 'opportunities'
+                                                      }"
+                                                      x-text="prospect.stage_display_name || prospect.funnel_stage">
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="flex items-center">
+                                                    <div class="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
+                                                        <div class="bg-blue-600 h-2 rounded-full" :style="`width: ${(prospect.compatibility_score * 100)}%`"></div>
+                                                    </div>
+                                                    <span class="text-sm text-gray-900 dark:text-white" x-text="(prospect.compatibility_score * 100).toFixed(1) + '%'"></span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="text-sm text-gray-900 dark:text-white" x-text="prospect.source_type"></span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="text-sm text-gray-900 dark:text-white" x-text="prospect.funding_amount ? '$' + prospect.funding_amount.toLocaleString() : 'Unknown'"></span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                                <button @click="promoteProspect(prospect)" 
+                                                        class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                                        :disabled="prospect.funnel_stage === 'opportunities'">
+                                                    Promote
+                                                </button>
+                                                <button @click="demoteProspect(prospect)" 
+                                                        class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                                        :disabled="prospect.funnel_stage === 'prospects'">
+                                                    Demote
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Empty State -->
+                        <div x-show="!prospectsData || prospectsData.length === 0" class="text-center py-12">
+                            <div class="text-gray-400 dark:text-gray-600">
+                                <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No prospects found</h3>
+                                <p class="text-gray-500 dark:text-gray-400">Start discovery to find potential funding opportunities</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- STAGE 3: ANALYZE (Comprehensive Analysis) -->
-                <div x-show="activeStage === 'analyze'" class="space-y-6">
-                    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-6 text-white">
-                        <h3 class="text-2xl font-bold">Analysis Hub</h3>
+                <!-- STAGE 3: PLAN (QUALIFIED PROSPECTS) -->
+                <div x-show="activeStage === 'plan'" class="space-y-6">
+                    <div class="bg-gradient-to-r from-yellow-600 to-amber-600 rounded-lg p-6 text-white">
+                        <h3 class="text-2xl font-bold">Qualified Prospects</h3>
+                        <p class="mt-2 opacity-90">Detailed qualification, 990 XML analysis, and network discovery</p>
                         <p class="mt-2 opacity-90">Financial, network and intelligence analysis</p>
                     </div>
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
@@ -626,10 +752,11 @@
                     </div>
                 </div>
 
-                <!-- STAGE 4: PLAN (Strategic Planning & AI Classification) -->
-                <div x-show="activeStage === 'plan'" class="space-y-6">
+                <!-- STAGE 4: ANALYZE (CANDIDATES) -->
+                <div x-show="activeStage === 'analyze'" class="space-y-6">
                     <div class="bg-gradient-to-r from-orange-600 to-red-600 rounded-lg p-6 text-white">
-                        <h3 class="text-2xl font-bold">Strategic Planning</h3>
+                        <h3 class="text-2xl font-bold">Candidates Analysis</h3>
+                        <p class="mt-2 opacity-90">Mission alignment, strategic matching, and board connection analysis</p>
                         <p class="mt-2 opacity-90">AI-powered recommendations and strategic guidance</p>
                     </div>
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
@@ -647,10 +774,11 @@
                     </div>
                 </div>
 
-                <!-- STAGE 5: EXECUTE (Implementation & Export) -->
-                <div x-show="activeStage === 'execute'" class="space-y-6">
-                    <div class="bg-gradient-to-r from-gray-600 to-gray-700 rounded-lg p-6 text-white">
-                        <h3 class="text-2xl font-bold">Implementation Hub</h3>
+                <!-- STAGE 5: EXAMINE (TARGETS) -->
+                <div x-show="activeStage === 'examine'" class="space-y-6">
+                    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-6 text-white">
+                        <h3 class="text-2xl font-bold">Target Examination</h3>
+                        <p class="mt-2 opacity-90">Deep dive dossier building and comprehensive intelligence reports</p>
                         <p class="mt-2 opacity-90">Export comprehensive reports and manage implementation</p>
                     </div>
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
@@ -672,8 +800,21 @@
                     </div>
                 </div>
 
-                <!-- SYSTEM CONTROLS (Admin/Demo Interface) -->
-                <div x-show="activeStage === 'system-controls'" class="space-y-6">
+                <!-- STAGE 6: APPROACH (OPPORTUNITIES) -->
+                <div x-show="activeStage === 'approach'" class="space-y-6">
+                    <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg p-6 text-white">
+                        <h3 class="text-2xl font-bold">Opportunity Approach</h3>
+                        <p class="mt-2 opacity-90">Active pursuit planning and grant writer handoff</p>
+                    </div>
+                    
+                    <!-- Approach content will be implemented here -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                        <p class="text-gray-600 dark:text-gray-400">Coming Soon: Active pursuit planning, relationship building strategies, and grant writer handoff tools.</p>
+                    </div>
+                </div>
+
+                <!-- STAGE 7: SETTINGS (System Configuration) -->
+                <div x-show="activeStage === 'settings'" class="space-y-6">
                     <!-- Pipeline Overview Header -->
                     <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
                         <div class="flex items-center justify-between">
@@ -1789,7 +1930,7 @@
                                 Organization Profiles
                             </h3>
                             <div class="flex space-x-3">
-                                <button @click="showCreateProfile = true" 
+                                <button @click="openCreateProfile()" 
                                         class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
                                     <span class="text-lg mr-2">➕</span>
                                     Create Profile
@@ -1798,6 +1939,11 @@
                                         class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
                                     <span class="text-lg mr-2">🔄</span>
                                     Refresh
+                                </button>
+                                <button @click="createSampleProfiles()" 
+                                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
+                                    <span class="text-lg mr-2">📁</span>
+                                    Sample Data
                                 </button>
                             </div>
                         </div>
@@ -2017,8 +2163,8 @@
                         </div>
                     </div>
                     
-                    <!-- Create Profile Modal -->
-                    <div x-show="showCreateProfile" 
+                    <!-- Create Profile Modal (DISABLED - Using newer modal) -->
+                    <div x-show="false" 
                          class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
                          x-transition:enter="transition ease-out duration-300"
                          x-transition:enter-start="opacity-0"
@@ -4432,7 +4578,7 @@
                                     <textarea x-model="profileForm.keywords" 
                                               rows="4"
                                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
-                                              placeholder="Key terms and phrases that describe your work (e.g., health, education, community development)"></textarea>
+                                              placeholder="Key terms and phrases that describe your work"></textarea>
                                 </div>
                             </div>
                         </div>

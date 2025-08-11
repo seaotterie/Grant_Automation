@@ -2003,6 +2003,230 @@ async def quick_start_demo():
         logger.error(f"Quick start demo failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Funnel Stage API endpoints
+@app.get("/api/funnel/stages")
+async def get_funnel_stages():
+    """Get all funnel stage definitions."""
+    from src.discovery.base_discoverer import FunnelStage
+    
+    stages = []
+    for stage in FunnelStage:
+        stages.append({
+            "value": stage.value,
+            "name": stage.value.replace('_', ' ').title(),
+            "color": {
+                "prospects": "gray",
+                "qualified_prospects": "yellow", 
+                "candidates": "orange",
+                "targets": "blue",
+                "opportunities": "green"
+            }.get(stage.value, "gray")
+        })
+    
+    return {"stages": stages}
+
+@app.get("/api/funnel/{profile_id}/opportunities")
+async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None):
+    """Get opportunities by funnel stage for a profile."""
+    try:
+        from src.discovery.funnel_manager import funnel_manager
+        from src.discovery.base_discoverer import FunnelStage
+        
+        if stage:
+            try:
+                stage_enum = FunnelStage(stage)
+                opportunities = funnel_manager.get_opportunities_by_stage(profile_id, stage_enum)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid stage: {stage}")
+        else:
+            opportunities = funnel_manager.get_all_opportunities(profile_id)
+        
+        return {
+            "profile_id": profile_id,
+            "stage_filter": stage,
+            "total_opportunities": len(opportunities),
+            "opportunities": [{
+                "opportunity_id": opp.opportunity_id,
+                "organization_name": opp.organization_name,
+                "funnel_stage": opp.funnel_stage.value,
+                "stage_color": opp.get_stage_color(),
+                "compatibility_score": opp.compatibility_score,
+                "source_type": opp.source_type.value,
+                "discovery_source": opp.discovery_source,
+                "funding_amount": opp.funding_amount,
+                "stage_updated_at": opp.stage_updated_at.isoformat() if opp.stage_updated_at else None,
+                "stage_notes": opp.stage_notes
+            } for opp in opportunities]
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get profile opportunities: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/funnel/{profile_id}/opportunities/{opportunity_id}/stage")
+async def update_opportunity_stage(
+    profile_id: str, 
+    opportunity_id: str, 
+    stage_data: dict
+):
+    """Update opportunity funnel stage."""
+    try:
+        from src.discovery.funnel_manager import funnel_manager
+        from src.discovery.base_discoverer import FunnelStage
+        
+        new_stage = stage_data.get("stage")
+        notes = stage_data.get("notes")
+        
+        if not new_stage:
+            raise HTTPException(status_code=400, detail="Stage is required")
+        
+        try:
+            stage_enum = FunnelStage(new_stage)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid stage: {new_stage}")
+        
+        success = funnel_manager.set_opportunity_stage(
+            profile_id, opportunity_id, stage_enum, notes
+        )
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Opportunity not found")
+        
+        return {
+            "success": True,
+            "profile_id": profile_id,
+            "opportunity_id": opportunity_id,
+            "new_stage": new_stage,
+            "notes": notes
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update opportunity stage: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/funnel/{profile_id}/opportunities/{opportunity_id}/promote")
+async def promote_opportunity(profile_id: str, opportunity_id: str, notes_data: dict = None):
+    """Promote opportunity to next funnel stage."""
+    try:
+        from src.discovery.funnel_manager import funnel_manager
+        
+        notes = notes_data.get("notes") if notes_data else None
+        success = funnel_manager.promote_opportunity(profile_id, opportunity_id, notes)
+        
+        if not success:
+            raise HTTPException(status_code=400, detail="Cannot promote opportunity (already at highest stage or not found)")
+        
+        return {
+            "success": True,
+            "profile_id": profile_id,
+            "opportunity_id": opportunity_id,
+            "action": "promoted",
+            "notes": notes
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to promote opportunity: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/funnel/{profile_id}/opportunities/{opportunity_id}/demote")
+async def demote_opportunity(profile_id: str, opportunity_id: str, notes_data: dict = None):
+    """Demote opportunity to previous funnel stage."""
+    try:
+        from src.discovery.funnel_manager import funnel_manager
+        
+        notes = notes_data.get("notes") if notes_data else None
+        success = funnel_manager.demote_opportunity(profile_id, opportunity_id, notes)
+        
+        if not success:
+            raise HTTPException(status_code=400, detail="Cannot demote opportunity (already at lowest stage or not found)")
+        
+        return {
+            "success": True,
+            "profile_id": profile_id,
+            "opportunity_id": opportunity_id,
+            "action": "demoted",
+            "notes": notes
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to demote opportunity: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/funnel/{profile_id}/metrics")
+async def get_funnel_metrics(profile_id: str):
+    """Get funnel conversion analytics for a profile."""
+    try:
+        from src.discovery.funnel_manager import funnel_manager
+        
+        metrics = funnel_manager.get_funnel_metrics(profile_id)
+        return metrics
+        
+    except Exception as e:
+        logger.error(f"Failed to get funnel metrics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/funnel/{profile_id}/recommendations")
+async def get_stage_recommendations(profile_id: str):
+    """Get recommendations for stage transitions."""
+    try:
+        from src.discovery.funnel_manager import funnel_manager
+        
+        recommendations = funnel_manager.get_stage_recommendations(profile_id)
+        return {
+            "profile_id": profile_id,
+            "recommendations": recommendations
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get stage recommendations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/funnel/{profile_id}/bulk-transition")
+async def bulk_stage_transition(profile_id: str, transition_data: dict):
+    """Bulk transition multiple opportunities to target stage."""
+    try:
+        from src.discovery.funnel_manager import funnel_manager
+        from src.discovery.base_discoverer import FunnelStage
+        
+        opportunity_ids = transition_data.get("opportunity_ids", [])
+        target_stage = transition_data.get("target_stage")
+        notes = transition_data.get("notes")
+        
+        if not opportunity_ids:
+            raise HTTPException(status_code=400, detail="opportunity_ids is required")
+        
+        if not target_stage:
+            raise HTTPException(status_code=400, detail="target_stage is required")
+        
+        try:
+            stage_enum = FunnelStage(target_stage)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid stage: {target_stage}")
+        
+        results = funnel_manager.bulk_stage_transition(
+            profile_id, opportunity_ids, stage_enum, notes
+        )
+        
+        return {
+            "profile_id": profile_id,
+            "target_stage": target_stage,
+            "results": results,
+            "successful_transitions": sum(1 for success in results.values() if success),
+            "total_opportunities": len(opportunity_ids)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to perform bulk stage transition: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Simple test endpoint for debugging
 @app.get("/api/test")
 async def api_test():
@@ -2018,6 +2242,9 @@ async def api_test():
             "/api/welcome/status",
             "/api/welcome/sample-profile",
             "/api/welcome/quick-start",
+            "/api/funnel/stages",
+            "/api/funnel/{profile_id}/opportunities",
+            "/api/funnel/{profile_id}/metrics",
             "/api/test"
         ]
     }

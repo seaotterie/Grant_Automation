@@ -19,6 +19,15 @@ class DiscoveryStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
+class FunnelStage(str, Enum):
+    """Grant opportunity funnel stages"""
+    PROSPECTS = "prospects"                    # Initial ProPublica/API broad filtering
+    QUALIFIED_PROSPECTS = "qualified_prospects" # 990 XML/eligibility detailed analysis  
+    CANDIDATES = "candidates"                  # Mission/eligibility matched
+    TARGETS = "targets"                        # High-potential for deep research
+    OPPORTUNITIES = "opportunities"            # Decision-ready final stage
+
+
 @dataclass
 class DiscoveryResult:
     """Single opportunity discovery result"""
@@ -47,6 +56,11 @@ class DiscoveryResult:
     contact_info: Dict[str, str] = None
     geographic_info: Dict[str, str] = None
     
+    # Funnel Tracking
+    funnel_stage: FunnelStage = FunnelStage.PROSPECTS
+    stage_updated_at: Optional[datetime] = None
+    stage_notes: Optional[str] = None
+    
     # Metadata
     external_data: Dict[str, Any] = None
     discovered_at: datetime = None
@@ -64,6 +78,76 @@ class DiscoveryResult:
             self.external_data = {}
         if self.discovered_at is None:
             self.discovered_at = datetime.now()
+        if self.stage_updated_at is None:
+            self.stage_updated_at = datetime.now()
+    
+    def promote_to_next_stage(self, notes: Optional[str] = None) -> bool:
+        """Move opportunity to next funnel stage"""
+        stage_order = [
+            FunnelStage.PROSPECTS,
+            FunnelStage.QUALIFIED_PROSPECTS, 
+            FunnelStage.CANDIDATES,
+            FunnelStage.TARGETS,
+            FunnelStage.OPPORTUNITIES
+        ]
+        
+        current_index = stage_order.index(self.funnel_stage)
+        if current_index < len(stage_order) - 1:
+            self.funnel_stage = stage_order[current_index + 1]
+            self.stage_updated_at = datetime.now()
+            if notes:
+                self.stage_notes = notes
+            return True
+        return False
+    
+    def demote_to_previous_stage(self, notes: Optional[str] = None) -> bool:
+        """Move opportunity to previous funnel stage"""
+        stage_order = [
+            FunnelStage.PROSPECTS,
+            FunnelStage.QUALIFIED_PROSPECTS,
+            FunnelStage.CANDIDATES, 
+            FunnelStage.TARGETS,
+            FunnelStage.OPPORTUNITIES
+        ]
+        
+        current_index = stage_order.index(self.funnel_stage)
+        if current_index > 0:
+            self.funnel_stage = stage_order[current_index - 1]
+            self.stage_updated_at = datetime.now()
+            if notes:
+                self.stage_notes = notes
+            return True
+        return False
+    
+    def set_stage(self, new_stage: FunnelStage, notes: Optional[str] = None) -> None:
+        """Set opportunity to specific funnel stage"""
+        self.funnel_stage = new_stage
+        self.stage_updated_at = datetime.now()
+        if notes:
+            self.stage_notes = notes
+    
+    def get_stage_color(self) -> str:
+        """Get display color for current funnel stage"""
+        stage_colors = {
+            FunnelStage.PROSPECTS: "gray",
+            FunnelStage.QUALIFIED_PROSPECTS: "yellow",
+            FunnelStage.CANDIDATES: "orange", 
+            FunnelStage.TARGETS: "blue",
+            FunnelStage.OPPORTUNITIES: "green"
+        }
+        return stage_colors.get(self.funnel_stage, "gray")
+    
+    def get_stage_display_name(self) -> str:
+        """Get human-readable stage name"""
+        stage_names = {
+            FunnelStage.PROSPECTS: "Prospects",
+            FunnelStage.QUALIFIED_PROSPECTS: "Qualified",
+            FunnelStage.CANDIDATES: "Candidates",
+            FunnelStage.TARGETS: "Targets", 
+            FunnelStage.OPPORTUNITIES: "Opportunities"
+        }
+        return stage_names.get(self.funnel_stage, "Unknown")
+
 
 
 @dataclass

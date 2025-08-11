@@ -43,6 +43,15 @@ class PipelineStage(str, Enum):
     RECOMMENDATIONS = "recommendations"
 
 
+class FunnelStage(str, Enum):
+    """Grant opportunity funnel stages"""
+    PROSPECTS = "prospects"                    # Initial ProPublica/API broad filtering
+    QUALIFIED_PROSPECTS = "qualified_prospects" # 990 XML/eligibility detailed analysis  
+    CANDIDATES = "candidates"                  # Mission/eligibility matched
+    TARGETS = "targets"                        # High-potential for deep research
+    OPPORTUNITIES = "opportunities"            # Decision-ready final stage
+
+
 class ProfileStatus(str, Enum):
     """Profile status options"""
     ACTIVE = "active"
