@@ -1525,6 +1525,17 @@ function catalynxApp() {
                 }, 100); // Small delay to ensure DOM is ready
             }
             
+            // Sync profile when switching to analyze stage
+            if (stage === 'analyze') {
+                // Trigger profile sync for analyze tab
+                setTimeout(() => {
+                    const analyzeElement = document.querySelector('[x-data*="analyzeTabData"]');
+                    if (analyzeElement && analyzeElement._x_dataStack && analyzeElement._x_dataStack[0]) {
+                        analyzeElement._x_dataStack[0].syncProfileWithDiscover();
+                    }
+                }, 100); // Small delay to ensure DOM is ready
+            }
+            
             // Close mobile menu if open
             this.mobileMenuOpen = false;
             
@@ -8427,6 +8438,17 @@ function planTabData() {
         },
         
         // Utility functions
+        formatStageWithNumber(stage) {
+            const stageMapping = {
+                'prospects': '#1 - PROSPECTS',
+                'qualified_prospects': '#2 - QUALIFIED PROSPECTS',
+                'candidates': '#3 - CANDIDATES',
+                'targets': '#4 - TARGETS', 
+                'opportunities': '#5 - OPPORTUNITIES'
+            };
+            return stageMapping[stage] || stage.replace('_', ' ').toUpperCase();
+        },
+        
         getStageColor(stage) {
             const colors = {
                 'prospects': 'bg-gray-100 text-gray-800',
@@ -8461,6 +8483,582 @@ function planTabData() {
                 'Pending': 'text-gray-600'
             };
             return colors[recommendation] || 'text-gray-600';
+        }
+    }
+}
+
+// ANALYZE Tab Data Management
+function analyzeTabData() {
+    return {
+        // Profile management
+        selectedAnalyzeProfile: null,
+        
+        // Candidates data
+        candidatesData: [
+            {
+                opportunity_id: "analyze-demo-1",
+                organization_name: "Health Innovation Foundation",
+                source_type: "commercial",
+                funnel_stage: "candidates",
+                combined_score: 0.89,
+                xml_990_score: 0.85,
+                network_score: 0.92,
+                enhanced_score: 0.91,
+                funding_amount: 180000,
+                ai_analyzed: false,
+                ai_processing: false,
+                ai_error: false,
+                board_connections: 8,
+                influence_score: 7.2
+            },
+            {
+                opportunity_id: "analyze-demo-2",
+                organization_name: "Community Development Partners",
+                source_type: "nonprofit",
+                funnel_stage: "candidates", 
+                combined_score: 0.76,
+                xml_990_score: 0.78,
+                network_score: 0.71,
+                enhanced_score: 0.79,
+                funding_amount: 125000,
+                ai_analyzed: true,
+                ai_processing: false,
+                ai_error: false,
+                board_connections: 5,
+                influence_score: 4.8
+            },
+            {
+                opportunity_id: "analyze-demo-3",
+                organization_name: "Rural Development Initiative",
+                source_type: "government",
+                funnel_stage: "targets",
+                combined_score: 0.94,
+                xml_990_score: 0.91,
+                network_score: 0.96,
+                enhanced_score: 0.95,
+                funding_amount: 250000,
+                ai_analyzed: true,
+                ai_processing: false,
+                ai_error: false,
+                board_connections: 12,
+                influence_score: 9.1
+            }
+        ],
+        filteredCandidates: [],
+        selectedForAnalysis: [],
+        searchQuery: '',
+        stageFilter: 'candidates+', // Default to candidates and above
+        
+        // Dashboard metrics
+        candidatesCount: 0,
+        readyForAnalysis: 0,
+        aiAnalyzedCount: 0,
+        averageCombinedScore: 0,
+        topScore: 0,
+        promotionReadyCount: 0,
+        analysisStatus: 'Ready',
+        
+        // Network visualization
+        networkVisualizationData: null,
+        showNetworkCharts: false,
+        loadingNetworkData: false,
+        fullscreenNetwork: {
+            board: false,
+            influence: false
+        },
+        networkMetrics: {
+            boardConnections: 0,
+            avgInfluence: 0,
+            density: 0
+        },
+        
+        // AI Analysis
+        estimatedCost: '$0.00',
+        
+        // Modal states
+        showAIAnalysisModal: false,
+        showCandidateDetailsModal: false,
+        selectedCandidateDetails: null,
+        
+        // Initialization
+        async init() {
+            console.log('Initializing ANALYZE tab data...');
+            // Sync profile with DISCOVER tab
+            this.syncProfileWithDiscover();
+            // Initialize candidates data
+            this.filteredCandidates = [...this.candidatesData];
+            this.calculateDashboardMetrics();
+            // Filter to show candidates+ by default
+            this.filterCandidates();
+            
+            // Add ESC key listener for fullscreen exit
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    if (this.fullscreenNetwork.board) {
+                        this.toggleFullscreenNetwork('board');
+                    }
+                    if (this.fullscreenNetwork.influence) {
+                        this.toggleFullscreenNetwork('influence');
+                    }
+                }
+            });
+        },
+        
+        syncProfileWithDiscover() {
+            // Try to get selected profile from DISCOVER tab via global app instance
+            try {
+                // Access the global app data through document.querySelector
+                const appElement = document.querySelector('[x-data*="catalynxApp"]');
+                if (appElement && appElement._x_dataStack) {
+                    const appData = appElement._x_dataStack[0];
+                    const discoverProfile = appData.selectedDiscoveryProfile;
+                    
+                    if (discoverProfile && discoverProfile.profile_id) {
+                        this.selectedAnalyzeProfile = {
+                            profile_id: discoverProfile.profile_id,
+                            name: discoverProfile.name,
+                            ein: discoverProfile.ein || 'Not Available',
+                            organization_type: discoverProfile.organization_type,
+                            focus_areas: discoverProfile.focus_areas,
+                            mission_statement: discoverProfile.mission_statement
+                        };
+                        console.log('Synced ANALYZE profile with DISCOVER:', discoverProfile.name);
+                        return;
+                    }
+                }
+                
+                // Fallback: No profile selected in DISCOVER tab
+                console.log('No DISCOVER profile found');
+                this.selectedAnalyzeProfile = null;
+                
+            } catch (error) {
+                console.error('Error syncing profile:', error);
+                this.selectedAnalyzeProfile = null;
+            }
+        },
+        
+        calculateDashboardMetrics() {
+            this.candidatesCount = this.candidatesData.length;
+            this.readyForAnalysis = this.candidatesData.filter(c => !c.ai_analyzed).length;
+            this.aiAnalyzedCount = this.candidatesData.filter(c => c.ai_analyzed).length;
+            
+            if (this.candidatesData.length > 0) {
+                const scores = this.candidatesData.map(c => c.combined_score || 0);
+                this.averageCombinedScore = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100);
+                this.topScore = Math.round(Math.max(...scores) * 100);
+                this.promotionReadyCount = this.candidatesData.filter(c => (c.combined_score || 0) >= 0.75).length;
+                
+                // Network metrics
+                this.networkMetrics = {
+                    boardConnections: this.candidatesData.reduce((sum, c) => sum + (c.board_connections || 0), 0),
+                    avgInfluence: (this.candidatesData.reduce((sum, c) => sum + (c.influence_score || 0), 0) / this.candidatesData.length).toFixed(1),
+                    density: Math.round((this.candidatesData.filter(c => (c.board_connections || 0) > 0).length / this.candidatesData.length) * 100) + '%'
+                };
+            }
+            
+            // Update estimated cost based on selected candidates
+            this.updateEstimatedCost();
+        },
+        
+        filterCandidates() {
+            let filtered = [...this.candidatesData];
+            
+            // Apply stage filter
+            if (this.stageFilter) {
+                const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
+                
+                if (this.stageFilter === 'candidates+') {
+                    // Default: Show candidates and above
+                    const minIndex = stageOrder.indexOf('candidates');
+                    filtered = filtered.filter(candidate => 
+                        stageOrder.indexOf(candidate.funnel_stage) >= minIndex
+                    );
+                } else if (this.stageFilter !== '') {
+                    // Single stage filter
+                    filtered = filtered.filter(candidate => 
+                        candidate.funnel_stage === this.stageFilter
+                    );
+                }
+            }
+            
+            // Apply search filter
+            if (this.searchQuery) {
+                const query = this.searchQuery.toLowerCase();
+                filtered = filtered.filter(candidate =>
+                    candidate.organization_name.toLowerCase().includes(query) ||
+                    candidate.source_type.toLowerCase().includes(query)
+                );
+            }
+            
+            this.filteredCandidates = filtered;
+            console.log(`Filtered candidates: ${filtered.length} of ${this.candidatesData.length}`);
+        },
+        
+        toggleCandidateSelection(candidate) {
+            const index = this.selectedForAnalysis.findIndex(id => id === candidate.opportunity_id);
+            if (index > -1) {
+                this.selectedForAnalysis.splice(index, 1);
+            } else {
+                this.selectedForAnalysis.push(candidate.opportunity_id);
+            }
+            this.updateEstimatedCost();
+        },
+        
+        toggleSelectAll(event) {
+            if (event.target.checked) {
+                // Select all unanalyzed candidates
+                this.selectedForAnalysis = this.filteredCandidates
+                    .filter(c => !c.ai_analyzed)
+                    .map(c => c.opportunity_id);
+            } else {
+                this.selectedForAnalysis = [];
+            }
+            this.updateEstimatedCost();
+        },
+        
+        updateEstimatedCost() {
+            // Estimate $0.02 per candidate for AI analysis
+            const costPerCandidate = 0.02;
+            const totalCost = this.selectedForAnalysis.length * costPerCandidate;
+            this.estimatedCost = '$' + totalCost.toFixed(2);
+        },
+        
+        // Network visualization functions
+        async loadNetworkVisualizations() {
+            if (!this.selectedAnalyzeProfile) {
+                console.error('No profile selected for network visualization');
+                return;
+            }
+            
+            this.loadingNetworkData = true;
+            try {
+                console.log('Loading network visualizations...');
+                
+                // Call the API to get network visualization data
+                const response = await fetch(`/api/analyze/network-data/${this.selectedAnalyzeProfile.profile_id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Embed the HTML charts directly
+                    document.getElementById('board-network-chart').innerHTML = data.board_network_html;
+                    document.getElementById('influence-network-chart').innerHTML = data.influence_network_html;
+                    
+                    this.networkVisualizationData = data;
+                    this.showNetworkCharts = true;
+                    console.log('Network visualizations loaded successfully');
+                } else {
+                    throw new Error('Failed to load network data');
+                }
+                
+            } catch (error) {
+                console.error('Failed to load network visualizations:', error);
+                // Show mock visualizations for demo
+                this.showMockNetworkCharts();
+            } finally {
+                this.loadingNetworkData = false;
+            }
+        },
+        
+        showMockNetworkCharts() {
+            // Create mock network charts for demo purposes
+            const boardChartHTML = `
+                <div class="text-center py-8">
+                    <div class="text-4xl mb-4">🕸️</div>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Board Member Network (Demo)</h3>
+                    <p class="text-gray-600 dark:text-gray-400">Interactive spider web showing ${this.networkMetrics.boardConnections} board connections</p>
+                    <div class="mt-4 text-sm text-gray-500">
+                        <div>Avg Influence: ${this.networkMetrics.avgInfluence}</div>
+                        <div>Network Density: ${this.networkMetrics.density}</div>
+                    </div>
+                </div>
+            `;
+            
+            const influenceChartHTML = `
+                <div class="text-center py-8">
+                    <div class="text-4xl mb-4">⚡</div>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Influence Network (Demo)</h3>
+                    <p class="text-gray-600 dark:text-gray-400">Individual influence mapping and strategic connections</p>
+                    <div class="mt-4 text-sm text-gray-500">
+                        <div>Top Influencers: ${Math.ceil(this.candidatesCount / 3)}</div>
+                        <div>Strategic Links: ${this.networkMetrics.boardConnections * 2}</div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('board-network-chart').innerHTML = boardChartHTML;
+            document.getElementById('influence-network-chart').innerHTML = influenceChartHTML;
+            
+            this.networkVisualizationData = { demo: true };
+            this.showNetworkCharts = true;
+        },
+        
+        refreshNetworkVisualization() {
+            this.showNetworkCharts = false;
+            this.networkVisualizationData = null;
+            setTimeout(() => {
+                this.loadNetworkVisualizations();
+            }, 100);
+        },
+        
+        toggleNetworkVisualizations() {
+            if (this.showNetworkCharts) {
+                // Hide network charts
+                this.showNetworkCharts = false;
+                this.networkVisualizationData = null;
+            } else {
+                // Show network charts - load if needed
+                if (!this.networkVisualizationData) {
+                    this.loadNetworkVisualizations();
+                } else {
+                    this.showNetworkCharts = true;
+                }
+            }
+        },
+        
+        toggleFullscreenNetwork(networkType) {
+            const isFullscreen = this.fullscreenNetwork[networkType];
+            const chartId = networkType === 'board' ? 'board-network-chart' : 'influence-network-chart';
+            const chartElement = document.getElementById(chartId);
+            const closeButtonId = `close-network-${networkType}`;
+            
+            if (!chartElement) {
+                console.error(`Chart element not found: ${chartId}`);
+                return;
+            }
+            
+            if (isFullscreen) {
+                // Exit scaled view
+                this.fullscreenNetwork[networkType] = false;
+                chartElement.style.position = '';
+                chartElement.style.top = '';
+                chartElement.style.left = '';
+                chartElement.style.width = '';
+                chartElement.style.height = '';
+                chartElement.style.zIndex = '';
+                chartElement.style.backgroundColor = '';
+                chartElement.style.boxShadow = '';
+                chartElement.style.borderRadius = '';
+                chartElement.style.border = '';
+                document.body.style.overflow = '';
+                
+                // Remove close button
+                const existingCloseButton = document.getElementById(closeButtonId);
+                if (existingCloseButton) {
+                    existingCloseButton.remove();
+                }
+            } else {
+                // Enter 2X scaled view
+                this.fullscreenNetwork[networkType] = true;
+                
+                // Get current dimensions
+                const rect = chartElement.getBoundingClientRect();
+                const originalWidth = rect.width;
+                const originalHeight = rect.height;
+                
+                // Calculate 2X dimensions
+                const scaledWidth = originalWidth * 2;
+                const scaledHeight = originalHeight * 2;
+                
+                // Center the scaled chart on screen
+                const centerX = (window.innerWidth - scaledWidth) / 2;
+                const centerY = (window.innerHeight - scaledHeight) / 2;
+                
+                // Detect dark mode
+                const isDarkMode = document.documentElement.classList.contains('dark');
+                
+                chartElement.style.position = 'fixed';
+                chartElement.style.top = Math.max(0, centerY) + 'px';
+                chartElement.style.left = Math.max(0, centerX) + 'px';
+                chartElement.style.width = scaledWidth + 'px';
+                chartElement.style.height = scaledHeight + 'px';
+                chartElement.style.zIndex = '9999';
+                chartElement.style.backgroundColor = isDarkMode ? '#1f2937' : 'white';
+                chartElement.style.boxShadow = isDarkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)' : '0 25px 50px -12px rgba(0, 0, 0, 0.25)';
+                chartElement.style.borderRadius = '12px';
+                chartElement.style.border = isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb';
+                document.body.style.overflow = 'hidden';
+                
+                // Create close X button
+                const closeButton = document.createElement('button');
+                closeButton.id = closeButtonId;
+                closeButton.innerHTML = '✕';
+                closeButton.style.cssText = `
+                    position: fixed;
+                    top: ${Math.max(0, centerY) + 12}px;
+                    right: ${Math.max(0, window.innerWidth - centerX - scaledWidth) + 12}px;
+                    width: 24px;
+                    height: 24px;
+                    background-color: transparent;
+                    color: ${isDarkMode ? '#d1d5db' : '#6b7280'};
+                    border: none;
+                    font-size: 18px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    z-index: 10000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s ease;
+                    line-height: 1;
+                `;
+                
+                // Add hover effects
+                closeButton.addEventListener('mouseenter', () => {
+                    closeButton.style.color = isDarkMode ? '#f3f4f6' : '#374151';
+                    closeButton.style.transform = 'scale(1.1)';
+                });
+                closeButton.addEventListener('mouseleave', () => {
+                    closeButton.style.color = isDarkMode ? '#d1d5db' : '#6b7280';
+                    closeButton.style.transform = 'scale(1)';
+                });
+                
+                // Add click handler to close
+                closeButton.addEventListener('click', () => {
+                    this.toggleFullscreenNetwork(networkType);
+                });
+                
+                // Add to DOM
+                document.body.appendChild(closeButton);
+            }
+            
+            // Trigger a resize event to help Plotly charts resize properly
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+            }, 100);
+        },
+        
+        // AI Analysis functions
+        openAIAnalysisModal() {
+            if (this.selectedForAnalysis.length === 0) return;
+            
+            // For now, show a simple confirmation and run analysis
+            const confirmMessage = `Run AI analysis on ${this.selectedForAnalysis.length} candidates?\nEstimated cost: ${this.estimatedCost}`;
+            if (confirm(confirmMessage)) {
+                this.runAIAnalysis();
+            }
+        },
+        
+        async runAIAnalysis() {
+            console.log('Running AI analysis on selected candidates...');
+            
+            try {
+                // Get selected candidate data
+                const selectedCandidates = this.candidatesData.filter(c => 
+                    this.selectedForAnalysis.includes(c.opportunity_id)
+                );
+                
+                // Simulate AI analysis
+                for (let candidate of selectedCandidates) {
+                    candidate.ai_analyzed = true;
+                    // Add some mock AI analysis results
+                    candidate.ai_score = 0.7 + Math.random() * 0.3;
+                    candidate.ai_recommendation = Math.random() > 0.5 ? 'Promote' : 'Review';
+                    candidate.ai_summary = `AI Analysis: Strong strategic fit with ${Math.floor(Math.random() * 5 + 3)} key alignment factors identified.`;
+                }
+                
+                // Clear selection and update metrics
+                this.selectedForAnalysis = [];
+                this.calculateDashboardMetrics();
+                this.filterCandidates();
+                
+                console.log('AI analysis completed');
+                alert('AI analysis completed successfully!');
+                
+            } catch (error) {
+                console.error('AI analysis failed:', error);
+                alert('AI analysis failed. Please try again.');
+            }
+        },
+        
+        async runSingleAIAnalysis(candidate) {
+            console.log(`Running AI analysis on ${candidate.organization_name}...`);
+            
+            try {
+                // Set processing state and clear any previous errors
+                candidate.ai_processing = true;
+                candidate.ai_error = false;
+                
+                // Simulate API call delay
+                await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1500));
+                
+                // Simulate occasional errors (10% chance)
+                if (Math.random() < 0.1) {
+                    throw new Error('API timeout or rate limit exceeded');
+                }
+                
+                // Update candidate with AI analysis results
+                candidate.ai_analyzed = true;
+                candidate.ai_processing = false;
+                candidate.ai_error = false;
+                candidate.ai_score = 0.7 + Math.random() * 0.3;
+                candidate.ai_recommendation = Math.random() > 0.5 ? 'Promote' : 'Review';
+                candidate.ai_summary = `AI Analysis: Strong strategic fit with ${Math.floor(Math.random() * 5 + 3)} key alignment factors identified.`;
+                
+                // Update metrics
+                this.calculateDashboardMetrics();
+                this.filterCandidates();
+                
+                console.log(`AI analysis completed for ${candidate.organization_name}`);
+                
+            } catch (error) {
+                console.error('AI analysis failed:', error);
+                candidate.ai_processing = false;
+                candidate.ai_error = true;
+                candidate.ai_analyzed = false;
+            }
+        },
+        
+        // Candidate management functions
+        viewCandidateDetails(candidate) {
+            this.selectedCandidateDetails = candidate;
+            // For now, just log the details - could open a modal
+            console.log('Viewing candidate details:', candidate);
+            
+            // Show a simple alert with details for demo
+            const details = `
+Organization: ${candidate.organization_name}
+Combined Score: ${(candidate.combined_score * 100).toFixed(1)}%
+AI Analysis: ${candidate.ai_analyzed ? 'Complete' : 'Pending'}
+${candidate.ai_summary || 'No AI analysis available yet'}
+            `;
+            alert(details);
+        },
+        
+        promoteToExamine(candidate) {
+            if ((candidate.combined_score || 0) < 0.75) {
+                alert('Candidate score too low for promotion. Minimum 75% required.');
+                return;
+            }
+            
+            if (confirm(`Promote ${candidate.organization_name} to EXAMINE stage?`)) {
+                candidate.funnel_stage = 'targets';
+                this.calculateDashboardMetrics();
+                this.filterCandidates();
+                console.log(`Promoted ${candidate.organization_name} to EXAMINE stage`);
+            }
+        },
+        
+        // Utility functions
+        formatStageWithNumber(stage) {
+            const stageMapping = {
+                'prospects': '#1 - PROSPECTS',
+                'qualified_prospects': '#2 - QUALIFIED PROSPECTS',
+                'candidates': '#3 - CANDIDATES',
+                'targets': '#4 - TARGETS', 
+                'opportunities': '#5 - OPPORTUNITIES'
+            };
+            return stageMapping[stage] || stage.replace('_', ' ').toUpperCase();
+        },
+        
+        getStageColor(stage) {
+            const colors = {
+                'prospects': 'bg-gray-100 text-gray-800',
+                'qualified_prospects': 'bg-blue-100 text-blue-800', 
+                'candidates': 'bg-yellow-100 text-yellow-800',
+                'targets': 'bg-purple-100 text-purple-800',
+                'opportunities': 'bg-green-100 text-green-800'
+            };
+            return colors[stage] || 'bg-gray-100 text-gray-800';
         }
     }
 }
