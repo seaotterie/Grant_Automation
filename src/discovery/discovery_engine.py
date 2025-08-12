@@ -6,7 +6,7 @@ import asyncio
 import time
 import uuid
 from typing import Dict, List, Optional, Any, AsyncIterator, Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 
 from .base_discoverer import (
@@ -115,6 +115,9 @@ class MultiTrackDiscoveryEngine:
             await self._execute_concurrent_discovery(
                 session, profile, search_params, progress_callback
             )
+            
+            # Apply Schedule I grantee fast-tracking
+            self._apply_schedule_i_fast_tracking(session.session_id, profile, progress_callback)
             
             # Finalize session
             session.status = DiscoveryStatus.COMPLETED
@@ -430,6 +433,42 @@ class MultiTrackDiscoveryEngine:
                 del self.session_results[session_id]
         
         return len(sessions_to_remove)
+    
+    def _apply_schedule_i_fast_tracking(
+        self, 
+        session_id: str, 
+        profile: OrganizationProfile,
+        progress_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
+    ):
+        """Apply Schedule I grantee fast-tracking to discovery results"""
+        
+        if not profile.schedule_i_grantees:
+            return  # No grantees to match against
+        
+        # Get session results
+        results = self.session_results.get(session_id, [])
+        if not results:
+            return  # No results to process
+        
+        # Import grantee matcher
+        from src.utils.grantee_matcher import apply_schedule_i_fast_tracking
+        
+        # Apply fast-tracking
+        updated_results = apply_schedule_i_fast_tracking(results, profile)
+        
+        # Update session results
+        self.session_results[session_id] = updated_results
+        
+        # Count grantee matches
+        grantee_matches = [r for r in updated_results if r.is_schedule_i_grantee]
+        
+        if grantee_matches and progress_callback:
+            progress_callback(session_id, {
+                "status": "schedule_i_processed",
+                "message": f"Schedule I fast-tracking: {len(grantee_matches)} grantee matches identified",
+                "grantee_matches": len(grantee_matches),
+                "fast_tracked": len([r for r in grantee_matches if r.funnel_stage.value == "candidates"])
+            })
 
 
 # Global engine instance

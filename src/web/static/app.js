@@ -1675,7 +1675,8 @@ function catalynxApp() {
                 volunteer_count: null,
                 board_size: null,
                 notes: '',
-                government_criteria: []
+                government_criteria: [],
+                schedule_i_grantees: []
             };
             // Reset modal states
             this.nteeModal.selectedNteeCodes = [];
@@ -1719,6 +1720,8 @@ function catalynxApp() {
             // Load NTEE codes and government criteria
             this.nteeModal.selectedNteeCodes = profile.ntee_codes || [];
             this.profileForm.government_criteria = profile.government_criteria || [];
+            this.profileForm.schedule_i_grantees = profile.schedule_i_grantees || [];
+            this.profileForm.schedule_i_status = profile.schedule_i_status || null;
             
             // Debug: Log what we loaded from the profile
             console.log('Loading profile for edit:', {
@@ -1782,7 +1785,25 @@ function catalynxApp() {
                         console.log('Setting revenue:', result.data.revenue);
                     }
                     
-                    this.showNotification(`Organization data fetched: ${result.data.name}${result.data.city ? ' (' + result.data.city + ', ' + result.data.state + ')' : ''}`, 'success');
+                    // Handle Schedule I data and status
+                    if (result.data.schedule_i_grantees && result.data.schedule_i_grantees.length > 0) {
+                        this.profileForm.schedule_i_grantees = result.data.schedule_i_grantees;
+                        this.profileForm.schedule_i_status = 'found';
+                        console.log('Setting Schedule I grantees:', result.data.schedule_i_grantees);
+                        
+                        const granteeCount = result.data.schedule_i_grantees.length;
+                        this.showNotification(`Organization data fetched: ${result.data.name} (${granteeCount} Schedule I grantee${granteeCount > 1 ? 's' : ''} found)${result.data.city ? ' (' + result.data.city + ', ' + result.data.state + ')' : ''}`, 'success');
+                    } else {
+                        this.profileForm.schedule_i_grantees = [];
+                        // Check if we have explicit status information from the API response
+                        if (result.data.schedule_i_status) {
+                            this.profileForm.schedule_i_status = result.data.schedule_i_status;
+                        } else {
+                            // Default to 'no_grantees' if XML was processed but no grantees found
+                            this.profileForm.schedule_i_status = 'no_grantees';
+                        }
+                        this.showNotification(`Organization data fetched: ${result.data.name} (No Schedule I grantees found)${result.data.city ? ' (' + result.data.city + ', ' + result.data.state + ')' : ''}`, 'success');
+                    }
                 } else {
                     console.log('API call failed or no data:', result);
                     this.showNotification(result.message || 'Failed to fetch organization data', 'error');
@@ -1834,7 +1855,9 @@ function catalynxApp() {
                     location: this.profileForm.location || null,
                     notes: this.profileForm.notes || null,
                     ntee_codes: this.nteeModal.selectedNteeCodes || [],
-                    government_criteria: this.profileForm.government_criteria || []
+                    government_criteria: this.profileForm.government_criteria || [],
+                    schedule_i_grantees: this.profileForm.schedule_i_grantees || [],
+                    schedule_i_status: this.profileForm.schedule_i_status || null
                 };
 
                 // Debug: Log what we're about to save

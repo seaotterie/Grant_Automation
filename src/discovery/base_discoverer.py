@@ -61,6 +61,10 @@ class DiscoveryResult:
     stage_updated_at: Optional[datetime] = None
     stage_notes: Optional[str] = None
     
+    # Schedule I Grantee Tracking
+    is_schedule_i_grantee: bool = False
+    schedule_i_match_data: Optional[Dict[str, Any]] = None
+    
     # Metadata
     external_data: Dict[str, Any] = None
     discovered_at: datetime = None
@@ -76,6 +80,8 @@ class DiscoveryResult:
             self.geographic_info = {}
         if self.external_data is None:
             self.external_data = {}
+        if self.schedule_i_match_data is None:
+            self.schedule_i_match_data = {}
         if self.discovered_at is None:
             self.discovered_at = datetime.now()
         if self.stage_updated_at is None:

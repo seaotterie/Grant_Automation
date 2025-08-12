@@ -474,7 +474,8 @@ async def export_workflow(workflow_id: str, format: str = "csv"):
 @app.post("/api/profiles/fetch-ein")
 async def fetch_ein_data(request: dict):
     """
-    Fetch organization data by EIN using ProPublica API.
+    Fetch organization data by EIN using ProPublica API (both JSON and XML data).
+    Enhanced to extract Schedule I grantees for discovery fast-tracking.
     """
     try:
         ein = request.get('ein', '').strip()
@@ -501,30 +502,72 @@ async def fetch_ein_data(request: dict):
             processor_specific_config={}
         )
         
-        # Execute EIN lookup
+        # Execute EIN lookup (gets JSON data)
         result = await ein_processor.execute(config)
         logger.info(f"EIN lookup result: success={result.success}, data_keys={list(result.data.keys()) if result.data else 'None'}")
         
         if result.success and result.data:
             logger.info(f"Result data structure: {result.data}")
             org_data = result.data.get('target_organization', {})
+            
+            # Prepare basic response data
+            response_data = {
+                "name": org_data.get('name', ''),
+                "ein": org_data.get('ein', ein),
+                "mission_statement": org_data.get('mission_description', '') or org_data.get('activity_description', ''),
+                "organization_type": str(org_data.get('organization_type', 'nonprofit')).replace('OrganizationType.', '').lower(),
+                "ntee_code": org_data.get('ntee_code', ''),
+                "city": org_data.get('city', ''),
+                "state": org_data.get('state', ''),
+                "website": org_data.get('website', ''),
+                "revenue": org_data.get('revenue', 0),
+                "assets": org_data.get('assets', 0),
+                "expenses": org_data.get('expenses', 0),
+                "most_recent_filing_year": org_data.get('most_recent_filing_year', ''),
+                "filing_years": org_data.get('filing_years', []),
+                "schedule_i_grantees": [],  # Initialize empty list
+                "schedule_i_status": "not_checked"  # Default status
+            }
+            
+            # Attempt to fetch XML data and extract Schedule I grantees
+            try:
+                from src.utils.xml_fetcher import XMLFetcher
+                from src.utils.schedule_i_extractor import ScheduleIExtractor
+                
+                logger.info(f"Attempting to fetch XML data for EIN {ein}")
+                
+                xml_fetcher = XMLFetcher()
+                xml_content = await xml_fetcher.fetch_xml_by_ein(ein)
+                
+                logger.info(f"XML fetch completed for EIN {ein}, content: {xml_content is not None}, size: {len(xml_content) if xml_content else 0}")
+                
+                if xml_content:
+                    logger.info(f"Successfully fetched XML data for EIN {ein} ({len(xml_content):,} bytes)")
+                    
+                    # Extract Schedule I grantees
+                    extractor = ScheduleIExtractor()
+                    most_recent_year = org_data.get('most_recent_filing_year')
+                    grantees = extractor.extract_grantees_from_xml(xml_content, most_recent_year)
+                    
+                    if grantees:
+                        logger.info(f"Extracted {len(grantees)} Schedule I grantees for EIN {ein}")
+                        response_data["schedule_i_grantees"] = [grantee.dict() for grantee in grantees]
+                        response_data["schedule_i_status"] = "found"
+                    else:
+                        logger.info(f"No Schedule I grantees found in XML for EIN {ein}")
+                        response_data["schedule_i_status"] = "no_grantees"
+                else:
+                    logger.warning(f"No XML data available for EIN {ein}")
+                    response_data["schedule_i_status"] = "no_xml"
+                    
+            except Exception as e:
+                logger.warning(f"Error fetching/processing XML data for EIN {ein}: {e}")
+                response_data["schedule_i_status"] = "no_xml"
+                # Continue with basic data even if XML processing fails
+            
             return {
                 "success": True,
-                "data": {
-                    "name": org_data.get('name', ''),
-                    "ein": org_data.get('ein', ein),
-                    "mission_statement": org_data.get('mission_description', '') or org_data.get('activity_description', ''),
-                    "organization_type": str(org_data.get('organization_type', 'nonprofit')).replace('OrganizationType.', '').lower(),
-                    "ntee_code": org_data.get('ntee_code', ''),
-                    "city": org_data.get('city', ''),
-                    "state": org_data.get('state', ''),
-                    "website": org_data.get('website', ''),
-                    "revenue": org_data.get('revenue', 0),
-                    "assets": org_data.get('assets', 0),
-                    "expenses": org_data.get('expenses', 0),
-                    "most_recent_filing_year": org_data.get('most_recent_filing_year', ''),
-                    "filing_years": org_data.get('filing_years', [])
-                }
+                "data": response_data
             }
         else:
             return {

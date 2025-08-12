@@ -80,6 +80,20 @@ class FundingPreferences(BaseModel):
     grants_gov_categories: List[GrantsGovCategory] = Field(default=[], description="Preferred Grants.gov funding categories")
 
 
+class ScheduleIGrantee(BaseModel):
+    """Schedule I grantee information from 990 filings"""
+    recipient_name: str = Field(..., description="Organization name of grant recipient")
+    recipient_ein: Optional[str] = Field(default=None, description="EIN of recipient if available")
+    grant_amount: float = Field(..., description="Grant amount provided")
+    grant_year: int = Field(..., description="Tax year of the grant")
+    grant_purpose: Optional[str] = Field(default=None, description="Purpose or description of grant")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+
 class OrganizationProfile(BaseModel):
     """Complete organization profile for opportunity discovery"""
     
@@ -106,6 +120,8 @@ class OrganizationProfile(BaseModel):
     funding_preferences: FundingPreferences = Field(default_factory=FundingPreferences)
     current_funders: List[str] = Field(default=[], description="Current funding sources")
     past_grants: List[str] = Field(default=[], description="Previous grant awards")
+    schedule_i_grantees: List[ScheduleIGrantee] = Field(default=[], description="Organizations this profile has granted to (from Schedule I)")
+    schedule_i_status: Optional[str] = Field(default=None, description="Status of Schedule I data: 'found', 'no_grantees', 'no_xml', 'not_checked'")
     
     # Organizational Capacity
     annual_revenue: Optional[int] = Field(default=None, description="Annual revenue/budget")

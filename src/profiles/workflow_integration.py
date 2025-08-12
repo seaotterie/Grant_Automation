@@ -91,7 +91,10 @@ class ProfileWorkflowIntegrator:
                         "metadata": result.external_data,
                         "opportunity_id": result.opportunity_id,
                         "discovered_at": result.discovered_at.isoformat(),
-                        "pipeline_stage": PipelineStage.DISCOVERY.value
+                        "pipeline_stage": PipelineStage.DISCOVERY.value,
+                        "funnel_stage": result.funnel_stage.value,
+                        "is_schedule_i_grantee": result.is_schedule_i_grantee,
+                        "schedule_i_match_data": result.schedule_i_match_data
                     }
                     opportunities.append(opportunity)
                 
