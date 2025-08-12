@@ -1,5 +1,6 @@
 // Catalynx Modern Web Interface - JavaScript Application
 // Alpine.js application with real-time WebSocket updates
+// Version: TYPE_COLOR_FIX_v1.2 - Updated organization type colors
 
 // Shared utility functions used across all tabs
 const CatalynxUtils = {
@@ -23,6 +24,15 @@ const CatalynxUtils = {
             'opportunities': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
         };
         return colorMapping[stage] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    },
+    
+    getOrganizationTypeColor(type) {
+        // All organization types use blue background with white text for consistency and visibility  
+        console.log('getOrganizationTypeColor called with type:', type);
+        // Using more specific/important classes to override any conflicts
+        const classes = '!bg-blue-600 !text-white dark:!bg-blue-700 dark:!text-white !font-medium';
+        console.log('Returning classes:', classes);
+        return classes;
     },
     
     toggleFullscreenNetwork(networkType, element) {
@@ -2469,7 +2479,63 @@ function catalynxApp() {
         },
         
         // Prospects discovery data (Stage 1: Prospects)
-        prospectsData: [],
+        prospectsData: [
+            {
+                opportunity_id: 'demo_prospect_1',
+                organization_name: 'American Heart Association',
+                funnel_stage: 'prospects',
+                organization_type: 'Nonprofit',
+                source_type: 'Nonprofit',
+                compatibility_score: 0.85,
+                discovery_source: 'ProPublica',
+                is_schedule_i_grantee: true,
+                funding_amount: 250000
+            },
+            {
+                opportunity_id: 'demo_prospect_2',
+                organization_name: 'United Way National',
+                funnel_stage: 'qualified_prospects',
+                organization_type: 'Nonprofit',
+                source_type: 'Nonprofit',
+                compatibility_score: 0.92,
+                discovery_source: 'ProPublica',
+                is_schedule_i_grantee: false,
+                funding_amount: 150000
+            },
+            {
+                opportunity_id: 'demo_prospect_3',
+                organization_name: 'Gates Foundation',
+                funnel_stage: 'candidates',
+                organization_type: 'Foundation',
+                source_type: 'Foundation',
+                compatibility_score: 0.78,
+                discovery_source: 'Foundation Directory',
+                is_schedule_i_grantee: false,
+                funding_amount: 500000
+            },
+            {
+                opportunity_id: 'demo_prospect_4',
+                organization_name: 'Department of Health & Human Services',
+                funnel_stage: 'targets',
+                organization_type: 'Government',
+                source_type: 'Government',
+                compatibility_score: 0.91,
+                discovery_source: 'Grants.gov',
+                is_schedule_i_grantee: false,
+                funding_amount: 750000
+            },
+            {
+                opportunity_id: 'demo_prospect_5',
+                organization_name: 'Google.org',
+                funnel_stage: 'opportunities',
+                organization_type: 'Corporate',
+                source_type: 'Commercial',
+                compatibility_score: 0.89,
+                discovery_source: 'Commercial Intelligence',
+                is_schedule_i_grantee: false,
+                funding_amount: 300000
+            }
+        ],
         prospectsLoading: false,
         prospectsStageFilter: '', // Filter by funnel stage
         
@@ -7926,7 +7992,8 @@ function catalynxApp() {
             
             // Utility functions - using shared CatalynxUtils
             formatStageWithNumber: CatalynxUtils.formatStageWithNumber,
-            getStageColor: CatalynxUtils.getStageColor
+            getStageColor: CatalynxUtils.getStageColor,
+            getOrganizationTypeColor: CatalynxUtils.getOrganizationTypeColor
         }
     }
 }
@@ -8515,6 +8582,7 @@ function planTabData() {
         // Utility functions - using shared CatalynxUtils
         formatStageWithNumber: CatalynxUtils.formatStageWithNumber,
         getStageColor: CatalynxUtils.getStageColor,
+        getOrganizationTypeColor: CatalynxUtils.getOrganizationTypeColor,
         
         get990Status(ein) {
             // Mock 990 availability - in production would check actual data
@@ -9096,6 +9164,7 @@ ${candidate.ai_summary || 'No AI analysis available yet'}
         
         // Utility functions - using shared CatalynxUtils
         formatStageWithNumber: CatalynxUtils.formatStageWithNumber,
-        getStageColor: CatalynxUtils.getStageColor
+        getStageColor: CatalynxUtils.getStageColor,
+        getOrganizationTypeColor: CatalynxUtils.getOrganizationTypeColor
     }
 }

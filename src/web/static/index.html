@@ -108,8 +108,8 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="text-xl font-bold flex items-center justify-center">
-                            <img src="/static/CatalynxLogo.png" alt="Catalynx" class="h-12 mr-2">
-                            <span class="font-bold">Opportunistic Grantmogrifier</span>
+                            <img src="/static/CatalynxLogo.png" alt="Catalynx" class="h-10 mr-3">
+                            <span class="font-bold text-xl">CATALYNX</span>
                         </h1>
                     </div>
                     
@@ -469,7 +469,8 @@
                                                     <div class="text-sm text-gray-500 dark:text-gray-400" x-text="profile.ein || 'No EIN'"></div>
                                                 </td>
                                                 <td class="px-6 py-3 whitespace-nowrap">
-                                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200" 
+                                                    <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                                          :class="getOrganizationTypeColor(profile.organization_type)"
                                                           x-text="profile.organization_type"></span>
                                                 </td>
                                                 <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -650,8 +651,8 @@
                                 <thead class="bg-gray-50 dark:bg-gray-700">
                                     <tr>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stage</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Score</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">990 Grantee</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Source</th>
@@ -666,20 +667,15 @@
                                                 <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="prospect.organization_name"></div>
                                             </td>
                                             <td class="px-6 py-3 whitespace-nowrap">
-                                                <span class="px-2 py-1 text-xs font-medium rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300" 
-                                                      x-text="prospect.organization_type || prospect.source_type || 'Nonprofit'"></span>
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full" 
+                                                      :class="getStageColor(prospect.funnel_stage || prospect.stage || 'prospects')"
+                                                      x-text="formatStageWithNumber(prospect.funnel_stage || prospect.stage || 'prospects')">
+                                                </span>
                                             </td>
                                             <td class="px-6 py-3 whitespace-nowrap">
                                                 <span class="px-2 py-1 text-xs font-medium rounded-full" 
-                                                      :class="{
-                                                          'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200': prospect.funnel_stage === 'prospects',
-                                                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200': prospect.funnel_stage === 'qualified_prospects',
-                                                          'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-200': prospect.funnel_stage === 'candidates',
-                                                          'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200': prospect.funnel_stage === 'targets',
-                                                          'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200': prospect.funnel_stage === 'opportunities'
-                                                      }"
-                                                      x-text="prospect.stage_display_name || prospect.funnel_stage">
-                                                </span>
+                                                      :class="getOrganizationTypeColor(prospect.organization_type || prospect.source_type || 'Nonprofit')"
+                                                      x-text="prospect.organization_type || prospect.source_type || 'Nonprofit'"></span>
                                             </td>
                                             <td class="px-6 py-3 whitespace-nowrap">
                                                 <div class="flex items-center">
@@ -881,6 +877,9 @@
                                                     Stage
                                                 </th>
                                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    Type
+                                                </th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                     990 Analysis
                                                 </th>
                                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -900,16 +899,19 @@
                                         <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                             <template x-for="prospect in filteredProspects" :key="prospect.opportunity_id">
                                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                                                    <td class="px-4 py-4 whitespace-nowrap">
+                                                    <td class="px-6 py-4 whitespace-nowrap">
                                                         <div class="text-sm font-medium text-gray-900 dark:text-white" 
                                                              x-text="prospect.organization_name"></div>
-                                                        <div class="text-sm text-gray-500 dark:text-gray-400" 
-                                                             x-text="prospect.source_type"></div>
                                                     </td>
-                                                    <td class="px-3 py-4 whitespace-nowrap">
+                                                    <td class="px-6 py-4 whitespace-nowrap">
                                                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
                                                               :class="getStageColor(prospect.funnel_stage)"
                                                               x-text="formatStageWithNumber(prospect.funnel_stage)"></span>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                                              :class="getOrganizationTypeColor(prospect.source_type || prospect.organization_type || 'Nonprofit')"
+                                                              x-text="prospect.source_type || prospect.organization_type || 'Nonprofit'"></span>
                                                     </td>
                                                     <td class="px-3 py-4 whitespace-nowrap">
                                                         <div class="text-xs font-medium text-gray-900 dark:text-white" 
@@ -965,7 +967,7 @@
                                             
                                             <!-- Empty State -->
                                             <tr x-show="filteredProspects.length === 0">
-                                                <td colspan="7" class="px-6 py-12 text-center">
+                                                <td colspan="8" class="px-6 py-12 text-center">
                                                     <div class="text-gray-400 dark:text-gray-600">
                                                         <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -1292,6 +1294,12 @@
                                             Organization
                                         </th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Stage
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Type
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                             Combined Score
                                         </th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -1301,9 +1309,6 @@
                                             AI Status
                                         </th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Stage
-                                        </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                             Actions
                                         </th>
                                     </tr>
@@ -1311,13 +1316,21 @@
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                     <template x-for="candidate in filteredCandidates" :key="candidate.opportunity_id">
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                                            <td class="px-4 py-4 whitespace-nowrap">
+                                            <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="text-sm font-medium text-gray-900 dark:text-white" 
                                                      x-text="candidate.organization_name"></div>
-                                                <div class="text-sm text-gray-500 dark:text-gray-400" 
-                                                     x-text="candidate.source_type"></div>
                                             </td>
-                                            <td class="px-3 py-4 whitespace-nowrap">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                                                      :class="getStageColor(candidate.funnel_stage)"
+                                                      x-text="formatStageWithNumber(candidate.funnel_stage)"></span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                                      :class="getOrganizationTypeColor(candidate.source_type || candidate.organization_type || 'Nonprofit')"
+                                                      x-text="candidate.source_type || candidate.organization_type || 'Nonprofit'"></span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="text-sm font-bold text-gray-900 dark:text-white" 
                                                      x-text="((candidate.combined_score || 0) * 100).toFixed(1) + '%'"></div>
                                                 <div class="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-2 mt-1">
@@ -1328,11 +1341,11 @@
                                                          :style="`width: ${(candidate.combined_score || 0) * 100}%`"></div>
                                                 </div>
                                             </td>
-                                            <td class="px-3 py-4 whitespace-nowrap">
+                                            <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="text-xs font-medium text-gray-900 dark:text-white" 
                                                      x-text="((candidate.network_score || 0) * 100).toFixed(1) + '%'"></div>
                                             </td>
-                                            <td class="px-3 py-4 whitespace-nowrap">
+                                            <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="space-y-2">
                                                     <div>
                                                         <span x-show="candidate.ai_analyzed && !candidate.ai_error" 
@@ -1354,11 +1367,6 @@
                                                     </button>
                                                 </div>
                                             </td>
-                                            <td class="px-3 py-4 whitespace-nowrap">
-                                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
-                                                      :class="getStageColor(candidate.funnel_stage)"
-                                                      x-text="formatStageWithNumber(candidate.funnel_stage)"></span>
-                                            </td>
                                             <td class="px-3 py-4 whitespace-nowrap text-sm">
                                                 <div class="flex items-center space-x-1">
                                                     <button @click="viewCandidateDetails(candidate)" 
@@ -1373,7 +1381,7 @@
                                     
                                     <!-- Empty State -->
                                     <tr x-show="filteredCandidates.length === 0">
-                                        <td colspan="6" class="px-6 py-12 text-center">
+                                        <td colspan="7" class="px-6 py-12 text-center">
                                             <div class="text-gray-400 dark:text-gray-600">
                                                 <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -5676,7 +5684,42 @@
     </footer>
 
     <!-- JavaScript -->
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=TYPE_COLOR_FIX_1.2"></script>
+    
+    <!-- INLINE FIX: Override getOrganizationTypeColor for PROFILER and DISCOVER cache issue -->
+    <script>
+        // Wait for Alpine.js to initialize, then override the function
+        document.addEventListener('alpine:init', () => {
+            // Override CatalynxUtils function
+            if (window.CatalynxUtils) {
+                window.CatalynxUtils.getOrganizationTypeColor = function(type) {
+                    console.log('[INLINE FIX] getOrganizationTypeColor called with type:', type);
+                    const classes = '!bg-blue-600 !text-white dark:!bg-blue-700 dark:!text-white !font-medium !important';
+                    console.log('[INLINE FIX] Returning classes:', classes);
+                    return classes;
+                };
+                console.log('[INLINE FIX] CatalynxUtils.getOrganizationTypeColor overridden');
+            }
+            
+            // Also override it on the Alpine data objects after they're created
+            setTimeout(() => {
+                // Try to find and override the function on Alpine instances
+                const alpineElements = document.querySelectorAll('[x-data]');
+                alpineElements.forEach(el => {
+                    if (el._x_dataStack && el._x_dataStack[0]) {
+                        const data = el._x_dataStack[0];
+                        if (data && typeof data === 'object') {
+                            data.getOrganizationTypeColor = function(type) {
+                                console.log('[INLINE OVERRIDE] getOrganizationTypeColor called with type:', type);
+                                return '!bg-blue-600 !text-white dark:!bg-blue-700 dark:!text-white !font-medium !important';
+                            };
+                        }
+                    }
+                });
+                console.log('[INLINE FIX] Alpine instances patched');
+            }, 1000);
+        });
+    </script>
     
 </body>
 </html>
