@@ -350,8 +350,7 @@
                     <div class="bg-gradient-to-r from-purple-600 to-teal-600 rounded-lg p-6 text-white">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-2xl font-bold">Organization Profile Management</h3>
-                                <p class="mt-2 opacity-90">Create and manage organization profiles for opportunity discovery</p>
+                                <h3 class="text-2xl font-bold">Organization Profiles <span class="text-lg font-normal">- Create and manage organization profiles for opportunity discovery</span></h3>
                             </div>
                         </div>
                     </div>
@@ -502,8 +501,7 @@
                 <div x-show="activeStage === 'discover'" class="space-y-6">
                     <!-- Prospects Discovery Header -->
                     <div class="bg-gradient-to-r from-teal-600 to-yellow-500 rounded-lg p-6 text-white">
-                        <h3 class="text-2xl font-bold">Prospects Discovery</h3>
-                        <p class="mt-2 opacity-90">Initial broad discovery and filtering across all funding sources</p>
+                        <h3 class="text-2xl font-bold">Prospects Discovery <span class="text-lg font-normal">- Initial broad discovery and filtering across all funding sources</span></h3>
                     </div>
 
                     <!-- Discovery Tracks -->
@@ -727,26 +725,392 @@
                 </div>
 
                 <!-- STAGE 3: PLAN (QUALIFIED PROSPECTS) -->
-                <div x-show="activeStage === 'plan'" class="space-y-6">
-                    <div class="bg-gradient-to-r from-yellow-600 to-amber-600 rounded-lg p-6 text-white">
-                        <h3 class="text-2xl font-bold">Qualified Prospects</h3>
-                        <p class="mt-2 opacity-90">Detailed qualification, 990 XML analysis, and network discovery</p>
-                        <p class="mt-2 opacity-90">Financial, network and intelligence analysis</p>
+                <div x-show="activeStage === 'plan'" class="space-y-6" x-data="planTabData()">
+                    <!-- Header -->
+                    <div class="bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg p-6 text-white">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-2xl font-bold">Qualified Prospects</h3>
+                            </div>
+                            <div class="text-center flex-1 mx-6">
+                                <p class="text-base font-normal opacity-90">Transform prospects into qualified candidates through detailed analysis</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-normal">Qualified leads <span x-text="qualifiedProspects.length"></span></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                        <h4 class="text-lg font-semibold mb-4">Analysis Components</h4>
-                        <div class="space-y-4">
-                            <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                                <h5 class="font-medium">Financial Health Assessment</h5>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Revenue analysis, financial stability scoring</p>
+
+                    <!-- Quick Actions Bar -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
+                        <div class="flex flex-wrap gap-3">
+                            <button @click="runFinancialAnalysis()" 
+                                    :disabled="selectedProspects.length === 0"
+                                    :class="selectedProspects.length === 0 ? 'bg-yellow-400' : 'bg-yellow-600 hover:bg-yellow-700'"
+                                    class="px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors">
+                                Run 990 Analysis
+                            </button>
+                            <button @click="generateNetworkMap()" 
+                                    :disabled="selectedProspects.length === 0"
+                                    :class="selectedProspects.length === 0 ? 'bg-amber-400' : 'bg-amber-600 hover:bg-amber-700'"
+                                    class="px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors">
+                                Network Discovery
+                            </button>
+                            <button @click="runIntelligenceAnalysis()" 
+                                    :disabled="selectedProspects.length === 0"
+                                    :class="selectedProspects.length === 0 ? 'bg-orange-400' : 'bg-orange-600 hover:bg-orange-700'"
+                                    class="px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors">
+                                AI Classification
+                            </button>
+                            <button @click="bulkPromoteToQualified()" 
+                                    :disabled="selectedProspects.length === 0"
+                                    :class="selectedProspects.length === 0 ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'"
+                                    class="px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors">
+                                Promote to Candidates
+                            </button>
+                            <div class="ml-auto text-sm text-gray-600 dark:text-gray-400 self-center">
+                                <span x-text="selectedProspects.length"></span> selected
                             </div>
-                            <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                                <h5 class="font-medium">Network Analysis</h5>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Board connections and strategic relationships</p>
+                        </div>
+                    </div>
+
+                    <!-- Main Content Grid -->
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        
+                        <!-- Left Column: Prospects Table -->
+                        <div class="xl:col-span-2">
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                                <!-- Table Header -->
+                                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Qualified Prospects Pipeline</h4>
+                                        <div class="flex items-center space-x-3">
+                                            <select x-model="stageFilter" @change="filterProspects()"
+                                                    class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700">
+                                                <option value="">All Stages</option>
+                                                <option value="prospects">Prospects</option>
+                                                <option value="qualified_prospects">Qualified</option>
+                                            </select>
+                                            <input type="text" placeholder="Search prospects..." 
+                                                   x-model="searchQuery" @input="filterProspects()"
+                                                   class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Prospects Table -->
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                        <thead class="bg-gray-50 dark:bg-gray-700">
+                                            <tr>
+                                                <th class="px-6 py-3 text-left">
+                                                    <input type="checkbox" @change="toggleSelectAll()" 
+                                                           :checked="selectedProspects.length === filteredProspects.length && filteredProspects.length > 0">
+                                                </th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    Organization
+                                                </th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    Stage
+                                                </th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    Score
+                                                </th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    990 Status
+                                                </th>
+                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    Actions
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                            <template x-for="prospect in filteredProspects" :key="prospect.opportunity_id">
+                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                                    :class="selectedProspects.includes(prospect.opportunity_id) ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''">
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <input type="checkbox" :value="prospect.opportunity_id" x-model="selectedProspects">
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <div class="text-sm font-medium text-gray-900 dark:text-white" 
+                                                             x-text="prospect.organization_name"></div>
+                                                        <div class="text-sm text-gray-500 dark:text-gray-400" 
+                                                             x-text="prospect.source_type"></div>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                                                              :class="getStageColor(prospect.funnel_stage)"
+                                                              x-text="prospect.funnel_stage.replace('_', ' ').toUpperCase()"></span>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <div class="text-sm font-semibold text-gray-900 dark:text-white" 
+                                                             x-text="(prospect.compatibility_score * 100).toFixed(1) + '%'"></div>
+                                                        <div class="w-16 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 mt-1">
+                                                            <div class="bg-yellow-500 h-1.5 rounded-full" 
+                                                                 :style="`width: ${prospect.compatibility_score * 100}%`"></div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                                                              :class="get990Status(prospect.ein) === 'Available' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                                              x-text="get990Status(prospect.ein)"></span>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        <div class="flex items-center space-x-2">
+                                                            <button @click="viewProspectDetails(prospect)" 
+                                                                    class="text-indigo-600 hover:text-indigo-900">View</button>
+                                                            <button @click="promoteProspect(prospect)" 
+                                                                    class="text-green-600 hover:text-green-900">Promote</button>
+                                                            <button @click="demoteProspect(prospect)" 
+                                                                    class="text-red-600 hover:text-red-900">Demote</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                            
+                                            <!-- Empty State -->
+                                            <tr x-show="filteredProspects.length === 0">
+                                                <td colspan="6" class="px-6 py-12 text-center">
+                                                    <div class="text-gray-400 dark:text-gray-600">
+                                                        <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                                  d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                                        </svg>
+                                                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No qualified prospects</h3>
+                                                        <p class="text-gray-500 dark:text-gray-400">Run discovery in the DISCOVER tab to find prospects</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                            <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                                <h5 class="font-medium">Competitive Intelligence</h5>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Market positioning and opportunity assessment</p>
+                        </div>
+
+                        <!-- Right Column: Analysis Panels -->
+                        <div class="space-y-6">
+                            
+                            <!-- 990 XML Analysis Panel -->
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h5 class="text-lg font-semibold text-gray-900 dark:text-white">990 XML Analysis</h5>
+                                    <button @click="refresh990Analysis()" 
+                                            class="text-sm text-blue-600 hover:text-blue-800">Refresh</button>
+                                </div>
+                                
+                                <!-- Analysis Status -->
+                                <div class="mb-4">
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-gray-600 dark:text-gray-400">Analysis Status</span>
+                                        <span :class="analysisStatus.xml_990 === 'complete' ? 'text-green-600' : 'text-yellow-600'"
+                                              x-text="analysisStatus.xml_990"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mt-2">
+                                        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                             :style="`width: ${analysisProgress.xml_990}%`"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Financial Metrics -->
+                                <div class="space-y-3" x-show="analysisResults.financial_metrics">
+                                    <div class="text-sm">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600 dark:text-gray-400">Revenue Trend</span>
+                                            <span class="font-medium" 
+                                                  :class="analysisResults.financial_metrics?.revenue_trend > 0 ? 'text-green-600' : 'text-red-600'"
+                                                  x-text="(analysisResults.financial_metrics?.revenue_trend || 0).toFixed(1) + '%'"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600 dark:text-gray-400">Financial Health Score</span>
+                                            <span class="font-medium text-gray-900 dark:text-white" 
+                                                  x-text="(analysisResults.financial_metrics?.health_score || 0).toFixed(2)"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600 dark:text-gray-400">Risk Level</span>
+                                            <span class="font-medium" 
+                                                  :class="getRiskLevelColor(analysisResults.financial_metrics?.risk_level)"
+                                                  x-text="analysisResults.financial_metrics?.risk_level || 'Unknown'"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Empty State -->
+                                <div x-show="!analysisResults.financial_metrics" class="text-center py-8">
+                                    <p class="text-gray-500 dark:text-gray-400 text-sm">Select prospects and run 990 analysis</p>
+                                </div>
+                            </div>
+
+                            <!-- Network Discovery Panel -->
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h5 class="text-lg font-semibold text-gray-900 dark:text-white">Network Discovery</h5>
+                                    <button @click="refreshNetworkAnalysis()" 
+                                            class="text-sm text-blue-600 hover:text-blue-800">Refresh</button>
+                                </div>
+                                
+                                <!-- Network Status -->
+                                <div class="mb-4">
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-gray-600 dark:text-gray-400">Discovery Status</span>
+                                        <span :class="analysisStatus.network === 'complete' ? 'text-green-600' : 'text-yellow-600'"
+                                              x-text="analysisStatus.network"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mt-2">
+                                        <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" 
+                                             :style="`width: ${analysisProgress.network}%`"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Network Metrics -->
+                                <div class="space-y-3" x-show="analysisResults.network_metrics">
+                                    <div class="text-sm">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600 dark:text-gray-400">Board Connections</span>
+                                            <span class="font-medium text-gray-900 dark:text-white" 
+                                                  x-text="analysisResults.network_metrics?.board_connections || 0"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600 dark:text-gray-400">Strategic Links</span>
+                                            <span class="font-medium text-gray-900 dark:text-white" 
+                                                  x-text="analysisResults.network_metrics?.strategic_links || 0"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600 dark:text-gray-400">Network Influence</span>
+                                            <span class="font-medium text-gray-900 dark:text-white" 
+                                                  x-text="(analysisResults.network_metrics?.influence_score || 0).toFixed(2)"></span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Quick Network Visualization -->
+                                    <div class="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                        <div class="text-xs text-gray-600 dark:text-gray-400 mb-2">Top Connections</div>
+                                        <div class="space-y-1" x-show="analysisResults.network_metrics?.top_connections">
+                                            <template x-for="connection in (analysisResults.network_metrics?.top_connections || []).slice(0, 3)" 
+                                                      :key="connection.name">
+                                                <div class="flex items-center justify-between text-xs">
+                                                    <span class="text-gray-900 dark:text-white" x-text="connection.name"></span>
+                                                    <span class="text-gray-600 dark:text-gray-400" x-text="connection.organizations + ' orgs'"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Empty State -->
+                                <div x-show="!analysisResults.network_metrics" class="text-center py-8">
+                                    <p class="text-gray-500 dark:text-gray-400 text-sm">Run network discovery to map connections</p>
+                                </div>
+                            </div>
+
+                            <!-- AI Classification Panel -->
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h5 class="text-lg font-semibold text-gray-900 dark:text-white">AI Classification</h5>
+                                    <button @click="refreshIntelligenceAnalysis()" 
+                                            class="text-sm text-blue-600 hover:text-blue-800">Refresh</button>
+                                </div>
+                                
+                                <!-- Intelligence Status -->
+                                <div class="mb-4">
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-gray-600 dark:text-gray-400">Analysis Status</span>
+                                        <span :class="analysisStatus.intelligence === 'complete' ? 'text-green-600' : 'text-yellow-600'"
+                                              x-text="analysisStatus.intelligence"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mt-2">
+                                        <div class="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
+                                             :style="`width: ${analysisProgress.intelligence}%`"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Classification Results -->
+                                <div class="space-y-3" x-show="analysisResults.classification">
+                                    <div class="text-sm">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600 dark:text-gray-400">Classification Score</span>
+                                            <span class="font-medium text-gray-900 dark:text-white" 
+                                                  x-text="(analysisResults.classification?.score || 0).toFixed(3)"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600 dark:text-gray-400">Confidence Level</span>
+                                            <span class="font-medium text-gray-900 dark:text-white" 
+                                                  x-text="(analysisResults.classification?.confidence || 0).toFixed(2)"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600 dark:text-gray-400">Recommendation</span>
+                                            <span class="font-medium" 
+                                                  :class="getRecommendationColor(analysisResults.classification?.recommendation)"
+                                                  x-text="analysisResults.classification?.recommendation || 'Pending'"></span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- AI Insights -->
+                                    <div class="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg" 
+                                         x-show="analysisResults.classification?.insights">
+                                        <div class="text-xs text-gray-600 dark:text-gray-400 mb-2">AI Insights</div>
+                                        <p class="text-xs text-gray-900 dark:text-white" 
+                                           x-text="analysisResults.classification?.insights"></p>
+                                    </div>
+                                </div>
+
+                                <!-- Empty State -->
+                                <div x-show="!analysisResults.classification" class="text-center py-8">
+                                    <p class="text-gray-500 dark:text-gray-400 text-sm">Run AI classification for intelligent insights</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prospect Details Modal -->
+                    <div x-show="showProspectModal" x-cloak
+                         class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                        <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white dark:bg-gray-800">
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
+                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" 
+                                    x-text="selectedProspectDetails?.organization_name || 'Prospect Details'"></h3>
+                                <button @click="showProspectModal = false" 
+                                        class="text-gray-400 hover:text-gray-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <!-- Modal Content -->
+                            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Basic Info -->
+                                <div>
+                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Basic Information</h4>
+                                    <div class="space-y-2 text-sm">
+                                        <div><strong>EIN:</strong> <span x-text="selectedProspectDetails?.ein || 'N/A'"></span></div>
+                                        <div><strong>Source:</strong> <span x-text="selectedProspectDetails?.source_type || 'N/A'"></span></div>
+                                        <div><strong>Score:</strong> <span x-text="((selectedProspectDetails?.compatibility_score || 0) * 100).toFixed(1) + '%'"></span></div>
+                                        <div><strong>Stage:</strong> <span x-text="selectedProspectDetails?.funnel_stage?.replace('_', ' ') || 'N/A'"></span></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Analysis Results -->
+                                <div>
+                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Analysis Results</h4>
+                                    <div class="space-y-2 text-sm">
+                                        <div><strong>990 Status:</strong> <span x-text="get990Status(selectedProspectDetails?.ein)"></span></div>
+                                        <div><strong>Financial Health:</strong> <span x-text="'Pending Analysis'"></span></div>
+                                        <div><strong>Network Connections:</strong> <span x-text="'Pending Discovery'"></span></div>
+                                        <div><strong>AI Classification:</strong> <span x-text="'Pending Review'"></span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Modal Actions -->
+                            <div class="flex items-center justify-end pt-6 space-x-2 border-t border-gray-200 dark:border-gray-700">
+                                <button @click="showProspectModal = false" 
+                                        class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-400 dark:hover:bg-gray-500">
+                                    Close
+                                </button>
+                                <button @click="promoteProspect(selectedProspectDetails)" 
+                                        class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                                    Promote to Candidate
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -755,8 +1119,7 @@
                 <!-- STAGE 4: ANALYZE (CANDIDATES) -->
                 <div x-show="activeStage === 'analyze'" class="space-y-6">
                     <div class="bg-gradient-to-r from-orange-600 to-red-600 rounded-lg p-6 text-white">
-                        <h3 class="text-2xl font-bold">Candidates Analysis</h3>
-                        <p class="mt-2 opacity-90">Mission alignment, strategic matching, and board connection analysis</p>
+                        <h3 class="text-2xl font-bold">Candidates Analysis - Mission alignment, strategic matching, and board connection analysis</h3>
                         <p class="mt-2 opacity-90">AI-powered recommendations and strategic guidance</p>
                     </div>
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
@@ -777,8 +1140,7 @@
                 <!-- STAGE 5: EXAMINE (TARGETS) -->
                 <div x-show="activeStage === 'examine'" class="space-y-6">
                     <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-6 text-white">
-                        <h3 class="text-2xl font-bold">Target Examination</h3>
-                        <p class="mt-2 opacity-90">Deep dive dossier building and comprehensive intelligence reports</p>
+                        <h3 class="text-2xl font-bold">Target Examination - Deep dive dossier building and comprehensive intelligence reports</h3>
                         <p class="mt-2 opacity-90">Export comprehensive reports and manage implementation</p>
                     </div>
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
@@ -803,8 +1165,7 @@
                 <!-- STAGE 6: APPROACH (OPPORTUNITIES) -->
                 <div x-show="activeStage === 'approach'" class="space-y-6">
                     <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg p-6 text-white">
-                        <h3 class="text-2xl font-bold">Opportunity Approach</h3>
-                        <p class="mt-2 opacity-90">Active pursuit planning and grant writer handoff</p>
+                        <h3 class="text-2xl font-bold">Opportunity Approach - Active pursuit planning and grant writer handoff</h3>
                     </div>
                     
                     <!-- Approach content will be implemented here -->
@@ -819,8 +1180,7 @@
                     <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-2xl font-bold">Pipeline Control Center</h3>
-                                <p class="mt-2 opacity-90">Real-time processing monitoring and control</p>
+                                <h3 class="text-2xl font-bold">Pipeline Control Center - Real-time processing monitoring and control</h3>
                             </div>
                             <div class="text-right">
                                 <div class="text-3xl font-bold" x-text="activeWorkflows || '0'"></div>
