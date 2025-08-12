@@ -1514,6 +1514,17 @@ function catalynxApp() {
                 await this.loadProfiles();
             }
             
+            // Sync profile when switching to plan stage
+            if (stage === 'plan') {
+                // Trigger profile sync for plan tab
+                setTimeout(() => {
+                    const planElement = document.querySelector('[x-data*="planTabData"]');
+                    if (planElement && planElement._x_dataStack && planElement._x_dataStack[0]) {
+                        planElement._x_dataStack[0].syncProfileWithDiscover();
+                    }
+                }, 100); // Small delay to ensure DOM is ready
+            }
+            
             // Close mobile menu if open
             this.mobileMenuOpen = false;
             
@@ -7846,9 +7857,13 @@ function planTabData() {
                 funding_amount: 150000,
                 compatibility_score: 0.85,
                 confidence_level: 0.78,
-                funnel_stage: "prospects",
+                funnel_stage: "qualified_prospects",
                 discovered_at: "2025-08-10",
-                description: "Health education and community wellness programs"
+                description: "Health education and community wellness programs",
+                xml_990_score: 0.82,
+                network_score: 0.65,
+                enhanced_score: 0.88,
+                combined_score: 0.78
             },
             {
                 opportunity_id: "demo-opp-2", 
@@ -7857,9 +7872,13 @@ function planTabData() {
                 funding_amount: 75000,
                 compatibility_score: 0.92,
                 confidence_level: 0.85,
-                funnel_stage: "qualified_prospects",
+                funnel_stage: "candidates",
                 discovered_at: "2025-08-09",
-                description: "STEM education and workforce development"
+                description: "STEM education and workforce development",
+                xml_990_score: 0.89,
+                network_score: 0.93,
+                enhanced_score: 0.85,
+                combined_score: 0.89
             },
             {
                 opportunity_id: "demo-opp-3",
@@ -7868,27 +7887,42 @@ function planTabData() {
                 funding_amount: 250000,
                 compatibility_score: 0.71,
                 confidence_level: 0.65,
-                funnel_stage: "prospects",
+                funnel_stage: "qualified_prospects",
                 discovered_at: "2025-08-11",
-                description: "Rural community infrastructure and economic development"
+                description: "Rural community infrastructure and economic development",
+                xml_990_score: 0.75,
+                network_score: 0.58,
+                enhanced_score: 0.72,
+                combined_score: 0.68
+            },
+            {
+                opportunity_id: "demo-opp-4",
+                organization_name: "Technology Innovation Hub",
+                source_type: "commercial",
+                funding_amount: 180000,
+                compatibility_score: 0.94,
+                confidence_level: 0.91,
+                funnel_stage: "targets",
+                discovered_at: "2025-08-08",
+                description: "Advanced technology development and commercialization",
+                xml_990_score: 0.95,
+                network_score: 0.87,
+                enhanced_score: 0.96,
+                combined_score: 0.93
             }
         ],
         filteredProspects: [],
         selectedProspects: [],
         searchQuery: '',
-        stageFilter: '',
+        stageFilter: 'qualified_prospects+', // Default to qualified prospects and above
+        selectedPlanProfile: null,
         
-        // Analysis tracking
-        analysisStatus: {
-            xml_990: 'idle',
-            network: 'idle',
-            intelligence: 'idle'
-        },
-        
+        // Analysis tracking with new scoring system
         analysisProgress: {
-            xml_990: 0,
-            network: 0,
-            intelligence: 0
+            xml_990_running: false,
+            network_running: false,
+            enhanced_scoring_running: false,
+            strategic_running: false
         },
         
         analysisResults: {
@@ -7898,18 +7932,16 @@ function planTabData() {
         },
         
         // Modal state
-        showProspectModal: false,
-        selectedProspectDetails: null,
+        showScoringModal: false,
+        selectedScoringDetails: null,
         
         // Initialization
         async init() {
             console.log('Initializing PLAN tab data...');
+            // Sync profile with DISCOVER tab
+            this.syncProfileWithDiscover();
             // Initialize with mock data for testing
             this.filteredProspects = [...this.qualifiedProspects];
-            // Pre-select the first prospect for testing so buttons aren't disabled
-            if (this.qualifiedProspects.length > 0) {
-                this.selectedProspects = [this.qualifiedProspects[0].opportunity_id];
-            }
             // Add some demo classification data for testing
             this.analysisResults.classification = {
                 score: 0.85,
@@ -8001,10 +8033,40 @@ function planTabData() {
         filterProspects() {
             let filtered = [...this.qualifiedProspects];
             
-            // Apply stage filter
+            // Apply stage filter with new options
             if (this.stageFilter) {
+                const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
+                
+                if (this.stageFilter === 'qualified_prospects+') {
+                    // Default: Show qualified_prospects and above
+                    const minIndex = stageOrder.indexOf('qualified_prospects');
+                    filtered = filtered.filter(prospect => 
+                        stageOrder.indexOf(prospect.funnel_stage) >= minIndex
+                    );
+                } else if (this.stageFilter === 'candidates+') {
+                    // Show candidates and above
+                    const minIndex = stageOrder.indexOf('candidates');
+                    filtered = filtered.filter(prospect => 
+                        stageOrder.indexOf(prospect.funnel_stage) >= minIndex
+                    );
+                } else if (this.stageFilter === 'targets+') {
+                    // Show targets and above
+                    const minIndex = stageOrder.indexOf('targets');
+                    filtered = filtered.filter(prospect => 
+                        stageOrder.indexOf(prospect.funnel_stage) >= minIndex
+                    );
+                } else if (this.stageFilter !== '') {
+                    // Single stage filter
+                    filtered = filtered.filter(prospect => 
+                        prospect.funnel_stage === this.stageFilter
+                    );
+                }
+            } else {
+                // Default to qualified_prospects+ when no filter specified
+                const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
+                const minIndex = stageOrder.indexOf('qualified_prospects');
                 filtered = filtered.filter(prospect => 
-                    prospect.funnel_stage === this.stageFilter
+                    stageOrder.indexOf(prospect.funnel_stage) >= minIndex
                 );
             }
             
@@ -8030,172 +8092,171 @@ function planTabData() {
             }
         },
         
-        // Analysis functions
-        async runFinancialAnalysis() {
-            if (this.selectedProspects.length === 0) return;
-            
-            console.log('Running 990 XML financial analysis...');
-            this.analysisStatus.xml_990 = 'running';
-            this.analysisProgress.xml_990 = 0;
+        // Analysis functions - New 3-component scoring system
+        async start990Analysis() {
+            console.log('Starting 990 XML Analysis...');
+            this.analysisProgress.xml_990_running = true;
             
             try {
-                // Simulate analysis progress
-                const progressInterval = setInterval(() => {
-                    if (this.analysisProgress.xml_990 < 90) {
-                        this.analysisProgress.xml_990 += Math.random() * 20;
-                    }
-                }, 500);
-                
-                // Get selected prospects data
-                const selectedProspectData = this.filteredProspects.filter(p => 
-                    this.selectedProspects.includes(p.opportunity_id)
-                );
-                
-                console.log('Selected prospects:', this.selectedProspects);
-                console.log('Filtered prospects:', this.filteredProspects);
-                console.log('Selected prospect data:', selectedProspectData);
-                
-                // Call financial scoring API
-                const response = await fetch('/api/analysis/scoring', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        organizations: selectedProspectData
-                    })
+                // Process each qualified prospect individually with real-time updates
+                const qualifiedProspects = this.filteredProspects.filter(prospect => {
+                    const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
+                    return stageOrder.indexOf(prospect.funnel_stage) >= 1; // qualified_prospects and above
                 });
                 
-                clearInterval(progressInterval);
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    this.analysisResults.financial_metrics = {
-                        revenue_trend: (Math.random() - 0.5) * 20, // -10% to +10%
-                        health_score: 0.7 + Math.random() * 0.3, // 0.7 to 1.0
-                        risk_level: ['Low', 'Medium', 'High'][Math.floor(Math.random() * 3)]
-                    };
-                    this.analysisStatus.xml_990 = 'complete';
-                    this.analysisProgress.xml_990 = 100;
+                for (let i = 0; i < qualifiedProspects.length; i++) {
+                    const prospect = qualifiedProspects[i];
                     
-                    console.log('Financial analysis completed');
-                } else {
-                    throw new Error('Financial analysis failed');
+                    // Mark as processing
+                    prospect.xml_990_processing = true;
+                    
+                    // Simulate processing time (varies per record)
+                    const processingTime = 800 + Math.random() * 1200; // 0.8-2.0 seconds
+                    await new Promise(resolve => setTimeout(resolve, processingTime));
+                    
+                    // Update with new score
+                    prospect.xml_990_score = 0.7 + Math.random() * 0.3;
+                    prospect.combined_score = this.calculateCombinedScore(prospect);
+                    prospect.xml_990_processing = false;
+                    
+                    // Force reactivity update
+                    this.filterProspects();
+                    console.log(`990 XML Analysis completed for ${prospect.organization_name}`);
                 }
+                
+                console.log('990 XML Analysis completed for all records');
+                
             } catch (error) {
-                console.error('Financial analysis error:', error);
-                this.analysisStatus.xml_990 = 'error';
-                this.analysisResults.financial_metrics = null;
+                console.error('990 XML Analysis error:', error);
+            } finally {
+                this.analysisProgress.xml_990_running = false;
+                // Clear any remaining processing flags
+                this.qualifiedProspects.forEach(prospect => {
+                    prospect.xml_990_processing = false;
+                });
             }
         },
         
-        async generateNetworkMap() {
-            if (this.selectedProspects.length === 0) return;
-            
-            console.log('Running network discovery...');
-            this.analysisStatus.network = 'running';
-            this.analysisProgress.network = 0;
+        async startNetworkDiscovery() {
+            console.log('Starting Network Discovery...');
+            this.analysisProgress.network_running = true;
             
             try {
-                // Simulate analysis progress
-                const progressInterval = setInterval(() => {
-                    if (this.analysisProgress.network < 90) {
-                        this.analysisProgress.network += Math.random() * 15;
-                    }
-                }, 600);
-                
-                // Get selected prospects data
-                const selectedProspectData = this.filteredProspects.filter(p => 
-                    this.selectedProspects.includes(p.opportunity_id)
-                );
-                
-                // Call network analysis API
-                const response = await fetch('/api/analysis/network', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        organizations: selectedProspectData
-                    })
+                // Process each qualified prospect individually with real-time updates
+                const qualifiedProspects = this.filteredProspects.filter(prospect => {
+                    const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
+                    return stageOrder.indexOf(prospect.funnel_stage) >= 1; // qualified_prospects and above
                 });
                 
-                clearInterval(progressInterval);
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    this.analysisResults.network_metrics = {
-                        board_connections: Math.floor(Math.random() * 20) + 5,
-                        strategic_links: Math.floor(Math.random() * 15) + 3,
-                        influence_score: 0.5 + Math.random() * 0.5,
-                        top_connections: [
-                            { name: 'John Smith', organizations: 4 },
-                            { name: 'Sarah Johnson', organizations: 3 },
-                            { name: 'Mike Davis', organizations: 3 }
-                        ]
-                    };
-                    this.analysisStatus.network = 'complete';
-                    this.analysisProgress.network = 100;
+                for (let i = 0; i < qualifiedProspects.length; i++) {
+                    const prospect = qualifiedProspects[i];
                     
-                    console.log('Network analysis completed');
-                } else {
-                    throw new Error('Network analysis failed');
+                    // Mark as processing
+                    prospect.network_processing = true;
+                    
+                    // Simulate processing time (network analysis takes longer)
+                    const processingTime = 1000 + Math.random() * 1500; // 1.0-2.5 seconds
+                    await new Promise(resolve => setTimeout(resolve, processingTime));
+                    
+                    // Update with new network score
+                    prospect.network_score = 0.6 + Math.random() * 0.4;
+                    prospect.combined_score = this.calculateCombinedScore(prospect);
+                    prospect.network_processing = false;
+                    
+                    // Force reactivity update
+                    this.filterProspects();
+                    console.log(`Network Discovery completed for ${prospect.organization_name}`);
                 }
+                
+                console.log('Network Discovery completed for all records');
+                
             } catch (error) {
-                console.error('Network analysis error:', error);
-                this.analysisStatus.network = 'error';
-                this.analysisResults.network_metrics = null;
+                console.error('Network Discovery error:', error);
+            } finally {
+                this.analysisProgress.network_running = false;
+                // Clear any remaining processing flags
+                this.qualifiedProspects.forEach(prospect => {
+                    prospect.network_processing = false;
+                });
             }
         },
         
-        async runIntelligenceAnalysis() {
-            if (this.selectedProspects.length === 0) return;
-            
-            console.log('Running AI classification...');
-            this.analysisStatus.intelligence = 'running';
-            this.analysisProgress.intelligence = 0;
+        async startEnhancedScoring() {
+            console.log('Starting Enhanced Scoring...');
+            this.analysisProgress.enhanced_scoring_running = true;
             
             try {
-                // Simulate analysis progress
-                const progressInterval = setInterval(() => {
-                    if (this.analysisProgress.intelligence < 90) {
-                        this.analysisProgress.intelligence += Math.random() * 25;
-                    }
-                }, 400);
-                
-                // Get selected prospects data
-                const selectedProspectData = this.filteredProspects.filter(p => 
-                    this.selectedProspects.includes(p.opportunity_id)
-                );
-                
-                // Call intelligence classification API
-                const response = await fetch('/api/intelligence/classify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        organizations: selectedProspectData,
-                        min_score: 0.3
-                    })
+                // Process each qualified prospect individually with real-time updates
+                const qualifiedProspects = this.filteredProspects.filter(prospect => {
+                    const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
+                    return stageOrder.indexOf(prospect.funnel_stage) >= 1; // qualified_prospects and above
                 });
                 
-                clearInterval(progressInterval);
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    this.analysisResults.classification = {
-                        score: 0.7 + Math.random() * 0.3,
-                        confidence: 0.8 + Math.random() * 0.2,
-                        recommendation: ['Promote', 'Review', 'Monitor'][Math.floor(Math.random() * 3)],
-                        insights: 'Strong financial performance with expanding network influence. Recommended for strategic partnership development.'
-                    };
-                    this.analysisStatus.intelligence = 'complete';
-                    this.analysisProgress.intelligence = 100;
+                for (let i = 0; i < qualifiedProspects.length; i++) {
+                    const prospect = qualifiedProspects[i];
                     
-                    console.log('Intelligence analysis completed');
-                } else {
-                    throw new Error('Intelligence analysis failed');
+                    // Mark as processing
+                    prospect.enhanced_processing = true;
+                    
+                    // Simulate processing time (enhanced scoring is faster)
+                    const processingTime = 600 + Math.random() * 1000; // 0.6-1.6 seconds
+                    await new Promise(resolve => setTimeout(resolve, processingTime));
+                    
+                    // Update with new enhanced score
+                    prospect.enhanced_score = 0.65 + Math.random() * 0.35;
+                    prospect.combined_score = this.calculateCombinedScore(prospect);
+                    prospect.enhanced_processing = false;
+                    
+                    // Force reactivity update
+                    this.filterProspects();
+                    console.log(`Enhanced Scoring completed for ${prospect.organization_name}`);
                 }
+                
+                console.log('Enhanced Scoring completed for all records');
+                
             } catch (error) {
-                console.error('Intelligence analysis error:', error);
-                this.analysisStatus.intelligence = 'error';
-                this.analysisResults.classification = null;
+                console.error('Enhanced Scoring error:', error);
+            } finally {
+                this.analysisProgress.enhanced_scoring_running = false;
+                // Clear any remaining processing flags
+                this.qualifiedProspects.forEach(prospect => {
+                    prospect.enhanced_processing = false;
+                });
             }
+        },
+        
+        async generateStrategicPlan() {
+            console.log('Generating Strategic Plan...');
+            this.analysisProgress.strategic_running = true;
+            
+            try {
+                // Simulate strategic planning
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                // Generate strategic insights for high-scoring prospects
+                const qualifiedCount = this.qualifiedProspects.filter(p => (p.combined_score || 0) >= 0.75).length;
+                console.log(`Strategic Plan generated for ${qualifiedCount} high-scoring prospects`);
+                
+            } catch (error) {
+                console.error('Strategic Planning error:', error);
+            } finally {
+                this.analysisProgress.strategic_running = false;
+            }
+        },
+        
+        // Scoring calculation
+        calculateCombinedScore(prospect) {
+            const xml990Weight = 0.4;
+            const networkWeight = 0.35; 
+            const enhancedWeight = 0.25;
+            
+            const xml990Score = prospect.xml_990_score || 0;
+            const networkScore = prospect.network_score || 0;
+            const enhancedScore = prospect.enhanced_score || 0;
+            
+            return (xml990Score * xml990Weight) + 
+                   (networkScore * networkWeight) + 
+                   (enhancedScore * enhancedWeight);
         },
         
         // Bulk operations
@@ -8245,9 +8306,44 @@ function planTabData() {
         },
         
         // Individual prospect actions
-        viewProspectDetails(prospect) {
-            this.selectedProspectDetails = prospect;
-            this.showProspectModal = true;
+        viewScoringDetails(prospect) {
+            this.selectedScoringDetails = prospect;
+            this.showScoringModal = true;
+        },
+        
+        syncProfileWithDiscover() {
+            // Try to get selected profile from DISCOVER tab via global app instance
+            try {
+                // Access the global app data through document.querySelector
+                const appElement = document.querySelector('[x-data*="catalynxApp"]');
+                if (appElement && appElement._x_dataStack) {
+                    const appData = appElement._x_dataStack[0];
+                    const discoverProfile = appData.selectedDiscoveryProfile;
+                    
+                    if (discoverProfile && discoverProfile.profile_id) {
+                        this.selectedPlanProfile = {
+                            profile_id: discoverProfile.profile_id,
+                            name: discoverProfile.name,
+                            ein: discoverProfile.ein || 'Not Available',
+                            last_analysis_date: discoverProfile.last_analysis_date,
+                            qualified_opportunities_count: this.qualifiedProspects.length,
+                            organization_type: discoverProfile.organization_type,
+                            focus_areas: discoverProfile.focus_areas,
+                            mission_statement: discoverProfile.mission_statement
+                        };
+                        console.log('Synced PLAN profile with DISCOVER:', discoverProfile.name);
+                        return;
+                    }
+                }
+                
+                // Fallback: No profile selected in DISCOVER tab
+                console.log('No DISCOVER profile found');
+                this.selectedPlanProfile = null;
+                
+            } catch (error) {
+                console.error('Error syncing profile:', error);
+                this.selectedPlanProfile = null;
+            }
         },
         
         async promoteProspect(prospect) {

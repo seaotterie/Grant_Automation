@@ -739,67 +739,128 @@
 
                 <!-- STAGE 3: PLAN (QUALIFIED PROSPECTS) -->
                 <div x-show="activeStage === 'plan'" class="space-y-6" x-data="planTabData()">
-                    <!-- Header -->
+                    <!-- Strategic Planning Header -->
                     <div class="bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg p-6 text-white">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h3 class="text-2xl font-bold">Qualified Prospects <span class="text-lg font-normal">- Transform prospects into qualified candidates through detailed analysis</span></h3>
+                        <h3 class="text-2xl font-bold">Strategic Planning <span class="text-lg font-normal">- In-depth analysis of qualified prospects for decision-ready intelligence</span></h3>
+                    </div>
+
+                    <!-- Current Profile Information -->
+                    <div x-show="selectedPlanProfile" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 border-orange-500">
+                        <div class="mb-3">
+                            <h5 class="font-semibold text-gray-900 dark:text-white">Current Profile</h5>
+                        </div>
+                        <div class="grid grid-cols-4 gap-3">
+                            <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                <div class="text-xs text-gray-600 dark:text-gray-400">Organization</div>
+                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedPlanProfile?.name">-</div>
                             </div>
-                            <div class="text-right">
-                                <div class="text-lg font-normal">Qualified leads <span x-text="qualifiedProspects.length"></span></div>
+                            <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                <div class="text-xs text-gray-600 dark:text-gray-400">EIN</div>
+                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedPlanProfile?.ein || 'Not Available'">-</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                <div class="text-xs text-gray-600 dark:text-gray-400">Analysis Status</div>
+                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedPlanProfile?.last_analysis_date ? formatDate(selectedPlanProfile.last_analysis_date) : 'Not Run'">Not Run</div>
+                            </div>
+                            <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                <div class="text-xs text-gray-600 dark:text-gray-400">Qualified Opportunities</div>
+                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedPlanProfile?.qualified_opportunities_count || 0">0</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Quick Actions Bar -->
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
-                        <div class="flex flex-wrap gap-3">
-                            <button @click="runFinancialAnalysis()" 
-                                    :disabled="selectedProspects.length === 0"
-                                    :class="selectedProspects.length === 0 ? 'bg-yellow-400' : 'bg-yellow-600 hover:bg-yellow-700'"
-                                    class="px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors">
-                                Run 990 Analysis
-                            </button>
-                            <button @click="generateNetworkMap()" 
-                                    :disabled="selectedProspects.length === 0"
-                                    :class="selectedProspects.length === 0 ? 'bg-amber-400' : 'bg-amber-600 hover:bg-amber-700'"
-                                    class="px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors">
-                                Network Discovery
-                            </button>
-                            <button @click="runIntelligenceAnalysis()" 
-                                    :disabled="selectedProspects.length === 0"
-                                    :class="selectedProspects.length === 0 ? 'bg-orange-400' : 'bg-orange-600 hover:bg-orange-700'"
-                                    class="px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors">
-                                AI Classification
-                            </button>
-                            <button @click="bulkPromoteToQualified()" 
-                                    :disabled="selectedProspects.length === 0"
-                                    :class="selectedProspects.length === 0 ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'"
-                                    class="px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors">
-                                Promote to Candidates
-                            </button>
-                            <div class="ml-auto text-sm text-gray-600 dark:text-gray-400 self-center">
-                                <span x-text="selectedProspects.length"></span> selected
+                    <!-- No Profile Selected State -->
+                    <div x-show="!selectedPlanProfile" class="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h5 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">No Profile Selected</h5>
+                                <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">Select an organization profile and run DISCOVER first to find qualified prospects for strategic planning.</p>
+                                <button @click="switchStage('discover')" class="mt-2 text-xs bg-yellow-100 dark:bg-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-700 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded">
+                                    Go to Discovery
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Main Content Grid -->
-                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                        
-                        <!-- Left Column: Prospects Table -->
-                        <div class="xl:col-span-2">
+                    <!-- Analysis Action Cards -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-medium text-blue-900 dark:text-blue-100">990 XML Analysis</h5>
+                                    <button @click="start990Analysis()" 
+                                            :disabled="analysisProgress.xml_990_running" 
+                                            class="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
+                                        <span x-show="!analysisProgress.xml_990_running">Analyze Financials</span>
+                                        <span x-show="analysisProgress.xml_990_running">Running...</span>
+                                    </button>
+                                </div>
+                                <p class="text-sm text-blue-700 dark:text-blue-300">Schedule I & financial health</p>
+                            </div>
+                            <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-medium text-purple-900 dark:text-purple-100">Network Discovery</h5>
+                                    <button @click="startNetworkDiscovery()" 
+                                            :disabled="analysisProgress.network_running" 
+                                            class="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
+                                        <span x-show="!analysisProgress.network_running">Map Networks</span>
+                                        <span x-show="analysisProgress.network_running">Running...</span>
+                                    </button>
+                                </div>
+                                <p class="text-sm text-purple-700 dark:text-purple-300">Board connections & influence</p>
+                            </div>
+                            <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-medium text-green-900 dark:text-green-100">Enhanced Scoring</h5>
+                                    <button @click="startEnhancedScoring()" 
+                                            :disabled="analysisProgress.enhanced_scoring_running" 
+                                            class="text-xs bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
+                                        <span x-show="!analysisProgress.enhanced_scoring_running">Score Compatibility</span>
+                                        <span x-show="analysisProgress.enhanced_scoring_running">Running...</span>
+                                    </button>
+                                </div>
+                                <p class="text-sm text-green-700 dark:text-green-300">Multi-factor eligibility & fit</p>
+                            </div>
+                            <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-medium text-orange-900 dark:text-orange-100">Strategic Insights</h5>
+                                    <button @click="generateStrategicPlan()" 
+                                            :disabled="analysisProgress.strategic_running" 
+                                            class="text-xs bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
+                                        <span x-show="!analysisProgress.strategic_running">Generate Plan</span>
+                                        <span x-show="analysisProgress.strategic_running">Running...</span>
+                                    </button>
+                                </div>
+                                <p class="text-sm text-orange-700 dark:text-orange-300">AI-powered recommendations</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Strategic Planning Pipeline Table -->
+                    <div class="w-full">
+                        <div class="w-full">
                             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
                                 <!-- Table Header -->
                                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                                     <div class="flex items-center justify-between">
-                                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Qualified Prospects Pipeline</h4>
+                                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Strategic Planning Pipeline</h4>
                                         <div class="flex items-center space-x-3">
                                             <select x-model="stageFilter" @change="filterProspects()"
                                                     class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700">
+                                                <option value="qualified_prospects+">Qualified Prospects+ (Default)</option>
+                                                <option value="candidates+">Candidates+</option>
+                                                <option value="targets+">Targets+</option>
                                                 <option value="">All Stages</option>
-                                                <option value="prospects">Prospects</option>
-                                                <option value="qualified_prospects">Qualified</option>
+                                                <option value="prospects">Prospects Only</option>
+                                                <option value="qualified_prospects">Qualified Prospects Only</option>
+                                                <option value="candidates">Candidates Only</option>
+                                                <option value="targets">Targets Only</option>
+                                                <option value="opportunities">Opportunities Only</option>
                                             </select>
                                             <input type="text" placeholder="Search prospects..." 
                                                    x-model="searchQuery" @input="filterProspects()"
@@ -813,66 +874,90 @@
                                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                         <thead class="bg-gray-50 dark:bg-gray-700">
                                             <tr>
-                                                <th class="px-6 py-3 text-left">
-                                                    <input type="checkbox" @change="toggleSelectAll()" 
-                                                           :checked="selectedProspects.length === filteredProspects.length && filteredProspects.length > 0">
-                                                </th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                     Organization
                                                 </th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                     Stage
                                                 </th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    Score
+                                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    990 Analysis
                                                 </th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    990 Status
+                                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    Network Score
                                                 </th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    Enhanced Score
+                                                </th>
+                                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    Combined
+                                                </th>
+                                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                                     Actions
                                                 </th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                             <template x-for="prospect in filteredProspects" :key="prospect.opportunity_id">
-                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                                                    :class="selectedProspects.includes(prospect.opportunity_id) ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''">
-                                                    <td class="px-6 py-4 whitespace-nowrap">
-                                                        <input type="checkbox" :value="prospect.opportunity_id" x-model="selectedProspects">
-                                                    </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                                    <td class="px-4 py-4 whitespace-nowrap">
                                                         <div class="text-sm font-medium text-gray-900 dark:text-white" 
                                                              x-text="prospect.organization_name"></div>
                                                         <div class="text-sm text-gray-500 dark:text-gray-400" 
                                                              x-text="prospect.source_type"></div>
                                                     </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                    <td class="px-3 py-4 whitespace-nowrap">
                                                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
                                                               :class="getStageColor(prospect.funnel_stage)"
                                                               x-text="prospect.funnel_stage.replace('_', ' ').toUpperCase()"></span>
                                                     </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap">
-                                                        <div class="text-sm font-semibold text-gray-900 dark:text-white" 
-                                                             x-text="(prospect.compatibility_score * 100).toFixed(1) + '%'"></div>
-                                                        <div class="w-16 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 mt-1">
-                                                            <div class="bg-yellow-500 h-1.5 rounded-full" 
-                                                                 :style="`width: ${prospect.compatibility_score * 100}%`"></div>
+                                                    <td class="px-3 py-4 whitespace-nowrap">
+                                                        <div class="text-xs font-medium text-gray-900 dark:text-white" 
+                                                             x-text="prospect.xml_990_processing ? 'Processing...' : ((prospect.xml_990_score * 100 || 0).toFixed(1) + '%')"></div>
+                                                        <div class="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 mt-1">
+                                                            <div :class="prospect.xml_990_processing ? 'bg-blue-400 animate-pulse' : 'bg-blue-500'" 
+                                                                 class="h-1.5 rounded-full transition-all duration-300" 
+                                                                 :style="`width: ${prospect.xml_990_processing ? '100' : ((prospect.xml_990_score || 0) * 100)}%`"></div>
                                                         </div>
                                                     </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap">
-                                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
-                                                              :class="get990Status(prospect.ein) === 'Available' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-                                                              x-text="get990Status(prospect.ein)"></span>
+                                                    <td class="px-3 py-4 whitespace-nowrap">
+                                                        <div class="text-xs font-medium text-gray-900 dark:text-white" 
+                                                             x-text="prospect.network_processing ? 'Processing...' : ((prospect.network_score * 100 || 0).toFixed(1) + '%')"></div>
+                                                        <div class="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 mt-1">
+                                                            <div :class="prospect.network_processing ? 'bg-purple-400 animate-pulse' : 'bg-purple-500'" 
+                                                                 class="h-1.5 rounded-full transition-all duration-300" 
+                                                                 :style="`width: ${prospect.network_processing ? '100' : ((prospect.network_score || 0) * 100)}%`"></div>
+                                                        </div>
                                                     </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                        <div class="flex items-center space-x-2">
-                                                            <button @click="viewProspectDetails(prospect)" 
-                                                                    class="text-indigo-600 hover:text-indigo-900">View</button>
+                                                    <td class="px-3 py-4 whitespace-nowrap">
+                                                        <div class="text-xs font-medium text-gray-900 dark:text-white" 
+                                                             x-text="prospect.enhanced_processing ? 'Processing...' : ((prospect.enhanced_score * 100 || 0).toFixed(1) + '%')"></div>
+                                                        <div class="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 mt-1">
+                                                            <div :class="prospect.enhanced_processing ? 'bg-green-400 animate-pulse' : 'bg-green-500'" 
+                                                                 class="h-1.5 rounded-full transition-all duration-300" 
+                                                                 :style="`width: ${prospect.enhanced_processing ? '100' : ((prospect.enhanced_score || 0) * 100)}%`"></div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-3 py-4 whitespace-nowrap">
+                                                        <div class="text-sm font-bold text-gray-900 dark:text-white" 
+                                                             x-text="(prospect.combined_score * 100 || 0).toFixed(1) + '%'"></div>
+                                                        <div class="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-2 mt-1">
+                                                            <div class="h-2 rounded-full" 
+                                                                 :class="(prospect.combined_score || 0) >= 0.9 ? 'bg-green-600' : 
+                                                                         (prospect.combined_score || 0) >= 0.75 ? 'bg-yellow-600' : 
+                                                                         (prospect.combined_score || 0) >= 0.5 ? 'bg-orange-600' : 'bg-red-600'"
+                                                                 :style="`width: ${(prospect.combined_score || 0) * 100}%`"></div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        <div class="flex items-center space-x-1">
+                                                            <button @click="viewScoringDetails(prospect)" 
+                                                                    class="text-indigo-600 hover:text-indigo-900 text-xs">View</button>
                                                             <button @click="promoteProspect(prospect)" 
-                                                                    class="text-green-600 hover:text-green-900">Promote</button>
+                                                                    :disabled="(prospect.combined_score || 0) < 0.75"
+                                                                    class="text-green-600 hover:text-green-900 disabled:text-gray-400 text-xs">Promote</button>
                                                             <button @click="demoteProspect(prospect)" 
-                                                                    class="text-red-600 hover:text-red-900">Demote</button>
+                                                                    class="text-red-600 hover:text-red-900 text-xs">Demote</button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -880,14 +965,14 @@
                                             
                                             <!-- Empty State -->
                                             <tr x-show="filteredProspects.length === 0">
-                                                <td colspan="6" class="px-6 py-12 text-center">
+                                                <td colspan="7" class="px-6 py-12 text-center">
                                                     <div class="text-gray-400 dark:text-gray-600">
                                                         <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                                                  d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                         </svg>
-                                                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No qualified prospects</h3>
-                                                        <p class="text-gray-500 dark:text-gray-400">Run discovery in the DISCOVER tab to find prospects</p>
+                                                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No opportunities for strategic planning</h3>
+                                                        <p class="text-gray-500 dark:text-gray-400">Run discovery to find qualified prospects or adjust stage filter to see more opportunities</p>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -896,17 +981,10 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Right Column: Analysis Panels -->
-                        <div class="space-y-6">
-                            
-                            <!-- 990 XML Analysis Panel -->
-                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h5 class="text-lg font-semibold text-gray-900 dark:text-white">990 XML Analysis</h5>
-                                    <button @click="refresh990Analysis()" 
-                                            class="text-sm text-blue-600 hover:text-blue-800">Refresh</button>
-                                </div>
+                    <!-- Prospect Details Modal -->
+                    <div x-show="showProspectModal" x-cloak
                                 
                                 <!-- Analysis Status -->
                                 <div class="mb-4">
@@ -950,135 +1028,15 @@
                                 </div>
                             </div>
 
-                            <!-- Network Discovery Panel -->
-                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h5 class="text-lg font-semibold text-gray-900 dark:text-white">Network Discovery</h5>
-                                    <button @click="refreshNetworkAnalysis()" 
-                                            class="text-sm text-blue-600 hover:text-blue-800">Refresh</button>
-                                </div>
-                                
-                                <!-- Network Status -->
-                                <div class="mb-4">
-                                    <div class="flex items-center justify-between text-sm">
-                                        <span class="text-gray-600 dark:text-gray-400">Discovery Status</span>
-                                        <span :class="analysisStatus.network === 'complete' ? 'text-green-600' : 'text-yellow-600'"
-                                              x-text="analysisStatus.network"></span>
-                                    </div>
-                                    <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mt-2">
-                                        <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" 
-                                             :style="`width: ${analysisProgress.network}%`"></div>
-                                    </div>
-                                </div>
 
-                                <!-- Network Metrics -->
-                                <div class="space-y-3" x-show="analysisResults.network_metrics">
-                                    <div class="text-sm">
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600 dark:text-gray-400">Board Connections</span>
-                                            <span class="font-medium text-gray-900 dark:text-white" 
-                                                  x-text="analysisResults.network_metrics?.board_connections || 0"></span>
-                                        </div>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600 dark:text-gray-400">Strategic Links</span>
-                                            <span class="font-medium text-gray-900 dark:text-white" 
-                                                  x-text="analysisResults.network_metrics?.strategic_links || 0"></span>
-                                        </div>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600 dark:text-gray-400">Network Influence</span>
-                                            <span class="font-medium text-gray-900 dark:text-white" 
-                                                  x-text="(analysisResults.network_metrics?.influence_score || 0).toFixed(2)"></span>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Quick Network Visualization -->
-                                    <div class="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                        <div class="text-xs text-gray-600 dark:text-gray-400 mb-2">Top Connections</div>
-                                        <div class="space-y-1" x-show="analysisResults.network_metrics?.top_connections">
-                                            <template x-for="connection in (analysisResults.network_metrics?.top_connections || []).slice(0, 3)" 
-                                                      :key="connection.name">
-                                                <div class="flex items-center justify-between text-xs">
-                                                    <span class="text-gray-900 dark:text-white" x-text="connection.name"></span>
-                                                    <span class="text-gray-600 dark:text-gray-400" x-text="connection.organizations + ' orgs'"></span>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Empty State -->
-                                <div x-show="!analysisResults.network_metrics" class="text-center py-8">
-                                    <p class="text-gray-500 dark:text-gray-400 text-sm">Run network discovery to map connections</p>
-                                </div>
-                            </div>
-
-                            <!-- AI Classification Panel -->
-                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h5 class="text-lg font-semibold text-gray-900 dark:text-white">AI Classification</h5>
-                                    <button @click="refreshIntelligenceAnalysis()" 
-                                            class="text-sm text-blue-600 hover:text-blue-800">Refresh</button>
-                                </div>
-                                
-                                <!-- Intelligence Status -->
-                                <div class="mb-4">
-                                    <div class="flex items-center justify-between text-sm">
-                                        <span class="text-gray-600 dark:text-gray-400">Analysis Status</span>
-                                        <span :class="analysisStatus.intelligence === 'complete' ? 'text-green-600' : 'text-yellow-600'"
-                                              x-text="analysisStatus.intelligence"></span>
-                                    </div>
-                                    <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mt-2">
-                                        <div class="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
-                                             :style="`width: ${analysisProgress.intelligence}%`"></div>
-                                    </div>
-                                </div>
-
-                                <!-- Classification Results -->
-                                <div class="space-y-3" x-show="analysisResults.classification">
-                                    <div class="text-sm">
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600 dark:text-gray-400">Classification Score</span>
-                                            <span class="font-medium text-gray-900 dark:text-white" 
-                                                  x-text="(analysisResults.classification?.score || 0).toFixed(3)"></span>
-                                        </div>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600 dark:text-gray-400">Confidence Level</span>
-                                            <span class="font-medium text-gray-900 dark:text-white" 
-                                                  x-text="(analysisResults.classification?.confidence || 0).toFixed(2)"></span>
-                                        </div>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600 dark:text-gray-400">Recommendation</span>
-                                            <span class="font-medium" 
-                                                  :class="getRecommendationColor(analysisResults.classification?.recommendation)"
-                                                  x-text="analysisResults.classification?.recommendation || 'Pending'"></span>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- AI Insights -->
-                                    <div class="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg" 
-                                         x-show="analysisResults.classification?.insights">
-                                        <div class="text-xs text-gray-600 dark:text-gray-400 mb-2">AI Insights</div>
-                                        <p class="text-xs text-gray-900 dark:text-white" 
-                                           x-text="analysisResults.classification?.insights"></p>
-                                    </div>
-                                </div>
-
-                                <!-- Empty State -->
-                                <div x-show="!analysisResults.classification" class="text-center py-8">
-                                    <p class="text-gray-500 dark:text-gray-400 text-sm">Run AI classification for intelligent insights</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Prospect Details Modal -->
-                    <div x-show="showProspectModal" x-cloak
+                    <!-- Scoring Details Modal -->
+                    <div x-show="showScoringModal" x-cloak
                          class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-                        <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white dark:bg-gray-800">
+                        <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-3xl shadow-lg rounded-md bg-white dark:bg-gray-800">
                             <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white" 
-                                    x-text="selectedProspectDetails?.organization_name || 'Prospect Details'"></h3>
-                                <button @click="showProspectModal = false" 
+                                    x-text="selectedScoringDetails?.organization_name + ' - Scoring Details' || 'Scoring Details'"></h3>
+                                <button @click="showScoringModal = false" 
                                         class="text-gray-400 hover:text-gray-600">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -1086,40 +1044,90 @@
                                 </button>
                             </div>
                             
-                            <!-- Modal Content -->
-                            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Basic Info -->
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Basic Information</h4>
-                                    <div class="space-y-2 text-sm">
-                                        <div><strong>EIN:</strong> <span x-text="selectedProspectDetails?.ein || 'N/A'"></span></div>
-                                        <div><strong>Source:</strong> <span x-text="selectedProspectDetails?.source_type || 'N/A'"></span></div>
-                                        <div><strong>Score:</strong> <span x-text="((selectedProspectDetails?.compatibility_score || 0) * 100).toFixed(1) + '%'"></span></div>
-                                        <div><strong>Stage:</strong> <span x-text="selectedProspectDetails?.funnel_stage?.replace('_', ' ') || 'N/A'"></span></div>
+                            <!-- Scoring Details Content -->
+                            <div class="mt-4 space-y-6">
+                                <!-- Overall Score Summary -->
+                                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Combined Score</h4>
+                                    <div class="flex items-center space-x-4">
+                                        <div class="flex-1">
+                                            <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                                                <div class="h-3 rounded-full transition-all duration-300" 
+                                                     :class="(selectedScoringDetails?.combined_score || 0) >= 0.9 ? 'bg-green-600' : 
+                                                             (selectedScoringDetails?.combined_score || 0) >= 0.75 ? 'bg-yellow-600' : 
+                                                             (selectedScoringDetails?.combined_score || 0) >= 0.5 ? 'bg-orange-600' : 'bg-red-600'"
+                                                     :style="`width: ${(selectedScoringDetails?.combined_score || 0) * 100}%`"></div>
+                                            </div>
+                                        </div>
+                                        <div class="text-lg font-bold text-gray-900 dark:text-white" 
+                                             x-text="((selectedScoringDetails?.combined_score || 0) * 100).toFixed(1) + '%'"></div>
+                                        <div class="text-sm px-2 py-1 rounded-full" 
+                                             :class="(selectedScoringDetails?.combined_score || 0) >= 0.75 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                                             x-text="(selectedScoringDetails?.combined_score || 0) >= 0.75 ? 'Promotion Eligible' : 'Below Threshold'"></div>
                                     </div>
                                 </div>
-                                
-                                <!-- Analysis Results -->
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Analysis Results</h4>
-                                    <div class="space-y-2 text-sm">
-                                        <div><strong>990 Status:</strong> <span x-text="get990Status(selectedProspectDetails?.ein)"></span></div>
-                                        <div><strong>Financial Health:</strong> <span x-text="'Pending Analysis'"></span></div>
-                                        <div><strong>Network Connections:</strong> <span x-text="'Pending Discovery'"></span></div>
-                                        <div><strong>AI Classification:</strong> <span x-text="'Pending Review'"></span></div>
+
+                                <!-- Individual Score Breakdown -->
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <!-- 990 XML Analysis Score -->
+                                    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                                        <h5 class="font-medium text-blue-900 dark:text-blue-100 mb-2">990 XML Analysis</h5>
+                                        <div class="text-2xl font-bold text-blue-900 dark:text-blue-100" 
+                                             x-text="((selectedScoringDetails?.xml_990_score || 0) * 100).toFixed(1) + '%'"></div>
+                                        <div class="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mt-2">
+                                            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                                 :style="`width: ${(selectedScoringDetails?.xml_990_score || 0) * 100}%`"></div>
+                                        </div>
+                                        <div class="text-xs text-blue-700 dark:text-blue-300 mt-1">Weight: 40%</div>
+                                    </div>
+
+                                    <!-- Network Discovery Score -->
+                                    <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+                                        <h5 class="font-medium text-purple-900 dark:text-purple-100 mb-2">Network Discovery</h5>
+                                        <div class="text-2xl font-bold text-purple-900 dark:text-purple-100" 
+                                             x-text="((selectedScoringDetails?.network_score || 0) * 100).toFixed(1) + '%'"></div>
+                                        <div class="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2 mt-2">
+                                            <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" 
+                                                 :style="`width: ${(selectedScoringDetails?.network_score || 0) * 100}%`"></div>
+                                        </div>
+                                        <div class="text-xs text-purple-700 dark:text-purple-300 mt-1">Weight: 35%</div>
+                                    </div>
+
+                                    <!-- Enhanced Scoring -->
+                                    <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                                        <h5 class="font-medium text-green-900 dark:text-green-100 mb-2">Enhanced Scoring</h5>
+                                        <div class="text-2xl font-bold text-green-900 dark:text-green-100" 
+                                             x-text="((selectedScoringDetails?.enhanced_score || 0) * 100).toFixed(1) + '%'"></div>
+                                        <div class="w-full bg-green-200 dark:bg-green-800 rounded-full h-2 mt-2">
+                                            <div class="bg-green-600 h-2 rounded-full transition-all duration-300" 
+                                                 :style="`width: ${(selectedScoringDetails?.enhanced_score || 0) * 100}%`"></div>
+                                        </div>
+                                        <div class="text-xs text-green-700 dark:text-green-300 mt-1">Weight: 25%</div>
+                                    </div>
+                                </div>
+
+                                <!-- Organization Details -->
+                                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                    <h5 class="font-medium text-gray-900 dark:text-white mb-3">Organization Details</h5>
+                                    <div class="grid grid-cols-2 gap-4 text-sm">
+                                        <div><strong>Source:</strong> <span x-text="selectedScoringDetails?.source_type || 'N/A'"></span></div>
+                                        <div><strong>Stage:</strong> <span x-text="selectedScoringDetails?.funnel_stage?.replace('_', ' ').toUpperCase() || 'N/A'"></span></div>
+                                        <div><strong>Funding Amount:</strong> <span x-text="selectedScoringDetails?.funding_amount ? '$' + selectedScoringDetails.funding_amount.toLocaleString() : 'N/A'"></span></div>
+                                        <div><strong>Discovered:</strong> <span x-text="selectedScoringDetails?.discovered_at || 'N/A'"></span></div>
                                     </div>
                                 </div>
                             </div>
                             
                             <!-- Modal Actions -->
                             <div class="flex items-center justify-end pt-6 space-x-2 border-t border-gray-200 dark:border-gray-700">
-                                <button @click="showProspectModal = false" 
+                                <button @click="showScoringModal = false" 
                                         class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-400 dark:hover:bg-gray-500">
                                     Close
                                 </button>
-                                <button @click="promoteProspect(selectedProspectDetails)" 
-                                        class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-                                    Promote to Candidate
+                                <button @click="promoteProspect(selectedScoringDetails)" 
+                                        :disabled="(selectedScoringDetails?.combined_score || 0) < 0.75"
+                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded">
+                                    Promote to Candidates
                                 </button>
                             </div>
                         </div>
