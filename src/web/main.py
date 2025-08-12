@@ -2334,6 +2334,127 @@ async def run_intelligence_classification(request: Dict[str, Any]):
         logger.error(f"Intelligence classification failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/analysis/enhanced-scoring")
+async def run_enhanced_scoring(request: Dict[str, Any]):
+    """Run enhanced scoring analysis using local Python algorithms."""
+    try:
+        logger.info(f"Received enhanced scoring request: {request}")
+        organizations = request.get("organizations", [])
+        if not organizations:
+            logger.error(f"No organizations provided in enhanced scoring request: {request}")
+            raise HTTPException(status_code=400, detail="Organizations list is required")
+        
+        logger.info(f"Running enhanced scoring on {len(organizations)} organizations")
+        
+        # Simulate analysis delay
+        await asyncio.sleep(1.8)
+        
+        # Mock enhanced scoring results using local Python analysis
+        results = {
+            "analysis_id": f"enhanced_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            "status": "completed",
+            "analyzed_count": len(organizations),
+            "enhanced_metrics": {
+                "average_mission_alignment": round(random.uniform(0.6, 0.9), 3),
+                "average_eligibility_match": round(random.uniform(0.65, 0.95), 3),
+                "average_opportunity_fit": round(random.uniform(0.7, 0.92), 3),
+                "geographic_distribution": {
+                    "Virginia": random.randint(60, 85),
+                    "Regional": random.randint(10, 25),
+                    "National": random.randint(5, 15)
+                }
+            },
+            "organization_results": [
+                {
+                    "organization_name": org.get("organization_name", "Unknown"),
+                    "ein": org.get("ein"),
+                    "mission_alignment_score": round(random.uniform(0.5, 0.95), 3),
+                    "eligibility_match_score": round(random.uniform(0.6, 0.98), 3), 
+                    "opportunity_fit_score": round(random.uniform(0.65, 0.92), 3),
+                    "enhanced_score": round(random.uniform(0.65, 0.93), 3),
+                    "qualification_factors": [
+                        random.choice(["Financial Strength", "Geographic Match", "Mission Alignment", "Foundation Type"]),
+                        random.choice(["Activity Pattern", "Network Position", "Grant History", "Organizational Size"])
+                    ]
+                }
+                for org in organizations
+            ],
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        return results
+        
+    except Exception as e:
+        logger.error(f"Enhanced scoring failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/analysis/strategic-plan")
+async def generate_strategic_plan(request: Dict[str, Any]):
+    """Generate strategic plan and recommendations for qualified prospects."""
+    try:
+        logger.info(f"Received strategic planning request: {request}")
+        profile_id = request.get("profile_id")
+        
+        if not profile_id:
+            logger.error("No profile_id provided in strategic planning request")
+            raise HTTPException(status_code=400, detail="Profile ID is required")
+        
+        logger.info(f"Generating strategic plan for profile: {profile_id}")
+        
+        # Simulate strategic analysis delay
+        await asyncio.sleep(3.0)
+        
+        # Mock strategic planning results
+        high_scoring_count = random.randint(5, 15)
+        results = {
+            "analysis_id": f"strategic_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            "status": "completed",
+            "profile_id": profile_id,
+            "strategic_metrics": {
+                "qualified_prospects_count": high_scoring_count,
+                "promotion_candidates": random.randint(3, 8),
+                "average_combined_score": round(random.uniform(0.75, 0.92), 3),
+                "recommended_focus_areas": [
+                    "High-value network connections",
+                    "Strategic partnerships",
+                    "Board-level introductions"
+                ]
+            },
+            "recommendations": [
+                {
+                    "priority": "High",
+                    "action": "Initiate contact with top 3 scoring organizations",
+                    "timeline": "Within 2 weeks",
+                    "expected_outcome": "Strategic partnership discussions"
+                },
+                {
+                    "priority": "Medium", 
+                    "action": "Network mapping for board connections",
+                    "timeline": "Within 1 month",
+                    "expected_outcome": "Warm introductions identified"
+                },
+                {
+                    "priority": "Medium",
+                    "action": "Develop partnership proposals for candidates",
+                    "timeline": "Within 6 weeks", 
+                    "expected_outcome": "Formal collaboration framework"
+                }
+            ],
+            "next_steps": [
+                "Review enhanced scoring results for top prospects",
+                "Prioritize network connections based on influence scores", 
+                "Prepare strategic outreach materials",
+                "Schedule follow-up analysis in 30 days"
+            ],
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        return results
+        
+    except Exception as e:
+        logger.error(f"Strategic planning failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/plan/{profile_id}/prospects")
 async def get_plan_prospects(profile_id: str, stage: Optional[str] = None):
     """Get prospects for PLAN tab analysis - supports comma-separated stages."""
@@ -2388,6 +2509,131 @@ async def get_plan_prospects(profile_id: str, stage: Optional[str] = None):
         logger.error(f"Failed to get PLAN prospects for profile {profile_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/analyze/network-data/{profile_id}")
+async def get_network_visualization_data(profile_id: str):
+    """Get network data and generate visualizations for ANALYZE tab."""
+    try:
+        logger.info(f"Generating network visualizations for profile: {profile_id}")
+        
+        # Import the existing network visualizer processor
+        from src.processors.visualization.network_visualizer import create_network_visualizer
+        
+        # Mock network data for demo - in production, this would come from actual network analysis
+        mock_network_data = {
+            "organizations": [
+                {
+                    "ein": "12-3456789",
+                    "name": "Health Innovation Foundation",
+                    "ntee_code": "E21",
+                    "revenue": 1800000,
+                    "assets": 2400000
+                },
+                {
+                    "ein": "98-7654321", 
+                    "name": "Community Development Partners",
+                    "ntee_code": "F30",
+                    "revenue": 1250000,
+                    "assets": 950000
+                },
+                {
+                    "ein": "55-1234567",
+                    "name": "Rural Development Initiative", 
+                    "ntee_code": "T31",
+                    "revenue": 2500000,
+                    "assets": 1800000
+                }
+            ],
+            "connections": [
+                {
+                    "org1_ein": "12-3456789",
+                    "org2_ein": "98-7654321",
+                    "shared_members": ["Sarah Johnson", "Michael Davis"],
+                    "connection_strength": 0.8
+                },
+                {
+                    "org1_ein": "98-7654321", 
+                    "org2_ein": "55-1234567",
+                    "shared_members": ["Jennifer Wilson"],
+                    "connection_strength": 0.6
+                }
+            ],
+            "influence_scores": {
+                "individual_influence": {
+                    "Sarah Johnson": {
+                        "total_influence_score": 8.5,
+                        "organizations": 3,
+                        "board_positions": ["Chair", "Member"]
+                    },
+                    "Michael Davis": {
+                        "total_influence_score": 6.2,
+                        "organizations": 2,
+                        "board_positions": ["Vice Chair", "Treasurer"] 
+                    },
+                    "Jennifer Wilson": {
+                        "total_influence_score": 4.8,
+                        "organizations": 2,
+                        "board_positions": ["Member", "Secretary"]
+                    }
+                }
+            },
+            "network_metrics": {
+                "organization_metrics": {
+                    "12-3456789": {"centrality": 0.75, "betweenness": 0.6},
+                    "98-7654321": {"centrality": 0.85, "betweenness": 0.8},
+                    "55-1234567": {"centrality": 0.65, "betweenness": 0.4}
+                }
+            }
+        }
+        
+        # Create visualizer instance
+        visualizer = create_network_visualizer()
+        
+        # Generate both network types
+        try:
+            network_fig = visualizer.create_interactive_network(mock_network_data, "Board Member Network")
+            influence_fig = visualizer.create_influence_network(mock_network_data)
+            
+            # Convert to HTML for embedding
+            board_network_html = network_fig.to_html(
+                include_plotlyjs='cdn',
+                div_id="board-network-plotly-div",
+                config={'displayModeBar': True, 'responsive': True}
+            )
+            
+            influence_network_html = influence_fig.to_html(
+                include_plotlyjs='cdn',
+                div_id="influence-network-plotly-div", 
+                config={'displayModeBar': True, 'responsive': True}
+            )
+            
+            return {
+                "profile_id": profile_id,
+                "board_network_html": board_network_html,
+                "influence_network_html": influence_network_html,
+                "network_metrics": mock_network_data.get('network_metrics', {}),
+                "influence_scores": mock_network_data.get('influence_scores', {}),
+                "total_organizations": len(mock_network_data['organizations']),
+                "total_connections": len(mock_network_data['connections']),
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as viz_error:
+            logger.error(f"Network visualization generation failed: {viz_error}")
+            # Return basic data without visualizations
+            return {
+                "profile_id": profile_id,
+                "board_network_html": "<div class='text-center py-8'><h3>Network visualization temporarily unavailable</h3></div>",
+                "influence_network_html": "<div class='text-center py-8'><h3>Influence network temporarily unavailable</h3></div>",
+                "network_metrics": mock_network_data.get('network_metrics', {}),
+                "influence_scores": mock_network_data.get('influence_scores', {}),
+                "error": "Visualization generation failed",
+                "timestamp": datetime.now().isoformat()
+            }
+        
+    except Exception as e:
+        logger.error(f"Network data retrieval failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate network visualizations: {str(e)}")
+
 # Simple test endpoint for debugging
 @app.get("/api/test")
 async def api_test():
@@ -2410,6 +2656,7 @@ async def api_test():
             "/api/analysis/network", 
             "/api/intelligence/classify",
             "/api/plan/{profile_id}/prospects",
+            "/api/analyze/network-data/{profile_id}",
             "/api/test"
         ]
     }

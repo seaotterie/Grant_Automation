@@ -1,6 +1,77 @@
 // Catalynx Modern Web Interface - JavaScript Application
 // Alpine.js application with real-time WebSocket updates
 
+// Shared utility functions used across all tabs
+const CatalynxUtils = {
+    formatStageWithNumber(stage) {
+        const stageMapping = {
+            'prospects': '#1 - PROSPECTS',
+            'qualified_prospects': '#2 - QUALIFIED PROSPECTS',
+            'candidates': '#3 - CANDIDATES',
+            'targets': '#4 - TARGETS', 
+            'opportunities': '#5 - OPPORTUNITIES'
+        };
+        return stageMapping[stage] || stage.replace('_', ' ').toUpperCase();
+    },
+    
+    getStageColor(stage) {
+        const colorMapping = {
+            'prospects': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+            'qualified_prospects': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+            'candidates': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+            'targets': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+            'opportunities': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+        };
+        return colorMapping[stage] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    },
+    
+    toggleFullscreenNetwork(networkType, element) {
+        const networkElement = element || document.getElementById(`${networkType}NetworkChart`);
+        const zoomedContainer = document.getElementById(`${networkType}ZoomedContainer`);
+        
+        if (!networkElement || !zoomedContainer) return;
+        
+        if (zoomedContainer.style.display === 'none' || !zoomedContainer.style.display) {
+            // Show zoomed version
+            const rect = networkElement.getBoundingClientRect();
+            const scaledWidth = Math.min(rect.width * 2, window.innerWidth * 0.9);
+            const scaledHeight = Math.min(rect.height * 2, window.innerHeight * 0.9);
+            
+            zoomedContainer.style.display = 'fixed';
+            zoomedContainer.style.top = '50%';
+            zoomedContainer.style.left = '50%';
+            zoomedContainer.style.transform = 'translate(-50%, -50%)';
+            zoomedContainer.style.width = scaledWidth + 'px';
+            zoomedContainer.style.height = scaledHeight + 'px';
+            zoomedContainer.style.zIndex = '1000';
+            zoomedContainer.style.backgroundColor = 'white';
+            zoomedContainer.style.border = '2px solid #e5e7eb';
+            zoomedContainer.style.borderRadius = '8px';
+            zoomedContainer.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.25)';
+            
+            // Dark mode styling
+            if (document.documentElement.classList.contains('dark')) {
+                zoomedContainer.style.backgroundColor = '#1f2937';
+                zoomedContainer.style.border = '2px solid #374151';
+            }
+        } else {
+            // Hide zoomed version
+            zoomedContainer.style.display = 'none';
+            zoomedContainer.style.position = '';
+            zoomedContainer.style.top = '';
+            zoomedContainer.style.left = '';
+            zoomedContainer.style.transform = '';
+            zoomedContainer.style.width = '';
+            zoomedContainer.style.height = '';
+            zoomedContainer.style.zIndex = '';
+            zoomedContainer.style.backgroundColor = '';
+            zoomedContainer.style.border = '';
+            zoomedContainer.style.borderRadius = '';
+            zoomedContainer.style.boxShadow = '';
+        }
+    }
+};
+
 function catalynxApp() {
     return {
         // Application state - New workflow-based navigation
@@ -7851,7 +7922,11 @@ function catalynxApp() {
                     console.error('Failed to demote prospect:', error);
                     this.addLogEntry('prospects-error', [`Failed to demote prospect: ${error.message}`]);
                 }
-            }
+            },
+            
+            // Utility functions - using shared CatalynxUtils
+            formatStageWithNumber: CatalynxUtils.formatStageWithNumber,
+            getStageColor: CatalynxUtils.getStageColor
         }
     }
 }
@@ -8437,28 +8512,9 @@ function planTabData() {
             this.analysisProgress.intelligence = 0;
         },
         
-        // Utility functions
-        formatStageWithNumber(stage) {
-            const stageMapping = {
-                'prospects': '#1 - PROSPECTS',
-                'qualified_prospects': '#2 - QUALIFIED PROSPECTS',
-                'candidates': '#3 - CANDIDATES',
-                'targets': '#4 - TARGETS', 
-                'opportunities': '#5 - OPPORTUNITIES'
-            };
-            return stageMapping[stage] || stage.replace('_', ' ').toUpperCase();
-        },
-        
-        getStageColor(stage) {
-            const colors = {
-                'prospects': 'bg-gray-100 text-gray-800',
-                'qualified_prospects': 'bg-yellow-100 text-yellow-800',
-                'candidates': 'bg-orange-100 text-orange-800',
-                'targets': 'bg-blue-100 text-blue-800',
-                'opportunities': 'bg-green-100 text-green-800'
-            };
-            return colors[stage] || 'bg-gray-100 text-gray-800';
-        },
+        // Utility functions - using shared CatalynxUtils
+        formatStageWithNumber: CatalynxUtils.formatStageWithNumber,
+        getStageColor: CatalynxUtils.getStageColor,
         
         get990Status(ein) {
             // Mock 990 availability - in production would check actual data
@@ -9038,27 +9094,8 @@ ${candidate.ai_summary || 'No AI analysis available yet'}
             }
         },
         
-        // Utility functions
-        formatStageWithNumber(stage) {
-            const stageMapping = {
-                'prospects': '#1 - PROSPECTS',
-                'qualified_prospects': '#2 - QUALIFIED PROSPECTS',
-                'candidates': '#3 - CANDIDATES',
-                'targets': '#4 - TARGETS', 
-                'opportunities': '#5 - OPPORTUNITIES'
-            };
-            return stageMapping[stage] || stage.replace('_', ' ').toUpperCase();
-        },
-        
-        getStageColor(stage) {
-            const colors = {
-                'prospects': 'bg-gray-100 text-gray-800',
-                'qualified_prospects': 'bg-blue-100 text-blue-800', 
-                'candidates': 'bg-yellow-100 text-yellow-800',
-                'targets': 'bg-purple-100 text-purple-800',
-                'opportunities': 'bg-green-100 text-green-800'
-            };
-            return colors[stage] || 'bg-gray-100 text-gray-800';
-        }
+        // Utility functions - using shared CatalynxUtils
+        formatStageWithNumber: CatalynxUtils.formatStageWithNumber,
+        getStageColor: CatalynxUtils.getStageColor
     }
 }

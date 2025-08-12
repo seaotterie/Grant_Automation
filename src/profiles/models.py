@@ -153,6 +153,14 @@ class OrganizationProfile(BaseModel):
     discovery_status: str = Field(default="never_run", description="Current discovery status (never_run, in_progress, completed, needs_update)")
     next_recommended_discovery: Optional[datetime] = Field(default=None, description="Suggested date for next discovery update")
     opportunities_count: int = Field(default=0, description="Total opportunities discovered")
+    
+    # Processing State Tracking
+    associated_opportunities: List[str] = Field(default=[], description="List of opportunity IDs associated with this profile")
+    processing_history: Dict[str, Any] = Field(default_factory=dict, description="History of processing operations and their status")
+    ai_analysis_count: int = Field(default=0, description="Number of AI analyses performed for this profile")
+    last_ai_analysis_date: Optional[datetime] = Field(default=None, description="Date of most recent AI analysis")
+    cache_usage_stats: Dict[str, int] = Field(default_factory=dict, description="Statistics on cache usage for this profile")
+    cost_tracking: Dict[str, Any] = Field(default_factory=dict, description="Cost tracking for expensive operations")
 
     @validator('focus_areas', 'program_areas', 'target_populations')
     def validate_string_lists(cls, v):

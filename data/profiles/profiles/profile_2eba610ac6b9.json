@@ -1,0 +1,53 @@
+{
+  "profile_id": "profile_2eba610ac6b9",
+  "name": "Button Test Profile",
+  "organization_type": "nonprofit",
+  "ein": null,
+  "mission_statement": "Testing that the edit and delete buttons work correctly",
+  "focus_areas": [
+    "testing",
+    "buttons",
+    "ui"
+  ],
+  "program_areas": [],
+  "target_populations": [],
+  "geographic_scope": {
+    "states": [],
+    "regions": [],
+    "nationwide": false,
+    "international": false
+  },
+  "service_areas": [],
+  "funding_preferences": {
+    "min_amount": null,
+    "max_amount": null,
+    "funding_types": [
+      "grants"
+    ],
+    "recurring": false,
+    "multi_year": false
+  },
+  "current_funders": [],
+  "past_grants": [],
+  "annual_revenue": null,
+  "staff_size": null,
+  "volunteer_count": null,
+  "board_size": null,
+  "strategic_priorities": [],
+  "growth_goals": [],
+  "partnership_interests": [],
+  "certifications": [],
+  "compliance_requirements": [],
+  "reporting_capabilities": [],
+  "status": "archived",
+  "created_at": "2025-08-09 21:53:51.389814",
+  "updated_at": "2025-08-10T07:39:11.796098",
+  "created_by": null,
+  "tags": [],
+  "notes": null,
+  "last_discovery_date": null,
+  "discovery_count": 0,
+  "discovery_status": "never_run",
+  "next_recommended_discovery": null,
+  "opportunities_count": 0
+}

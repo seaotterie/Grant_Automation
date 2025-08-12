@@ -1,0 +1,5 @@
+Organization_1_EIN,Organization_1_Name,Organization_2_EIN,Organization_2_Name,Shared_Members,Number_Shared_Members,Connection_Strength
+123456789,Health Foundation of Virginia,123456789,Health Foundation of Virginia,John Smith; Mary Johnson,2,2.0
+123456789,Health Foundation of Virginia,987654321,Community Health Alliance,Mary Johnson; Mary Johnson; Mary Johnson; Mary Johnson; Robert Davis,5,5.0
+987654321,Community Health Alliance,987654321,Community Health Alliance,Mary Johnson; David Miller,2,2.0
+123456789,Health Foundation of Virginia,456789123,Virginia Food Bank Network,Sarah Wilson; Michael Brown,2,2.0

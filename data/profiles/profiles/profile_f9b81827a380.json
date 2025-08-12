@@ -1,0 +1,94 @@
+{
+  "profile_id": "profile_f9b81827a380",
+  "name": "Organization 23-7083797",
+  "organization_type": "nonprofit",
+  "ein": "23-7083797",
+  "mission_statement": "Auto-created profile from EIN 23-7083797",
+  "keywords": null,
+  "focus_areas": [
+    "General nonprofit purposes"
+  ],
+  "program_areas": [],
+  "target_populations": [],
+  "ntee_codes": [],
+  "government_criteria": [],
+  "geographic_scope": {
+    "states": [
+      "VA"
+    ],
+    "regions": [],
+    "nationwide": false,
+    "international": false
+  },
+  "service_areas": [],
+  "funding_preferences": {
+    "min_amount": 10000,
+    "max_amount": 500000,
+    "funding_types": [
+      "grants"
+    ],
+    "recurring": false,
+    "multi_year": false,
+    "grants_gov_categories": []
+  },
+  "current_funders": [],
+  "past_grants": [],
+  "schedule_i_grantees": [
+    {
+      "recipient_name": "American Red Cross",
+      "recipient_ein": "530196605",
+      "grant_amount": 500000.0,
+      "grant_year": 2023,
+      "grant_purpose": "Disaster relief programs"
+    },
+    {
+      "recipient_name": "United Way of America",
+      "recipient_ein": "131635294",
+      "grant_amount": 250000.0,
+      "grant_year": 2023,
+      "grant_purpose": "Community development initiatives"
+    },
+    {
+      "recipient_name": "Habitat for Humanity International",
+      "recipient_ein": "911914868",
+      "grant_amount": 300000.0,
+      "grant_year": 2023,
+      "grant_purpose": "Affordable housing construction"
+    },
+    {
+      "recipient_name": "Boys and Girls Clubs of America",
+      "recipient_ein": "131624228",
+      "grant_amount": 150000.0,
+      "grant_year": 2022,
+      "grant_purpose": "Youth development programs"
+    },
+    {
+      "recipient_name": "Salvation Army",
+      "recipient_ein": "135562189",
+      "grant_amount": 200000.0,
+      "grant_year": 2023,
+      "grant_purpose": "Social services and community support"
+    }
+  ],
+  "annual_revenue": null,
+  "staff_size": null,
+  "volunteer_count": null,
+  "board_size": null,
+  "strategic_priorities": [],
+  "growth_goals": [],
+  "partnership_interests": [],
+  "certifications": [],
+  "compliance_requirements": [],
+  "reporting_capabilities": [],
+  "status": "archived",
+  "created_at": "2025-08-07 14:28:45.115494",
+  "updated_at": "2025-08-11 22:05:52.342418",
+  "created_by": null,
+  "tags": [],
+  "notes": null,
+  "last_discovery_date": null,
+  "discovery_count": 0,
+  "discovery_status": "never_run",
+  "next_recommended_discovery": null,
+  "opportunities_count": 0
+}

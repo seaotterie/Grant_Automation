@@ -1,0 +1,70 @@
+{
+  "profile_id": "profile_f3adef3b653c",
+  "name": "Heros Bridge",
+  "organization_type": "nonprofit",
+  "ein": "81-2827604",
+  "mission_statement": "Providing healthcare services to underserved communities",
+  "keywords": "",
+  "focus_areas": [
+    "general"
+  ],
+  "program_areas": [],
+  "target_populations": [],
+  "ntee_codes": [
+    "L11",
+    "L20",
+    "I05",
+    "I12",
+    "I20"
+  ],
+  "government_criteria": [
+    "HHS",
+    "ED",
+    "USDA",
+    "DOL",
+    "state_specific",
+    "rural_priority"
+  ],
+  "geographic_scope": {
+    "states": [
+      "VA"
+    ],
+    "regions": [],
+    "nationwide": false,
+    "international": false
+  },
+  "service_areas": [],
+  "funding_preferences": {
+    "min_amount": null,
+    "max_amount": null,
+    "funding_types": [
+      "grants"
+    ],
+    "recurring": false,
+    "multi_year": false,
+    "grants_gov_categories": []
+  },
+  "current_funders": [],
+  "past_grants": [],
+  "annual_revenue": 502611,
+  "staff_size": null,
+  "volunteer_count": null,
+  "board_size": null,
+  "strategic_priorities": [],
+  "growth_goals": [],
+  "partnership_interests": [],
+  "certifications": [],
+  "compliance_requirements": [],
+  "reporting_capabilities": [],
+  "status": "active",
+  "created_at": "2025-08-10 14:40:01.485534",
+  "updated_at": "2025-08-12 06:48:09.266028",
+  "created_by": null,
+  "tags": [],
+  "notes": null,
+  "last_discovery_date": null,
+  "discovery_count": 0,
+  "discovery_status": "never_run",
+  "next_recommended_discovery": null,
+  "opportunities_count": 0
+}

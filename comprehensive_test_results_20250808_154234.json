@@ -1,0 +1,68 @@
+{
+  "test_start": "2025-08-08T15:42:34.356906",
+  "scenarios": {
+    "scenario_1": {
+      "name": "New User Complete Journey",
+      "start_time": "2025-08-08T15:42:34.357050",
+      "steps_completed": 9,
+      "total_steps": 9,
+      "success": true,
+      "issues": [],
+      "profile_id": "test_profile",
+      "demo_opportunities": 4,
+      "success_rate": 100.0,
+      "end_time": "2025-08-08T15:42:34.384749"
+    },
+    "scenario_2": {
+      "name": "Power User Workflow",
+      "start_time": "2025-08-08T15:42:34.384791",
+      "profiles_created": 3,
+      "bulk_operations": 1,
+      "success": true,
+      "issues": [
+        "Failed to create Tech Corporate CSR: 500",
+        "Failed to create University Research: 500",
+        "Profile listing failed: 500"
+      ],
+      "end_time": "2025-08-08T15:42:34.421526"
+    },
+    "scenario_3": {
+      "name": "Mobile Experience",
+      "start_time": "2025-08-08T15:42:34.421553",
+      "mobile_tests": 3,
+      "responsive_features": 4,
+      "success": true,
+      "issues": [],
+      "end_time": "2025-08-08T15:42:34.488602"
+    },
+    "scenario_4": {
+      "name": "Export Format Validation",
+      "start_time": "2025-08-08T15:42:34.488646",
+      "formats_tested": 3,
+      "data_integrity_checks": 2,
+      "success": true,
+      "issues": [],
+      "end_time": "2025-08-08T15:42:34.507889"
+    },
+    "scenario_5": {
+      "name": "Analytics Validation",
+      "start_time": "2025-08-08T15:42:34.507954",
+      "analytics_endpoints": 4,
+      "data_accuracy": 3,
+      "success": true,
+      "issues": [],
+      "end_time": "2025-08-08T15:42:34.518294"
+    }
+  },
+  "analytics_validation": {},
+  "export_validation": {},
+  "performance_metrics": {
+    "total_duration_seconds": 0.16142,
+    "avg_scenario_duration": 0.032284
+  },
+  "overall_success": true,
+  "success_rate": 100.0,
+  "scenarios_passed": 5,
+  "total_scenarios": 5,
+  "test_end": "2025-08-08T15:42:34.518326"
+}

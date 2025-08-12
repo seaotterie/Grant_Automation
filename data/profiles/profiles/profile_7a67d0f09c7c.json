@@ -1,0 +1,53 @@
+{
+  "profile_id": "profile_7a67d0f09c7c",
+  "name": "Organization 36-2167817",
+  "organization_type": "nonprofit",
+  "ein": "36-2167817",
+  "mission_statement": "Nonprofit organization with EIN 36-2167817",
+  "focus_areas": [
+    "General nonprofit purposes"
+  ],
+  "program_areas": [],
+  "target_populations": [],
+  "geographic_scope": {
+    "states": [
+      "VA"
+    ],
+    "regions": [],
+    "nationwide": false,
+    "international": false
+  },
+  "service_areas": [],
+  "funding_preferences": {
+    "min_amount": 10000,
+    "max_amount": 500000,
+    "funding_types": [
+      "grants"
+    ],
+    "recurring": false,
+    "multi_year": false
+  },
+  "current_funders": [],
+  "past_grants": [],
+  "annual_revenue": null,
+  "staff_size": null,
+  "volunteer_count": null,
+  "board_size": null,
+  "strategic_priorities": [],
+  "growth_goals": [],
+  "partnership_interests": [],
+  "certifications": [],
+  "compliance_requirements": [],
+  "reporting_capabilities": [],
+  "status": "active",
+  "created_at": "2025-08-07 14:32:28.968971",
+  "updated_at": "2025-08-10T07:39:11.800707",
+  "created_by": null,
+  "tags": [],
+  "notes": null,
+  "last_discovery_date": null,
+  "discovery_count": 0,
+  "discovery_status": "never_run",
+  "next_recommended_discovery": null,
+  "opportunities_count": 0
+}

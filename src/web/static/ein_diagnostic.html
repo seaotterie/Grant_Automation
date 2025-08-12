@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EIN Diagnostic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">EIN Functionality Diagnostic</h1>
+        
+        <!-- Diagnostic Information -->
+        <div class="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-4">Diagnostic Tests</h2>
+            <div id="diagnostic-results" class="space-y-2 text-sm font-mono"></div>
+        </div>
+        
+        <!-- EIN Test Form -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-lg font-semibold mb-4">EIN Profile Creation Test</h2>
+            
+            <div x-data="{
+                showForm: true,
+                einInput: '13-1628593',
+                loading: false,
+                result: null,
+                error: null,
+                
+                async createProfile() {
+                    this.loading = true;
+                    this.error = null;
+                    this.result = null;
+                    
+                    try {
+                        console.log('Calling API with EIN:', this.einInput);
+                        
+                        const response = await fetch('/api/profiles', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                ein: this.einInput
+                            })
+                        });
+                        
+                        console.log('Response status:', response.status);
+                        
+                        const data = await response.json();
+                        console.log('Response data:', data);
+                        
+                        if (response.ok) {
+                            this.result = data;
+                        } else {
+                            this.error = data.detail || 'Unknown error';
+                        }
+                        
+                    } catch (err) {
+                        console.error('Error:', err);
+                        this.error = err.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }">
+                <form @submit.prevent="createProfile()" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Test EIN</label>
+                        <input type="text" x-model="einInput" 
+                               class="w-full rounded border-gray-300 font-mono"
+                               placeholder="13-1628593">
+                        <p class="text-xs text-gray-500 mt-1">Try: 13-1628593 (American Red Cross)</p>
+                    </div>
+                    
+                    <button type="submit" :disabled="loading"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded disabled:opacity-50">
+                        <span x-show="!loading">Test EIN Lookup</span>
+                        <span x-show="loading">Testing...</span>
+                    </button>
+                </form>
+                
+                <!-- Results -->
+                <div x-show="result" class="mt-6 p-4 bg-green-50 border border-green-200 rounded">
+                    <h3 class="font-semibold text-green-800">Success!</h3>
+                    <p class="text-sm mt-1">Profile created for: <span x-text="result?.profile?.name"></span></p>
+                    <p class="text-sm">Revenue: $<span x-text="result?.profile?.annual_revenue?.toLocaleString()"></span></p>
+                </div>
+                
+                <div x-show="error" class="mt-6 p-4 bg-red-50 border border-red-200 rounded">
+                    <h3 class="font-semibold text-red-800">Error</h3>
+                    <p class="text-sm mt-1" x-text="error"></p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Back Link -->
+        <div class="mt-6 text-center">
+            <a href="/" class="text-blue-600 hover:text-blue-800 underline">← Back to Main App</a>
+        </div>
+    </div>
+    
+    <script>
+        // Run diagnostics when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const results = document.getElementById('diagnostic-results');
+            
+            function addResult(test, status, details = '') {
+                const div = document.createElement('div');
+                const statusColor = status === 'PASS' ? 'text-green-600' : status === 'FAIL' ? 'text-red-600' : 'text-yellow-600';
+                div.innerHTML = `<span class="${statusColor}">[${status}]</span> ${test} ${details}`;
+                results.appendChild(div);
+            }
+            
+            // Test 1: Alpine.js loaded
+            if (typeof Alpine !== 'undefined') {
+                addResult('Alpine.js', 'PASS', '- Framework loaded');
+            } else {
+                addResult('Alpine.js', 'FAIL', '- Framework not loaded');
+            }
+            
+            // Test 2: API accessibility
+            fetch('/api/health')
+                .then(response => {
+                    if (response.ok) {
+                        addResult('API Health', 'PASS', '- Server responding');
+                    } else {
+                        addResult('API Health', 'FAIL', `- Status: ${response.status}`);
+                    }
+                })
+                .catch(err => {
+                    addResult('API Health', 'FAIL', `- Error: ${err.message}`);
+                });
+            
+            // Test 3: EIN Endpoint (via profiles endpoint)
+            fetch('/api/profiles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ein: 'test' })
+            })
+            .then(response => {
+                if (response.status === 400 || response.status === 422) {
+                    addResult('EIN Endpoint', 'PASS', '- Endpoint exists (validation error expected)');
+                } else if (response.status === 404) {
+                    addResult('EIN Endpoint', 'FAIL', '- Endpoint not found');
+                } else if (response.status === 405) {
+                    addResult('EIN Endpoint', 'FAIL', '- Method not allowed');
+                } else {
+                    addResult('EIN Endpoint', 'WARN', `- Unexpected status: ${response.status}`);
+                }
+            })
+            .catch(err => {
+                addResult('EIN Endpoint', 'FAIL', `- Error: ${err.message}`);
+            });
+        });
+    </script>
+</body>
+</html>

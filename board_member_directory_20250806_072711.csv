@@ -1,0 +1,20 @@
+Board_Member,Organization_EIN,Organization_Name,State,NTEE_Code,Position
+Dr. John Smith,123456789,Health Foundation of Virginia,VA,T31,Board Member
+Mary Johnson,123456789,Health Foundation of Virginia,VA,T31,Board Member
+Robert Davis,123456789,Health Foundation of Virginia,VA,T31,Board Member
+Sarah Wilson,123456789,Health Foundation of Virginia,VA,T31,Board Member
+Michael Brown,123456789,Health Foundation of Virginia,VA,T31,Board Member
+Dr. John Smith,123456789,Health Foundation of Virginia,VA,T31,Board Chair
+Mary Johnson,123456789,Health Foundation of Virginia,VA,T31,CEO
+Mary Johnson,987654321,Community Health Alliance,VA,E32,Board Member
+David Miller,987654321,Community Health Alliance,VA,E32,Board Member
+Robert Davis,987654321,Community Health Alliance,VA,E32,Board Member
+Lisa Anderson,987654321,Community Health Alliance,VA,E32,Board Member
+James Taylor,987654321,Community Health Alliance,VA,E32,Board Member
+David Miller,987654321,Community Health Alliance,VA,E32,Executive Director
+Mary Johnson,987654321,Community Health Alliance,VA,E32,Board Member
+Sarah Wilson,456789123,Virginia Food Bank Network,VA,F30,Board Member
+Michael Brown,456789123,Virginia Food Bank Network,VA,F30,Board Member
+Jennifer Lee,456789123,Virginia Food Bank Network,VA,F30,Board Member
+Thomas Anderson,456789123,Virginia Food Bank Network,VA,F30,Board Member
+Patricia Martinez,456789123,Virginia Food Bank Network,VA,F30,Board Member
