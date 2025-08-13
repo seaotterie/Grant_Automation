@@ -79,7 +79,107 @@ const CatalynxUtils = {
             zoomedContainer.style.borderRadius = '';
             zoomedContainer.style.boxShadow = '';
         }
+    },
+    
+    // SCHEMA VALIDATION AND STANDARDIZATION FUNCTIONS
+    validateOpportunitySchema(opportunity) {
+        const requiredFields = [
+            'opportunity_id', 'organization_name', 'funnel_stage', 'source_type',
+            'discovery_source', 'compatibility_score', 'discovered_at'
+        ];
+        
+        const missingFields = requiredFields.filter(field => !opportunity[field]);
+        if (missingFields.length > 0) {
+            console.warn('Missing required fields in opportunity:', missingFields, opportunity);
+            return false;
+        }
+        
+        // Validate score ranges (0-1)
+        const scoreFields = ['raw_score', 'compatibility_score', 'confidence_level', 
+                           'xml_990_score', 'network_score', 'enhanced_score', 'combined_score'];
+        for (const field of scoreFields) {
+            if (opportunity[field] && (opportunity[field] < 0 || opportunity[field] > 1)) {
+                console.warn(`Invalid score range for ${field}:`, opportunity[field]);
+                return false;
+            }
+        }
+        
+        // Validate funnel stage
+        const validStages = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
+        if (!validStages.includes(opportunity.funnel_stage)) {
+            console.warn('Invalid funnel stage:', opportunity.funnel_stage);
+            return false;
+        }
+        
+        return true;
+    },
+    
+    standardizeOpportunityData(rawOpportunity) {
+        // Convert legacy data to standardized schema
+        const standardized = {
+            // Core fields
+            opportunity_id: rawOpportunity.opportunity_id || `opp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            organization_name: rawOpportunity.organization_name || rawOpportunity.name || 'Unknown Organization',
+            funnel_stage: rawOpportunity.funnel_stage || rawOpportunity.stage || 'prospects',
+            source_type: rawOpportunity.source_type || rawOpportunity.organization_type || 'Nonprofit',
+            discovery_source: rawOpportunity.discovery_source || rawOpportunity.source || 'Unknown Source',
+            
+            // Opportunity details
+            program_name: rawOpportunity.program_name || rawOpportunity.program || null,
+            description: rawOpportunity.description || rawOpportunity.summary || null,
+            funding_amount: rawOpportunity.funding_amount || rawOpportunity.amount || null,
+            application_deadline: rawOpportunity.application_deadline || rawOpportunity.deadline || null,
+            
+            // Scoring
+            raw_score: rawOpportunity.raw_score || rawOpportunity.score || 0.0,
+            compatibility_score: rawOpportunity.compatibility_score || 0.0,
+            confidence_level: rawOpportunity.confidence_level || rawOpportunity.confidence || 0.0,
+            
+            // Advanced scoring (for candidates/targets/opportunities)
+            xml_990_score: rawOpportunity.xml_990_score || null,
+            network_score: rawOpportunity.network_score || null,
+            enhanced_score: rawOpportunity.enhanced_score || null,
+            combined_score: rawOpportunity.combined_score || null,
+            
+            // Metadata
+            is_schedule_i_grantee: rawOpportunity.is_schedule_i_grantee || false,
+            discovered_at: rawOpportunity.discovered_at || new Date().toISOString(),
+            stage_updated_at: rawOpportunity.stage_updated_at || new Date().toISOString(),
+            
+            // Contact and location
+            contact_info: rawOpportunity.contact_info || {},
+            geographic_info: rawOpportunity.geographic_info || {},
+            
+            // Analysis factors
+            match_factors: rawOpportunity.match_factors || {},
+            risk_factors: rawOpportunity.risk_factors || {},
+            
+            // Analysis status and AI
+            analysis_status: rawOpportunity.analysis_status || {},
+            strategic_analysis: rawOpportunity.strategic_analysis || {},
+            ai_analyzed: rawOpportunity.ai_analyzed || false,
+            ai_processing: rawOpportunity.ai_processing || false,
+            ai_error: rawOpportunity.ai_error || false,
+            ai_summary: rawOpportunity.ai_summary || null,
+            action_plan: rawOpportunity.action_plan || null
+        };
+        
+        return standardized;
     }
+};
+
+// OPPORTUNITY DATA SCHEMA CONSTANTS
+const OPPORTUNITY_SCHEMA = {
+    REQUIRED_FIELDS: [
+        'opportunity_id', 'organization_name', 'funnel_stage', 'source_type',
+        'discovery_source', 'compatibility_score', 'discovered_at'
+    ],
+    SCORE_FIELDS: [
+        'raw_score', 'compatibility_score', 'confidence_level',
+        'xml_990_score', 'network_score', 'enhanced_score', 'combined_score'
+    ],
+    VALID_STAGES: ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'],
+    VALID_SOURCE_TYPES: ['Nonprofit', 'Foundation', 'Government', 'Commercial', 'Corporate', 'State']
 };
 
 function catalynxApp() {
@@ -108,6 +208,23 @@ function catalynxApp() {
             enhanced_scoring_running: false,
             strategic_running: false
         },
+        
+        // Network visualization state (ANALYZE tab)
+        showNetworkCharts: false,
+        loadingNetworkData: false,
+        networkVisualizationData: null,
+        fullscreenNetwork: {
+            board: false,
+            influence: false
+        },
+        
+        // Popup modal state for network charts
+        showNetworkPopup: false,
+        networkPopupType: null,
+        
+        // Scoring modal system
+        showScoringModal: false,
+        selectedScoringDetails: null,
         
         // Stage-specific data
         profileCount: 0,
@@ -2499,27 +2616,43 @@ function catalynxApp() {
                 opportunity_id: 'unified_opp_001',
                 organization_name: 'American Heart Association',
                 funnel_stage: 'prospects',
-                organization_type: 'Nonprofit',
                 source_type: 'Nonprofit',
-                compatibility_score: 0.85,
                 discovery_source: 'ProPublica',
-                is_schedule_i_grantee: true,
+                program_name: 'Cardiovascular Health Initiative',
+                description: 'Cardiovascular health research and community education programs',
                 funding_amount: 250000,
-                discovered_at: '2025-08-12',
-                description: 'Cardiovascular health research and community education programs'
+                application_deadline: '2025-09-15',
+                raw_score: 0.82,
+                compatibility_score: 0.85,
+                confidence_level: 0.88,
+                is_schedule_i_grantee: true,
+                discovered_at: '2025-08-12T10:30:00Z',
+                stage_updated_at: '2025-08-12T10:30:00Z',
+                contact_info: { email: 'grants@heart.org', phone: '(555) 123-4567' },
+                geographic_info: { state: 'VA', city: 'Richmond', region: 'Mid-Atlantic' },
+                match_factors: { focus_alignment: true, geographic_fit: true, funding_fit: true },
+                risk_factors: { high_competition: true, matching_required: false }
             },
             {
                 opportunity_id: 'unified_opp_002',
                 organization_name: 'Community Health Alliance',
                 funnel_stage: 'prospects',
-                organization_type: 'Nonprofit',
                 source_type: 'Nonprofit',
-                compatibility_score: 0.73,
                 discovery_source: 'ProPublica',
-                is_schedule_i_grantee: false,
+                program_name: 'Rural Health Access Program',
+                description: 'Rural health access and preventive care initiatives',
                 funding_amount: 125000,
-                discovered_at: '2025-08-11',
-                description: 'Rural health access and preventive care initiatives'
+                application_deadline: '2025-10-01',
+                raw_score: 0.70,
+                compatibility_score: 0.73,
+                confidence_level: 0.75,
+                is_schedule_i_grantee: false,
+                discovered_at: '2025-08-11T14:15:00Z',
+                stage_updated_at: '2025-08-11T14:15:00Z',
+                contact_info: { email: 'info@communityhealth.org', phone: '(555) 234-5678' },
+                geographic_info: { state: 'VA', city: 'Charlottesville', region: 'Central Virginia' },
+                match_factors: { focus_alignment: true, geographic_fit: true, funding_fit: true },
+                risk_factors: { limited_funding: false, new_program: false }
             },
             
             // QUALIFIED PROSPECTS - Initial qualification complete
@@ -2527,27 +2660,43 @@ function catalynxApp() {
                 opportunity_id: 'unified_opp_003',
                 organization_name: 'United Way National',
                 funnel_stage: 'qualified_prospects',
-                organization_type: 'Nonprofit',
                 source_type: 'Nonprofit',
-                compatibility_score: 0.92,
                 discovery_source: 'ProPublica',
-                is_schedule_i_grantee: false,
+                program_name: 'Community Impact Fund',
+                description: 'Community development and social services coordination',
                 funding_amount: 150000,
-                discovered_at: '2025-08-10',
-                description: 'Community development and social services coordination'
+                application_deadline: '2025-09-30',
+                raw_score: 0.90,
+                compatibility_score: 0.92,
+                confidence_level: 0.94,
+                is_schedule_i_grantee: false,
+                discovered_at: '2025-08-10T09:20:00Z',
+                stage_updated_at: '2025-08-10T09:20:00Z',
+                contact_info: { email: 'grants@unitedway.org', phone: '(555) 345-6789' },
+                geographic_info: { state: 'VA', city: 'Norfolk', region: 'Hampton Roads' },
+                match_factors: { focus_alignment: true, geographic_fit: true, funding_fit: true, eligibility_match: true },
+                risk_factors: { competitive_process: true, matching_required: true }
             },
             {
                 opportunity_id: 'unified_opp_004',
                 organization_name: 'Virginia Health Foundation',
                 funnel_stage: 'qualified_prospects',
-                organization_type: 'Foundation',
                 source_type: 'Foundation',
-                compatibility_score: 0.85,
                 discovery_source: 'Foundation Directory',
-                is_schedule_i_grantee: false,
+                program_name: 'Community Wellness Initiative',
+                description: 'Health education and community wellness programs',
                 funding_amount: 200000,
-                discovered_at: '2025-08-09',
-                description: 'Health education and community wellness programs'
+                application_deadline: '2025-11-15',
+                raw_score: 0.83,
+                compatibility_score: 0.85,
+                confidence_level: 0.87,
+                is_schedule_i_grantee: false,
+                discovered_at: '2025-08-09T16:45:00Z',
+                stage_updated_at: '2025-08-09T16:45:00Z',
+                contact_info: { email: 'programs@vahealthfdn.org', phone: '(804) 555-7890' },
+                geographic_info: { state: 'VA', city: 'Richmond', region: 'Central Virginia' },
+                match_factors: { focus_alignment: true, geographic_fit: true, funding_fit: true, foundation_history: true },
+                risk_factors: { limited_slots: true, reporting_intensive: true }
             },
             
             // CANDIDATES - Deep analysis stage  
@@ -2555,52 +2704,82 @@ function catalynxApp() {
                 opportunity_id: 'unified_opp_005',
                 organization_name: 'Gates Foundation',
                 funnel_stage: 'candidates',
-                organization_type: 'Foundation',
                 source_type: 'Foundation',
-                compatibility_score: 0.78,
                 discovery_source: 'Foundation Directory',
-                is_schedule_i_grantee: false,
-                funding_amount: 500000,
-                discovered_at: '2025-08-08',
+                program_name: 'Global Health Technology Fund',
                 description: 'Global health initiatives and technology innovation',
+                funding_amount: 500000,
+                application_deadline: '2025-12-01',
+                raw_score: 0.76,
+                compatibility_score: 0.78,
+                confidence_level: 0.80,
+                is_schedule_i_grantee: false,
+                discovered_at: '2025-08-08T11:30:00Z',
+                stage_updated_at: '2025-08-08T11:30:00Z',
+                contact_info: { email: 'grants@gatesfoundation.org', phone: '(206) 555-1234' },
+                geographic_info: { state: 'WA', city: 'Seattle', region: 'Pacific Northwest' },
+                match_factors: { focus_alignment: true, tech_innovation: true, global_reach: true },
+                risk_factors: { high_competition: true, global_scope_required: true, tech_expertise_needed: true },
+                // Deep Analysis Scores
                 xml_990_score: 0.82,
                 network_score: 0.75,
                 enhanced_score: 0.88,
-                combined_score: 0.81
+                combined_score: 0.81,
+                analysis_status: { xml_990: 'completed', network: 'completed', enhanced: 'completed' }
             },
             {
                 opportunity_id: 'unified_opp_006',
                 organization_name: 'Richmond Education Initiative',
                 funnel_stage: 'candidates',
-                organization_type: 'Nonprofit',
                 source_type: 'Nonprofit',
-                compatibility_score: 0.89,
                 discovery_source: 'ProPublica',
-                is_schedule_i_grantee: true,
-                funding_amount: 175000,
-                discovered_at: '2025-08-07',
+                program_name: 'STEM Workforce Pipeline',
                 description: 'STEM education and workforce development programs',
+                funding_amount: 175000,
+                application_deadline: '2025-10-15',
+                raw_score: 0.87,
+                compatibility_score: 0.89,
+                confidence_level: 0.91,
+                is_schedule_i_grantee: true,
+                discovered_at: '2025-08-07T13:20:00Z',
+                stage_updated_at: '2025-08-07T13:20:00Z',
+                contact_info: { email: 'partnerships@rva-edu.org', phone: '(804) 555-9876' },
+                geographic_info: { state: 'VA', city: 'Richmond', region: 'Central Virginia' },
+                match_factors: { focus_alignment: true, local_partner: true, stem_focus: true, workforce_development: true },
+                risk_factors: { limited_duration: true, performance_metrics_required: true },
+                // Deep Analysis Scores
                 xml_990_score: 0.89,
                 network_score: 0.93,
                 enhanced_score: 0.85,
-                combined_score: 0.89
+                combined_score: 0.89,
+                analysis_status: { xml_990: 'completed', network: 'completed', enhanced: 'completed' }
             },
             {
                 opportunity_id: 'unified_opp_007',
                 organization_name: 'Health Innovation Foundation',
                 funnel_stage: 'candidates',
-                organization_type: 'Foundation',
                 source_type: 'Commercial',
-                compatibility_score: 0.91,
                 discovery_source: 'Commercial Intelligence',
-                is_schedule_i_grantee: false,
-                funding_amount: 320000,
-                discovered_at: '2025-08-06',
+                program_name: 'Digital Health Innovation Fund',
                 description: 'Healthcare technology and digital health solutions',
+                funding_amount: 320000,
+                application_deadline: '2025-11-30',
+                raw_score: 0.89,
+                compatibility_score: 0.91,
+                confidence_level: 0.93,
+                is_schedule_i_grantee: false,
+                discovered_at: '2025-08-06T08:45:00Z',
+                stage_updated_at: '2025-08-06T08:45:00Z',
+                contact_info: { email: 'innovation@healthfdn.org', phone: '(555) 678-9012' },
+                geographic_info: { state: 'CA', city: 'San Francisco', region: 'Bay Area' },
+                match_factors: { tech_focus: true, health_innovation: true, digital_solutions: true, commercial_partnership: true },
+                risk_factors: { tech_complexity: true, regulatory_compliance: true, rapid_deployment_needed: true },
+                // Deep Analysis Scores
                 xml_990_score: 0.85,
                 network_score: 0.92,
                 enhanced_score: 0.91,
                 combined_score: 0.89,
+                analysis_status: { xml_990: 'completed', network: 'completed', enhanced: 'completed', ai: 'pending' },
                 ai_analyzed: false,
                 ai_processing: false,
                 ai_error: false
@@ -2611,39 +2790,71 @@ function catalynxApp() {
                 opportunity_id: 'unified_opp_008',
                 organization_name: 'Department of Health & Human Services',
                 funnel_stage: 'targets',
-                organization_type: 'Government',
                 source_type: 'Government',
-                compatibility_score: 0.91,
                 discovery_source: 'Grants.gov',
-                is_schedule_i_grantee: false,
-                funding_amount: 750000,
-                discovered_at: '2025-08-05',
+                program_name: 'Public Health Infrastructure Grant',
                 description: 'Public health infrastructure and emergency preparedness',
+                funding_amount: 750000,
+                application_deadline: '2025-09-01',
+                raw_score: 0.89,
+                compatibility_score: 0.91,
+                confidence_level: 0.95,
+                is_schedule_i_grantee: false,
+                discovered_at: '2025-08-05T15:10:00Z',
+                stage_updated_at: '2025-08-05T15:10:00Z',
+                contact_info: { email: 'grants@hhs.gov', phone: '(202) 555-0123' },
+                geographic_info: { state: 'DC', city: 'Washington', region: 'National Capital' },
+                match_factors: { mission_alignment: true, federal_priority: true, infrastructure_focus: true, emergency_prep: true },
+                risk_factors: { federal_compliance: true, extensive_reporting: true, audit_requirements: true },
+                // Strategic Analysis Complete
                 xml_990_score: 0.88,
                 network_score: 0.85,
                 enhanced_score: 0.92,
-                combined_score: 0.88
+                combined_score: 0.88,
+                analysis_status: { xml_990: 'completed', network: 'completed', enhanced: 'completed', strategic: 'completed' },
+                strategic_analysis: {
+                    priority_level: 'high',
+                    readiness_score: 0.87,
+                    timeline_fit: 'excellent',
+                    resource_requirements: 'moderate'
+                }
             },
             {
                 opportunity_id: 'unified_opp_009',
                 organization_name: 'Rural Development Initiative', 
                 funnel_stage: 'targets',
-                organization_type: 'Government',
                 source_type: 'Government',
-                compatibility_score: 0.94,
                 discovery_source: 'Grants.gov',
-                is_schedule_i_grantee: false,
-                funding_amount: 250000,
-                discovered_at: '2025-08-04',
+                program_name: 'Rural Community Economic Development Grant',
                 description: 'Rural community infrastructure and economic development',
+                funding_amount: 250000,
+                application_deadline: '2025-10-30',
+                raw_score: 0.92,
+                compatibility_score: 0.94,
+                confidence_level: 0.96,
+                is_schedule_i_grantee: false,
+                discovered_at: '2025-08-04T12:00:00Z',
+                stage_updated_at: '2025-08-04T12:00:00Z',
+                contact_info: { email: 'rural.grants@usda.gov', phone: '(202) 555-4567' },
+                geographic_info: { state: 'VA', city: 'Multiple', region: 'Rural Virginia' },
+                match_factors: { rural_focus: true, economic_development: true, infrastructure: true, community_impact: true },
+                risk_factors: { rural_accessibility: false, limited_resources: false, community_buy_in: true },
+                // Strategic Analysis Complete with AI
                 xml_990_score: 0.91,
                 network_score: 0.96,
                 enhanced_score: 0.95,
                 combined_score: 0.94,
+                analysis_status: { xml_990: 'completed', network: 'completed', enhanced: 'completed', strategic: 'completed', ai: 'completed' },
+                strategic_analysis: {
+                    priority_level: 'very_high',
+                    readiness_score: 0.94,
+                    timeline_fit: 'excellent',
+                    resource_requirements: 'low_moderate'
+                },
                 ai_analyzed: true,
                 ai_processing: false,
                 ai_error: false,
-                ai_summary: 'High-priority target with excellent network connections and strong funding history.'
+                ai_summary: 'High-priority target with excellent network connections and strong funding history. Strong rural focus alignment with organizational mission.'
             },
             
             // OPPORTUNITIES - Ready for action
@@ -2651,22 +2862,44 @@ function catalynxApp() {
                 opportunity_id: 'unified_opp_010',
                 organization_name: 'Google.org',
                 funnel_stage: 'opportunities',
-                organization_type: 'Corporate',
                 source_type: 'Commercial',
-                compatibility_score: 0.89,
                 discovery_source: 'Commercial Intelligence',
-                is_schedule_i_grantee: false,
-                funding_amount: 300000,
-                discovered_at: '2025-08-03',
+                program_name: 'Google.org Impact Challenge',
                 description: 'Technology for social good and digital equity initiatives',
+                funding_amount: 300000,
+                application_deadline: '2025-08-30',
+                raw_score: 0.87,
+                compatibility_score: 0.89,
+                confidence_level: 0.92,
+                is_schedule_i_grantee: false,
+                discovered_at: '2025-08-03T10:15:00Z',
+                stage_updated_at: '2025-08-03T10:15:00Z',
+                contact_info: { email: 'impact@google.org', phone: '(650) 555-2468' },
+                geographic_info: { state: 'CA', city: 'Mountain View', region: 'Bay Area' },
+                match_factors: { tech_for_good: true, digital_equity: true, innovation_focus: true, scalable_impact: true },
+                risk_factors: { high_visibility: true, tech_requirements: true, rapid_scaling_needed: true },
+                // Complete Analysis with Action Plan
                 xml_990_score: 0.87,
                 network_score: 0.91,
                 enhanced_score: 0.88,
                 combined_score: 0.89,
+                analysis_status: { xml_990: 'completed', network: 'completed', enhanced: 'completed', strategic: 'completed', ai: 'completed' },
+                strategic_analysis: {
+                    priority_level: 'high',
+                    readiness_score: 0.91,
+                    timeline_fit: 'urgent',
+                    resource_requirements: 'moderate_high'
+                },
                 ai_analyzed: true,
                 ai_processing: false,
                 ai_error: false,
-                ai_summary: 'Excellent opportunity with strong alignment and active funding programs.'
+                ai_summary: 'Excellent opportunity with strong alignment and active funding programs. High potential for scalable social impact through technology.',
+                action_plan: {
+                    next_steps: ['Review application requirements', 'Prepare technology demo', 'Submit LOI by Aug 15'],
+                    timeline: '2 weeks to application',
+                    resources_needed: ['Technical team lead', 'Impact measurement specialist', 'Demo environment'],
+                    success_probability: 0.78
+                }
             }
         ],
         
@@ -3057,6 +3290,76 @@ function catalynxApp() {
             return colorMapping[type] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
         },
         
+        // SCORING MODAL FUNCTIONS
+        openScoringModal(opportunity) {
+            console.log('Opening scoring modal for:', opportunity.organization_name);
+            console.log('Opportunity data:', opportunity);
+            
+            // Enhance opportunity data with missing fields for better modal display
+            const enhancedOpportunity = {
+                ...opportunity,
+                description: opportunity.description || this.generateDescription(opportunity),
+                revenue: opportunity.revenue || this.generateRevenue(opportunity),
+                program_expense_ratio: opportunity.program_expense_ratio || (0.75 + Math.random() * 0.20),
+                contact_info: opportunity.contact_info || this.generateContactInfo(opportunity),
+                geographic_info: opportunity.geographic_info || this.generateGeographicInfo(opportunity),
+                analysis_status: opportunity.analysis_status || { xml_990: 'completed', network: 'completed', enhanced: 'completed' }
+            };
+            
+            this.selectedScoringDetails = enhancedOpportunity;
+            this.showScoringModal = true;
+            console.log('Enhanced opportunity data for modal:', enhancedOpportunity);
+        },
+        
+        generateDescription(opportunity) {
+            const descriptions = {
+                'Nonprofit': `${opportunity.organization_name} is a leading nonprofit organization focused on community development and social impact. They provide essential services and support to underserved populations.`,
+                'Foundation': `${opportunity.organization_name} is a private foundation dedicated to philanthropy and social good, with a strong track record of supporting innovative programs.`,
+                'Government': `${opportunity.organization_name} is a government agency committed to public service and advancing policy initiatives that benefit citizens and communities.`,
+                'Commercial': `${opportunity.organization_name} is a forward-thinking company with strong corporate social responsibility programs and community investment initiatives.`
+            };
+            return descriptions[opportunity.source_type] || `${opportunity.organization_name} is an organization focused on making a positive impact in the community.`;
+        },
+        
+        generateRevenue(opportunity) {
+            const revenueRanges = {
+                'Nonprofit': () => Math.floor(Math.random() * 50000000) + 1000000, // $1M - $50M
+                'Foundation': () => Math.floor(Math.random() * 100000000) + 10000000, // $10M - $100M
+                'Government': () => Math.floor(Math.random() * 500000000) + 50000000, // $50M - $500M
+                'Commercial': () => Math.floor(Math.random() * 200000000) + 20000000 // $20M - $200M
+            };
+            const generator = revenueRanges[opportunity.source_type] || revenueRanges['Nonprofit'];
+            return generator();
+        },
+        
+        generateContactInfo(opportunity) {
+            return {
+                email: `grants@${opportunity.organization_name.toLowerCase().replace(/\s+/g, '')}.org`,
+                phone: `(${Math.floor(Math.random() * 900) + 100}) ${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`,
+                website: `https://www.${opportunity.organization_name.toLowerCase().replace(/\s+/g, '')}.org`
+            };
+        },
+        
+        generateGeographicInfo(opportunity) {
+            const locations = [
+                { city: 'New York', state: 'NY' },
+                { city: 'Los Angeles', state: 'CA' },
+                { city: 'Chicago', state: 'IL' },
+                { city: 'Houston', state: 'TX' },
+                { city: 'Washington', state: 'DC' },
+                { city: 'Richmond', state: 'VA' },
+                { city: 'Atlanta', state: 'GA' },
+                { city: 'Boston', state: 'MA' }
+            ];
+            return locations[Math.floor(Math.random() * locations.length)];
+        },
+        
+        closeScoringModal() {
+            this.showScoringModal = false;
+            this.selectedScoringDetails = null;
+            console.log('Closing scoring modal');
+        },
+        
         // PLAN TAB ANALYSIS FUNCTIONS
         async start990Analysis() {
             if (!this.selectedProfile) {
@@ -3071,16 +3374,37 @@ function catalynxApp() {
             this.analysisProgress.xml_990_running = true;
             
             try {
-                this.showNotification('990 Analysis', 'Starting financial analysis...', 'info');
+                this.showNotification('990 Analysis', 'Starting sequential financial analysis...', 'info');
                 
-                // Simulate API call with delay
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                // Process opportunities one by one
+                for (let i = 0; i < this.qualifiedProspects.length; i++) {
+                    const prospect = this.qualifiedProspects[i];
+                    console.log(`Processing 990 analysis for ${prospect.organization_name} (${i+1}/${this.qualifiedProspects.length})`);
+                    
+                    // Set processing flag for current prospect
+                    prospect.xml_990_processing = true;
+                    
+                    // Simulate analysis time for this prospect (1-3 seconds)
+                    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+                    
+                    // Complete analysis for this prospect
+                    prospect.xml_990_processing = false;
+                    prospect.xml_990_score = Math.random() * 0.6 + 0.4; // Random score between 0.4-1.0
+                    this.calculateCombinedScore(prospect);
+                    
+                    console.log(`✅ Completed 990 analysis for ${prospect.organization_name}: ${(prospect.xml_990_score * 100).toFixed(1)}%`);
+                }
                 
-                this.showNotification('990 Analysis Complete', 'Financial analysis completed successfully', 'success');
+                this.showNotification('990 Analysis Complete', 'Financial analysis completed for all prospects', 'success');
                 this.workflowProgress.plan = true;
             } catch (error) {
                 console.error('990 analysis failed:', error);
                 this.showNotification('Analysis Error', 'Failed to complete 990 analysis', 'error');
+                
+                // Clear all processing flags on error
+                this.qualifiedProspects.forEach(prospect => {
+                    prospect.xml_990_processing = false;
+                });
             } finally {
                 this.analysisProgress.xml_990_running = false;
             }
@@ -3099,16 +3423,37 @@ function catalynxApp() {
             this.analysisProgress.network_running = true;
             
             try {
-                this.showNotification('Network Discovery', 'Mapping board connections...', 'info');
+                this.showNotification('Network Discovery', 'Starting sequential board connection mapping...', 'info');
                 
-                // Simulate API call with delay
-                await new Promise(resolve => setTimeout(resolve, 2500));
+                // Process opportunities one by one
+                for (let i = 0; i < this.qualifiedProspects.length; i++) {
+                    const prospect = this.qualifiedProspects[i];
+                    console.log(`Processing network analysis for ${prospect.organization_name} (${i+1}/${this.qualifiedProspects.length})`);
+                    
+                    // Set processing flag for current prospect
+                    prospect.network_processing = true;
+                    
+                    // Simulate analysis time for this prospect (1.5-3.5 seconds)
+                    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 2000));
+                    
+                    // Complete analysis for this prospect
+                    prospect.network_processing = false;
+                    prospect.network_score = Math.random() * 0.5 + 0.5; // Random score between 0.5-1.0
+                    this.calculateCombinedScore(prospect);
+                    
+                    console.log(`✅ Completed network analysis for ${prospect.organization_name}: ${(prospect.network_score * 100).toFixed(1)}%`);
+                }
                 
-                this.showNotification('Network Discovery Complete', 'Board network mapping completed', 'success');
+                this.showNotification('Network Discovery Complete', 'Board network mapping completed for all prospects', 'success');
                 this.workflowProgress.plan = true;
             } catch (error) {
                 console.error('Network discovery failed:', error);
                 this.showNotification('Analysis Error', 'Failed to complete network discovery', 'error');
+                
+                // Clear all processing flags on error
+                this.qualifiedProspects.forEach(prospect => {
+                    prospect.network_processing = false;
+                });
             } finally {
                 this.analysisProgress.network_running = false;
             }
@@ -3127,16 +3472,37 @@ function catalynxApp() {
             this.analysisProgress.enhanced_scoring_running = true;
             
             try {
-                this.showNotification('Enhanced Scoring', 'Calculating compatibility scores...', 'info');
+                this.showNotification('Enhanced Scoring', 'Starting sequential compatibility scoring...', 'info');
                 
-                // Simulate API call with delay
-                await new Promise(resolve => setTimeout(resolve, 3000));
+                // Process opportunities one by one
+                for (let i = 0; i < this.qualifiedProspects.length; i++) {
+                    const prospect = this.qualifiedProspects[i];
+                    console.log(`Processing enhanced scoring for ${prospect.organization_name} (${i+1}/${this.qualifiedProspects.length})`);
+                    
+                    // Set processing flag for current prospect
+                    prospect.enhanced_processing = true;
+                    
+                    // Simulate analysis time for this prospect (2-4 seconds)
+                    await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
+                    
+                    // Complete analysis for this prospect
+                    prospect.enhanced_processing = false;
+                    prospect.enhanced_score = Math.random() * 0.7 + 0.3; // Random score between 0.3-1.0
+                    this.calculateCombinedScore(prospect);
+                    
+                    console.log(`✅ Completed enhanced scoring for ${prospect.organization_name}: ${(prospect.enhanced_score * 100).toFixed(1)}%`);
+                }
                 
-                this.showNotification('Enhanced Scoring Complete', 'Compatibility scoring completed', 'success');
+                this.showNotification('Enhanced Scoring Complete', 'Compatibility scoring completed for all prospects', 'success');
                 this.workflowProgress.plan = true;
             } catch (error) {
                 console.error('Enhanced scoring failed:', error);
                 this.showNotification('Analysis Error', 'Failed to complete enhanced scoring', 'error');
+                
+                // Clear all processing flags on error
+                this.qualifiedProspects.forEach(prospect => {
+                    prospect.enhanced_processing = false;
+                });
             } finally {
                 this.analysisProgress.enhanced_scoring_running = false;
             }
@@ -3167,6 +3533,178 @@ function catalynxApp() {
                 this.showNotification('Analysis Error', 'Failed to generate strategic plan', 'error');
             } finally {
                 this.analysisProgress.strategic_running = false;
+            }
+        },
+        
+        // Combined score calculation for prospects
+        calculateCombinedScore(prospect) {
+            // Default weights if not already set
+            const xml990Score = prospect.xml_990_score || 0;
+            const networkScore = prospect.network_score || 0; 
+            const enhancedScore = prospect.enhanced_score || 0;
+            
+            // Weighted calculation: XML 990 (40%), Network (30%), Enhanced (30%)
+            const combinedScore = (xml990Score * 0.4) + (networkScore * 0.3) + (enhancedScore * 0.3);
+            prospect.combined_score = combinedScore;
+            
+            console.log(`Updated combined score for ${prospect.organization_name}: ${(combinedScore * 100).toFixed(1)}%`);
+        },
+        
+        // NETWORK VISUALIZATION FUNCTIONS (ANALYZE TAB)
+        async toggleNetworkVisualizations() {
+            if (this.showNetworkCharts) {
+                this.showNetworkCharts = false;
+                this.networkVisualizationData = null;
+                return;
+            }
+            
+            if (!this.selectedProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile to view network visualizations', 'warning');
+                return;
+            }
+            
+            this.loadingNetworkData = true;
+            
+            try {
+                // Simulate network data loading
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Mock network data for demonstration
+                this.networkVisualizationData = {
+                    board_connections: [
+                        { organization: this.selectedProfile.name, connections: 5 },
+                        { organization: "Tech Foundation", connections: 8 },
+                        { organization: "Education Alliance", connections: 3 }
+                    ],
+                    influence_scores: [
+                        { name: "John Smith", score: 0.85, position: "Board Chair" },
+                        { name: "Mary Johnson", score: 0.72, position: "Executive Director" },
+                        { name: "David Wilson", score: 0.68, position: "Treasurer" }
+                    ]
+                };
+                
+                this.showNetworkCharts = true;
+                this.showNotification('Network Data Loaded', 'Board connections and influence data ready', 'success');
+                
+                // Initialize network visualizations (mock implementation)
+                setTimeout(() => this.initializeNetworkCharts(), 100);
+                
+            } catch (error) {
+                console.error('Failed to load network data:', error);
+                this.showNotification('Network Error', 'Failed to load network visualizations', 'error');
+            } finally {
+                this.loadingNetworkData = false;
+            }
+        },
+        
+        initializeNetworkCharts() {
+            // This would initialize the actual network visualizations
+            // For now, just simulate the presence of charts
+            console.log('Network charts initialized with data:', this.networkVisualizationData);
+        },
+        
+        refreshNetworkVisualization() {
+            if (this.networkVisualizationData) {
+                this.showNotification('Network Refresh', 'Refreshing network visualization...', 'info');
+                this.initializeNetworkCharts();
+            }
+        },
+        
+        toggleFullscreenNetwork(type) {
+            console.log(`Opening network popup for type: ${type}`);
+            
+            if (!this.networkVisualizationData) {
+                this.showNotification('No Network Data', 'Please load network data first by clicking "Show Networks"', 'warning');
+                return;
+            }
+            
+            this.networkPopupType = type;
+            this.showNetworkPopup = true;
+            
+            // Initialize the network chart in the popup after a brief delay
+            setTimeout(() => this.initializePopupNetworkChart(type), 200);
+        },
+        
+        closeNetworkPopup() {
+            this.showNetworkPopup = false;
+            this.networkPopupType = null;
+        },
+        
+        initializePopupNetworkChart(type) {
+            // This would initialize the actual network visualization in the popup
+            // For now, just simulate the presence of an enhanced chart
+            console.log(`Initializing popup network chart for type: ${type} with enhanced size`);
+            const popupContainer = document.getElementById(`popup-${type}-network-chart`);
+            if (popupContainer) {
+                popupContainer.innerHTML = `
+                    <div class="flex items-center justify-center h-full text-gray-400">
+                        <div class="text-center">
+                            <svg class="mx-auto h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-2">
+                                Enhanced ${type === 'board' ? 'Board Member' : 'Influence'} Network
+                            </h3>
+                            <p class="text-gray-500 dark:text-gray-400">
+                                Expanded view with detailed ${type === 'board' ? 'board connections' : 'influence mapping'}
+                            </p>
+                            <div class="mt-4 text-sm text-blue-600 dark:text-blue-400">
+                                ${this.networkVisualizationData[type === 'board' ? 'board_connections' : 'influence_scores'].length} 
+                                ${type === 'board' ? 'connections' : 'influence scores'} loaded
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        },
+        
+        // AI ANALYSIS FUNCTION (ANALYZE TAB)
+        async runSingleAIAnalysis(candidate) {
+            if (!candidate) {
+                console.error('No candidate provided for AI analysis');
+                return;
+            }
+            
+            console.log(`Starting AI analysis for ${candidate.organization_name}`);
+            
+            // Set processing state
+            candidate.ai_processing = true;
+            candidate.ai_error = false;
+            candidate.ai_analyzed = false;
+            
+            try {
+                this.showNotification('AI Analysis', `Starting AI analysis for ${candidate.organization_name}...`, 'info');
+                
+                // Simulate AI analysis with random delay
+                await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
+                
+                // Simulate success/failure (90% success rate)
+                if (Math.random() > 0.1) {
+                    // Success
+                    candidate.ai_analyzed = true;
+                    candidate.ai_error = false;
+                    candidate.ai_summary = "AI analysis completed successfully with strategic recommendations and risk assessment.";
+                    candidate.strategic_analysis = {
+                        recommendations: ["Focus on STEM education grants", "Leverage board connections", "Strengthen financial reports"],
+                        risk_level: Math.random() > 0.7 ? 'high' : Math.random() > 0.4 ? 'medium' : 'low',
+                        success_probability: 0.6 + Math.random() * 0.3
+                    };
+                    
+                    this.showNotification('AI Analysis Complete', `Analysis completed for ${candidate.organization_name}`, 'success');
+                } else {
+                    // Error
+                    candidate.ai_error = true;
+                    candidate.ai_analyzed = false;
+                    this.showNotification('AI Analysis Error', `Analysis failed for ${candidate.organization_name}. Click Retry to try again.`, 'error');
+                }
+                
+            } catch (error) {
+                console.error('AI analysis failed:', error);
+                candidate.ai_error = true;
+                candidate.ai_analyzed = false;
+                this.showNotification('AI Analysis Error', `Analysis failed for ${candidate.organization_name}`, 'error');
+            } finally {
+                candidate.ai_processing = false;
             }
         },
         
@@ -3222,9 +3760,14 @@ function catalynxApp() {
                     this.opportunitiesData = [];
                 }
                 
-                // Add new opportunities to unified data
-                this.opportunitiesData.push(...enhancedMockOpportunities);
-                console.log(`Added ${enhancedMockOpportunities.length} mock opportunities, total opportunities now: ${this.opportunitiesData.length}`);
+                // Standardize and validate mock opportunities before adding
+                const validatedOpportunities = enhancedMockOpportunities
+                    .map(opp => CatalynxUtils.standardizeOpportunityData(opp))
+                    .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
+                
+                // Add validated opportunities to unified data
+                this.opportunitiesData.push(...validatedOpportunities);
+                console.log(`Added ${validatedOpportunities.length}/${enhancedMockOpportunities.length} validated opportunities, total opportunities now: ${this.opportunitiesData.length}`);
                 
                 this.$nextTick(() => {
                     console.log('UI update completed after adding mock data');
@@ -8207,16 +8750,24 @@ function catalynxApp() {
                 }
                 
                 // Find and update the opportunity in unified data
+                console.log(`Searching for opportunity_id: ${opportunity.opportunity_id} in ${this.opportunitiesData.length} opportunities`);
                 const oppIndex = this.opportunitiesData.findIndex(opp => opp.opportunity_id === opportunity.opportunity_id);
                 if (oppIndex !== -1) {
+                    const oldStage = this.opportunitiesData[oppIndex].funnel_stage;
                     this.opportunitiesData[oppIndex].funnel_stage = nextStage;
                     this.opportunitiesData[oppIndex].stage_updated_at = new Date().toISOString();
-                    console.log(`Promoted ${opportunity.organization_name} to ${nextStage}`);
+                    console.log(`✅ Promoted ${opportunity.organization_name} from ${oldStage} to ${nextStage}`);
+                    console.log('Updated opportunity:', this.opportunitiesData[oppIndex]);
                     
-                    // Trigger reactivity
+                    // Trigger reactivity and UI update
                     this.$nextTick(() => {
-                        console.log('UI updated after promotion');
+                        console.log('✅ UI update triggered after promotion');
+                        console.log('Current prospectsData length:', this.prospectsData.length);
+                        console.log('Current qualifiedProspects length:', this.qualifiedProspects.length);
                     });
+                } else {
+                    console.error(`❌ Opportunity with ID ${opportunity.opportunity_id} not found in opportunitiesData`);
+                    console.log('Available opportunity IDs:', this.opportunitiesData.map(opp => opp.opportunity_id));
                 }
             },
             
@@ -8237,16 +8788,24 @@ function catalynxApp() {
                 }
                 
                 // Find and update the opportunity in unified data
+                console.log(`Searching for opportunity_id: ${opportunity.opportunity_id} in ${this.opportunitiesData.length} opportunities`);
                 const oppIndex = this.opportunitiesData.findIndex(opp => opp.opportunity_id === opportunity.opportunity_id);
                 if (oppIndex !== -1) {
+                    const oldStage = this.opportunitiesData[oppIndex].funnel_stage;
                     this.opportunitiesData[oppIndex].funnel_stage = prevStage;
                     this.opportunitiesData[oppIndex].stage_updated_at = new Date().toISOString();
-                    console.log(`Demoted ${opportunity.organization_name} to ${prevStage}`);
+                    console.log(`✅ Demoted ${opportunity.organization_name} from ${oldStage} to ${prevStage}`);
+                    console.log('Updated opportunity:', this.opportunitiesData[oppIndex]);
                     
-                    // Trigger reactivity
+                    // Trigger reactivity and UI update
                     this.$nextTick(() => {
-                        console.log('UI updated after demotion');
+                        console.log('✅ UI update triggered after demotion');
+                        console.log('Current prospectsData length:', this.prospectsData.length);
+                        console.log('Current qualifiedProspects length:', this.qualifiedProspects.length);
                     });
+                } else {
+                    console.error(`❌ Opportunity with ID ${opportunity.opportunity_id} not found in opportunitiesData`);
+                    console.log('Available opportunity IDs:', this.opportunitiesData.map(opp => opp.opportunity_id));
                 }
             },
             
@@ -8272,11 +8831,20 @@ function catalynxApp() {
                     const response = await fetch(`/api/funnel/${profileId}/opportunities${stageFilter}`);
                     if (response.ok) {
                         const data = await response.json();
-                        // Merge new opportunities into unified data
+                        // Standardize and validate API opportunities before merging
                         if (data.opportunities && data.opportunities.length > 0) {
-                            this.opportunitiesData.push(...data.opportunities);
+                            const validatedOpportunities = data.opportunities
+                                .map(opp => CatalynxUtils.standardizeOpportunityData(opp))
+                                .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
+                            
+                            this.opportunitiesData.push(...validatedOpportunities);
+                            
+                            if (validatedOpportunities.length !== data.opportunities.length) {
+                                console.warn(`Filtered ${data.opportunities.length - validatedOpportunities.length} invalid opportunities from API`);
+                            }
                         }
-                        this.addLogEntry('prospects', [`Loaded ${data.opportunities?.length || 0} new opportunities, total: ${this.opportunitiesData.length}`]);
+                        const validatedCount = validatedOpportunities?.length || 0;
+                        this.addLogEntry('prospects', [`Loaded ${data.opportunities?.length || 0} opportunities (${validatedCount} validated), total: ${this.opportunitiesData.length}`]);
                     } else {
                         this.addLogEntry('prospects-error', [`Failed to load prospects: ${response.statusText}`]);
                     }
@@ -8310,13 +8878,51 @@ function catalynxApp() {
             },
             
             
-            // Legacy promote/demote functions - delegate to centralized functions
+            // Legacy promote/demote functions - delegate to centralized functions with enhanced logging
             async promoteProspect(prospect) {
-                this.promoteOpportunity(prospect);
+                console.log('=== PROMOTE PROSPECT CALLED ===');
+                console.log('Tab: DISCOVER/PLAN');
+                console.log('Prospect details:', prospect);
+                console.log('Prospect opportunity_id:', prospect.opportunity_id);
+                console.log('Current opportunitiesData length:', this.opportunitiesData.length);
+                
+                if (!prospect.opportunity_id) {
+                    console.error('❌ ERROR: Prospect missing opportunity_id');
+                    this.showNotification('Promotion Error', 'Cannot promote: Missing opportunity ID', 'error');
+                    return;
+                }
+                
+                try {
+                    this.promoteOpportunity(prospect);
+                    console.log('✅ DISCOVER/PLAN Tab: Promotion completed');
+                    this.showNotification('Promotion Success', `${prospect.organization_name} promoted successfully`, 'success');
+                } catch (error) {
+                    console.error('❌ DISCOVER/PLAN Tab: Error during promotion:', error);
+                    this.showNotification('Promotion Error', `Failed to promote ${prospect.organization_name}`, 'error');
+                }
             },
             
             async demoteProspect(prospect) {
-                this.demoteOpportunity(prospect);
+                console.log('=== DEMOTE PROSPECT CALLED ===');
+                console.log('Tab: DISCOVER/PLAN');
+                console.log('Prospect details:', prospect);
+                console.log('Prospect opportunity_id:', prospect.opportunity_id);
+                console.log('Current opportunitiesData length:', this.opportunitiesData.length);
+                
+                if (!prospect.opportunity_id) {
+                    console.error('❌ ERROR: Prospect missing opportunity_id');
+                    this.showNotification('Demotion Error', 'Cannot demote: Missing opportunity ID', 'error');
+                    return;
+                }
+                
+                try {
+                    this.demoteOpportunity(prospect);
+                    console.log('✅ DISCOVER/PLAN Tab: Demotion completed');
+                    this.showNotification('Demotion Success', `${prospect.organization_name} demoted successfully`, 'success');
+                } catch (error) {
+                    console.error('❌ DISCOVER/PLAN Tab: Error during demotion:', error);
+                    this.showNotification('Demotion Error', `Failed to demote ${prospect.organization_name}`, 'error');
+                }
             },
             
             // Utility functions now defined directly in main context above

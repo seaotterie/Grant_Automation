@@ -365,10 +365,6 @@
                                 Create Profile
                             </button>
                             
-                            <!-- Manage Profiles Button -->
-                            <button class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors font-medium">
-                                Manage Profiles
-                            </button>
                             
                             <!-- Search Input -->
                             <div class="flex-grow max-w-md">
@@ -609,13 +605,21 @@
                         
                         <!-- Action Buttons -->
                         <div class="flex justify-center gap-2">
-                            <button class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm">
-                                Run All Tracks
+                            <button @click="startAllDiscovery()" 
+                                    :disabled="multiTrackInProgress"
+                                    class="bg-blue-100 dark:bg-blue-700 hover:bg-blue-200 dark:hover:bg-blue-600 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-md text-sm transition-colors"
+                                    :class="multiTrackInProgress ? 'opacity-50 cursor-not-allowed' : ''">
+                                <span x-show="!multiTrackInProgress">Run All Tracks</span>
+                                <span x-show="multiTrackInProgress">Running...</span>
                             </button>
-                            <button class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm">
+                            <button @click="viewDiscoveryResults()" 
+                                    :disabled="discoveryStats.totalResults === 0"
+                                    class="bg-green-100 dark:bg-green-700 hover:bg-green-200 dark:hover:bg-green-600 text-green-700 dark:text-green-300 px-4 py-2 rounded-md text-sm transition-colors"
+                                    :class="discoveryStats.totalResults === 0 ? 'opacity-50 cursor-not-allowed' : ''">
                                 View Recent Results
                             </button>
-                            <button class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm">
+                            <button @click="showNotification('Settings', 'Discovery settings configuration coming soon', 'info')" 
+                                    class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm transition-colors">
                                 Configure Settings
                             </button>
                         </div>
@@ -703,16 +707,16 @@
                                                 <span class="text-sm text-gray-900 dark:text-white" x-text="prospect.funding_amount ? '$' + prospect.funding_amount.toLocaleString() : 'Unknown'"></span>
                                             </td>
                                             <td class="px-6 py-3 whitespace-nowrap text-sm font-medium space-x-2">
-                                                <button @click="promoteProspect(prospect)" 
-                                                        class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                                                        :disabled="prospect.funnel_stage === 'opportunities'">
-                                                    Promote
-                                                </button>
-                                                <button @click="demoteProspect(prospect)" 
-                                                        class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                                                        :disabled="prospect.funnel_stage === 'prospects'">
-                                                    Demote
-                                                </button>
+                                                <div class="flex items-center space-x-2">
+                                                    <button @click="openScoringModal(prospect)" 
+                                                            class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View</button>
+                                                    <button @click="promoteProspect(prospect)" 
+                                                            :disabled="prospect.funnel_stage === 'opportunities'"
+                                                            class="px-3 py-1 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 rounded-md transition-colors">Promote</button>
+                                                    <button @click="demoteProspect(prospect)" 
+                                                            :disabled="prospect.funnel_stage === 'prospects'"
+                                                            class="px-3 py-1 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 rounded-md transition-colors">Demote</button>
+                                                </div>
                                             </td>
                                         </tr>
                                     </template>
@@ -952,21 +956,21 @@
                                                         </div>
                                                     </td>
                                                     <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                        <div class="flex items-center space-x-1">
-                                                            <button @click="viewScoringDetails(prospect)" 
-                                                                    class="text-indigo-600 hover:text-indigo-900 text-xs">View</button>
+                                                        <div class="flex items-center space-x-2">
+                                                            <button @click="openScoringModal(prospect)" 
+                                                                    class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View</button>
                                                             <button @click="promoteProspect(prospect)" 
                                                                     :disabled="(prospect.combined_score || 0) < 0.75"
-                                                                    class="text-green-600 hover:text-green-900 disabled:text-gray-400 text-xs">Promote</button>
+                                                                    class="px-3 py-1 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 rounded-md transition-colors">Promote</button>
                                                             <button @click="demoteProspect(prospect)" 
-                                                                    class="text-red-600 hover:text-red-900 text-xs">Demote</button>
+                                                                    class="px-3 py-1 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 rounded-md transition-colors">Demote</button>
                                                         </div>
                                                     </td>
                                                 </tr>
                                             </template>
                                             
                                             <!-- Empty State -->
-                                            <tr x-show="filteredProspects.length === 0">
+                                            <tr x-show="qualifiedProspects.length === 0">
                                                 <td colspan="8" class="px-6 py-12 text-center">
                                                     <div class="text-gray-400 dark:text-gray-600">
                                                         <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1031,109 +1035,7 @@
                             </div>
 
 
-                    <!-- Scoring Details Modal -->
-                    <div x-show="showScoringModal" x-cloak
-                         class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-                        <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-3xl shadow-lg rounded-md bg-white dark:bg-gray-800">
-                            <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
-                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" 
-                                    x-text="selectedScoringDetails?.organization_name + ' - Scoring Details' || 'Scoring Details'"></h3>
-                                <button @click="showScoringModal = false" 
-                                        class="text-gray-400 hover:text-gray-600">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            
-                            <!-- Scoring Details Content -->
-                            <div class="mt-4 space-y-6">
-                                <!-- Overall Score Summary -->
-                                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Combined Score</h4>
-                                    <div class="flex items-center space-x-4">
-                                        <div class="flex-1">
-                                            <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
-                                                <div class="h-3 rounded-full transition-all duration-300" 
-                                                     :class="(selectedScoringDetails?.combined_score || 0) >= 0.9 ? 'bg-green-600' : 
-                                                             (selectedScoringDetails?.combined_score || 0) >= 0.75 ? 'bg-yellow-600' : 
-                                                             (selectedScoringDetails?.combined_score || 0) >= 0.5 ? 'bg-orange-600' : 'bg-red-600'"
-                                                     :style="`width: ${(selectedScoringDetails?.combined_score || 0) * 100}%`"></div>
-                                            </div>
-                                        </div>
-                                        <div class="text-lg font-bold text-gray-900 dark:text-white" 
-                                             x-text="((selectedScoringDetails?.combined_score || 0) * 100).toFixed(1) + '%'"></div>
-                                        <div class="text-sm px-2 py-1 rounded-full" 
-                                             :class="(selectedScoringDetails?.combined_score || 0) >= 0.75 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
-                                             x-text="(selectedScoringDetails?.combined_score || 0) >= 0.75 ? 'Promotion Eligible' : 'Below Threshold'"></div>
-                                    </div>
-                                </div>
-
-                                <!-- Individual Score Breakdown -->
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <!-- 990 XML Analysis Score -->
-                                    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                                        <h5 class="font-medium text-blue-900 dark:text-blue-100 mb-2">990 XML Analysis</h5>
-                                        <div class="text-2xl font-bold text-blue-900 dark:text-blue-100" 
-                                             x-text="((selectedScoringDetails?.xml_990_score || 0) * 100).toFixed(1) + '%'"></div>
-                                        <div class="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mt-2">
-                                            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                                                 :style="`width: ${(selectedScoringDetails?.xml_990_score || 0) * 100}%`"></div>
-                                        </div>
-                                        <div class="text-xs text-blue-700 dark:text-blue-300 mt-1">Weight: 40%</div>
-                                    </div>
-
-                                    <!-- Network Discovery Score -->
-                                    <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
-                                        <h5 class="font-medium text-purple-900 dark:text-purple-100 mb-2">Network Discovery</h5>
-                                        <div class="text-2xl font-bold text-purple-900 dark:text-purple-100" 
-                                             x-text="((selectedScoringDetails?.network_score || 0) * 100).toFixed(1) + '%'"></div>
-                                        <div class="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2 mt-2">
-                                            <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" 
-                                                 :style="`width: ${(selectedScoringDetails?.network_score || 0) * 100}%`"></div>
-                                        </div>
-                                        <div class="text-xs text-purple-700 dark:text-purple-300 mt-1">Weight: 35%</div>
-                                    </div>
-
-                                    <!-- Enhanced Scoring -->
-                                    <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-                                        <h5 class="font-medium text-green-900 dark:text-green-100 mb-2">Enhanced Scoring</h5>
-                                        <div class="text-2xl font-bold text-green-900 dark:text-green-100" 
-                                             x-text="((selectedScoringDetails?.enhanced_score || 0) * 100).toFixed(1) + '%'"></div>
-                                        <div class="w-full bg-green-200 dark:bg-green-800 rounded-full h-2 mt-2">
-                                            <div class="bg-green-600 h-2 rounded-full transition-all duration-300" 
-                                                 :style="`width: ${(selectedScoringDetails?.enhanced_score || 0) * 100}%`"></div>
-                                        </div>
-                                        <div class="text-xs text-green-700 dark:text-green-300 mt-1">Weight: 25%</div>
-                                    </div>
-                                </div>
-
-                                <!-- Organization Details -->
-                                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                                    <h5 class="font-medium text-gray-900 dark:text-white mb-3">Organization Details</h5>
-                                    <div class="grid grid-cols-2 gap-4 text-sm">
-                                        <div><strong>Source:</strong> <span x-text="selectedScoringDetails?.source_type || 'N/A'"></span></div>
-                                        <div><strong>Stage:</strong> <span x-text="formatStageWithNumber(selectedScoringDetails?.funnel_stage) || 'N/A'"></span></div>
-                                        <div><strong>Funding Amount:</strong> <span x-text="selectedScoringDetails?.funding_amount ? '$' + selectedScoringDetails.funding_amount.toLocaleString() : 'N/A'"></span></div>
-                                        <div><strong>Discovered:</strong> <span x-text="selectedScoringDetails?.discovered_at || 'N/A'"></span></div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Modal Actions -->
-                            <div class="flex items-center justify-end pt-6 space-x-2 border-t border-gray-200 dark:border-gray-700">
-                                <button @click="showScoringModal = false" 
-                                        class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-400 dark:hover:bg-gray-500">
-                                    Close
-                                </button>
-                                <button @click="promoteProspect(selectedScoringDetails)" 
-                                        :disabled="(selectedScoringDetails?.combined_score || 0) < 0.75"
-                                        class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded">
-                                    Promote to Candidates
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Scoring Details Modal moved to global scope -->
                 </div>
 
                 <!-- STAGE 4: ANALYZE (CANDIDATES) -->
@@ -1347,6 +1249,7 @@
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="space-y-2">
+                                                    <!-- Status Badges -->
                                                     <div>
                                                         <span x-show="candidate.ai_analyzed && !candidate.ai_error" 
                                                               class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
@@ -1356,31 +1259,59 @@
                                                               class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
                                                             Error
                                                         </span>
+                                                        <span x-show="!candidate.ai_analyzed && !candidate.ai_error && (candidate.combined_score || 0) < 0.75" 
+                                                              class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                            Unavailable
+                                                        </span>
                                                     </div>
-                                                    <button x-show="(!candidate.ai_analyzed && !candidate.ai_processing) || candidate.ai_error"
-                                                            @click="runSingleAIAnalysis(candidate)" 
-                                                            :disabled="candidate.ai_processing"
-                                                            class="px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white text-xs font-medium rounded transition-colors">
-                                                        <span x-show="!candidate.ai_processing && !candidate.ai_error">Initiate</span>
-                                                        <span x-show="!candidate.ai_processing && candidate.ai_error">Retry</span>
-                                                        <span x-show="candidate.ai_processing">Processing...</span>
-                                                    </button>
+                                                    
+                                                    <!-- Action Buttons -->
+                                                    <div>
+                                                        <!-- Initiate button for high-scoring candidates -->
+                                                        <button x-show="(!candidate.ai_analyzed && !candidate.ai_processing && !candidate.ai_error && (candidate.combined_score || 0) >= 0.75)"
+                                                                @click="runSingleAIAnalysis(candidate)" 
+                                                                class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors">
+                                                            Initiate
+                                                        </button>
+                                                        
+                                                        <!-- Retry button for errors -->
+                                                        <button x-show="candidate.ai_error && !candidate.ai_processing"
+                                                                @click="runSingleAIAnalysis(candidate)" 
+                                                                class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors">
+                                                            Retry
+                                                        </button>
+                                                        
+                                                        <!-- Processing indicator -->
+                                                        <button x-show="candidate.ai_processing"
+                                                                disabled
+                                                                class="px-3 py-1 bg-gray-400 text-white text-xs font-medium rounded cursor-not-allowed">
+                                                            Processing...
+                                                        </button>
+                                                        
+                                                        <!-- Unavailable explanation for low scores -->
+                                                        <div x-show="!candidate.ai_analyzed && !candidate.ai_error && (candidate.combined_score || 0) < 0.75"
+                                                             class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                            Score too low (requires ≥75%)
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td class="px-3 py-4 whitespace-nowrap text-sm">
-                                                <div class="flex items-center space-x-1">
-                                                    <button @click="viewCandidateDetails(candidate)" 
-                                                            class="text-indigo-600 hover:text-indigo-900 text-xs">View</button>
-                                                    <button @click="promoteToExamine(candidate)" 
+                                                <div class="flex items-center space-x-2">
+                                                    <button @click="openScoringModal(candidate)" 
+                                                            class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View</button>
+                                                    <button @click="promoteOpportunity(candidate)" 
                                                             :disabled="(candidate.combined_score || 0) < 0.75"
-                                                            class="text-green-600 hover:text-green-900 disabled:text-gray-400 text-xs">Promote</button>
+                                                            class="px-3 py-1 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 rounded-md transition-colors">Promote</button>
+                                                    <button @click="demoteOpportunity(candidate)" 
+                                                            class="px-3 py-1 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 rounded-md transition-colors">Demote</button>
                                                 </div>
                                             </td>
                                         </tr>
                                     </template>
                                     
                                     <!-- Empty State -->
-                                    <tr x-show="filteredCandidates.length === 0">
+                                    <tr x-show="candidatesData.length === 0">
                                         <td colspan="7" class="px-6 py-12 text-center">
                                             <div class="text-gray-400 dark:text-gray-600">
                                                 <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -5099,6 +5030,125 @@
         </main>
     </div>
 
+    <!-- Scoring Details Modal (Global) -->
+    <div x-show="showScoringModal" x-cloak
+         class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-3xl shadow-lg rounded-md bg-white dark:bg-gray-800">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" 
+                    x-text="selectedScoringDetails?.organization_name + ' - Scoring Details' || 'Scoring Details'"></h3>
+                <button @click="showScoringModal = false" 
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="mt-4">
+                <!-- Organization Overview -->
+                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4">
+                    <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-3">Organization Overview</h4>
+                    <p class="text-blue-800 dark:text-blue-200 mb-3" x-text="selectedScoringDetails?.description || 'No description available'"></p>
+                    
+                    <h5 class="font-medium text-blue-900 dark:text-blue-100 mb-2">Financial Summary</h5>
+                    <div class="text-sm text-blue-800 dark:text-blue-200">
+                        <div><strong>Revenue:</strong> <span x-text="selectedScoringDetails?.revenue ? '$' + selectedScoringDetails.revenue.toLocaleString() : 'N/A'"></span></div>
+                        <div><strong>Program Ratio:</strong> <span x-text="selectedScoringDetails?.program_expense_ratio ? (selectedScoringDetails.program_expense_ratio * 100).toFixed(1) + '%' : 'N/A'"></span></div>
+                    </div>
+                </div>
+
+                <!-- Combined Score Display -->
+                <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-4">
+                    <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Combined Score</h4>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-1">
+                            <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                                <div class="h-3 rounded-full transition-all duration-300" 
+                                     :class="(selectedScoringDetails?.combined_score || 0) >= 0.9 ? 'bg-green-600' : 
+                                             (selectedScoringDetails?.combined_score || 0) >= 0.75 ? 'bg-yellow-600' : 
+                                             (selectedScoringDetails?.combined_score || 0) >= 0.5 ? 'bg-orange-600' : 'bg-red-600'"
+                                     :style="`width: ${(selectedScoringDetails?.combined_score || 0) * 100}%`"></div>
+                            </div>
+                        </div>
+                        <div class="text-lg font-bold text-gray-900 dark:text-white" 
+                             x-text="((selectedScoringDetails?.combined_score || 0) * 100).toFixed(1) + '%'"></div>
+                        <div class="text-sm px-2 py-1 rounded-full" 
+                             :class="(selectedScoringDetails?.combined_score || 0) >= 0.75 ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100'"
+                             x-text="(selectedScoringDetails?.combined_score || 0) >= 0.75 ? 'Promotion Eligible' : 'Below Threshold'"></div>
+                    </div>
+                </div>
+
+                <!-- Individual Score Breakdown -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- 990 XML Analysis Score -->
+                    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                        <h5 class="font-medium text-blue-900 dark:text-blue-100 mb-2">990 XML Analysis</h5>
+                        <div class="text-2xl font-bold text-blue-900 dark:text-blue-100" 
+                             x-text="((selectedScoringDetails?.xml_990_score || 0) * 100).toFixed(1) + '%'"></div>
+                        <div class="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mt-2">
+                            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                 :style="`width: ${(selectedScoringDetails?.xml_990_score || 0) * 100}%`"></div>
+                        </div>
+                        <div class="text-xs text-blue-700 dark:text-blue-300 mt-1">Weight: 40%</div>
+                    </div>
+
+                    <!-- Network Discovery Score -->
+                    <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+                        <h5 class="font-medium text-purple-900 dark:text-purple-100 mb-2">Network Discovery</h5>
+                        <div class="text-2xl font-bold text-purple-900 dark:text-purple-100" 
+                             x-text="((selectedScoringDetails?.network_score || 0) * 100).toFixed(1) + '%'"></div>
+                        <div class="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2 mt-2">
+                            <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" 
+                                 :style="`width: ${(selectedScoringDetails?.network_score || 0) * 100}%`"></div>
+                        </div>
+                        <div class="text-xs text-purple-700 dark:text-purple-300 mt-1">Weight: 35%</div>
+                    </div>
+
+                    <!-- Enhanced Scoring -->
+                    <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                        <h5 class="font-medium text-green-900 dark:text-green-100 mb-2">Enhanced Scoring</h5>
+                        <div class="text-2xl font-bold text-green-900 dark:text-green-100" 
+                             x-text="((selectedScoringDetails?.enhanced_score || 0) * 100).toFixed(1) + '%'"></div>
+                        <div class="w-full bg-green-200 dark:bg-green-800 rounded-full h-2 mt-2">
+                            <div class="bg-green-600 h-2 rounded-full transition-all duration-300" 
+                                 :style="`width: ${(selectedScoringDetails?.enhanced_score || 0) * 100}%`"></div>
+                        </div>
+                        <div class="text-xs text-green-700 dark:text-green-300 mt-1">Weight: 25%</div>
+                    </div>
+                </div>
+
+                <!-- Organization Details -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 mt-4 border border-gray-200 dark:border-gray-700">
+                    <h5 class="font-medium text-gray-900 dark:text-white mb-3">Organization Details</h5>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="text-gray-900 dark:text-gray-100"><strong>Source:</strong> <span x-text="selectedScoringDetails?.discovery_source || 'N/A'"></span></div>
+                        <div class="text-gray-900 dark:text-gray-100"><strong>Program:</strong> <span x-text="selectedScoringDetails?.program_name || 'N/A'"></span></div>
+                        <div class="text-gray-900 dark:text-gray-100"><strong>Stage:</strong> <span x-text="formatStageWithNumber(selectedScoringDetails?.funnel_stage) || 'N/A'"></span></div>
+                        <div class="text-gray-900 dark:text-gray-100"><strong>Funding Amount:</strong> <span x-text="selectedScoringDetails?.funding_amount ? '$' + selectedScoringDetails.funding_amount.toLocaleString() : 'N/A'"></span></div>
+                        <div class="text-gray-900 dark:text-gray-100"><strong>Deadline:</strong> <span x-text="selectedScoringDetails?.application_deadline || 'N/A'"></span></div>
+                        <div class="text-gray-900 dark:text-gray-100"><strong>Discovered:</strong> <span x-text="selectedScoringDetails?.discovered_at ? new Date(selectedScoringDetails.discovered_at).toLocaleDateString() : 'N/A'"></span></div>
+                        <div class="text-gray-900 dark:text-gray-100"><strong>Contact:</strong> <span x-text="selectedScoringDetails?.contact_info?.email || 'N/A'"></span></div>
+                        <div class="text-gray-900 dark:text-gray-100"><strong>Location:</strong> <span x-text="selectedScoringDetails?.geographic_info ? (selectedScoringDetails.geographic_info.city + ', ' + selectedScoringDetails.geographic_info.state) : 'N/A'"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Actions -->
+            <div class="flex items-center justify-end pt-6 space-x-2 border-t border-gray-200 dark:border-gray-700">
+                <button @click="showScoringModal = false" 
+                        class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-400 dark:hover:bg-gray-500">
+                    Close
+                </button>
+                <button @click="promoteProspect(selectedScoringDetails)" 
+                        :disabled="(selectedScoringDetails?.combined_score || 0) < 0.75"
+                        class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded">
+                    Promote to Candidates
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Profile Creation/Edit Modal -->
     <div x-show="showProfileModal" 
          x-transition:enter="ease-out duration-300"
@@ -5673,6 +5723,55 @@
                             </button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Network Visualization Popup Modal -->
+    <div x-show="showNetworkPopup" x-cloak
+         class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border w-11/12 max-w-6xl shadow-lg rounded-md bg-white dark:bg-gray-800"
+             style="height: 80vh;">
+            <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white" 
+                    x-text="networkPopupType === 'board' ? 'Board Member Network - Enhanced View' : 'Influence Network - Enhanced View'"></h3>
+                <button @click="closeNetworkPopup()" 
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="mt-4 h-full pb-16">
+                <!-- Enhanced Network Chart Container -->
+                <div class="h-full bg-gray-50 dark:bg-gray-900 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                    <div :id="`popup-${networkPopupType}-network-chart`" class="w-full h-full">
+                        <!-- Network visualization will be rendered here -->
+                        <div class="flex items-center justify-center h-full text-gray-400">
+                            <div class="text-center">
+                                <svg class="mx-auto h-12 w-12 mb-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Loading Enhanced Network Visualization</h3>
+                                <p class="text-gray-500 dark:text-gray-400">Preparing 2x scaled visualization...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="absolute bottom-0 left-0 right-0 px-5 py-3 bg-gray-50 dark:bg-gray-700 rounded-b-md">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                        Enhanced view - 2x original size
+                    </div>
+                    <button @click="closeNetworkPopup()" 
+                            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors">
+                        Close
+                    </button>
                 </div>
             </div>
         </div>
