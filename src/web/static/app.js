@@ -2172,7 +2172,7 @@ function catalynxApp() {
         },
 
         selectProfileForDiscovery(profile) {
-            this.selectedDiscoveryProfile = profile;
+            this.selectedProfile = profile;
             this.showNotification('Profile Selected', `Selected ${profile.name} for discovery`, 'info');
             this.switchStage('discover');
             // Load prospects data for the selected profile
@@ -2454,7 +2454,13 @@ function catalynxApp() {
         },
         
         // Selected profile for discovery
-        selectedDiscoveryProfile: {},
+        // CENTRALIZED PROFILE MANAGEMENT - Single profile for all tabs
+        selectedProfile: null,
+        
+        // Legacy compatibility getters (for gradual migration)
+        get selectedDiscoveryProfile() { return this.selectedProfile; },
+        get selectedPlanProfile() { return this.selectedProfile; },
+        get selectedAnalyzeProfile() { return this.selectedProfile; },
         
         // Track status tracking
         nonprofitTrackStatus: {
@@ -2478,10 +2484,11 @@ function catalynxApp() {
             results: 0
         },
         
-        // Prospects discovery data (Stage 1: Prospects)
-        prospectsData: [
+        // UNIFIED OPPORTUNITIES DATA - Single source of truth for all tabs
+        opportunitiesData: [
+            // PROSPECTS - Early discovery stage
             {
-                opportunity_id: 'demo_prospect_1',
+                opportunity_id: 'unified_opp_001',
                 organization_name: 'American Heart Association',
                 funnel_stage: 'prospects',
                 organization_type: 'Nonprofit',
@@ -2489,10 +2496,27 @@ function catalynxApp() {
                 compatibility_score: 0.85,
                 discovery_source: 'ProPublica',
                 is_schedule_i_grantee: true,
-                funding_amount: 250000
+                funding_amount: 250000,
+                discovered_at: '2025-08-12',
+                description: 'Cardiovascular health research and community education programs'
             },
             {
-                opportunity_id: 'demo_prospect_2',
+                opportunity_id: 'unified_opp_002',
+                organization_name: 'Community Health Alliance',
+                funnel_stage: 'prospects',
+                organization_type: 'Nonprofit',
+                source_type: 'Nonprofit',
+                compatibility_score: 0.73,
+                discovery_source: 'ProPublica',
+                is_schedule_i_grantee: false,
+                funding_amount: 125000,
+                discovered_at: '2025-08-11',
+                description: 'Rural health access and preventive care initiatives'
+            },
+            
+            // QUALIFIED PROSPECTS - Initial qualification complete
+            {
+                opportunity_id: 'unified_opp_003',
                 organization_name: 'United Way National',
                 funnel_stage: 'qualified_prospects',
                 organization_type: 'Nonprofit',
@@ -2500,10 +2524,27 @@ function catalynxApp() {
                 compatibility_score: 0.92,
                 discovery_source: 'ProPublica',
                 is_schedule_i_grantee: false,
-                funding_amount: 150000
+                funding_amount: 150000,
+                discovered_at: '2025-08-10',
+                description: 'Community development and social services coordination'
             },
             {
-                opportunity_id: 'demo_prospect_3',
+                opportunity_id: 'unified_opp_004',
+                organization_name: 'Virginia Health Foundation',
+                funnel_stage: 'qualified_prospects',
+                organization_type: 'Foundation',
+                source_type: 'Foundation',
+                compatibility_score: 0.85,
+                discovery_source: 'Foundation Directory',
+                is_schedule_i_grantee: false,
+                funding_amount: 200000,
+                discovered_at: '2025-08-09',
+                description: 'Health education and community wellness programs'
+            },
+            
+            // CANDIDATES - Deep analysis stage  
+            {
+                opportunity_id: 'unified_opp_005',
                 organization_name: 'Gates Foundation',
                 funnel_stage: 'candidates',
                 organization_type: 'Foundation',
@@ -2511,10 +2552,55 @@ function catalynxApp() {
                 compatibility_score: 0.78,
                 discovery_source: 'Foundation Directory',
                 is_schedule_i_grantee: false,
-                funding_amount: 500000
+                funding_amount: 500000,
+                discovered_at: '2025-08-08',
+                description: 'Global health initiatives and technology innovation',
+                xml_990_score: 0.82,
+                network_score: 0.75,
+                enhanced_score: 0.88,
+                combined_score: 0.81
             },
             {
-                opportunity_id: 'demo_prospect_4',
+                opportunity_id: 'unified_opp_006',
+                organization_name: 'Richmond Education Initiative',
+                funnel_stage: 'candidates',
+                organization_type: 'Nonprofit',
+                source_type: 'Nonprofit',
+                compatibility_score: 0.89,
+                discovery_source: 'ProPublica',
+                is_schedule_i_grantee: true,
+                funding_amount: 175000,
+                discovered_at: '2025-08-07',
+                description: 'STEM education and workforce development programs',
+                xml_990_score: 0.89,
+                network_score: 0.93,
+                enhanced_score: 0.85,
+                combined_score: 0.89
+            },
+            {
+                opportunity_id: 'unified_opp_007',
+                organization_name: 'Health Innovation Foundation',
+                funnel_stage: 'candidates',
+                organization_type: 'Foundation',
+                source_type: 'Commercial',
+                compatibility_score: 0.91,
+                discovery_source: 'Commercial Intelligence',
+                is_schedule_i_grantee: false,
+                funding_amount: 320000,
+                discovered_at: '2025-08-06',
+                description: 'Healthcare technology and digital health solutions',
+                xml_990_score: 0.85,
+                network_score: 0.92,
+                enhanced_score: 0.91,
+                combined_score: 0.89,
+                ai_analyzed: false,
+                ai_processing: false,
+                ai_error: false
+            },
+            
+            // TARGETS - Strategic analysis complete
+            {
+                opportunity_id: 'unified_opp_008',
                 organization_name: 'Department of Health & Human Services',
                 funnel_stage: 'targets',
                 organization_type: 'Government',
@@ -2522,10 +2608,39 @@ function catalynxApp() {
                 compatibility_score: 0.91,
                 discovery_source: 'Grants.gov',
                 is_schedule_i_grantee: false,
-                funding_amount: 750000
+                funding_amount: 750000,
+                discovered_at: '2025-08-05',
+                description: 'Public health infrastructure and emergency preparedness',
+                xml_990_score: 0.88,
+                network_score: 0.85,
+                enhanced_score: 0.92,
+                combined_score: 0.88
             },
             {
-                opportunity_id: 'demo_prospect_5',
+                opportunity_id: 'unified_opp_009',
+                organization_name: 'Rural Development Initiative', 
+                funnel_stage: 'targets',
+                organization_type: 'Government',
+                source_type: 'Government',
+                compatibility_score: 0.94,
+                discovery_source: 'Grants.gov',
+                is_schedule_i_grantee: false,
+                funding_amount: 250000,
+                discovered_at: '2025-08-04',
+                description: 'Rural community infrastructure and economic development',
+                xml_990_score: 0.91,
+                network_score: 0.96,
+                enhanced_score: 0.95,
+                combined_score: 0.94,
+                ai_analyzed: true,
+                ai_processing: false,
+                ai_error: false,
+                ai_summary: 'High-priority target with excellent network connections and strong funding history.'
+            },
+            
+            // OPPORTUNITIES - Ready for action
+            {
+                opportunity_id: 'unified_opp_010',
                 organization_name: 'Google.org',
                 funnel_stage: 'opportunities',
                 organization_type: 'Corporate',
@@ -2533,9 +2648,49 @@ function catalynxApp() {
                 compatibility_score: 0.89,
                 discovery_source: 'Commercial Intelligence',
                 is_schedule_i_grantee: false,
-                funding_amount: 300000
+                funding_amount: 300000,
+                discovered_at: '2025-08-03',
+                description: 'Technology for social good and digital equity initiatives',
+                xml_990_score: 0.87,
+                network_score: 0.91,
+                enhanced_score: 0.88,
+                combined_score: 0.89,
+                ai_analyzed: true,
+                ai_processing: false,
+                ai_error: false,
+                ai_summary: 'Excellent opportunity with strong alignment and active funding programs.'
             }
         ],
+        
+        // COMPUTED PROPERTIES - Auto-filtered data for each tab
+        get prospectsData() {
+            // DISCOVER tab: prospects + qualified_prospects
+            return this.opportunitiesData.filter(opp => 
+                ['prospects', 'qualified_prospects'].includes(opp.funnel_stage)
+            );
+        },
+        
+        get qualifiedProspects() {
+            // PLAN tab: qualified_prospects + candidates
+            return this.opportunitiesData.filter(opp => 
+                ['qualified_prospects', 'candidates'].includes(opp.funnel_stage)
+            );
+        },
+        
+        get candidatesData() {
+            // ANALYZE tab: candidates + targets  
+            return this.opportunitiesData.filter(opp => 
+                ['candidates', 'targets'].includes(opp.funnel_stage)
+            );
+        },
+        
+        get targetsData() {
+            // EXAMINE tab: targets + opportunities
+            return this.opportunitiesData.filter(opp => 
+                ['targets', 'opportunities'].includes(opp.funnel_stage)
+            );
+        },
+        
         prospectsLoading: false,
         prospectsStageFilter: '', // Filter by funnel stage
         
@@ -2908,12 +3063,13 @@ function catalynxApp() {
                     status: 'active'
                 }));
                 
-                if (!this.prospectsData) {
-                    this.prospectsData = [];
+                if (!this.opportunitiesData) {
+                    this.opportunitiesData = [];
                 }
                 
-                this.prospectsData.push(...enhancedMockOpportunities);
-                console.log(`Added ${enhancedMockOpportunities.length} mock opportunities, total prospects now: ${this.prospectsData.length}`);
+                // Add new opportunities to unified data
+                this.opportunitiesData.push(...enhancedMockOpportunities);
+                console.log(`Added ${enhancedMockOpportunities.length} mock opportunities, total opportunities now: ${this.opportunitiesData.length}`);
                 
                 this.$nextTick(() => {
                     console.log('UI update completed after adding mock data');
@@ -7877,17 +8033,79 @@ function catalynxApp() {
                 this.currentEditingProfile = null;
             },
             
+            // CENTRALIZED FUNNEL STAGE MANAGEMENT
+            
+            promoteOpportunity(opportunity) {
+                console.log(`Promoting ${opportunity.organization_name} from ${opportunity.funnel_stage}`);
+                
+                const stageProgression = {
+                    'prospects': 'qualified_prospects',
+                    'qualified_prospects': 'candidates', 
+                    'candidates': 'targets',
+                    'targets': 'opportunities'
+                };
+                
+                const nextStage = stageProgression[opportunity.funnel_stage];
+                if (!nextStage) {
+                    console.log(`Cannot promote from ${opportunity.funnel_stage} - already at highest stage`);
+                    return;
+                }
+                
+                // Find and update the opportunity in unified data
+                const oppIndex = this.opportunitiesData.findIndex(opp => opp.opportunity_id === opportunity.opportunity_id);
+                if (oppIndex !== -1) {
+                    this.opportunitiesData[oppIndex].funnel_stage = nextStage;
+                    this.opportunitiesData[oppIndex].stage_updated_at = new Date().toISOString();
+                    console.log(`Promoted ${opportunity.organization_name} to ${nextStage}`);
+                    
+                    // Trigger reactivity
+                    this.$nextTick(() => {
+                        console.log('UI updated after promotion');
+                    });
+                }
+            },
+            
+            demoteOpportunity(opportunity) {
+                console.log(`Demoting ${opportunity.organization_name} from ${opportunity.funnel_stage}`);
+                
+                const stageRegression = {
+                    'opportunities': 'targets',
+                    'targets': 'candidates',
+                    'candidates': 'qualified_prospects',
+                    'qualified_prospects': 'prospects'
+                };
+                
+                const prevStage = stageRegression[opportunity.funnel_stage];
+                if (!prevStage) {
+                    console.log(`Cannot demote from ${opportunity.funnel_stage} - already at lowest stage`);
+                    return;
+                }
+                
+                // Find and update the opportunity in unified data
+                const oppIndex = this.opportunitiesData.findIndex(opp => opp.opportunity_id === opportunity.opportunity_id);
+                if (oppIndex !== -1) {
+                    this.opportunitiesData[oppIndex].funnel_stage = prevStage;
+                    this.opportunitiesData[oppIndex].stage_updated_at = new Date().toISOString();
+                    console.log(`Demoted ${opportunity.organization_name} to ${prevStage}`);
+                    
+                    // Trigger reactivity
+                    this.$nextTick(() => {
+                        console.log('UI updated after demotion');
+                    });
+                }
+            },
+            
             // Prospects Discovery Functions (Stage 1: Prospects)
             
             async loadProspectsData() {
                 if (!this.selectedDiscoveryProfile) {
-                    this.prospectsData = [];
+                    console.log('No profile selected, using existing opportunities data');
                     return;
                 }
                 
-                // If we already have mock data, don't overwrite it with empty API results
-                if (this.prospectsData && this.prospectsData.length > 0) {
-                    console.log(`Already have ${this.prospectsData.length} prospects, skipping API call`);
+                // Check if we have recent data for this profile (unified data already exists)
+                if (this.opportunitiesData && this.opportunitiesData.length > 0) {
+                    console.log(`Already have ${this.opportunitiesData.length} total opportunities, ${this.prospectsData.length} prospects visible`);
                     return;
                 }
                 
@@ -7899,21 +8117,16 @@ function catalynxApp() {
                     const response = await fetch(`/api/funnel/${profileId}/opportunities${stageFilter}`);
                     if (response.ok) {
                         const data = await response.json();
-                        this.prospectsData = data.opportunities || [];
-                        this.addLogEntry('prospects', [`Loaded ${this.prospectsData.length} prospects for profile ${profileId}`]);
-                    } else {
-                        // Don't reset to empty if we have existing data
-                        if (!this.prospectsData || this.prospectsData.length === 0) {
-                            this.prospectsData = [];
+                        // Merge new opportunities into unified data
+                        if (data.opportunities && data.opportunities.length > 0) {
+                            this.opportunitiesData.push(...data.opportunities);
                         }
+                        this.addLogEntry('prospects', [`Loaded ${data.opportunities?.length || 0} new opportunities, total: ${this.opportunitiesData.length}`]);
+                    } else {
                         this.addLogEntry('prospects-error', [`Failed to load prospects: ${response.statusText}`]);
                     }
                 } catch (error) {
                     console.error('Failed to load prospects data:', error);
-                    // Don't reset to empty if we have existing data
-                    if (!this.prospectsData || this.prospectsData.length === 0) {
-                        this.prospectsData = [];
-                    }
                     this.addLogEntry('prospects-error', [`Failed to load prospects: ${error.message}`]);
                 } finally {
                     this.prospectsLoading = false;
@@ -7942,52 +8155,13 @@ function catalynxApp() {
             },
             
             
+            // Legacy promote/demote functions - delegate to centralized functions
             async promoteProspect(prospect) {
-                if (!this.selectedDiscoveryProfile || !prospect) return;
-                
-                try {
-                    const profileId = this.selectedDiscoveryProfile.profile_id;
-                    const response = await fetch(`/api/funnel/${profileId}/opportunities/${prospect.opportunity_id}/promote`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ notes: `Promoted from ${prospect.funnel_stage}` })
-                    });
-                    
-                    if (response.ok) {
-                        this.addLogEntry('prospects', [`Promoted ${prospect.organization_name} to next stage`]);
-                        await this.loadProspectsData(); // Refresh data
-                    } else {
-                        const error = await response.json();
-                        this.addLogEntry('prospects-error', [`Failed to promote prospect: ${error.detail}`]);
-                    }
-                } catch (error) {
-                    console.error('Failed to promote prospect:', error);
-                    this.addLogEntry('prospects-error', [`Failed to promote prospect: ${error.message}`]);
-                }
+                this.promoteOpportunity(prospect);
             },
             
             async demoteProspect(prospect) {
-                if (!this.selectedDiscoveryProfile || !prospect) return;
-                
-                try {
-                    const profileId = this.selectedDiscoveryProfile.profile_id;
-                    const response = await fetch(`/api/funnel/${profileId}/opportunities/${prospect.opportunity_id}/demote`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ notes: `Demoted from ${prospect.funnel_stage}` })
-                    });
-                    
-                    if (response.ok) {
-                        this.addLogEntry('prospects', [`Demoted ${prospect.organization_name} to previous stage`]);
-                        await this.loadProspectsData(); // Refresh data
-                    } else {
-                        const error = await response.json();
-                        this.addLogEntry('prospects-error', [`Failed to demote prospect: ${error.detail}`]);
-                    }
-                } catch (error) {
-                    console.error('Failed to demote prospect:', error);
-                    this.addLogEntry('prospects-error', [`Failed to demote prospect: ${error.message}`]);
-                }
+                this.demoteOpportunity(prospect);
             },
             
             // Utility functions - using shared CatalynxUtils
@@ -7998,1173 +8172,24 @@ function catalynxApp() {
     }
 }
 
-// Plan Tab Data and Functions - 990 XML Analysis and Strategic Intelligence
-function planTabData() {
-    return {
-        // Core data
-        qualifiedProspects: [
-            {
-                opportunity_id: "demo-opp-1",
-                organization_name: "Virginia Health Foundation",
-                source_type: "nonprofit",
-                funding_amount: 150000,
-                compatibility_score: 0.85,
-                confidence_level: 0.78,
-                funnel_stage: "qualified_prospects",
-                discovered_at: "2025-08-10",
-                description: "Health education and community wellness programs",
-                xml_990_score: 0.82,
-                network_score: 0.65,
-                enhanced_score: 0.88,
-                combined_score: 0.78
-            },
-            {
-                opportunity_id: "demo-opp-2", 
-                organization_name: "Richmond Education Initiative",
-                source_type: "nonprofit",
-                funding_amount: 75000,
-                compatibility_score: 0.92,
-                confidence_level: 0.85,
-                funnel_stage: "candidates",
-                discovered_at: "2025-08-09",
-                description: "STEM education and workforce development",
-                xml_990_score: 0.89,
-                network_score: 0.93,
-                enhanced_score: 0.85,
-                combined_score: 0.89
-            },
-            {
-                opportunity_id: "demo-opp-3",
-                organization_name: "Community Development Partners",
-                source_type: "government",
-                funding_amount: 250000,
-                compatibility_score: 0.71,
-                confidence_level: 0.65,
-                funnel_stage: "qualified_prospects",
-                discovered_at: "2025-08-11",
-                description: "Rural community infrastructure and economic development",
-                xml_990_score: 0.75,
-                network_score: 0.58,
-                enhanced_score: 0.72,
-                combined_score: 0.68
-            },
-            {
-                opportunity_id: "demo-opp-4",
-                organization_name: "Technology Innovation Hub",
-                source_type: "commercial",
-                funding_amount: 180000,
-                compatibility_score: 0.94,
-                confidence_level: 0.91,
-                funnel_stage: "targets",
-                discovered_at: "2025-08-08",
-                description: "Advanced technology development and commercialization",
-                xml_990_score: 0.95,
-                network_score: 0.87,
-                enhanced_score: 0.96,
-                combined_score: 0.93
-            }
-        ],
-        filteredProspects: [],
-        selectedProspects: [],
-        searchQuery: '',
-        stageFilter: 'qualified_prospects+', // Default to qualified prospects and above
-        selectedPlanProfile: null,
-        
-        // Analysis tracking with new scoring system
-        analysisProgress: {
-            xml_990_running: false,
-            network_running: false,
-            enhanced_scoring_running: false,
-            strategic_running: false
-        },
-        
-        analysisResults: {
-            financial_metrics: null,
-            network_metrics: null,
-            classification: null
-        },
-        
-        // Modal state
-        showScoringModal: false,
-        selectedScoringDetails: null,
-        
-        // Initialization
-        async init() {
-            console.log('Initializing PLAN tab data...');
-            // Sync profile with DISCOVER tab
-            this.syncProfileWithDiscover();
-            // Initialize with mock data for testing
-            this.filteredProspects = [...this.qualifiedProspects];
-            // Add some demo classification data for testing
-            this.analysisResults.classification = {
-                score: 0.85,
-                confidence: 0.92,
-                recommendation: 'Promote',
-                insights: 'DEMO: Strong financial performance with expanding network influence. Recommended for strategic partnership development.'
-            };
-            this.analysisStatus.intelligence = 'complete';
-            console.log(`Loaded ${this.qualifiedProspects.length} demo prospects for testing`);
-            await this.loadQualifiedProspects();
-            
-            // If no prospects were loaded from API, use demo data
-            if (this.qualifiedProspects.length === 0) {
-                this.qualifiedProspects = [
-                    {
-                        opportunity_id: "demo-opp-1",
-                        organization_name: "Virginia Health Foundation",
-                        source_type: "nonprofit",
-                        funding_amount: 150000,
-                        compatibility_score: 0.85,
-                        confidence_level: 0.78,
-                        funnel_stage: "prospects",
-                        discovered_at: "2025-08-10",
-                        description: "Health education and community wellness programs"
-                    },
-                    {
-                        opportunity_id: "demo-opp-2", 
-                        organization_name: "Richmond Education Initiative",
-                        source_type: "nonprofit",
-                        funding_amount: 75000,
-                        compatibility_score: 0.92,
-                        confidence_level: 0.85,
-                        funnel_stage: "qualified_prospects",
-                        discovered_at: "2025-08-09",
-                        description: "STEM education programs for underserved communities"
-                    },
-                    {
-                        opportunity_id: "demo-opp-3",
-                        organization_name: "Blue Ridge Community Foundation", 
-                        source_type: "nonprofit",
-                        funding_amount: 200000,
-                        compatibility_score: 0.78,
-                        confidence_level: 0.73,
-                        funnel_stage: "prospects",
-                        discovered_at: "2025-08-08",
-                        description: "Community development and economic empowerment initiatives"
-                    }
-                ];
-                // Reset selected prospects
-                this.selectedProspects = [this.qualifiedProspects[0].opportunity_id];
-                console.log('Using demo data for PLAN tab testing');
-            }
-            
-            this.filterProspects();
-        },
-        
-        // Load qualified prospects from the funnel system
-        async loadQualifiedProspects() {
-            try {
-                // Get selected profile from the main app
-                const selectedProfile = window.Alpine?.store ? 
-                    window.Alpine.store('app')?.selectedDiscoveryProfile :
-                    catalynxAppInstance?.selectedDiscoveryProfile;
-                
-                if (!selectedProfile) {
-                    console.log('No selected profile for PLAN tab');
-                    this.qualifiedProspects = [];
-                    return;
-                }
-                
-                const profileId = selectedProfile.profile_id || selectedProfile.id;
-                const response = await fetch(`/api/funnel/${profileId}/opportunities?stage=prospects,qualified_prospects`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    this.qualifiedProspects = data.opportunities || [];
-                    console.log(`Loaded ${this.qualifiedProspects.length} qualified prospects`);
-                } else {
-                    console.error('Failed to load qualified prospects:', response.status);
-                    this.qualifiedProspects = [];
-                }
-            } catch (error) {
-                console.error('Error loading qualified prospects:', error);
-                this.qualifiedProspects = [];
-            }
-        },
-        
-        // Filter prospects based on search and stage
-        filterProspects() {
-            let filtered = [...this.qualifiedProspects];
-            
-            // Apply stage filter with new options
-            if (this.stageFilter) {
-                const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
-                
-                if (this.stageFilter === 'qualified_prospects+') {
-                    // Default: Show qualified_prospects and above
-                    const minIndex = stageOrder.indexOf('qualified_prospects');
-                    filtered = filtered.filter(prospect => 
-                        stageOrder.indexOf(prospect.funnel_stage) >= minIndex
-                    );
-                } else if (this.stageFilter === 'candidates+') {
-                    // Show candidates and above
-                    const minIndex = stageOrder.indexOf('candidates');
-                    filtered = filtered.filter(prospect => 
-                        stageOrder.indexOf(prospect.funnel_stage) >= minIndex
-                    );
-                } else if (this.stageFilter === 'targets+') {
-                    // Show targets and above
-                    const minIndex = stageOrder.indexOf('targets');
-                    filtered = filtered.filter(prospect => 
-                        stageOrder.indexOf(prospect.funnel_stage) >= minIndex
-                    );
-                } else if (this.stageFilter !== '') {
-                    // Single stage filter
-                    filtered = filtered.filter(prospect => 
-                        prospect.funnel_stage === this.stageFilter
-                    );
-                }
-            } else {
-                // Default to qualified_prospects+ when no filter specified
-                const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
-                const minIndex = stageOrder.indexOf('qualified_prospects');
-                filtered = filtered.filter(prospect => 
-                    stageOrder.indexOf(prospect.funnel_stage) >= minIndex
-                );
-            }
-            
-            // Apply search filter
-            if (this.searchQuery.trim()) {
-                const query = this.searchQuery.toLowerCase();
-                filtered = filtered.filter(prospect =>
-                    prospect.organization_name.toLowerCase().includes(query) ||
-                    prospect.source_type.toLowerCase().includes(query) ||
-                    (prospect.ein && prospect.ein.includes(query))
-                );
-            }
-            
-            this.filteredProspects = filtered;
-        },
-        
-        // Selection management
-        toggleSelectAll() {
-            if (this.selectedProspects.length === this.filteredProspects.length && this.filteredProspects.length > 0) {
-                this.selectedProspects = [];
-            } else {
-                this.selectedProspects = this.filteredProspects.map(p => p.opportunity_id);
-            }
-        },
-        
-        // Analysis functions - New 3-component scoring system
-        async start990Analysis() {
-            console.log('Starting 990 XML Analysis...');
-            this.analysisProgress.xml_990_running = true;
-            
-            try {
-                // Process each qualified prospect individually with real-time updates
-                const qualifiedProspects = this.filteredProspects.filter(prospect => {
-                    const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
-                    return stageOrder.indexOf(prospect.funnel_stage) >= 1; // qualified_prospects and above
-                });
-                
-                for (let i = 0; i < qualifiedProspects.length; i++) {
-                    const prospect = qualifiedProspects[i];
-                    
-                    // Mark as processing
-                    prospect.xml_990_processing = true;
-                    
-                    // Simulate processing time (varies per record)
-                    const processingTime = 800 + Math.random() * 1200; // 0.8-2.0 seconds
-                    await new Promise(resolve => setTimeout(resolve, processingTime));
-                    
-                    // Update with new score
-                    prospect.xml_990_score = 0.7 + Math.random() * 0.3;
-                    prospect.combined_score = this.calculateCombinedScore(prospect);
-                    prospect.xml_990_processing = false;
-                    
-                    // Force reactivity update
-                    this.filterProspects();
-                    console.log(`990 XML Analysis completed for ${prospect.organization_name}`);
-                }
-                
-                console.log('990 XML Analysis completed for all records');
-                
-            } catch (error) {
-                console.error('990 XML Analysis error:', error);
-            } finally {
-                this.analysisProgress.xml_990_running = false;
-                // Clear any remaining processing flags
-                this.qualifiedProspects.forEach(prospect => {
-                    prospect.xml_990_processing = false;
-                });
-            }
-        },
-        
-        async startNetworkDiscovery() {
-            console.log('Starting Network Discovery...');
-            this.analysisProgress.network_running = true;
-            
-            try {
-                // Process each qualified prospect individually with real-time updates
-                const qualifiedProspects = this.filteredProspects.filter(prospect => {
-                    const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
-                    return stageOrder.indexOf(prospect.funnel_stage) >= 1; // qualified_prospects and above
-                });
-                
-                for (let i = 0; i < qualifiedProspects.length; i++) {
-                    const prospect = qualifiedProspects[i];
-                    
-                    // Mark as processing
-                    prospect.network_processing = true;
-                    
-                    // Simulate processing time (network analysis takes longer)
-                    const processingTime = 1000 + Math.random() * 1500; // 1.0-2.5 seconds
-                    await new Promise(resolve => setTimeout(resolve, processingTime));
-                    
-                    // Update with new network score
-                    prospect.network_score = 0.6 + Math.random() * 0.4;
-                    prospect.combined_score = this.calculateCombinedScore(prospect);
-                    prospect.network_processing = false;
-                    
-                    // Force reactivity update
-                    this.filterProspects();
-                    console.log(`Network Discovery completed for ${prospect.organization_name}`);
-                }
-                
-                console.log('Network Discovery completed for all records');
-                
-            } catch (error) {
-                console.error('Network Discovery error:', error);
-            } finally {
-                this.analysisProgress.network_running = false;
-                // Clear any remaining processing flags
-                this.qualifiedProspects.forEach(prospect => {
-                    prospect.network_processing = false;
-                });
-            }
-        },
-        
-        async startEnhancedScoring() {
-            console.log('Starting Enhanced Scoring...');
-            this.analysisProgress.enhanced_scoring_running = true;
-            
-            try {
-                // Process each qualified prospect individually with real-time updates
-                const qualifiedProspects = this.filteredProspects.filter(prospect => {
-                    const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
-                    return stageOrder.indexOf(prospect.funnel_stage) >= 1; // qualified_prospects and above
-                });
-                
-                for (let i = 0; i < qualifiedProspects.length; i++) {
-                    const prospect = qualifiedProspects[i];
-                    
-                    // Mark as processing
-                    prospect.enhanced_processing = true;
-                    
-                    // Simulate processing time (enhanced scoring is faster)
-                    const processingTime = 600 + Math.random() * 1000; // 0.6-1.6 seconds
-                    await new Promise(resolve => setTimeout(resolve, processingTime));
-                    
-                    // Update with new enhanced score
-                    prospect.enhanced_score = 0.65 + Math.random() * 0.35;
-                    prospect.combined_score = this.calculateCombinedScore(prospect);
-                    prospect.enhanced_processing = false;
-                    
-                    // Force reactivity update
-                    this.filterProspects();
-                    console.log(`Enhanced Scoring completed for ${prospect.organization_name}`);
-                }
-                
-                console.log('Enhanced Scoring completed for all records');
-                
-            } catch (error) {
-                console.error('Enhanced Scoring error:', error);
-            } finally {
-                this.analysisProgress.enhanced_scoring_running = false;
-                // Clear any remaining processing flags
-                this.qualifiedProspects.forEach(prospect => {
-                    prospect.enhanced_processing = false;
-                });
-            }
-        },
-        
-        async generateStrategicPlan() {
-            console.log('Generating Strategic Plan...');
-            this.analysisProgress.strategic_running = true;
-            
-            try {
-                // Simulate strategic planning
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                
-                // Generate strategic insights for high-scoring prospects
-                const qualifiedCount = this.qualifiedProspects.filter(p => (p.combined_score || 0) >= 0.75).length;
-                console.log(`Strategic Plan generated for ${qualifiedCount} high-scoring prospects`);
-                
-            } catch (error) {
-                console.error('Strategic Planning error:', error);
-            } finally {
-                this.analysisProgress.strategic_running = false;
-            }
-        },
-        
-        // Scoring calculation
-        calculateCombinedScore(prospect) {
-            const xml990Weight = 0.4;
-            const networkWeight = 0.35; 
-            const enhancedWeight = 0.25;
-            
-            const xml990Score = prospect.xml_990_score || 0;
-            const networkScore = prospect.network_score || 0;
-            const enhancedScore = prospect.enhanced_score || 0;
-            
-            return (xml990Score * xml990Weight) + 
-                   (networkScore * networkWeight) + 
-                   (enhancedScore * enhancedWeight);
-        },
-        
-        // Bulk operations
-        async bulkPromoteToQualified() {
-            if (this.selectedProspects.length === 0) return;
-            
-            console.log(`Promoting ${this.selectedProspects.length} prospects to qualified candidates...`);
-            
-            try {
-                // Get selected profile
-                const selectedProfile = window.Alpine?.store ? 
-                    window.Alpine.store('app')?.selectedDiscoveryProfile :
-                    catalynxAppInstance?.selectedDiscoveryProfile;
-                
-                let profileId;
-                if (!selectedProfile) {
-                    // Use demo profile for PLAN tab testing
-                    profileId = 'demo-profile-1';
-                    console.log('No profile selected, using demo profile for PLAN tab');
-                } else {
-                    profileId = selectedProfile.profile_id || selectedProfile.id;
-                }
-                const response = await fetch(`/api/funnel/${profileId}/bulk-transition`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        opportunity_ids: this.selectedProspects,
-                        target_stage: 'qualified_prospects',
-                        notes: 'Bulk promoted via PLAN tab analysis'
-                    })
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('Bulk promotion completed:', result);
-                    
-                    // Refresh data
-                    await this.loadQualifiedProspects();
-                    this.filterProspects();
-                    this.selectedProspects = [];
-                } else {
-                    throw new Error('Bulk promotion failed');
-                }
-            } catch (error) {
-                console.error('Bulk promotion error:', error);
-            }
-        },
-        
-        // Individual prospect actions
-        viewScoringDetails(prospect) {
-            this.selectedScoringDetails = prospect;
-            this.showScoringModal = true;
-        },
-        
-        syncProfileWithDiscover() {
-            // Try to get selected profile from DISCOVER tab via global app instance
-            try {
-                // Access the global app data through document.querySelector
-                const appElement = document.querySelector('[x-data*="catalynxApp"]');
-                if (appElement && appElement._x_dataStack) {
-                    const appData = appElement._x_dataStack[0];
-                    const discoverProfile = appData.selectedDiscoveryProfile;
-                    
-                    if (discoverProfile && discoverProfile.profile_id) {
-                        this.selectedPlanProfile = {
-                            profile_id: discoverProfile.profile_id,
-                            name: discoverProfile.name,
-                            ein: discoverProfile.ein || 'Not Available',
-                            last_analysis_date: discoverProfile.last_analysis_date,
-                            qualified_opportunities_count: this.qualifiedProspects.length,
-                            organization_type: discoverProfile.organization_type,
-                            focus_areas: discoverProfile.focus_areas,
-                            mission_statement: discoverProfile.mission_statement
-                        };
-                        console.log('Synced PLAN profile with DISCOVER:', discoverProfile.name);
-                        return;
-                    }
-                }
-                
-                // Fallback: No profile selected in DISCOVER tab
-                console.log('No DISCOVER profile found');
-                this.selectedPlanProfile = null;
-                
-            } catch (error) {
-                console.error('Error syncing profile:', error);
-                this.selectedPlanProfile = null;
-            }
-        },
-        
-        async promoteProspect(prospect) {
-            try {
-                // Get selected profile
-                const selectedProfile = window.Alpine?.store ? 
-                    window.Alpine.store('app')?.selectedDiscoveryProfile :
-                    catalynxAppInstance?.selectedDiscoveryProfile;
-                
-                if (!selectedProfile) {
-                    throw new Error('No profile selected');
-                }
-                
-                const profileId = selectedProfile.profile_id || selectedProfile.id;
-                const response = await fetch(`/api/funnel/${profileId}/opportunities/${prospect.opportunity_id}/promote`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ notes: 'Promoted via PLAN tab' })
-                });
-                
-                if (response.ok) {
-                    console.log('Prospect promoted successfully');
-                    await this.loadQualifiedProspects();
-                    this.filterProspects();
-                    this.showProspectModal = false;
-                } else {
-                    throw new Error('Promotion failed');
-                }
-            } catch (error) {
-                console.error('Promotion error:', error);
-            }
-        },
-        
-        async demoteProspect(prospect) {
-            try {
-                // Get selected profile
-                const selectedProfile = window.Alpine?.store ? 
-                    window.Alpine.store('app')?.selectedDiscoveryProfile :
-                    catalynxAppInstance?.selectedDiscoveryProfile;
-                
-                if (!selectedProfile) {
-                    throw new Error('No profile selected');
-                }
-                
-                const profileId = selectedProfile.profile_id || selectedProfile.id;
-                const response = await fetch(`/api/funnel/${profileId}/opportunities/${prospect.opportunity_id}/demote`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ notes: 'Demoted via PLAN tab' })
-                });
-                
-                if (response.ok) {
-                    console.log('Prospect demoted successfully');
-                    await this.loadQualifiedProspects();
-                    this.filterProspects();
-                } else {
-                    throw new Error('Demotion failed');
-                }
-            } catch (error) {
-                console.error('Demotion error:', error);
-            }
-        },
-        
-        // Refresh functions
-        async refresh990Analysis() {
-            this.analysisResults.financial_metrics = null;
-            this.analysisStatus.xml_990 = 'idle';
-            this.analysisProgress.xml_990 = 0;
-        },
-        
-        async refreshNetworkAnalysis() {
-            this.analysisResults.network_metrics = null;
-            this.analysisStatus.network = 'idle';
-            this.analysisProgress.network = 0;
-        },
-        
-        async refreshIntelligenceAnalysis() {
-            this.analysisResults.classification = null;
-            this.analysisStatus.intelligence = 'idle';
-            this.analysisProgress.intelligence = 0;
-        },
-        
-        // Utility functions - using shared CatalynxUtils
-        formatStageWithNumber: CatalynxUtils.formatStageWithNumber,
-        getStageColor: CatalynxUtils.getStageColor,
-        getOrganizationTypeColor: CatalynxUtils.getOrganizationTypeColor,
-        
-        get990Status(ein) {
-            // Mock 990 availability - in production would check actual data
-            if (!ein) return 'Unknown';
-            return Math.random() > 0.3 ? 'Available' : 'Missing';
-        },
-        
-        getRiskLevelColor(riskLevel) {
-            const colors = {
-                'Low': 'text-green-600',
-                'Medium': 'text-yellow-600',
-                'High': 'text-red-600'
-            };
-            return colors[riskLevel] || 'text-gray-600';
-        },
-        
-        getRecommendationColor(recommendation) {
-            const colors = {
-                'Promote': 'text-green-600',
-                'Review': 'text-yellow-600',
-                'Monitor': 'text-blue-600',
-                'Pending': 'text-gray-600'
-            };
-            return colors[recommendation] || 'text-gray-600';
-        }
-    }
-}
-
-// ANALYZE Tab Data Management
-function analyzeTabData() {
-    return {
-        // Profile management
-        selectedAnalyzeProfile: null,
-        
-        // Candidates data
-        candidatesData: [
-            {
-                opportunity_id: "analyze-demo-1",
-                organization_name: "Health Innovation Foundation",
-                source_type: "commercial",
-                funnel_stage: "candidates",
-                combined_score: 0.89,
-                xml_990_score: 0.85,
-                network_score: 0.92,
-                enhanced_score: 0.91,
-                funding_amount: 180000,
-                ai_analyzed: false,
-                ai_processing: false,
-                ai_error: false,
-                board_connections: 8,
-                influence_score: 7.2
-            },
-            {
-                opportunity_id: "analyze-demo-2",
-                organization_name: "Community Development Partners",
-                source_type: "nonprofit",
-                funnel_stage: "candidates", 
-                combined_score: 0.76,
-                xml_990_score: 0.78,
-                network_score: 0.71,
-                enhanced_score: 0.79,
-                funding_amount: 125000,
-                ai_analyzed: true,
-                ai_processing: false,
-                ai_error: false,
-                board_connections: 5,
-                influence_score: 4.8
-            },
-            {
-                opportunity_id: "analyze-demo-3",
-                organization_name: "Rural Development Initiative",
-                source_type: "government",
-                funnel_stage: "targets",
-                combined_score: 0.94,
-                xml_990_score: 0.91,
-                network_score: 0.96,
-                enhanced_score: 0.95,
-                funding_amount: 250000,
-                ai_analyzed: true,
-                ai_processing: false,
-                ai_error: false,
-                board_connections: 12,
-                influence_score: 9.1
-            }
-        ],
-        filteredCandidates: [],
-        selectedForAnalysis: [],
-        searchQuery: '',
-        stageFilter: 'candidates+', // Default to candidates and above
-        
-        // Dashboard metrics
-        candidatesCount: 0,
-        readyForAnalysis: 0,
-        aiAnalyzedCount: 0,
-        averageCombinedScore: 0,
-        topScore: 0,
-        promotionReadyCount: 0,
-        analysisStatus: 'Ready',
-        
-        // Network visualization
-        networkVisualizationData: null,
-        showNetworkCharts: false,
-        loadingNetworkData: false,
-        fullscreenNetwork: {
-            board: false,
-            influence: false
-        },
-        networkMetrics: {
-            boardConnections: 0,
-            avgInfluence: 0,
-            density: 0
-        },
-        
-        // AI Analysis
-        estimatedCost: '$0.00',
-        
-        // Modal states
-        showAIAnalysisModal: false,
-        showCandidateDetailsModal: false,
-        selectedCandidateDetails: null,
-        
-        // Initialization
-        async init() {
-            console.log('Initializing ANALYZE tab data...');
-            // Sync profile with DISCOVER tab
-            this.syncProfileWithDiscover();
-            // Initialize candidates data
-            this.filteredCandidates = [...this.candidatesData];
-            this.calculateDashboardMetrics();
-            // Filter to show candidates+ by default
-            this.filterCandidates();
-            
-            // Add ESC key listener for fullscreen exit
-            document.addEventListener('keydown', (event) => {
-                if (event.key === 'Escape') {
-                    if (this.fullscreenNetwork.board) {
-                        this.toggleFullscreenNetwork('board');
-                    }
-                    if (this.fullscreenNetwork.influence) {
-                        this.toggleFullscreenNetwork('influence');
-                    }
-                }
-            });
-        },
-        
-        syncProfileWithDiscover() {
-            // Try to get selected profile from DISCOVER tab via global app instance
-            try {
-                // Access the global app data through document.querySelector
-                const appElement = document.querySelector('[x-data*="catalynxApp"]');
-                if (appElement && appElement._x_dataStack) {
-                    const appData = appElement._x_dataStack[0];
-                    const discoverProfile = appData.selectedDiscoveryProfile;
-                    
-                    if (discoverProfile && discoverProfile.profile_id) {
-                        this.selectedAnalyzeProfile = {
-                            profile_id: discoverProfile.profile_id,
-                            name: discoverProfile.name,
-                            ein: discoverProfile.ein || 'Not Available',
-                            organization_type: discoverProfile.organization_type,
-                            focus_areas: discoverProfile.focus_areas,
-                            mission_statement: discoverProfile.mission_statement
-                        };
-                        console.log('Synced ANALYZE profile with DISCOVER:', discoverProfile.name);
-                        return;
-                    }
-                }
-                
-                // Fallback: No profile selected in DISCOVER tab
-                console.log('No DISCOVER profile found');
-                this.selectedAnalyzeProfile = null;
-                
-            } catch (error) {
-                console.error('Error syncing profile:', error);
-                this.selectedAnalyzeProfile = null;
-            }
-        },
-        
-        calculateDashboardMetrics() {
-            this.candidatesCount = this.candidatesData.length;
-            this.readyForAnalysis = this.candidatesData.filter(c => !c.ai_analyzed).length;
-            this.aiAnalyzedCount = this.candidatesData.filter(c => c.ai_analyzed).length;
-            
-            if (this.candidatesData.length > 0) {
-                const scores = this.candidatesData.map(c => c.combined_score || 0);
-                this.averageCombinedScore = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100);
-                this.topScore = Math.round(Math.max(...scores) * 100);
-                this.promotionReadyCount = this.candidatesData.filter(c => (c.combined_score || 0) >= 0.75).length;
-                
-                // Network metrics
-                this.networkMetrics = {
-                    boardConnections: this.candidatesData.reduce((sum, c) => sum + (c.board_connections || 0), 0),
-                    avgInfluence: (this.candidatesData.reduce((sum, c) => sum + (c.influence_score || 0), 0) / this.candidatesData.length).toFixed(1),
-                    density: Math.round((this.candidatesData.filter(c => (c.board_connections || 0) > 0).length / this.candidatesData.length) * 100) + '%'
-                };
-            }
-            
-            // Update estimated cost based on selected candidates
-            this.updateEstimatedCost();
-        },
-        
-        filterCandidates() {
-            let filtered = [...this.candidatesData];
-            
-            // Apply stage filter
-            if (this.stageFilter) {
-                const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
-                
-                if (this.stageFilter === 'candidates+') {
-                    // Default: Show candidates and above
-                    const minIndex = stageOrder.indexOf('candidates');
-                    filtered = filtered.filter(candidate => 
-                        stageOrder.indexOf(candidate.funnel_stage) >= minIndex
-                    );
-                } else if (this.stageFilter !== '') {
-                    // Single stage filter
-                    filtered = filtered.filter(candidate => 
-                        candidate.funnel_stage === this.stageFilter
-                    );
-                }
-            }
-            
-            // Apply search filter
-            if (this.searchQuery) {
-                const query = this.searchQuery.toLowerCase();
-                filtered = filtered.filter(candidate =>
-                    candidate.organization_name.toLowerCase().includes(query) ||
-                    candidate.source_type.toLowerCase().includes(query)
-                );
-            }
-            
-            this.filteredCandidates = filtered;
-            console.log(`Filtered candidates: ${filtered.length} of ${this.candidatesData.length}`);
-        },
-        
-        toggleCandidateSelection(candidate) {
-            const index = this.selectedForAnalysis.findIndex(id => id === candidate.opportunity_id);
-            if (index > -1) {
-                this.selectedForAnalysis.splice(index, 1);
-            } else {
-                this.selectedForAnalysis.push(candidate.opportunity_id);
-            }
-            this.updateEstimatedCost();
-        },
-        
-        toggleSelectAll(event) {
-            if (event.target.checked) {
-                // Select all unanalyzed candidates
-                this.selectedForAnalysis = this.filteredCandidates
-                    .filter(c => !c.ai_analyzed)
-                    .map(c => c.opportunity_id);
-            } else {
-                this.selectedForAnalysis = [];
-            }
-            this.updateEstimatedCost();
-        },
-        
-        updateEstimatedCost() {
-            // Estimate $0.02 per candidate for AI analysis
-            const costPerCandidate = 0.02;
-            const totalCost = this.selectedForAnalysis.length * costPerCandidate;
-            this.estimatedCost = '$' + totalCost.toFixed(2);
-        },
-        
-        // Network visualization functions
-        async loadNetworkVisualizations() {
-            if (!this.selectedAnalyzeProfile) {
-                console.error('No profile selected for network visualization');
-                return;
-            }
-            
-            this.loadingNetworkData = true;
-            try {
-                console.log('Loading network visualizations...');
-                
-                // Call the API to get network visualization data
-                const response = await fetch(`/api/analyze/network-data/${this.selectedAnalyzeProfile.profile_id}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    // Embed the HTML charts directly
-                    document.getElementById('board-network-chart').innerHTML = data.board_network_html;
-                    document.getElementById('influence-network-chart').innerHTML = data.influence_network_html;
-                    
-                    this.networkVisualizationData = data;
-                    this.showNetworkCharts = true;
-                    console.log('Network visualizations loaded successfully');
-                } else {
-                    throw new Error('Failed to load network data');
-                }
-                
-            } catch (error) {
-                console.error('Failed to load network visualizations:', error);
-                // Show mock visualizations for demo
-                this.showMockNetworkCharts();
-            } finally {
-                this.loadingNetworkData = false;
-            }
-        },
-        
-        showMockNetworkCharts() {
-            // Create mock network charts for demo purposes
-            const boardChartHTML = `
-                <div class="text-center py-8">
-                    <div class="text-4xl mb-4">🕸️</div>
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Board Member Network (Demo)</h3>
-                    <p class="text-gray-600 dark:text-gray-400">Interactive spider web showing ${this.networkMetrics.boardConnections} board connections</p>
-                    <div class="mt-4 text-sm text-gray-500">
-                        <div>Avg Influence: ${this.networkMetrics.avgInfluence}</div>
-                        <div>Network Density: ${this.networkMetrics.density}</div>
-                    </div>
-                </div>
-            `;
-            
-            const influenceChartHTML = `
-                <div class="text-center py-8">
-                    <div class="text-4xl mb-4">⚡</div>
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Influence Network (Demo)</h3>
-                    <p class="text-gray-600 dark:text-gray-400">Individual influence mapping and strategic connections</p>
-                    <div class="mt-4 text-sm text-gray-500">
-                        <div>Top Influencers: ${Math.ceil(this.candidatesCount / 3)}</div>
-                        <div>Strategic Links: ${this.networkMetrics.boardConnections * 2}</div>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('board-network-chart').innerHTML = boardChartHTML;
-            document.getElementById('influence-network-chart').innerHTML = influenceChartHTML;
-            
-            this.networkVisualizationData = { demo: true };
-            this.showNetworkCharts = true;
-        },
-        
-        refreshNetworkVisualization() {
-            this.showNetworkCharts = false;
-            this.networkVisualizationData = null;
-            setTimeout(() => {
-                this.loadNetworkVisualizations();
-            }, 100);
-        },
-        
-        toggleNetworkVisualizations() {
-            if (this.showNetworkCharts) {
-                // Hide network charts
-                this.showNetworkCharts = false;
-                this.networkVisualizationData = null;
-            } else {
-                // Show network charts - load if needed
-                if (!this.networkVisualizationData) {
-                    this.loadNetworkVisualizations();
-                } else {
-                    this.showNetworkCharts = true;
-                }
-            }
-        },
-        
-        toggleFullscreenNetwork(networkType) {
-            const isFullscreen = this.fullscreenNetwork[networkType];
-            const chartId = networkType === 'board' ? 'board-network-chart' : 'influence-network-chart';
-            const chartElement = document.getElementById(chartId);
-            const closeButtonId = `close-network-${networkType}`;
-            
-            if (!chartElement) {
-                console.error(`Chart element not found: ${chartId}`);
-                return;
-            }
-            
-            if (isFullscreen) {
-                // Exit scaled view
-                this.fullscreenNetwork[networkType] = false;
-                chartElement.style.position = '';
-                chartElement.style.top = '';
-                chartElement.style.left = '';
-                chartElement.style.width = '';
-                chartElement.style.height = '';
-                chartElement.style.zIndex = '';
-                chartElement.style.backgroundColor = '';
-                chartElement.style.boxShadow = '';
-                chartElement.style.borderRadius = '';
-                chartElement.style.border = '';
-                document.body.style.overflow = '';
-                
-                // Remove close button
-                const existingCloseButton = document.getElementById(closeButtonId);
-                if (existingCloseButton) {
-                    existingCloseButton.remove();
-                }
-            } else {
-                // Enter 2X scaled view
-                this.fullscreenNetwork[networkType] = true;
-                
-                // Get current dimensions
-                const rect = chartElement.getBoundingClientRect();
-                const originalWidth = rect.width;
-                const originalHeight = rect.height;
-                
-                // Calculate 2X dimensions
-                const scaledWidth = originalWidth * 2;
-                const scaledHeight = originalHeight * 2;
-                
-                // Center the scaled chart on screen
-                const centerX = (window.innerWidth - scaledWidth) / 2;
-                const centerY = (window.innerHeight - scaledHeight) / 2;
-                
-                // Detect dark mode
-                const isDarkMode = document.documentElement.classList.contains('dark');
-                
-                chartElement.style.position = 'fixed';
-                chartElement.style.top = Math.max(0, centerY) + 'px';
-                chartElement.style.left = Math.max(0, centerX) + 'px';
-                chartElement.style.width = scaledWidth + 'px';
-                chartElement.style.height = scaledHeight + 'px';
-                chartElement.style.zIndex = '9999';
-                chartElement.style.backgroundColor = isDarkMode ? '#1f2937' : 'white';
-                chartElement.style.boxShadow = isDarkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.5)' : '0 25px 50px -12px rgba(0, 0, 0, 0.25)';
-                chartElement.style.borderRadius = '12px';
-                chartElement.style.border = isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb';
-                document.body.style.overflow = 'hidden';
-                
-                // Create close X button
-                const closeButton = document.createElement('button');
-                closeButton.id = closeButtonId;
-                closeButton.innerHTML = '✕';
-                closeButton.style.cssText = `
-                    position: fixed;
-                    top: ${Math.max(0, centerY) + 12}px;
-                    right: ${Math.max(0, window.innerWidth - centerX - scaledWidth) + 12}px;
-                    width: 24px;
-                    height: 24px;
-                    background-color: transparent;
-                    color: ${isDarkMode ? '#d1d5db' : '#6b7280'};
-                    border: none;
-                    font-size: 18px;
-                    font-weight: bold;
-                    cursor: pointer;
-                    z-index: 10000;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.2s ease;
-                    line-height: 1;
-                `;
-                
-                // Add hover effects
-                closeButton.addEventListener('mouseenter', () => {
-                    closeButton.style.color = isDarkMode ? '#f3f4f6' : '#374151';
-                    closeButton.style.transform = 'scale(1.1)';
-                });
-                closeButton.addEventListener('mouseleave', () => {
-                    closeButton.style.color = isDarkMode ? '#d1d5db' : '#6b7280';
-                    closeButton.style.transform = 'scale(1)';
-                });
-                
-                // Add click handler to close
-                closeButton.addEventListener('click', () => {
-                    this.toggleFullscreenNetwork(networkType);
-                });
-                
-                // Add to DOM
-                document.body.appendChild(closeButton);
-            }
-            
-            // Trigger a resize event to help Plotly charts resize properly
-            setTimeout(() => {
-                window.dispatchEvent(new Event('resize'));
-            }, 100);
-        },
-        
-        // AI Analysis functions
-        openAIAnalysisModal() {
-            if (this.selectedForAnalysis.length === 0) return;
-            
-            // For now, show a simple confirmation and run analysis
-            const confirmMessage = `Run AI analysis on ${this.selectedForAnalysis.length} candidates?\nEstimated cost: ${this.estimatedCost}`;
-            if (confirm(confirmMessage)) {
-                this.runAIAnalysis();
-            }
-        },
-        
-        async runAIAnalysis() {
-            console.log('Running AI analysis on selected candidates...');
-            
-            try {
-                // Get selected candidate data
-                const selectedCandidates = this.candidatesData.filter(c => 
-                    this.selectedForAnalysis.includes(c.opportunity_id)
-                );
-                
-                // Simulate AI analysis
-                for (let candidate of selectedCandidates) {
-                    candidate.ai_analyzed = true;
-                    // Add some mock AI analysis results
-                    candidate.ai_score = 0.7 + Math.random() * 0.3;
-                    candidate.ai_recommendation = Math.random() > 0.5 ? 'Promote' : 'Review';
-                    candidate.ai_summary = `AI Analysis: Strong strategic fit with ${Math.floor(Math.random() * 5 + 3)} key alignment factors identified.`;
-                }
-                
-                // Clear selection and update metrics
-                this.selectedForAnalysis = [];
-                this.calculateDashboardMetrics();
-                this.filterCandidates();
-                
-                console.log('AI analysis completed');
-                alert('AI analysis completed successfully!');
-                
-            } catch (error) {
-                console.error('AI analysis failed:', error);
-                alert('AI analysis failed. Please try again.');
-            }
-        },
-        
-        async runSingleAIAnalysis(candidate) {
-            console.log(`Running AI analysis on ${candidate.organization_name}...`);
-            
-            try {
-                // Set processing state and clear any previous errors
-                candidate.ai_processing = true;
-                candidate.ai_error = false;
-                
-                // Simulate API call delay
-                await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1500));
-                
-                // Simulate occasional errors (10% chance)
-                if (Math.random() < 0.1) {
-                    throw new Error('API timeout or rate limit exceeded');
-                }
-                
-                // Update candidate with AI analysis results
-                candidate.ai_analyzed = true;
-                candidate.ai_processing = false;
-                candidate.ai_error = false;
-                candidate.ai_score = 0.7 + Math.random() * 0.3;
-                candidate.ai_recommendation = Math.random() > 0.5 ? 'Promote' : 'Review';
-                candidate.ai_summary = `AI Analysis: Strong strategic fit with ${Math.floor(Math.random() * 5 + 3)} key alignment factors identified.`;
-                
-                // Update metrics
-                this.calculateDashboardMetrics();
-                this.filterCandidates();
-                
-                console.log(`AI analysis completed for ${candidate.organization_name}`);
-                
-            } catch (error) {
-                console.error('AI analysis failed:', error);
-                candidate.ai_processing = false;
-                candidate.ai_error = true;
-                candidate.ai_analyzed = false;
-            }
-        },
-        
-        // Candidate management functions
-        viewCandidateDetails(candidate) {
-            this.selectedCandidateDetails = candidate;
-            // For now, just log the details - could open a modal
-            console.log('Viewing candidate details:', candidate);
-            
-            // Show a simple alert with details for demo
-            const details = `
-Organization: ${candidate.organization_name}
-Combined Score: ${(candidate.combined_score * 100).toFixed(1)}%
-AI Analysis: ${candidate.ai_analyzed ? 'Complete' : 'Pending'}
-${candidate.ai_summary || 'No AI analysis available yet'}
-            `;
-            alert(details);
-        },
-        
-        promoteToExamine(candidate) {
-            if ((candidate.combined_score || 0) < 0.75) {
-                alert('Candidate score too low for promotion. Minimum 75% required.');
-                return;
-            }
-            
-            if (confirm(`Promote ${candidate.organization_name} to EXAMINE stage?`)) {
-                candidate.funnel_stage = 'targets';
-                this.calculateDashboardMetrics();
-                this.filterCandidates();
-                console.log(`Promoted ${candidate.organization_name} to EXAMINE stage`);
-            }
-        },
-        
-        // Utility functions - using shared CatalynxUtils
-        formatStageWithNumber: CatalynxUtils.formatStageWithNumber,
-        getStageColor: CatalynxUtils.getStageColor,
-        getOrganizationTypeColor: CatalynxUtils.getOrganizationTypeColor
-    }
-}
+// ========================================
+// SEPARATE DATA CONTEXTS REMOVED
+// ========================================
+// 
+// Previous planTabData() and analyzeTabData() functions have been removed
+// All functionality consolidated into main catalynxApp() context
+// 
+// Benefits:
+// - Single source of truth for all opportunity data
+// - Consistent profile selection across tabs
+// - Centralized funnel stage management
+// - Shared state and utility functions
+// - Simplified data flow and maintenance
+//
+// All tabs now use the unified opportunitiesData with computed filtering:
+// - DISCOVER: prospects + qualified_prospects
+// - PLAN: qualified_prospects + candidates  
+// - ANALYZE: candidates + targets
+// - EXAMINE: targets + opportunities (ready for implementation)
+//
+// ========================================
