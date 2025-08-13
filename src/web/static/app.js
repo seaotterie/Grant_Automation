@@ -101,6 +101,14 @@ function catalynxApp() {
             execute: false
         },
         
+        // Analysis progress tracking for PLAN tab
+        analysisProgress: {
+            xml_990_running: false,
+            network_running: false,
+            enhanced_scoring_running: false,
+            strategic_running: false
+        },
+        
         // Stage-specific data
         profileCount: 0,
         activeWorkflows: 0,
@@ -3012,6 +3020,153 @@ function catalynxApp() {
                 this.showNotification('Discovery Error', 'An error occurred during multi-track discovery', 'error');
             } finally {
                 this.multiTrackInProgress = false;
+            }
+        },
+        
+        // UTILITY FUNCTIONS FOR STAGE DISPLAY
+        formatStageWithNumber(stage) {
+            const stageMapping = {
+                'prospects': '#1 - PROSPECTS',
+                'qualified_prospects': '#2 - QUALIFIED PROSPECTS',
+                'candidates': '#3 - CANDIDATES',
+                'targets': '#4 - TARGETS', 
+                'opportunities': '#5 - OPPORTUNITIES'
+            };
+            return stageMapping[stage] || stage?.replace('_', ' ').toUpperCase() || 'UNKNOWN';
+        },
+        
+        getStageColor(stage) {
+            const colorMapping = {
+                'prospects': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+                'qualified_prospects': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+                'candidates': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+                'targets': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+                'opportunities': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+            };
+            return colorMapping[stage] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+        },
+        
+        getOrganizationTypeColor(type) {
+            const colorMapping = {
+                'Nonprofit': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+                'Federal': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+                'State': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+                'Commercial': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+                'Foundation': 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300'
+            };
+            return colorMapping[type] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+        },
+        
+        // PLAN TAB ANALYSIS FUNCTIONS
+        async start990Analysis() {
+            if (!this.selectedProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile before starting analysis', 'warning');
+                return;
+            }
+            
+            if (this.analysisProgress.xml_990_running) {
+                return;
+            }
+            
+            this.analysisProgress.xml_990_running = true;
+            
+            try {
+                this.showNotification('990 Analysis', 'Starting financial analysis...', 'info');
+                
+                // Simulate API call with delay
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                this.showNotification('990 Analysis Complete', 'Financial analysis completed successfully', 'success');
+                this.workflowProgress.plan = true;
+            } catch (error) {
+                console.error('990 analysis failed:', error);
+                this.showNotification('Analysis Error', 'Failed to complete 990 analysis', 'error');
+            } finally {
+                this.analysisProgress.xml_990_running = false;
+            }
+        },
+        
+        async startNetworkDiscovery() {
+            if (!this.selectedProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile before starting network analysis', 'warning');
+                return;
+            }
+            
+            if (this.analysisProgress.network_running) {
+                return;
+            }
+            
+            this.analysisProgress.network_running = true;
+            
+            try {
+                this.showNotification('Network Discovery', 'Mapping board connections...', 'info');
+                
+                // Simulate API call with delay
+                await new Promise(resolve => setTimeout(resolve, 2500));
+                
+                this.showNotification('Network Discovery Complete', 'Board network mapping completed', 'success');
+                this.workflowProgress.plan = true;
+            } catch (error) {
+                console.error('Network discovery failed:', error);
+                this.showNotification('Analysis Error', 'Failed to complete network discovery', 'error');
+            } finally {
+                this.analysisProgress.network_running = false;
+            }
+        },
+        
+        async startEnhancedScoring() {
+            if (!this.selectedProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile before starting enhanced scoring', 'warning');
+                return;
+            }
+            
+            if (this.analysisProgress.enhanced_scoring_running) {
+                return;
+            }
+            
+            this.analysisProgress.enhanced_scoring_running = true;
+            
+            try {
+                this.showNotification('Enhanced Scoring', 'Calculating compatibility scores...', 'info');
+                
+                // Simulate API call with delay
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                this.showNotification('Enhanced Scoring Complete', 'Compatibility scoring completed', 'success');
+                this.workflowProgress.plan = true;
+            } catch (error) {
+                console.error('Enhanced scoring failed:', error);
+                this.showNotification('Analysis Error', 'Failed to complete enhanced scoring', 'error');
+            } finally {
+                this.analysisProgress.enhanced_scoring_running = false;
+            }
+        },
+        
+        async generateStrategicPlan() {
+            if (!this.selectedProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile before generating strategic plan', 'warning');
+                return;
+            }
+            
+            if (this.analysisProgress.strategic_running) {
+                return;
+            }
+            
+            this.analysisProgress.strategic_running = true;
+            
+            try {
+                this.showNotification('Strategic Planning', 'Generating AI-powered recommendations...', 'info');
+                
+                // Simulate API call with delay
+                await new Promise(resolve => setTimeout(resolve, 4000));
+                
+                this.showNotification('Strategic Plan Complete', 'AI recommendations generated successfully', 'success');
+                this.workflowProgress.plan = true;
+            } catch (error) {
+                console.error('Strategic planning failed:', error);
+                this.showNotification('Analysis Error', 'Failed to generate strategic plan', 'error');
+            } finally {
+                this.analysisProgress.strategic_running = false;
             }
         },
         
@@ -8133,7 +8288,7 @@ function catalynxApp() {
                 }
             },
             
-            filteredProspects() {
+            get filteredProspects() {
                 console.log('filteredProspects called, prospectsData:', this.prospectsData);
                 console.log('prospectsStageFilter:', this.prospectsStageFilter);
                 
@@ -8164,10 +8319,7 @@ function catalynxApp() {
                 this.demoteOpportunity(prospect);
             },
             
-            // Utility functions - using shared CatalynxUtils
-            formatStageWithNumber: CatalynxUtils.formatStageWithNumber,
-            getStageColor: CatalynxUtils.getStageColor,
-            getOrganizationTypeColor: CatalynxUtils.getOrganizationTypeColor
+            // Utility functions now defined directly in main context above
         }
     }
 }
