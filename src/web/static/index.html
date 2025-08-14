@@ -1088,6 +1088,31 @@
                         </div>
                     </div>
 
+                    <!-- AI Lite Analysis Controls -->
+                    <div x-show="selectedAnalyzeProfile" class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white mb-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="text-xl font-semibold mb-2">AI Lite Analysis</h4>
+                                <p class="text-blue-100 text-sm">Cost-optimized batch analysis (~$0.0001/candidate) • Enables Deep AI for high scorers</p>
+                                <div class="mt-2 text-xs text-blue-200">
+                                    <span>Total Analyzed: </span><span x-text="aiLiteAnalysis.analysisCount"></span>
+                                    <span class="mx-2">•</span>
+                                    <span>Cost: $</span><span x-text="aiLiteAnalysis.totalCost.toFixed(4)"></span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <button @click="runAILiteAnalysis()" 
+                                        :disabled="aiLiteAnalysis.running || candidatesData.length === 0"
+                                        class="px-6 py-3 bg-white text-blue-600 hover:bg-blue-50 disabled:bg-gray-300 disabled:text-gray-500 font-medium rounded-lg transition-colors">
+                                    <span x-show="!aiLiteAnalysis.running">
+                                        Analyze with AI (<span x-text="candidatesData.length"></span> candidates)
+                                    </span>
+                                    <span x-show="aiLiteAnalysis.running">Analyzing...</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Network Visualization Toggle -->
                     <div x-show="selectedAnalyzeProfile" class="text-right">
                         <button @click="toggleNetworkVisualizations()" 
@@ -1208,6 +1233,9 @@
                                             Network Score
                                         </th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            AI Analysis
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                             AI Status
                                         </th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -1248,31 +1276,84 @@
                                                      x-text="((candidate.network_score || 0) * 100).toFixed(1) + '%'"></div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="space-y-1">
+                                                    <!-- AI Compatibility Score -->
+                                                    <div x-show="hasAIAnalysis(candidate)">
+                                                        <div class="text-xs font-medium text-gray-900 dark:text-white">
+                                                            AI: <span x-text="(getAICompatibilityScore(candidate) * 100).toFixed(1) + '%'"></span>
+                                                        </div>
+                                                        <div class="w-16 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 mt-1">
+                                                            <div class="h-1.5 rounded-full transition-all duration-300" 
+                                                                 :class="getAICompatibilityScore(candidate) >= 0.8 ? 'bg-green-500' : 
+                                                                         getAICompatibilityScore(candidate) >= 0.6 ? 'bg-yellow-500' : 'bg-red-500'"
+                                                                 :style="`width: ${getAICompatibilityScore(candidate) * 100}%`"></div>
+                                                        </div>
+                                                        <!-- Priority Rank -->
+                                                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                                                            Priority: <span x-text="getAIPriorityRank(candidate)"></span>
+                                                        </div>
+                                                        <!-- Risk Flags -->
+                                                        <div x-show="getAIRiskFlags(candidate).length > 0" class="flex flex-wrap gap-1 mt-1">
+                                                            <template x-for="flag in getAIRiskFlags(candidate).slice(0, 2)" :key="flag">
+                                                                <span class="inline-flex px-1 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded">
+                                                                    <span x-text="flag.replace('_', ' ')"></span>
+                                                                </span>
+                                                            </template>
+                                                            <span x-show="getAIRiskFlags(candidate).length > 2" 
+                                                                  class="text-xs text-gray-400"
+                                                                  x-text="`+${getAIRiskFlags(candidate).length - 2} more`"></span>
+                                                        </div>
+                                                    </div>
+                                                    <!-- No AI Analysis -->
+                                                    <div x-show="!hasAIAnalysis(candidate)" class="text-xs text-gray-400 dark:text-gray-500">
+                                                        No AI analysis
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="space-y-2">
                                                     <!-- Status Badges -->
-                                                    <div>
-                                                        <span x-show="candidate.ai_analyzed && !candidate.ai_error" 
-                                                              class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                                            Completed
-                                                        </span>
-                                                        <span x-show="candidate.ai_error" 
-                                                              class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                                            Error
-                                                        </span>
-                                                        <span x-show="!candidate.ai_analyzed && !candidate.ai_error && (candidate.combined_score || 0) < 0.75" 
-                                                              class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                                                            Unavailable
-                                                        </span>
+                                                    <div class="space-y-1">
+                                                        <!-- AI Lite Status -->
+                                                        <div>
+                                                            <span x-show="hasAIAnalysis(candidate)" 
+                                                                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                                AI Lite
+                                                            </span>
+                                                        </div>
+                                                        
+                                                        <!-- Deep AI Status -->
+                                                        <div>
+                                                            <span x-show="candidate.ai_analyzed && !candidate.ai_error" 
+                                                                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                                                Deep AI
+                                                            </span>
+                                                            <span x-show="candidate.ai_error" 
+                                                                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                                                Error
+                                                            </span>
+                                                            <span x-show="!candidate.ai_analyzed && !candidate.ai_error && !hasAIAnalysis(candidate) && (candidate.combined_score || 0) < 0.75" 
+                                                                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                                Unavailable
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                     
                                                     <!-- Action Buttons -->
                                                     <div>
-                                                        <!-- Initiate button for high-scoring candidates -->
-                                                        <button x-show="(!candidate.ai_analyzed && !candidate.ai_processing && !candidate.ai_error && (candidate.combined_score || 0) >= 0.75)"
+                                                        <!-- Initiate Deep AI button (requires AI Lite + high score) -->
+                                                        <button x-show="(!candidate.ai_analyzed && !candidate.ai_processing && !candidate.ai_error && hasAIAnalysis(candidate) && getAICompatibilityScore(candidate) >= 0.75)"
                                                                 @click="runSingleAIAnalysis(candidate)" 
                                                                 class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors">
-                                                            Initiate
+                                                            Deep AI
                                                         </button>
+                                                        
+                                                        <!-- Unavailable for low AI scores -->
+                                                        <div x-show="hasAIAnalysis(candidate) && !candidate.ai_analyzed && !candidate.ai_error && getAICompatibilityScore(candidate) < 0.75"
+                                                             class="text-xs text-gray-500 dark:text-gray-400">
+                                                            Deep AI Unavailable<br>
+                                                            <span class="text-xs">(AI Score: <span x-text="(getAICompatibilityScore(candidate) * 100).toFixed(0)"></span>% &lt; 75%)</span>
+                                                        </div>
                                                         
                                                         <!-- Retry button for errors -->
                                                         <button x-show="candidate.ai_error && !candidate.ai_processing"
@@ -1333,23 +1414,236 @@
                 <div x-show="activeStage === 'examine'" class="space-y-6">
                     <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-6 text-white">
                         <h3 class="text-2xl font-bold">Target Examination - Deep dive dossier building and comprehensive intelligence reports</h3>
-                        <p class="mt-2 opacity-90">Export comprehensive reports and manage implementation</p>
+                        <p class="mt-2 opacity-90">Advanced AI analysis and strategic intelligence for priority targets</p>
                     </div>
+
+                    <!-- Profile Selection -->
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                        <h4 class="text-lg font-semibold mb-4">Export Options</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                                <h5 class="font-medium">CSV Reports</h5>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Structured data exports</p>
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Organization Profile</h4>
+                            <div class="flex items-center space-x-3">
+                                <select x-model="selectedExamineProfile" @change="filterTargets()"
+                                        class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700">
+                                    <option value="">Select Profile...</option>
+                                    <template x-for="profile in profiles" :key="profile.id">
+                                        <option :value="profile.id" x-text="profile.name"></option>
+                                    </template>
+                                </select>
                             </div>
-                            <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                                <h5 class="font-medium">PDF Summaries</h5>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Executive summaries</p>
+                        </div>
+                        
+                        <div x-show="selectedExamineProfile" class="text-sm text-gray-600 dark:text-gray-400">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <span class="font-medium">Targets:</span> 
+                                    <span x-text="targetsData.filter(t => t.funnel_stage === 'targets').length"></span>
+                                </div>
+                                <div>
+                                    <span class="font-medium">Opportunities:</span> 
+                                    <span x-text="targetsData.filter(t => t.funnel_stage === 'opportunities').length"></span>
+                                </div>
+                                <div>
+                                    <span class="font-medium">Ready for Deep AI:</span> 
+                                    <span x-text="targetsData.filter(t => hasAIAnalysis(t) && getAICompatibilityScore(t) >= 0.75).length"></span>
+                                </div>
                             </div>
-                            <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                                <h5 class="font-medium">Interactive Networks</h5>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">Network visualizations</p>
+                        </div>
+                    </div>
+
+                    <!-- Deep AI Heavy Analysis Controls -->
+                    <div x-show="selectedExamineProfile" class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg p-6 text-white mb-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="text-xl font-semibold mb-2">AI Heavy Intelligence</h4>
+                                <p class="text-purple-100 text-sm">Strategic dossiers with comprehensive analysis (~$0.10-0.25/target) • Premium AI research</p>
+                                <div class="mt-2 text-xs text-purple-200">
+                                    <span>Deep Analysis Available: </span>
+                                    <span x-text="targetsData.filter(t => hasAIAnalysis(t) && getAICompatibilityScore(t) >= 0.75).length"></span>
+                                    <span> targets</span>
+                                </div>
                             </div>
+                            <div class="flex items-center space-x-3">
+                                <div class="text-right text-purple-100 text-sm">
+                                    <div>Select individual targets</div>
+                                    <div>for deep AI analysis</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Targets Analysis Table -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Targets Analysis</h4>
+                                <div class="flex items-center space-x-3">
+                                    <input type="text" placeholder="Search targets..." 
+                                           x-model="searchQuery" @input="filterTargets()"
+                                           class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Organization
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Stage
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Type
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            AI Lite Score
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Funding Amount
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Deep AI Status
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    <template x-for="target in targetsData" :key="target.opportunity_id">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white" 
+                                                     x-text="target.organization_name"></div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400" 
+                                                     x-text="target.discovery_source"></div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                                                      :class="getStageColor(target.funnel_stage)"
+                                                      x-text="formatStageWithNumber(target.funnel_stage)"></span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                                      :class="getOrganizationTypeColor(target.source_type || target.organization_type || 'Nonprofit')"
+                                                      x-text="target.source_type || target.organization_type || 'Nonprofit'"></span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div x-show="hasAIAnalysis(target)" class="space-y-1">
+                                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                                        <span x-text="(getAICompatibilityScore(target) * 100).toFixed(1) + '%'"></span>
+                                                    </div>
+                                                    <div class="w-16 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                                                        <div class="h-2 rounded-full transition-all duration-300" 
+                                                             :class="getAICompatibilityScore(target) >= 0.8 ? 'bg-green-500' : 
+                                                                     getAICompatibilityScore(target) >= 0.6 ? 'bg-yellow-500' : 'bg-red-500'"
+                                                             :style="`width: ${getAICompatibilityScore(target) * 100}%`"></div>
+                                                    </div>
+                                                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                                                        Priority: <span x-text="getAIPriorityRank(target)"></span>
+                                                    </div>
+                                                </div>
+                                                <div x-show="!hasAIAnalysis(target)" class="text-xs text-gray-400 dark:text-gray-500">
+                                                    No AI Lite analysis
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                                    <span x-text="target.funding_amount ? '$' + target.funding_amount.toLocaleString() : 'N/A'"></span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="space-y-2">
+                                                    <!-- Deep AI Status Badges -->
+                                                    <div>
+                                                        <span x-show="target.deep_ai_analyzed && !target.deep_ai_error" 
+                                                              class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                                            Complete
+                                                        </span>
+                                                        <span x-show="target.deep_ai_error" 
+                                                              class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                                            Error
+                                                        </span>
+                                                        <span x-show="target.deep_ai_processing" 
+                                                              class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                            Processing...
+                                                        </span>
+                                                        <span x-show="!target.deep_ai_analyzed && !target.deep_ai_error && !target.deep_ai_processing && (!hasAIAnalysis(target) || getAICompatibilityScore(target) < 0.75)" 
+                                                              class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                            Unavailable
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <!-- Deep AI Action Buttons -->
+                                                    <div>
+                                                        <!-- Initiate Deep AI button (requires AI Lite + high score) -->
+                                                        <button x-show="(!target.deep_ai_analyzed && !target.deep_ai_processing && !target.deep_ai_error && hasAIAnalysis(target) && getAICompatibilityScore(target) >= 0.75)"
+                                                                @click="runDeepAIAnalysis(target)" 
+                                                                class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded transition-colors">
+                                                            Deep AI
+                                                        </button>
+                                                        
+                                                        <!-- Retry button for errors -->
+                                                        <button x-show="target.deep_ai_error && !target.deep_ai_processing"
+                                                                @click="runDeepAIAnalysis(target)" 
+                                                                class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded transition-colors">
+                                                            Retry
+                                                        </button>
+                                                        
+                                                        <!-- View Dossier button for completed analysis -->
+                                                        <button x-show="target.deep_ai_analyzed && !target.deep_ai_error"
+                                                                @click="viewTargetDossier(target)" 
+                                                                class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded transition-colors">
+                                                            View Dossier
+                                                        </button>
+                                                        
+                                                        <!-- Unavailable explanation for low scores -->
+                                                        <div x-show="hasAIAnalysis(target) && !target.deep_ai_analyzed && !target.deep_ai_error && getAICompatibilityScore(target) < 0.75"
+                                                             class="text-xs text-gray-500 dark:text-gray-400">
+                                                            Deep AI Unavailable<br>
+                                                            <span class="text-xs">(AI Score: <span x-text="(getAICompatibilityScore(target) * 100).toFixed(0)"></span>% &lt; 75%)</span>
+                                                        </div>
+                                                        
+                                                        <!-- Needs AI Lite first -->
+                                                        <div x-show="!hasAIAnalysis(target)"
+                                                             class="text-xs text-gray-500 dark:text-gray-400">
+                                                            Requires AI Lite analysis first
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-3 py-4 whitespace-nowrap text-sm">
+                                                <div class="flex items-center space-x-2">
+                                                    <button @click="openScoringModal(target)" 
+                                                            class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View</button>
+                                                    <button @click="promoteOpportunity(target)" 
+                                                            :disabled="target.funnel_stage === 'opportunities'"
+                                                            class="px-3 py-1 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 rounded-md transition-colors">Promote</button>
+                                                    <button @click="demoteOpportunity(target)" 
+                                                            :disabled="target.funnel_stage === 'targets'"
+                                                            class="px-3 py-1 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 rounded-md transition-colors">Demote</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    
+                                    <!-- Empty State -->
+                                    <tr x-show="targetsData.length === 0">
+                                        <td colspan="7" class="px-6 py-12 text-center">
+                                            <div class="text-gray-400 dark:text-gray-600">
+                                                <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No targets for examination</h3>
+                                                <p class="text-gray-500 dark:text-gray-400">Complete DISCOVER, PLAN, and ANALYZE stages to generate targets for deep examination</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -1357,12 +1651,291 @@
                 <!-- STAGE 6: APPROACH (OPPORTUNITIES) -->
                 <div x-show="activeStage === 'approach'" class="space-y-6">
                     <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg p-6 text-white">
-                        <h3 class="text-2xl font-bold">Opportunity Approach - Active pursuit planning and grant writer handoff</h3>
+                        <h3 class="text-2xl font-bold">Opportunity Approach - Grant Application Intelligence & Team Readiness</h3>
+                        <p class="text-green-100 mt-2">Comprehensive grant application packages and strategic pursuit recommendations to get your team 60-80% ready to apply</p>
                     </div>
-                    
-                    <!-- Approach content will be implemented here -->
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                        <p class="text-gray-600 dark:text-gray-400">Coming Soon: Active pursuit planning, relationship building strategies, and grant writer handoff tools.</p>
+
+                    <!-- Profile Selection Notice -->
+                    <div x-show="!selectedProfile" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h5 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">No Profile Selected</h5>
+                                <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">Select an organization profile and progress through DISCOVER → PLAN → ANALYZE → EXAMINE stages to generate strategic pursuit recommendations.</p>
+                                <button @click="switchStage('profiler')" class="mt-2 text-xs bg-yellow-100 dark:bg-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-700 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded">
+                                    Go to Profiler
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Approach Content -->
+                    <div x-show="selectedProfile" class="space-y-6">
+                        
+                        <!-- Strategic Pursuit Dashboard -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <!-- Grant Application Intelligence Panel -->
+                            <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Grant Application Intelligence</h4>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                        Ready for Implementation
+                                    </span>
+                                </div>
+                                
+                                <!-- Grant Package Generation Status -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                            <div>
+                                                <p class="font-medium text-gray-900 dark:text-white">Grant Requirements Analysis</p>
+                                                <p class="text-sm text-gray-600 dark:text-gray-400">Comprehensive eligibility and documentation requirements</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-sm font-medium text-green-600 dark:text-green-400">Enhanced</span>
+                                    </div>
+                                    
+                                    <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                            <div>
+                                                <p class="font-medium text-gray-900 dark:text-white">Application Package Generator</p>
+                                                <p class="text-sm text-gray-600 dark:text-gray-400">Document templates, checklists, and preparation phases</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-sm font-medium text-green-600 dark:text-green-400">Ready</span>
+                                    </div>
+                                    
+                                    <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                            <div>
+                                                <p class="font-medium text-gray-900 dark:text-white">Level of Effort (LOE) Estimation</p>
+                                                <p class="text-sm text-gray-600 dark:text-gray-400">Realistic timeline and resource planning</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-sm font-medium text-blue-600 dark:text-blue-400">Integrated</span>
+                                    </div>
+                                    
+                                    <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                            <div>
+                                                <p class="font-medium text-gray-900 dark:text-white">Strategic Approach Recommendations</p>
+                                                <p class="text-sm text-gray-600 dark:text-gray-400">Pursuit strategy, timing, and amount recommendations</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-sm font-medium text-blue-600 dark:text-blue-400">Enhanced</span>
+                                    </div>
+                                </div>
+
+                                <!-- Generate Grant Package Button -->
+                                <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                    <button x-show="selectedTarget" 
+                                            @click="generateGrantPackage()" 
+                                            class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
+                                        <div class="flex items-center justify-center space-x-2">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                            <span>Generate Comprehensive Grant Package</span>
+                                        </div>
+                                    </button>
+                                    
+                                    <div x-show="!selectedTarget" class="text-center py-4">
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Select a target from EXAMINE stage to generate grant application package</p>
+                                        <button @click="switchStage('examine')" class="mt-2 text-sm bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-3 py-1 rounded">
+                                            Go to Examine
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Grant Team Readiness Panel -->
+                            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Grant Team Readiness</h4>
+                                
+                                <!-- Readiness Metrics -->
+                                <div class="space-y-4">
+                                    <div class="text-center">
+                                        <div class="text-3xl font-bold text-green-600 dark:text-green-400">75%</div>
+                                        <p class="text-sm text-gray-600 dark:text-gray-400">Team Readiness Score</p>
+                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
+                                            <div class="bg-green-600 h-2 rounded-full" style="width: 75%"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="space-y-3">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm text-gray-600 dark:text-gray-400">Grant Requirements</span>
+                                            <span class="text-sm font-medium text-green-600 dark:text-green-400">Complete</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm text-gray-600 dark:text-gray-400">Document Templates</span>
+                                            <span class="text-sm font-medium text-green-600 dark:text-green-400">Ready</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm text-gray-600 dark:text-gray-400">Application Timeline</span>
+                                            <span class="text-sm font-medium text-blue-600 dark:text-blue-400">In Progress</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm text-gray-600 dark:text-gray-400">Strategic Approach</span>
+                                            <span class="text-sm font-medium text-blue-600 dark:text-blue-400">Pending</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Team Action Items -->
+                                <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                    <h5 class="font-medium text-gray-900 dark:text-white mb-3">Next Steps</h5>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center space-x-2 text-sm">
+                                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                            <span class="text-gray-600 dark:text-gray-400">Review grant requirements analysis</span>
+                                        </div>
+                                        <div class="flex items-center space-x-2 text-sm">
+                                            <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                            <span class="text-gray-600 dark:text-gray-400">Download document templates</span>
+                                        </div>
+                                        <div class="flex items-center space-x-2 text-sm">
+                                            <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                            <span class="text-gray-600 dark:text-gray-400">Plan application timeline</span>
+                                        </div>
+                                        <div class="flex items-center space-x-2 text-sm">
+                                            <div class="w-2 h-2 bg-purple-500 rounded-full"></div>
+                                            <span class="text-gray-600 dark:text-gray-400">Execute strategic approach</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Grant Application Package Results (placeholder for future implementation) -->
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Grant Application Package Generator</h4>
+                            <div class="text-center py-8">
+                                <div class="mx-auto h-12 w-12 text-gray-400 mb-4">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                </div>
+                                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Comprehensive Grant Package Generation</h3>
+                                <p class="text-gray-500 dark:text-gray-400 mb-4">
+                                    Enhanced AI Heavy research now includes grant requirements analysis, document templates, 
+                                    application checklists, and Level of Effort (LOE) estimation to get your grant team 60-80% ready to apply.
+                                </p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                                    <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                                        <h5 class="font-medium text-blue-800 dark:text-blue-200 mb-2">Grant Requirements</h5>
+                                        <p class="text-sm text-blue-700 dark:text-blue-300">Eligibility analysis, documentation requirements, and application criteria</p>
+                                    </div>
+                                    <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                                        <h5 class="font-medium text-green-800 dark:text-green-200 mb-2">Document Templates</h5>
+                                        <p class="text-sm text-green-700 dark:text-green-300">Narrative outlines, budget templates, and writing guidance</p>
+                                    </div>
+                                    <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+                                        <h5 class="font-medium text-purple-800 dark:text-purple-200 mb-2">Application Timeline</h5>
+                                        <p class="text-sm text-purple-700 dark:text-purple-300">Preparation phases, milestones, and critical path planning</p>
+                                    </div>
+                                    <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
+                                        <h5 class="font-medium text-orange-800 dark:text-orange-200 mb-2">Strategic Approach</h5>
+                                        <p class="text-sm text-orange-700 dark:text-orange-300">Pursuit recommendations, timing, and amount optimization</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Strategic Pursuit Recommendations -->
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Strategic Pursuit Recommendations</h4>
+                            
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- Pursuit Strategy -->
+                                <div class="space-y-4">
+                                    <h5 class="font-medium text-gray-900 dark:text-white">Pursuit Strategy Framework</h5>
+                                    <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+                                        <div class="space-y-3">
+                                            <div class="flex justify-between">
+                                                <span class="text-sm font-medium text-gray-900 dark:text-white">Request Amount Range:</span>
+                                                <span class="text-sm text-green-600 dark:text-green-400 font-medium">AI-Optimized</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-sm font-medium text-gray-900 dark:text-white">Optimal Timing:</span>
+                                                <span class="text-sm text-blue-600 dark:text-blue-400 font-medium">Strategic Windows</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-sm font-medium text-gray-900 dark:text-white">Success Probability:</span>
+                                                <span class="text-sm text-green-600 dark:text-green-400 font-medium">Data-Driven Analysis</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-sm font-medium text-gray-900 dark:text-white">Level of Effort:</span>
+                                                <span class="text-sm text-orange-600 dark:text-orange-400 font-medium">Realistic Planning</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Action Framework -->
+                                <div class="space-y-4">
+                                    <h5 class="font-medium text-gray-900 dark:text-white">Grant Team Action Framework</h5>
+                                    <div class="space-y-3">
+                                        <div class="flex items-center space-x-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                                            <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-green-800 dark:text-green-200">Research & Planning</p>
+                                                <p class="text-xs text-green-700 dark:text-green-300">Requirements analysis and capacity assessment</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center space-x-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                            <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-blue-800 dark:text-blue-200">Relationship Building</p>
+                                                <p class="text-xs text-blue-700 dark:text-blue-300">Stakeholder engagement and network development</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center space-x-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                                            <div class="w-2 h-2 bg-purple-500 rounded-full"></div>
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-purple-800 dark:text-purple-200">Application Development</p>
+                                                <p class="text-xs text-purple-700 dark:text-purple-300">Document creation and review cycles</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center space-x-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                                            <div class="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-orange-800 dark:text-orange-200">Submission & Follow-up</p>
+                                                <p class="text-xs text-orange-700 dark:text-orange-300">Final review, submission, and post-application strategy</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Grant Writer Handoff Section -->
+                            <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <h5 class="font-medium text-gray-900 dark:text-white mb-3">Grant Writer Handoff Package</h5>
+                                <div class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-4 rounded-lg">
+                                    <p class="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                                        Enhanced AI Heavy research now generates comprehensive grant packages with requirements analysis, 
+                                        document templates, application checklists, and strategic recommendations - providing everything 
+                                        your grant writer needs to get your team 60-80% ready for application submission.
+                                    </p>
+                                    <div class="flex space-x-3">
+                                        <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded transition-colors">
+                                            Generate Complete Package
+                                        </button>
+                                        <button class="bg-white dark:bg-gray-700 border border-blue-600 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm font-medium py-2 px-4 rounded transition-colors">
+                                            View Sample Package
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
