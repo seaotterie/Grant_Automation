@@ -643,6 +643,25 @@
                                     <option value="targets">Targets</option>
                                     <option value="opportunities">Opportunities</option>
                                 </select>
+                                
+                                <!-- Foundation Type Filter -->
+                                <select class="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" x-model="foundationTypeFilter">
+                                    <option value="">All Organizations</option>
+                                    <option value="private_non_operating">🎯 Private Foundations (990-PF)</option>
+                                    <option value="private_operating">Private Operating Foundations</option>
+                                    <option value="public_charity">Public Charities (990)</option>
+                                    <option value="supporting_organization">Supporting Organizations</option>
+                                    <option value="donor_advised_fund">Donor Advised Funds</option>
+                                </select>
+                                
+                                <!-- Foundation Application Filter -->
+                                <select class="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" x-model="applicationStatusFilter">
+                                    <option value="">All Applications</option>
+                                    <option value="accepts_applications">✅ Accepts Applications</option>
+                                    <option value="invitation_only">📨 Invitation Only</option>
+                                    <option value="no_applications">❌ No Applications</option>
+                                    <option value="unknown">❓ Unknown Status</option>
+                                </select>
                                 <!-- Refresh Button -->
                                 <button @click="loadProspectsData()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm">
                                     Refresh
@@ -668,7 +687,21 @@
                                     <template x-for="prospect in prospectsData" :key="prospect.opportunity_id">
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                                             <td class="px-6 py-3 whitespace-nowrap">
+                                                <div class="flex items-center space-x-2">
                                                 <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="prospect.organization_name"></div>
+                                                <!-- 990-PF Foundation Indicator -->
+                                                <span x-show="prospect.form_type === '990-PF' || prospect.foundation_code === '03'" 
+                                                      class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 dark:from-purple-900/20 dark:to-pink-900/20 dark:text-purple-300 border border-purple-200 dark:border-purple-700"
+                                                      title="Private Foundation (990-PF) - High Grant Research Value">
+                                                    🏛️ PF
+                                                </span>
+                                                <!-- Accepts Applications Indicator -->
+                                                <span x-show="prospect.accepts_unsolicited_applications" 
+                                                      class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300 border border-green-200 dark:border-green-700"
+                                                      title="Accepts Applications">
+                                                    ✅ Apps
+                                                </span>
+                                            </div>
                                             </td>
                                             <td class="px-6 py-3 whitespace-nowrap">
                                                 <span class="px-2 py-1 text-xs font-medium rounded-full" 
@@ -1951,6 +1984,168 @@
                                 <div class="text-3xl font-bold" x-text="activeWorkflows || '0'"></div>
                                 <div class="text-sm opacity-90">Active Workflows</div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile Metrics Dashboard -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-gray-900/50 p-6 animate-fade-in">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                                <span class="text-2xl mr-3">📊</span>
+                                Profile Metrics Dashboard
+                            </h3>
+                            <div class="flex items-center space-x-4">
+                                <!-- Profile Selector -->
+                                <select x-model="selectedMetricsProfile" @change="loadProfileMetrics()" 
+                                        class="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm">
+                                    <option value="">Select Profile</option>
+                                    <template x-for="profile in availableProfiles" :key="profile.profile_id">
+                                        <option :value="profile.profile_id" x-text="profile.name"></option>
+                                    </template>
+                                </select>
+                                <button @click="refreshMetrics()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm">
+                                    Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Metrics Content -->
+                        <div x-show="profileMetrics && selectedMetricsProfile" class="space-y-6">
+                            
+                            <!-- Key Performance Indicators -->
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-blue-100 text-sm">Total Opportunities</p>
+                                            <p class="text-2xl font-bold" x-text="profileMetrics?.total_opportunities || 0">0</p>
+                                        </div>
+                                        <div class="text-3xl opacity-80">🎯</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 text-white">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-green-100 text-sm">FTE Hours Saved</p>
+                                            <p class="text-2xl font-bold" x-text="profileMetrics?.fte_hours_saved || 0">0</p>
+                                        </div>
+                                        <div class="text-3xl opacity-80">⏱️</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 text-white">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-purple-100 text-sm">AI Processing Cost</p>
+                                            <p class="text-2xl font-bold" x-text="`$${profileMetrics?.total_ai_cost?.toFixed(2) || '0.00'}`">$0.00</p>
+                                        </div>
+                                        <div class="text-3xl opacity-80">🤖</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-4 text-white">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-orange-100 text-sm">Success Rate</p>
+                                            <p class="text-2xl font-bold" x-text="`${profileMetrics?.success_rate?.toFixed(1) || '0.0'}%`">0.0%</p>
+                                        </div>
+                                        <div class="text-3xl opacity-80">✅</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Funnel Progression Chart -->
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Opportunity Funnel Progression</h4>
+                                <div class="space-y-4">
+                                    <template x-for="(stage, index) in ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities']" :key="stage">
+                                        <div class="flex items-center space-x-4">
+                                            <div class="w-32 text-sm font-medium text-gray-700 dark:text-gray-300 capitalize" x-text="stage.replace('_', ' ')">Stage</div>
+                                            <div class="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-4">
+                                                <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-4 rounded-full transition-all duration-500"
+                                                     :style="`width: ${getStagePercentage(stage)}%`"></div>
+                                            </div>
+                                            <div class="w-16 text-right text-sm font-semibold text-gray-900 dark:text-white" 
+                                                 x-text="profileMetrics?.funnel_breakdown?.[stage] || 0">0</div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            
+                            <!-- API Usage Breakdown -->
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">API Usage Breakdown</h4>
+                                    <div class="space-y-3">
+                                        <template x-for="(count, api) in profileMetrics?.api_calls || {}" :key="api">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300" x-text="formatApiName(api)">API</span>
+                                                <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="count">0</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Efficiency Metrics</h4>
+                                    <div class="space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Cache Hit Rate</span>
+                                            <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="`${profileMetrics?.cache_hit_rate?.toFixed(1) || '0.0'}%`">0.0%</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">ROI Multiplier</span>
+                                            <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="`${profileMetrics?.roi_multiplier?.toFixed(1) || '0.0'}x`">0.0x</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">AI Lite Calls</span>
+                                            <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="profileMetrics?.ai_lite_calls || 0">0</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">AI Heavy Calls</span>
+                                            <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="profileMetrics?.ai_heavy_calls || 0">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Time Savings Calculator -->
+                            <div class="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg p-6">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">📈 FTE Time Savings Analysis</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                                    <div>
+                                        <div class="text-2xl font-bold text-green-600 dark:text-green-400" x-text="`${profileMetrics?.fte_hours_saved || 0} hrs`">0 hrs</div>
+                                        <div class="text-sm text-gray-600 dark:text-gray-400">Total Hours Saved</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" x-text="`${profileMetrics?.processing_hours?.toFixed(1) || '0.0'} hrs`">0.0 hrs</div>
+                                        <div class="text-sm text-gray-600 dark:text-gray-400">Processing Time</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" x-text="`${profileMetrics?.roi_multiplier?.toFixed(1) || '0.0'}x`">0.0x</div>
+                                        <div class="text-sm text-gray-600 dark:text-gray-400">Efficiency Multiplier</div>
+                                    </div>
+                                </div>
+                                <div class="mt-4 text-sm text-gray-600 dark:text-gray-400 text-center">
+                                    <p>Automation has saved approximately <span class="font-semibold text-green-600 dark:text-green-400" x-text="`${(profileMetrics?.fte_hours_saved / 2080 * 100)?.toFixed(1) || '0.0'}%`">0.0%</span> of a full-time employee's annual work</p>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        
+                        <!-- No Profile Selected State -->
+                        <div x-show="!selectedMetricsProfile" class="text-center py-12 text-gray-500 dark:text-gray-400">
+                            <div class="text-4xl mb-4">📊</div>
+                            <p class="text-lg">Select a profile to view detailed metrics</p>
+                            <p class="text-sm mt-2">Track API usage, funnel progression, FTE hours saved, and more</p>
+                        </div>
+                        
+                        <!-- No Metrics Data State -->
+                        <div x-show="selectedMetricsProfile && (!profileMetrics || profileMetrics.error)" class="text-center py-12 text-gray-500 dark:text-gray-400">
+                            <div class="text-4xl mb-4">📈</div>
+                            <p class="text-lg">No metrics data available</p>
+                            <p class="text-sm mt-2">Run some discovery sessions to start generating metrics</p>
                         </div>
                     </div>
 

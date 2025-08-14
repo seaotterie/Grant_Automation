@@ -31,10 +31,12 @@ from src.web.models.responses import DashboardStats, WorkflowResponse, SystemSta
 from src.profiles.service import ProfileService
 from src.profiles.models import OrganizationProfile, FundingType
 from src.profiles.workflow_integration import ProfileWorkflowIntegrator
+from src.profiles.metrics_tracker import get_metrics_tracker
 from src.pipeline.pipeline_engine import ProcessingPriority
 from src.pipeline.resource_allocator import resource_allocator
 from src.processors.registry import get_processor_summary
 from src.processors.lookup.ein_lookup import EINLookupProcessor
+# from src.processors.analysis.ai_service_manager import get_ai_service_manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -63,6 +65,7 @@ workflow_service = WorkflowService()
 progress_service = ProgressService()
 profile_service = ProfileService()
 profile_integrator = ProfileWorkflowIntegrator()
+metrics_tracker = get_metrics_tracker()
 
 # Custom static file handler with cache control
 @app.get("/static/{file_path:path}")
@@ -718,6 +721,82 @@ async def get_profile_analytics(profile_id: str):
         raise
     except Exception as e:
         logger.error(f"Failed to get profile analytics {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/profiles/{profile_id}/metrics")
+async def get_profile_metrics(profile_id: str):
+    """Get comprehensive metrics for a specific profile."""
+    try:
+        # Verify profile exists
+        profile = profile_service.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Generate efficiency report
+        metrics_report = await metrics_tracker.generate_efficiency_report(profile_id)
+        
+        return {
+            "profile_id": profile_id,
+            "profile_name": profile.name,
+            "metrics": metrics_report
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get metrics for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/profiles/metrics/summary")
+async def get_all_profiles_metrics_summary():
+    """Get metrics summary for all profiles."""
+    try:
+        summary = await metrics_tracker.get_all_profile_metrics_summary()
+        
+        return {
+            "total_profiles": len(summary),
+            "profiles": summary,
+            "generated_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get profiles metrics summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/profiles/{profile_id}/metrics/funnel")
+async def update_funnel_metrics(profile_id: str, request: Dict[str, Any]):
+    """Update funnel stage metrics for a profile."""
+    try:
+        stage = request.get("stage")
+        count = request.get("count", 1)
+        
+        if not stage:
+            raise HTTPException(status_code=400, detail="Stage is required")
+        
+        await metrics_tracker.update_funnel_stage(profile_id, stage, count)
+        
+        return {"success": True, "message": f"Updated {stage} metrics for profile {profile_id}"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update funnel metrics for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/profiles/{profile_id}/metrics/session")
+async def start_metrics_session(profile_id: str):
+    """Start a new discovery session for metrics tracking."""
+    try:
+        await metrics_tracker.start_discovery_session(profile_id)
+        
+        return {
+            "success": True, 
+            "message": f"Started new discovery session for profile {profile_id}",
+            "session_started_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to start metrics session for profile {profile_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/profiles/{profile_id}/leads")
@@ -1959,6 +2038,123 @@ async def get_funnel_stages():
     
     return {"stages": stages}
 
+@app.get("/api/opportunities")
+async def get_opportunities(profile_id: Optional[str] = None, scope: Optional[str] = None, stage: Optional[str] = None):
+    """Get opportunities with profile scoping and filtering for real data integration."""
+    try:
+        logger.info(f"Getting opportunities - profile_id: {profile_id}, scope: {scope}, stage: {stage}")
+        
+        # Enhanced mock opportunities with profile associations for development
+        base_opportunities = [
+            {
+                "opportunity_id": "unified_opp_001",
+                "organization_name": "Metropolitan Health Foundation",
+                "source_type": "Nonprofit", 
+                "discovery_source": "nonprofit_discovery",
+                "description": "Leading health advocacy organization focused on community wellness and preventive care programs.",
+                "funnel_stage": "prospects",
+                "raw_score": 0.72,
+                "compatibility_score": 0.68,
+                "confidence_level": 0.85,
+                "xml_990_score": 0.0,
+                "network_score": 0.0,
+                "enhanced_score": 0.0,
+                "combined_score": 0.68,
+                "discovered_at": "2024-01-15T10:30:00Z",
+                "discovered_for_profile": "demo_profile_001",
+                "analysis_context": {
+                    "profile_id": "demo_profile_001",
+                    "discovery_mode": "nonprofit_track",
+                    "ntee_matches": ["E", "P"],
+                    "focus_area_matches": ["health", "community"]
+                }
+            },
+            {
+                "opportunity_id": "unified_opp_002",
+                "organization_name": "Regional Education Alliance", 
+                "source_type": "Nonprofit",
+                "discovery_source": "nonprofit_discovery",
+                "description": "Consortium of educational institutions promoting STEM learning and digital literacy.",
+                "funnel_stage": "qualified_prospects",
+                "raw_score": 0.85,
+                "compatibility_score": 0.82,
+                "confidence_level": 0.90,
+                "xml_990_score": 0.0,
+                "network_score": 0.0,
+                "enhanced_score": 0.0,
+                "combined_score": 0.82,
+                "discovered_at": "2024-01-15T11:45:00Z",
+                "discovered_for_profile": "demo_profile_001",
+                "analysis_context": {
+                    "profile_id": "demo_profile_001",
+                    "discovery_mode": "government_track",
+                    "ntee_matches": ["B"],
+                    "focus_area_matches": ["education", "STEM"]
+                }
+            },
+            {
+                "opportunity_id": "unified_opp_003",
+                "organization_name": "Tech Innovation Fund",
+                "source_type": "Commercial",
+                "discovery_source": "foundation_directory",
+                "description": "Corporate foundation supporting technology startups and digital innovation projects.",
+                "funnel_stage": "candidates",
+                "raw_score": 0.78,
+                "compatibility_score": 0.75,
+                "confidence_level": 0.88,
+                "xml_990_score": 0.0,
+                "network_score": 0.0,
+                "enhanced_score": 0.0,
+                "combined_score": 0.75,
+                "discovered_at": "2024-01-15T14:20:00Z",
+                "discovered_for_profile": "demo_profile_002",
+                "analysis_context": {
+                    "profile_id": "demo_profile_002",
+                    "discovery_mode": "commercial_track",
+                    "ntee_matches": ["M", "T"],
+                    "focus_area_matches": ["technology", "innovation"]
+                }
+            }
+        ]
+        
+        # Apply profile scoping if specified
+        filtered_opportunities = base_opportunities
+        if profile_id:
+            filtered_opportunities = [
+                opp for opp in filtered_opportunities 
+                if opp.get("discovered_for_profile") == profile_id or 
+                   opp.get("analysis_context", {}).get("profile_id") == profile_id
+            ]
+        
+        # Apply stage filtering if specified
+        if stage:
+            stages = [s.strip() for s in stage.split(',')]
+            filtered_opportunities = [opp for opp in filtered_opportunities if opp["funnel_stage"] in stages]
+        
+        # Apply scope filtering (all=return everything, focused=apply additional filtering)
+        if scope == "focused" and profile_id:
+            # In real implementation, this would apply advanced matching logic
+            # For now, return profile-scoped results
+            pass
+        
+        return {
+            "profile_id": profile_id,
+            "scope": scope,
+            "stage_filter": stage,
+            "total_count": len(filtered_opportunities),
+            "opportunities": filtered_opportunities,
+            "metadata": {
+                "data_source": "mock_development",
+                "profile_scoped": profile_id is not None,
+                "filtered": stage is not None,
+                "last_updated": datetime.now().isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting opportunities: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/funnel/{profile_id}/opportunities")
 async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None):
     """Get opportunities by funnel stage for a profile."""
@@ -1980,16 +2176,55 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
             "stage_filter": stage,
             "total_opportunities": len(opportunities),
             "opportunities": [{
+                # Core opportunity fields (standardized schema)
                 "opportunity_id": opp.opportunity_id,
                 "organization_name": opp.organization_name,
                 "funnel_stage": opp.funnel_stage.value,
-                "stage_color": opp.get_stage_color(),
-                "compatibility_score": opp.compatibility_score,
                 "source_type": opp.source_type.value,
                 "discovery_source": opp.discovery_source,
+                
+                # Opportunity details
+                "program_name": getattr(opp, 'program_name', None),
+                "description": getattr(opp, 'description', None),
                 "funding_amount": opp.funding_amount,
+                "application_deadline": getattr(opp, 'application_deadline', None),
+                
+                # Scoring fields (standardized)
+                "raw_score": getattr(opp, 'raw_score', 0.0),
+                "compatibility_score": opp.compatibility_score,
+                "confidence_level": getattr(opp, 'confidence_level', 0.0),
+                
+                # Advanced scoring (for candidates/targets/opportunities)
+                "xml_990_score": getattr(opp, 'xml_990_score', None),
+                "network_score": getattr(opp, 'network_score', None),
+                "enhanced_score": getattr(opp, 'enhanced_score', None),
+                "combined_score": getattr(opp, 'combined_score', None),
+                
+                # Metadata
+                "is_schedule_i_grantee": getattr(opp, 'is_schedule_i_grantee', False),
+                "discovered_at": opp.discovered_at.isoformat() if hasattr(opp, 'discovered_at') and opp.discovered_at else None,
                 "stage_updated_at": opp.stage_updated_at.isoformat() if opp.stage_updated_at else None,
-                "stage_notes": opp.stage_notes
+                "stage_notes": opp.stage_notes,
+                
+                # Contact and location info
+                "contact_info": getattr(opp, 'contact_info', {}),
+                "geographic_info": getattr(opp, 'geographic_info', {}),
+                
+                # Analysis factors
+                "match_factors": getattr(opp, 'match_factors', {}),
+                "risk_factors": getattr(opp, 'risk_factors', {}),
+                
+                # Analysis status
+                "analysis_status": getattr(opp, 'analysis_status', {}),
+                "strategic_analysis": getattr(opp, 'strategic_analysis', {}),
+                "ai_analyzed": getattr(opp, 'ai_analyzed', False),
+                "ai_processing": getattr(opp, 'ai_processing', False),
+                "ai_error": getattr(opp, 'ai_error', False),
+                "ai_summary": getattr(opp, 'ai_summary', None),
+                "action_plan": getattr(opp, 'action_plan', None),
+                
+                # Legacy support
+                "stage_color": opp.get_stage_color() if hasattr(opp, 'get_stage_color') else None
             } for opp in opportunities]
         }
         
@@ -2633,6 +2868,242 @@ async def get_network_visualization_data(profile_id: str):
     except Exception as e:
         logger.error(f"Network data retrieval failed: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to generate network visualizations: {str(e)}")
+
+# ENHANCED AI ANALYSIS ENDPOINTS - Comprehensive AI Lite & AI Heavy Processing
+
+@app.post("/api/ai/lite-analysis")
+async def execute_ai_lite_analysis(request: Dict[str, Any]):
+    """
+    Execute AI Lite batch analysis using comprehensive data packets.
+    
+    Request format:
+    {
+        "selected_profile": {...},
+        "candidates": [...],
+        "model_preference": "gpt-3.5-turbo",
+        "cost_limit": 0.01
+    }
+    """
+    try:
+        logger.info("Starting AI Lite batch analysis")
+        
+        # Get AI service manager
+        ai_service = get_ai_service_manager()
+        
+        # Validate request data
+        if not request.get("candidates"):
+            raise HTTPException(status_code=400, detail="No candidates provided for analysis")
+            
+        if not request.get("selected_profile"):
+            raise HTTPException(status_code=400, detail="Profile context required for AI analysis")
+        
+        # Execute AI Lite analysis
+        result = await ai_service.execute_ai_lite_analysis(request)
+        
+        return {
+            "status": "success",
+            "analysis_type": "ai_lite",
+            "result": result,
+            "session_summary": ai_service.get_session_summary()
+        }
+        
+    except Exception as e:
+        logger.error(f"AI Lite analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"AI Lite analysis failed: {str(e)}")
+
+@app.post("/api/ai/deep-research")
+async def execute_ai_heavy_research(request: Dict[str, Any]):
+    """
+    Execute AI Heavy deep research using comprehensive data packets.
+    
+    Request format:
+    {
+        "target_opportunity": {...},
+        "selected_profile": {...},
+        "ai_lite_results": {...},
+        "model_preference": "gpt-4",
+        "cost_budget": 0.25,
+        "research_priority_areas": [...],
+        "research_risk_areas": [...],
+        "research_intelligence_gaps": [...]
+    }
+    """
+    try:
+        logger.info("Starting AI Heavy deep research")
+        
+        # Get AI service manager
+        ai_service = get_ai_service_manager()
+        
+        # Validate request data
+        if not request.get("target_opportunity"):
+            raise HTTPException(status_code=400, detail="Target opportunity required for deep research")
+            
+        if not request.get("selected_profile"):
+            raise HTTPException(status_code=400, detail="Profile context required for AI research")
+        
+        # Execute AI Heavy research
+        result = await ai_service.execute_ai_heavy_research(request)
+        
+        return {
+            "status": "success",
+            "analysis_type": "ai_heavy",
+            "result": result,
+            "session_summary": ai_service.get_session_summary()
+        }
+        
+    except Exception as e:
+        logger.error(f"AI Heavy research failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"AI Heavy research failed: {str(e)}")
+
+@app.get("/api/ai/analysis-status/{request_id}")
+async def get_ai_analysis_status(request_id: str):
+    """Get status of a specific AI processing request."""
+    try:
+        ai_service = get_ai_service_manager()
+        status = ai_service.get_processing_status(request_id)
+        
+        if not status:
+            raise HTTPException(status_code=404, detail=f"Request {request_id} not found")
+        
+        return {
+            "status": "success",
+            "request_status": status
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get AI analysis status: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/ai/session-summary")
+async def get_ai_session_summary():
+    """Get comprehensive AI session summary with cost tracking."""
+    try:
+        ai_service = get_ai_service_manager()
+        summary = ai_service.get_session_summary()
+        
+        return {
+            "status": "success",
+            "session_summary": summary
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get AI session summary: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/ai/cost-estimates")
+async def get_ai_cost_estimates(candidate_count: int = 1, research_count: int = 1):
+    """Get cost estimates for AI processing."""
+    try:
+        ai_service = get_ai_service_manager()
+        estimates = ai_service.get_cost_estimates(candidate_count, research_count)
+        
+        return {
+            "status": "success",
+            "cost_estimates": estimates,
+            "pricing_info": {
+                "ai_lite_per_candidate": "$0.0001 - $0.0015",
+                "ai_heavy_per_research": "$0.10 - $0.25",
+                "model_tiers": {
+                    "ai_lite": "GPT-3.5 Turbo (cost-optimized)",
+                    "ai_heavy": "GPT-4 (premium analysis)"
+                }
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get AI cost estimates: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/ai/batch-analysis")
+async def execute_batch_ai_analysis(request: Dict[str, Any]):
+    """
+    Execute combined AI Lite + AI Heavy analysis pipeline.
+    
+    First runs AI Lite on all candidates, then runs AI Heavy on top-ranked targets.
+    """
+    try:
+        logger.info("Starting batch AI analysis pipeline")
+        
+        # Get AI service manager
+        ai_service = get_ai_service_manager()
+        
+        # Validate request data
+        if not request.get("candidates"):
+            raise HTTPException(status_code=400, detail="No candidates provided for batch analysis")
+            
+        if not request.get("selected_profile"):
+            raise HTTPException(status_code=400, detail="Profile context required for batch analysis")
+        
+        # Step 1: Execute AI Lite analysis
+        logger.info("Phase 1: AI Lite batch analysis")
+        ai_lite_result = await ai_service.execute_ai_lite_analysis(request)
+        
+        # Step 2: Identify top candidates for deep research
+        top_candidates_count = request.get("deep_research_count", 3)
+        candidates_data = request.get("candidates", [])
+        
+        # Sort by AI Lite priority ranking and select top candidates
+        if "candidate_results" in ai_lite_result:
+            top_candidates = []
+            for candidate in candidates_data:
+                opp_id = candidate.get("opportunity_id")
+                if opp_id in ai_lite_result["candidate_results"]:
+                    ai_analysis = ai_lite_result["candidate_results"][opp_id]["ai_analysis"]
+                    candidate["ai_lite_results"] = ai_analysis
+                    top_candidates.append((candidate, ai_analysis["priority_rank"]))
+            
+            # Sort by priority rank and take top N
+            top_candidates.sort(key=lambda x: x[1])
+            selected_candidates = [c[0] for c in top_candidates[:top_candidates_count]]
+        else:
+            selected_candidates = candidates_data[:top_candidates_count]
+        
+        # Step 3: Execute AI Heavy research on top candidates
+        logger.info(f"Phase 2: AI Heavy research on {len(selected_candidates)} top candidates")
+        deep_research_results = []
+        
+        for candidate in selected_candidates:
+            try:
+                research_request = {
+                    "target_opportunity": candidate,
+                    "selected_profile": request["selected_profile"],
+                    "ai_lite_results": candidate.get("ai_lite_results", {}),
+                    "model_preference": request.get("model_preference", "gpt-4"),
+                    "cost_budget": request.get("cost_budget", 0.25)
+                }
+                
+                research_result = await ai_service.execute_ai_heavy_research(research_request)
+                deep_research_results.append({
+                    "candidate": candidate,
+                    "research_result": research_result
+                })
+                
+            except Exception as e:
+                logger.warning(f"Deep research failed for {candidate.get('organization_name', 'Unknown')}: {str(e)}")
+                deep_research_results.append({
+                    "candidate": candidate,
+                    "research_result": {"error": str(e)}
+                })
+        
+        # Compile comprehensive results
+        return {
+            "status": "success",
+            "analysis_type": "batch_pipeline",
+            "ai_lite_result": ai_lite_result,
+            "deep_research_results": deep_research_results,
+            "pipeline_summary": {
+                "total_candidates_analyzed": len(candidates_data),
+                "deep_research_conducted": len(selected_candidates),
+                "successful_deep_research": len([r for r in deep_research_results if "error" not in r["research_result"]])
+            },
+            "session_summary": ai_service.get_session_summary()
+        }
+        
+    except Exception as e:
+        logger.error(f"Batch AI analysis pipeline failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
 
 # Simple test endpoint for debugging
 @app.get("/api/test")

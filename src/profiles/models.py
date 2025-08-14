@@ -60,6 +60,33 @@ class ProfileStatus(str, Enum):
     TEMPLATE = "template"
 
 
+class FormType(str, Enum):
+    """IRS form type classification"""
+    FORM_990 = "990"
+    FORM_990_PF = "990-PF"
+    FORM_990_EZ = "990-EZ"
+    FORM_990_N = "990-N"
+    UNKNOWN = "unknown"
+
+
+class FoundationType(str, Enum):
+    """Foundation type classification"""
+    PRIVATE_NON_OPERATING = "private_non_operating"      # Foundation Code 03 - Primary target
+    PRIVATE_OPERATING = "private_operating"              # Foundation Code 04
+    PUBLIC_CHARITY = "public_charity"                    # Most nonprofits
+    SUPPORTING_ORGANIZATION = "supporting_organization"   # Foundation Code 12
+    DONOR_ADVISED_FUND = "donor_advised_fund"           # Foundation Code 15
+    UNKNOWN = "unknown"
+
+
+class ApplicationAcceptanceStatus(str, Enum):
+    """Application acceptance status from 990-PF Part XV"""
+    ACCEPTS_APPLICATIONS = "accepts_applications"
+    NO_APPLICATIONS = "no_applications"
+    INVITATION_ONLY = "invitation_only"
+    UNKNOWN = "unknown"
+
+
 class GeographicScope(BaseModel):
     """Geographic targeting configuration"""
     states: Optional[List[str]] = Field(default=[], description="Target states (2-letter codes)")
@@ -94,6 +121,208 @@ class ScheduleIGrantee(BaseModel):
         }
 
 
+class FoundationBoardMember(BaseModel):
+    """990-PF Part VIII - Officers, Directors, Trustees information"""
+    name: str = Field(..., description="Board member full name")
+    title: str = Field(..., description="Position/title")
+    address: Optional[str] = Field(default=None, description="Full address if available")
+    average_hours_per_week: Optional[float] = Field(default=None, description="Hours per week devoted to position")
+    compensation: Optional[float] = Field(default=None, description="Compensation amount")
+    is_officer: bool = Field(default=False, description="Whether this person is an officer")
+    is_director: bool = Field(default=False, description="Whether this person is a director/trustee")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+
+class FoundationGrantRecord(BaseModel):
+    """990-PF Part XV - Enhanced grant record with full details"""
+    recipient_name: str = Field(..., description="Grantee organization name")
+    recipient_ein: Optional[str] = Field(default=None, description="Recipient EIN if available")
+    recipient_address: Optional[str] = Field(default=None, description="Full recipient address")
+    grant_amount: float = Field(..., description="Grant amount")
+    grant_year: int = Field(..., description="Tax year of grant")
+    grant_purpose: Optional[str] = Field(default=None, description="Detailed purpose or project description")
+    support_type: Optional[str] = Field(default=None, description="General support or project support")
+    relationship_to_substantial_contributor: Optional[str] = Field(default=None, description="Any relationship notes")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+
+class FoundationApplicationProcess(BaseModel):
+    """990-PF Part XV - Application process information"""
+    accepts_applications: ApplicationAcceptanceStatus = Field(default=ApplicationAcceptanceStatus.UNKNOWN, description="Application acceptance status")
+    application_deadlines: Optional[str] = Field(default=None, description="Application deadline information")
+    application_process_description: Optional[str] = Field(default=None, description="How to apply - process description")
+    contact_information: Optional[str] = Field(default=None, description="Contact person or information")
+    application_restrictions: Optional[str] = Field(default=None, description="Any restrictions on applications")
+    geographic_limitations: Optional[str] = Field(default=None, description="Geographic giving limitations")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+
+class FoundationFinancialData(BaseModel):
+    """990-PF Part I - Financial summary and investment information"""
+    investment_income: Optional[float] = Field(default=None, description="Total investment income")
+    capital_gains: Optional[float] = Field(default=None, description="Net capital gains")
+    total_revenue: Optional[float] = Field(default=None, description="Total revenue")
+    total_assets_beginning: Optional[float] = Field(default=None, description="Total assets beginning of year")
+    total_assets_end: Optional[float] = Field(default=None, description="Total assets end of year")
+    grants_paid: Optional[float] = Field(default=None, description="Total grants and contributions paid")
+    qualifying_distributions: Optional[float] = Field(default=None, description="Qualifying distributions")
+    minimum_investment_return: Optional[float] = Field(default=None, description="Minimum investment return")
+    distributable_amount: Optional[float] = Field(default=None, description="Distributable amount for year")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+
+class FoundationProgramAreas(BaseModel):
+    """990-PF Part XVI - Program areas and funding priorities"""
+    program_area_codes: Optional[List[str]] = Field(default=[], description="NTEE or other program area codes")
+    program_descriptions: Optional[List[str]] = Field(default=[], description="Detailed program area descriptions")
+    funding_priorities: Optional[List[str]] = Field(default=[], description="Stated funding priorities")
+    population_served: Optional[List[str]] = Field(default=[], description="Target populations served")
+    geographic_focus: Optional[List[str]] = Field(default=[], description="Geographic areas of focus")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+
+class ProfileMetrics(BaseModel):
+    """Comprehensive metrics tracking for profile-based processing"""
+    
+    # Basic Information
+    profile_id: str = Field(..., description="Associated profile ID")
+    last_updated: datetime = Field(default_factory=datetime.now, description="Last metrics update")
+    
+    # Opportunity Funnel Metrics
+    total_opportunities_discovered: int = Field(default=0, description="Total opportunities discovered")
+    funnel_stage_counts: Dict[str, int] = Field(default_factory=lambda: {
+        "prospects": 0,
+        "qualified_prospects": 0, 
+        "candidates": 0,
+        "targets": 0,
+        "opportunities": 0
+    }, description="Count of opportunities at each funnel stage")
+    
+    # API Usage Tracking
+    api_calls_made: Dict[str, int] = Field(default_factory=lambda: {
+        "propublica_api": 0,
+        "grants_gov_api": 0,
+        "foundation_directory_api": 0,
+        "va_state_api": 0,
+        "usaspending_api": 0,
+        "other_apis": 0
+    }, description="API calls made by source")
+    
+    # AI Processing Metrics
+    ai_lite_calls: int = Field(default=0, description="AI Lite scoring calls made")
+    ai_heavy_calls: int = Field(default=0, description="AI Heavy research calls made")
+    total_ai_cost_usd: float = Field(default=0.0, description="Total AI processing costs")
+    
+    # Processing Efficiency
+    total_processing_time_minutes: float = Field(default=0.0, description="Total processing time")
+    successful_processors: int = Field(default=0, description="Number of successful processor executions")
+    failed_processors: int = Field(default=0, description="Number of failed processor executions")
+    cache_hits: int = Field(default=0, description="Number of cache hits")
+    cache_misses: int = Field(default=0, description="Number of cache misses")
+    
+    # FTE Time Savings Calculation
+    estimated_manual_hours_saved: float = Field(default=0.0, description="Estimated manual research hours saved")
+    automation_efficiency_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Overall automation efficiency")
+    
+    # Quality Metrics
+    average_match_score: Optional[float] = Field(default=None, description="Average opportunity match score")
+    success_rate_by_stage: Dict[str, float] = Field(default_factory=dict, description="Success rates for stage transitions")
+    user_engagement_score: Optional[float] = Field(default=None, description="User interaction/engagement score")
+    
+    # Session Tracking
+    total_discovery_sessions: int = Field(default=0, description="Number of discovery sessions run")
+    last_discovery_session: Optional[datetime] = Field(default=None, description="Last discovery session timestamp")
+    avg_session_duration_minutes: float = Field(default=0.0, description="Average session duration")
+    
+    # Cost Analysis
+    cost_per_qualified_opportunity: Optional[float] = Field(default=None, description="Cost per qualified opportunity")
+    roi_estimate: Optional[float] = Field(default=None, description="Estimated ROI based on time savings")
+    
+    # Export and Reporting
+    reports_generated: int = Field(default=0, description="Number of reports generated for this profile")
+    last_export_date: Optional[datetime] = Field(default=None, description="Last data export timestamp")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+    
+    def calculate_fte_hours_saved(self) -> float:
+        """Calculate estimated FTE hours saved based on automated tasks"""
+        hours_saved = 0.0
+        
+        # Organization discovery: 2.5 hours per org (average)
+        orgs_processed = sum(self.funnel_stage_counts.values())
+        hours_saved += orgs_processed * 2.5
+        
+        # Financial analysis: 1.5 hours per detailed analysis
+        deep_analyses = self.funnel_stage_counts.get("candidates", 0) + self.funnel_stage_counts.get("targets", 0)
+        hours_saved += deep_analyses * 1.5
+        
+        # Grant opportunity research: 4 hours per final opportunity
+        final_opportunities = self.funnel_stage_counts.get("opportunities", 0)
+        hours_saved += final_opportunities * 4.0
+        
+        # Board network analysis: 5 hours per network analysis session
+        if self.total_discovery_sessions > 0:
+            hours_saved += self.total_discovery_sessions * 5.0
+        
+        self.estimated_manual_hours_saved = hours_saved
+        return hours_saved
+    
+    def update_funnel_metrics(self, stage: str, increment: int = 1) -> None:
+        """Update funnel stage counts"""
+        if stage in self.funnel_stage_counts:
+            self.funnel_stage_counts[stage] += increment
+            self.last_updated = datetime.now()
+    
+    def add_api_call(self, api_source: str) -> None:
+        """Track an API call"""
+        if api_source in self.api_calls_made:
+            self.api_calls_made[api_source] += 1
+        else:
+            self.api_calls_made["other_apis"] += 1
+        self.last_updated = datetime.now()
+    
+    def add_processing_time(self, minutes: float) -> None:
+        """Add to total processing time"""
+        self.total_processing_time_minutes += minutes
+        self.last_updated = datetime.now()
+    
+    def calculate_cost_efficiency(self) -> float:
+        """Calculate cost per qualified opportunity"""
+        qualified_opps = (
+            self.funnel_stage_counts.get("candidates", 0) + 
+            self.funnel_stage_counts.get("targets", 0) + 
+            self.funnel_stage_counts.get("opportunities", 0)
+        )
+        
+        if qualified_opps > 0 and self.total_ai_cost_usd > 0:
+            self.cost_per_qualified_opportunity = self.total_ai_cost_usd / qualified_opps
+            return self.cost_per_qualified_opportunity
+        return 0.0
+
+
 class OrganizationProfile(BaseModel):
     """Complete organization profile for opportunity discovery"""
     
@@ -122,6 +351,25 @@ class OrganizationProfile(BaseModel):
     past_grants: List[str] = Field(default=[], description="Previous grant awards")
     schedule_i_grantees: List[ScheduleIGrantee] = Field(default=[], description="Organizations this profile has granted to (from Schedule I)")
     schedule_i_status: Optional[str] = Field(default=None, description="Status of Schedule I data: 'found', 'no_grantees', 'no_xml', 'not_checked'")
+    
+    # 990-PF Private Foundation Information
+    form_type: FormType = Field(default=FormType.UNKNOWN, description="IRS form type (990, 990-PF, etc.)")
+    foundation_type: FoundationType = Field(default=FoundationType.UNKNOWN, description="Foundation classification")
+    foundation_code: Optional[str] = Field(default=None, description="IRS Foundation Code (03 for private non-operating)")
+    
+    # 990-PF Part XV - Grant Making and Applications
+    foundation_grants: List[FoundationGrantRecord] = Field(default=[], description="Grants made by this foundation (990-PF Part XV)")
+    application_process: Optional[FoundationApplicationProcess] = Field(default=None, description="Application process information")
+    accepts_unsolicited_applications: bool = Field(default=False, description="Whether foundation accepts unsolicited applications")
+    
+    # 990-PF Part VIII - Board and Decision Makers  
+    foundation_board_members: List[FoundationBoardMember] = Field(default=[], description="Board members and officers (990-PF Part VIII)")
+    
+    # 990-PF Part I - Financial Information
+    foundation_financial_data: Optional[FoundationFinancialData] = Field(default=None, description="Foundation financial summary")
+    
+    # 990-PF Part XVI - Program Areas
+    foundation_program_areas: Optional[FoundationProgramAreas] = Field(default=None, description="Foundation program areas and priorities")
     
     # Organizational Capacity
     annual_revenue: Optional[int] = Field(default=None, description="Annual revenue/budget")
@@ -161,6 +409,9 @@ class OrganizationProfile(BaseModel):
     last_ai_analysis_date: Optional[datetime] = Field(default=None, description="Date of most recent AI analysis")
     cache_usage_stats: Dict[str, int] = Field(default_factory=dict, description="Statistics on cache usage for this profile")
     cost_tracking: Dict[str, Any] = Field(default_factory=dict, description="Cost tracking for expensive operations")
+    
+    # Comprehensive Metrics Tracking
+    metrics: Optional[ProfileMetrics] = Field(default=None, description="Comprehensive metrics tracking for this profile")
 
     @validator('focus_areas', 'program_areas', 'target_populations')
     def validate_string_lists(cls, v):

@@ -47,6 +47,7 @@ class BaseProcessor(ABC):
         self._start_time: Optional[datetime] = None
         self._progress_callback: Optional[Callable] = None
         self._is_cancelled = False
+        self._metrics_tracker = None  # Will be initialized lazily
     
     def set_progress_callback(self, callback: Callable[[int, int, str], None]) -> None:
         """Set callback function for progress updates."""
@@ -68,6 +69,59 @@ class BaseProcessor(ABC):
     def is_cancelled(self) -> bool:
         """Check if processor execution has been cancelled."""
         return self._is_cancelled
+    
+    def _get_metrics_tracker(self):
+        """Get metrics tracker instance (lazy initialization)"""
+        if self._metrics_tracker is None:
+            try:
+                from ..profiles.metrics_tracker import get_metrics_tracker
+                self._metrics_tracker = get_metrics_tracker()
+            except ImportError:
+                # Metrics tracking not available
+                self._metrics_tracker = None
+        return self._metrics_tracker
+    
+    def _extract_profile_id_from_config(self, config: ProcessorConfig) -> Optional[str]:
+        """Extract profile ID from config if available"""
+        # Try different ways to get profile ID
+        if hasattr(config, 'profile_id') and config.profile_id:
+            return config.profile_id
+        
+        if hasattr(config, 'workflow_config') and hasattr(config.workflow_config, 'profile_id'):
+            return config.workflow_config.profile_id
+            
+        # Check for profile ID in metadata
+        if hasattr(config, 'metadata') and isinstance(config.metadata, dict):
+            return config.metadata.get('profile_id')
+            
+        return None
+    
+    def _get_api_source_from_processor(self) -> Optional[str]:
+        """Determine API source based on processor name"""
+        processor_name = self.metadata.name.lower()
+        
+        if 'propublica' in processor_name:
+            return 'propublica_api'
+        elif 'grants' in processor_name or 'gov' in processor_name:
+            return 'grants_gov_api'
+        elif 'foundation' in processor_name:
+            return 'foundation_directory_api'
+        elif 'state' in processor_name or 'virginia' in processor_name:
+            return 'va_state_api'
+        elif 'usaspending' in processor_name:
+            return 'usaspending_api'
+        else:
+            return 'other_apis'
+    
+    def _estimate_ai_cost(self, ai_type: str, duration_seconds: float) -> float:
+        """Estimate AI processing cost based on type and duration"""
+        # Simple cost estimation - in real implementation, this would use actual token counts
+        if ai_type == 'heavy':
+            # Heavy processing: assume ~$0.50 per operation
+            return 0.50
+        else:
+            # Lite processing: assume ~$0.05 per operation  
+            return 0.05
     
     @abstractmethod
     async def execute(self, config: ProcessorConfig) -> ProcessorResult:
@@ -170,6 +224,10 @@ class BaseProcessor(ABC):
         self._start_time = datetime.now()
         self.logger.info(f"Starting {self.metadata.name} for workflow {config.workflow_id}")
         
+        # Get profile ID for metrics tracking
+        profile_id = self._extract_profile_id_from_config(config)
+        metrics_tracker = self._get_metrics_tracker()
+        
         # Create result object
         result = ProcessorResult(
             success=False,
@@ -247,6 +305,31 @@ class BaseProcessor(ABC):
                 self.logger.info(f"Completed {self.metadata.name} in {duration:.2f}s")
             else:
                 self.logger.error(f"Failed {self.metadata.name} after {duration:.2f}s")
+            
+            # Track metrics if profile ID and metrics tracker are available
+            if profile_id and metrics_tracker:
+                try:
+                    # Track processing time and success/failure
+                    await metrics_tracker.track_processing_time(
+                        profile_id, 
+                        duration / 60.0,  # Convert to minutes
+                        result.success
+                    )
+                    
+                    # Track API calls based on processor type
+                    api_source = self._get_api_source_from_processor()
+                    if api_source:
+                        await metrics_tracker.track_api_call(profile_id, api_source)
+                    
+                    # Track AI processing if this is an AI processor
+                    if 'ai' in self.metadata.name.lower():
+                        ai_type = 'heavy' if 'heavy' in self.metadata.name.lower() else 'lite'
+                        # Estimate cost based on processor type (would need actual cost from result)
+                        estimated_cost = self._estimate_ai_cost(ai_type, duration)
+                        await metrics_tracker.track_ai_processing(profile_id, ai_type, estimated_cost)
+                        
+                except Exception as e:
+                    self.logger.warning(f"Failed to track metrics: {e}")
             
             return result
             

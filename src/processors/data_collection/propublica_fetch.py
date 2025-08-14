@@ -20,6 +20,7 @@ import logging
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata
 from src.core.data_models import ProcessorConfig, ProcessorResult, OrganizationProfile
+from src.profiles.models import FormType, FoundationType
 from src.auth.api_key_manager import get_api_key_manager
 
 
@@ -221,7 +222,7 @@ class ProPublicaFetchProcessor(BaseProcessor):
         org: OrganizationProfile, 
         pp_data: Dict[str, Any]
     ) -> OrganizationProfile:
-        """Enrich organization profile with ProPublica detailed data."""
+        """Enrich organization profile with ProPublica detailed data, handling 990-PF forms specially."""
         
         organization = pp_data.get('organization', {})
         filings = pp_data.get('filings_with_data', [])
@@ -230,22 +231,38 @@ class ProPublicaFetchProcessor(BaseProcessor):
         if organization.get('name'):
             org.name = organization['name']
         
+        # Detect form type and handle accordingly
+        form_types_found = set()
+        pf_filings = []
+        regular_filings = []
+        
+        for filing in filings:
+            form_type = filing.get('formtype', '').upper()
+            form_types_found.add(form_type)
+            
+            if form_type in ['990PF', '990-PF']:
+                pf_filings.append(filing)
+            else:
+                regular_filings.append(filing)
+        
+        # Determine primary form type
+        if pf_filings:
+            org.form_type = FormType.FORM_990_PF
+            self.logger.info(f"Detected 990-PF form for {org.name} ({org.ein})")
+            primary_filings = pf_filings
+        else:
+            org.form_type = FormType.FORM_990 if regular_filings else FormType.UNKNOWN
+            primary_filings = regular_filings
+        
         # Update financial data from most recent filing
-        if filings:
-            recent_filing = filings[0]  # Most recent filing
+        if primary_filings:
+            recent_filing = primary_filings[0]  # Most recent filing
             
-            # Extract financial data
-            if recent_filing.get('totrevenue'):
-                org.revenue = float(recent_filing['totrevenue'])
-            if recent_filing.get('totassetsend'):
-                org.assets = float(recent_filing['totassetsend'])
-            if recent_filing.get('totfuncexpns'):
-                org.expenses = float(recent_filing['totfuncexpns'])
-            
-            # Calculate program expense ratio
-            if org.expenses and recent_filing.get('totprogrevs'):
-                program_expenses = float(recent_filing['totprogrevs'])
-                org.program_expense_ratio = program_expenses / org.expenses
+            # Extract financial data (990-PF has different field structure)
+            if org.form_type == FormType.FORM_990_PF:
+                await self._extract_990_pf_financial_data(org, recent_filing)
+            else:
+                await self._extract_990_financial_data(org, recent_filing)
             
             # Update filing information
             org.most_recent_filing_year = recent_filing.get('tax_prd_yr')
@@ -276,7 +293,82 @@ class ProPublicaFetchProcessor(BaseProcessor):
         if filings:
             org.add_processing_note(f"Found {len(filings)} years of filing data")
         
+        # Add 990-PF specific processing notes
+        if org.form_type == FormType.FORM_990_PF:
+            org.add_processing_note("990-PF FOUNDATION: High-priority for grant research")
+            if org.foundation_type == FoundationType.PRIVATE_NON_OPERATING:
+                org.add_processing_note("Private Non-Operating Foundation - Prime grant research target")
+        
         return org
+    
+    async def _extract_990_pf_financial_data(self, org: OrganizationProfile, filing: Dict[str, Any]) -> None:
+        """Extract financial data specific to 990-PF forms."""
+        
+        try:
+            # 990-PF specific fields from Part I
+            if filing.get('totrevenue'):
+                org.revenue = float(filing['totrevenue'])
+            if filing.get('totassetsend'):
+                org.assets = float(filing['totassetsend'])
+            
+            # Foundation-specific financial indicators
+            investment_income = self._safe_float(filing.get('totinvstinc'))
+            grants_paid = self._safe_float(filing.get('totgrntstoindv')) or self._safe_float(filing.get('totgrntsto'))
+            
+            # Mark as high-value for grant research if significant grant-making activity
+            if grants_paid and grants_paid > 100000:  # $100K+ in grants
+                org.add_processing_note(f"HIGH VALUE: Foundation paid ${grants_paid:,.0f} in grants - Strong grant research prospect")
+            
+            # Update foundation classification if needed
+            if org.foundation_type == FoundationType.UNKNOWN and grants_paid:
+                if investment_income and investment_income > grants_paid * 2:
+                    org.foundation_type = FoundationType.PRIVATE_NON_OPERATING
+                else:
+                    org.foundation_type = FoundationType.PRIVATE_OPERATING
+            
+        except Exception as e:
+            self.logger.debug(f"Error extracting 990-PF financial data: {e}")
+    
+    async def _extract_990_financial_data(self, org: OrganizationProfile, filing: Dict[str, Any]) -> None:
+        """Extract financial data from regular 990 forms."""
+        
+        try:
+            # Regular 990 fields
+            if filing.get('totrevenue'):
+                org.revenue = float(filing['totrevenue'])
+            if filing.get('totassetsend'):
+                org.assets = float(filing['totassetsend'])
+            if filing.get('totfuncexpns'):
+                org.expenses = float(filing['totfuncexpns'])
+            
+            # Calculate program expense ratio for nonprofits
+            if org.expenses and filing.get('totprogrevs'):
+                program_expenses = float(filing['totprogrevs'])
+                org.program_expense_ratio = program_expenses / org.expenses
+                
+        except Exception as e:
+            self.logger.debug(f"Error extracting 990 financial data: {e}")
+    
+    def _safe_float(self, value: Any) -> Optional[float]:
+        """Safely convert value to float."""
+        if value is None:
+            return None
+        
+        try:
+            if isinstance(value, (int, float)):
+                return float(value)
+            
+            if isinstance(value, str):
+                # Remove common formatting
+                import re
+                cleaned = re.sub(r'[,$]', '', value.strip())
+                if cleaned:
+                    return float(cleaned)
+                    
+        except (ValueError, TypeError):
+            pass
+        
+        return None
     
     async def _enrich_organization_from_search(
         self, 

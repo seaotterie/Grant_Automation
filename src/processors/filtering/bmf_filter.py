@@ -12,6 +12,7 @@ from pathlib import Path
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata, SyncProcessorMixin, BatchProcessorMixin
 from src.core.data_models import ProcessorConfig, ProcessorResult, OrganizationProfile
+from src.profiles.models import FormType, FoundationType, ApplicationAcceptanceStatus
 from src.utils.decorators import retry_on_failure, cache_result
 from src.utils.validators import validate_ein, validate_state_code, validate_ntee_code, normalize_ein
 
@@ -256,7 +257,7 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
     
     def _create_organization_profile(self, org_data: Dict[str, Any]) -> OrganizationProfile:
         """
-        Create OrganizationProfile from BMF data.
+        Create OrganizationProfile from BMF data with 990-PF classification.
         
         Args:
             org_data: Parsed organization data
@@ -264,6 +265,11 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
         Returns:
             OrganizationProfile object
         """
+        # Classify foundation type and form type
+        foundation_code = org_data.get('foundation_code', '').strip()
+        foundation_type = self._classify_foundation_type(foundation_code)
+        form_type = self._determine_form_type(foundation_code)
+        
         profile = OrganizationProfile(
             ein=org_data['ein'],
             name=org_data['name'],
@@ -275,7 +281,12 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
             subsection_code=org_data.get('subsection_code'),
             asset_code=org_data.get('asset_code'),
             income_code=org_data.get('income_code'),
-            last_updated=datetime.now()
+            last_updated=datetime.now(),
+            
+            # 990-PF specific fields
+            form_type=form_type,
+            foundation_type=foundation_type,
+            foundation_code=foundation_code if foundation_code else None
         )
         
         # Add data source
@@ -284,15 +295,89 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
         # Add processing notes
         profile.add_processing_note("Filtered from IRS BMF data")
         
+        # Add foundation-specific processing notes
+        if foundation_code:
+            profile.add_processing_note(f"Foundation Code: {foundation_code} ({foundation_type.value})")
+            if foundation_code == '03':
+                profile.add_processing_note("PRIORITY: Private Non-Operating Foundation (990-PF) - High Grant Research Value")
+        
         # Add additional data as processing notes
         if org_data.get('classification'):
             profile.add_processing_note(f"IRS Classification: {org_data['classification']}")
-        if org_data.get('foundation_code'):
-            profile.add_processing_note(f"Foundation Code: {org_data['foundation_code']}")
         if org_data.get('activity_code'):
             profile.add_processing_note(f"Activity Code: {org_data['activity_code']}")
         
         return profile
+    
+    def _classify_foundation_type(self, foundation_code: str) -> FoundationType:
+        """
+        Classify foundation type based on IRS Foundation Code.
+        
+        Foundation Codes:
+        03 = Private Non-Operating Foundation (990-PF) - PRIMARY TARGET
+        04 = Private Operating Foundation (990-PF) 
+        12 = Supporting Organization
+        15 = Donor Advised Fund
+        """
+        if not foundation_code:
+            return FoundationType.UNKNOWN
+        
+        code_mapping = {
+            '03': FoundationType.PRIVATE_NON_OPERATING,  # Primary target - 990-PF
+            '04': FoundationType.PRIVATE_OPERATING,      # 990-PF
+            '12': FoundationType.SUPPORTING_ORGANIZATION,
+            '15': FoundationType.DONOR_ADVISED_FUND
+        }
+        
+        return code_mapping.get(foundation_code, FoundationType.PUBLIC_CHARITY)
+    
+    def _determine_form_type(self, foundation_code: str) -> FormType:
+        """
+        Determine IRS form type based on Foundation Code.
+        
+        Returns:
+            FormType enum indicating expected form type
+        """
+        if not foundation_code:
+            return FormType.UNKNOWN
+        
+        # Foundation codes 03 and 04 typically file 990-PF
+        if foundation_code in ['03', '04']:
+            return FormType.FORM_990_PF
+        
+        # Most others file regular 990
+        return FormType.FORM_990
+    
+    def _prioritize_foundation_results(self, organizations: List[OrganizationProfile]) -> List[OrganizationProfile]:
+        """
+        Sort organizations to prioritize private foundations by research value.
+        
+        Priority order:
+        1. Foundation Code 03 (Private Non-Operating) - Highest value for grant research
+        2. Foundation Code 04 (Private Operating) 
+        3. Other foundation codes
+        4. Regular nonprofits
+        
+        Within each category, sort by assets (descending) then revenue (descending)
+        """
+        def priority_key(org):
+            # Primary sort: Foundation priority (lower number = higher priority)
+            foundation_priority = {
+                '03': 1,  # Private Non-Operating - Primary target
+                '04': 2,  # Private Operating 
+                '12': 3,  # Supporting Organization
+                '15': 4,  # Donor Advised Fund
+            }.get(org.foundation_code, 5)  # Everything else
+            
+            # Secondary sort: Assets (descending, None = 0)
+            assets = -(org.assets or 0)
+            
+            # Tertiary sort: Revenue (descending, None = 0) 
+            revenue = -(org.revenue or 0)
+            
+            return (foundation_priority, assets, revenue)
+        
+        return sorted(organizations, key=priority_key)
     
     async def _process_bmf_file(self, bmf_file_path: str, config: ProcessorConfig) -> List[OrganizationProfile]:
         """
@@ -364,7 +449,14 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
             self.logger.error(f"Error processing BMF file: {e}")
             raise
         
+        # Sort results to prioritize Foundation Code 03 (Private Non-Operating Foundations)
+        matching_orgs = self._prioritize_foundation_results(matching_orgs)
+        
         self.logger.info(f"BMF filtering complete: {len(matching_orgs)} organizations found")
+        foundation_03_count = sum(1 for org in matching_orgs if org.foundation_code == '03')
+        if foundation_03_count > 0:
+            self.logger.info(f"Found {foundation_03_count} Private Non-Operating Foundations (990-PF) - prioritized for grant research")
+        
         return matching_orgs
     
     async def execute(self, config: ProcessorConfig, workflow_state=None) -> ProcessorResult:
