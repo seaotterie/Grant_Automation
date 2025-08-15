@@ -1238,13 +1238,13 @@ async def discover_nonprofits(request: Dict[str, Any]):
         
         results = {"track": "nonprofit", "results": []}
         
+        # Import configuration objects needed for both BMF and ProPublica
+        from src.core.data_models import WorkflowConfig, ProcessorConfig
+        
         # Execute BMF filtering if no specific EIN
         if not ein:
             bmf_instance = engine.registry.get_processor("bmf_filter")
             if bmf_instance:
-                
-                # Create proper configuration objects
-                from src.core.data_models import WorkflowConfig, ProcessorConfig
                 workflow_config = WorkflowConfig(
                     workflow_id=f"nonprofit_discovery_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                     states=[state] if state else ["VA"],
@@ -1262,7 +1262,12 @@ async def discover_nonprofits(request: Dict[str, Any]):
                 )
                 
                 bmf_result = await bmf_instance.execute(processor_config)
-                results["bmf_results"] = bmf_result.data.get("results", [])
+                logger.info(f"BMF result success: {bmf_result.success}")
+                logger.info(f"BMF result data keys: {list(bmf_result.data.keys()) if bmf_result.data else 'None'}")
+                if bmf_result.success and bmf_result.data:
+                    results["bmf_results"] = bmf_result.data.get("results", bmf_result.data.get("organizations", []))
+                else:
+                    results["bmf_results"] = []
         
         # Execute ProPublica fetch
         pp_instance = engine.registry.get_processor("propublica_fetch")
@@ -1287,7 +1292,64 @@ async def discover_nonprofits(request: Dict[str, Any]):
             )
             
             pp_result = await pp_instance.execute(processor_config)
-            results["propublica_results"] = pp_result.data.get("results", [])
+            logger.info(f"ProPublica result success: {pp_result.success}")
+            logger.info(f"ProPublica result data keys: {list(pp_result.data.keys()) if pp_result.data else 'None'}")
+            if pp_result.success and pp_result.data:
+                results["propublica_results"] = pp_result.data.get("results", pp_result.data.get("organizations", []))
+            else:
+                results["propublica_results"] = []
+        
+        # Phase 3.1: Integrate with FunnelManager for web interface
+        try:
+            from src.discovery.funnel_manager import FunnelManager
+            from src.discovery.base_discoverer import DiscoveryResult, FunnelStage, FundingType
+            
+            # Get or create funnel manager instance
+            if not hasattr(app.state, 'funnel_manager'):
+                app.state.funnel_manager = FunnelManager()
+            funnel_manager = app.state.funnel_manager
+            
+            # Convert results to DiscoveryResult objects
+            discovery_results = []
+            
+            # Convert BMF results
+            for bmf_org in results.get("bmf_results", []):
+                discovery_result = DiscoveryResult(
+                    organization_name=bmf_org.get('name', 'Unknown Organization'),
+                    source_type=FundingType.GRANTS,
+                    discovery_source='bmf_filter',
+                    opportunity_id=f"bmf_{bmf_org.get('ein', 'unknown')}_{int(datetime.now().timestamp())}",
+                    description=f"Nonprofit organization from IRS Business Master File. Revenue: ${bmf_org.get('revenue', 0) or 0:,}",
+                    raw_score=0.7,
+                    compatibility_score=0.6,
+                    confidence_level=0.8,
+                    funnel_stage=FunnelStage.PROSPECTS
+                )
+                discovery_results.append(discovery_result)
+            
+            # Convert ProPublica results
+            for pp_org in results.get("propublica_results", []):
+                discovery_result = DiscoveryResult(
+                    organization_name=pp_org.get('name', 'Unknown Organization'),
+                    source_type=FundingType.GRANTS,
+                    discovery_source='propublica_fetch',
+                    opportunity_id=f"propublica_{pp_org.get('ein', 'unknown')}_{int(datetime.now().timestamp())}",
+                    description=f"Nonprofit organization from ProPublica database. Revenue: ${pp_org.get('revenue', 0) or 0:,}",
+                    raw_score=0.8,
+                    compatibility_score=0.7,
+                    confidence_level=0.9,
+                    funnel_stage=FunnelStage.PROSPECTS
+                )
+                discovery_results.append(discovery_result)
+            
+            # Add to funnel manager if we have a profile context
+            if profile_context and discovery_results:
+                profile_id = profile_context.get('profile_id', 'test_profile')
+                funnel_manager.add_opportunities(profile_id, discovery_results)
+                logger.info(f"Added {len(discovery_results)} opportunities to funnel for profile {profile_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to integrate with FunnelManager: {str(e)}")
         
         return {
             "status": "completed",
@@ -2159,8 +2221,13 @@ async def get_opportunities(profile_id: Optional[str] = None, scope: Optional[st
 async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None):
     """Get opportunities by funnel stage for a profile."""
     try:
-        from src.discovery.funnel_manager import funnel_manager
+        from src.discovery.funnel_manager import FunnelManager
         from src.discovery.base_discoverer import FunnelStage
+        
+        # Use the same funnel manager instance as discovery endpoints
+        if not hasattr(app.state, 'funnel_manager'):
+            app.state.funnel_manager = FunnelManager()
+        funnel_manager = app.state.funnel_manager
         
         if stage:
             try:
@@ -2331,7 +2398,12 @@ async def demote_opportunity(profile_id: str, opportunity_id: str, notes_data: d
 async def get_funnel_metrics(profile_id: str):
     """Get funnel conversion analytics for a profile."""
     try:
-        from src.discovery.funnel_manager import funnel_manager
+        from src.discovery.funnel_manager import FunnelManager
+        
+        # Use the same funnel manager instance as discovery endpoints
+        if not hasattr(app.state, 'funnel_manager'):
+            app.state.funnel_manager = FunnelManager()
+        funnel_manager = app.state.funnel_manager
         
         metrics = funnel_manager.get_funnel_metrics(profile_id)
         return metrics
@@ -2344,7 +2416,12 @@ async def get_funnel_metrics(profile_id: str):
 async def get_stage_recommendations(profile_id: str):
     """Get recommendations for stage transitions."""
     try:
-        from src.discovery.funnel_manager import funnel_manager
+        from src.discovery.funnel_manager import FunnelManager
+        
+        # Use the same funnel manager instance as discovery endpoints
+        if not hasattr(app.state, 'funnel_manager'):
+            app.state.funnel_manager = FunnelManager()
+        funnel_manager = app.state.funnel_manager
         
         recommendations = funnel_manager.get_stage_recommendations(profile_id)
         return {
@@ -2354,6 +2431,37 @@ async def get_stage_recommendations(profile_id: str):
         
     except Exception as e:
         logger.error(f"Failed to get stage recommendations: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Debug endpoint to check funnel manager state
+@app.get("/api/debug/funnel-status")
+async def debug_funnel_status():
+    """Debug endpoint to check funnel manager state."""
+    try:
+        from src.discovery.funnel_manager import FunnelManager
+        
+        # Check app.state instance
+        if not hasattr(app.state, 'funnel_manager'):
+            app.state.funnel_manager = FunnelManager()
+        funnel_manager = app.state.funnel_manager
+        
+        all_profiles = list(funnel_manager.opportunities.keys())
+        profile_counts = {
+            profile_id: len(opportunities) 
+            for profile_id, opportunities in funnel_manager.opportunities.items()
+        }
+        
+        return {
+            "app_state_instance": {
+                "total_profiles": len(all_profiles),
+                "profiles_with_opportunities": all_profiles,
+                "opportunity_counts": profile_counts,
+                "instance_id": id(funnel_manager)
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Debug funnel status failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/funnel/{profile_id}/bulk-transition")

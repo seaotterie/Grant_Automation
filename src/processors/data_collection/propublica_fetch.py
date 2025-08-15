@@ -131,7 +131,7 @@ class ProPublicaFetchProcessor(BaseProcessor):
         """Get organizations from the BMF filter step using improved data flow."""
         try:
             # Get organizations from BMF filter processor
-            if workflow_state.has_processor_succeeded('bmf_filter'):
+            if workflow_state and workflow_state.has_processor_succeeded('bmf_filter'):
                 org_dicts = workflow_state.get_organizations_from_processor('bmf_filter')
                 if org_dicts:
                     self.logger.info(f"Retrieved {len(org_dicts)} organizations from BMF filter")

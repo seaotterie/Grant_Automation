@@ -367,7 +367,7 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
                 '04': 2,  # Private Operating 
                 '12': 3,  # Supporting Organization
                 '15': 4,  # Donor Advised Fund
-            }.get(org.foundation_code, 5)  # Everything else
+            }.get(getattr(org, 'foundation_code', None), 5)  # Everything else
             
             # Secondary sort: Assets (descending, None = 0)
             assets = -(org.assets or 0)
@@ -453,7 +453,7 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
         matching_orgs = self._prioritize_foundation_results(matching_orgs)
         
         self.logger.info(f"BMF filtering complete: {len(matching_orgs)} organizations found")
-        foundation_03_count = sum(1 for org in matching_orgs if org.foundation_code == '03')
+        foundation_03_count = sum(1 for org in matching_orgs if getattr(org, 'foundation_code', None) == '03')
         if foundation_03_count > 0:
             self.logger.info(f"Found {foundation_03_count} Private Non-Operating Foundations (990-PF) - prioritized for grant research")
         
