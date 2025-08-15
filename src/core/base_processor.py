@@ -10,6 +10,7 @@ from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass
 
 from .data_models import ProcessorConfig, ProcessorResult, WorkflowState
+from .http_client import get_http_client, CatalynxHTTPClient, HTTPConfig
 from ..utils.decorators import retry_on_failure, log_execution_time
 from ..utils.validators import validate_ein
 
@@ -48,6 +49,7 @@ class BaseProcessor(ABC):
         self._progress_callback: Optional[Callable] = None
         self._is_cancelled = False
         self._metrics_tracker = None  # Will be initialized lazily
+        self._http_client: Optional[CatalynxHTTPClient] = None  # Will be initialized lazily
     
     def set_progress_callback(self, callback: Callable[[int, int, str], None]) -> None:
         """Set callback function for progress updates."""
@@ -80,6 +82,111 @@ class BaseProcessor(ABC):
                 # Metrics tracking not available
                 self._metrics_tracker = None
         return self._metrics_tracker
+    
+    def _get_http_client(self) -> CatalynxHTTPClient:
+        """Get HTTP client instance (lazy initialization)"""
+        if self._http_client is None:
+            # Configure HTTP client based on processor requirements
+            http_config = HTTPConfig(
+                timeout=self.metadata.estimated_duration + 30,  # Add buffer to estimated duration
+                max_retries=3 if self.metadata.requires_network else 1,
+                user_agent=f"Catalynx/2.0 Processor:{self.metadata.name}"
+            )
+            
+            self._http_client = get_http_client(http_config)
+            
+            # Configure processor-specific rate limits
+            self._configure_processor_rate_limits()
+            
+        return self._http_client
+    
+    def _configure_processor_rate_limits(self):
+        """Configure rate limits based on processor type and API requirements"""
+        if not self.metadata.requires_api_key or not self._http_client:
+            return
+            
+        processor_name = self.metadata.name.lower()
+        
+        # Configure rate limits based on known API limits
+        if 'grants_gov' in processor_name:
+            self._http_client.set_api_rate_limit('grants_gov', 1000, 0.1)
+        elif 'propublica' in processor_name:
+            self._http_client.set_api_rate_limit('propublica', 1000, 0.1)
+        elif 'foundation' in processor_name:
+            self._http_client.set_api_rate_limit('foundation_directory', 500, 0.2)
+        elif 'usaspending' in processor_name:
+            self._http_client.set_api_rate_limit('usaspending', 2000, 0.05)
+        elif 'state' in processor_name or 'virginia' in processor_name:
+            self._http_client.set_api_rate_limit('va_state', 500, 0.2)
+    
+    async def _http_get(self, 
+                       url: str, 
+                       params: Optional[Dict[str, Any]] = None,
+                       headers: Optional[Dict[str, str]] = None,
+                       cache_ttl: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Perform HTTP GET request with processor context
+        
+        Args:
+            url: Target URL
+            params: Query parameters
+            headers: Additional headers
+            cache_ttl: Cache TTL in seconds
+            
+        Returns:
+            Response data as dictionary
+        """
+        http_client = self._get_http_client()
+        
+        def progress_callback(message: str):
+            if self._progress_callback:
+                self._progress_callback(0, 1, f"{self.metadata.name}: {message}")
+        
+        return await http_client.get(
+            url=url,
+            params=params,
+            headers=headers,
+            rate_limit_key=self.metadata.name,
+            progress_callback=progress_callback
+        )
+    
+    async def _http_post(self,
+                        url: str,
+                        data: Optional[Dict[str, Any]] = None,
+                        json_data: Optional[Dict[str, Any]] = None,
+                        headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        """
+        Perform HTTP POST request with processor context
+        
+        Args:
+            url: Target URL
+            data: Form data
+            json_data: JSON data
+            headers: Additional headers
+            
+        Returns:
+            Response data as dictionary
+        """
+        http_client = self._get_http_client()
+        
+        def progress_callback(message: str):
+            if self._progress_callback:
+                self._progress_callback(0, 1, f"{self.metadata.name}: {message}")
+        
+        return await http_client.post(
+            url=url,
+            data=data,
+            json_data=json_data,
+            headers=headers,
+            rate_limit_key=self.metadata.name,
+            progress_callback=progress_callback
+        )
+    
+    async def cleanup(self) -> None:
+        """Cleanup processor resources"""
+        if self._http_client:
+            await self._http_client.close()
+            self._http_client = None
     
     def _extract_profile_id_from_config(self, config: ProcessorConfig) -> Optional[str]:
         """Extract profile ID from config if available"""

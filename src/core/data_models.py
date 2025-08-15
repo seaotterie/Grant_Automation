@@ -9,6 +9,286 @@ from enum import Enum
 import re
 
 
+class FundingSourceType(str, Enum):
+    """Types of funding sources"""
+    GOVERNMENT_FEDERAL = "government_federal"
+    GOVERNMENT_STATE = "government_state" 
+    GOVERNMENT_LOCAL = "government_local"
+    FOUNDATION_PRIVATE = "foundation_private"
+    FOUNDATION_CORPORATE = "foundation_corporate"
+    FOUNDATION_COMMUNITY = "foundation_community"
+    CORPORATE_CSR = "corporate_csr"
+    CORPORATE_SPONSORSHIP = "corporate_sponsorship"
+    NONPROFIT_INTERMEDIARY = "nonprofit_intermediary"
+    INTERNATIONAL = "international"
+    OTHER = "other"
+
+
+class OpportunityStatus(str, Enum):
+    """Universal opportunity status"""
+    DISCOVERY = "discovery"          # Just discovered
+    ACTIVE = "active"               # Open for applications
+    FORECASTED = "forecasted"       # Announced but not yet open
+    POSTED = "posted"               # Government terminology
+    CLOSING_SOON = "closing_soon"   # Less than 30 days to deadline
+    CLOSED = "closed"               # Past deadline
+    AWARDED = "awarded"             # Awards made
+    CANCELLED = "cancelled"         # Cancelled/withdrawn
+    ARCHIVED = "archived"           # Historical
+
+
+class EligibilityType(str, Enum):
+    """Universal eligibility categories"""
+    NONPROFIT_501C3 = "nonprofit_501c3"
+    NONPROFIT_OTHER = "nonprofit_other"
+    GOVERNMENT_STATE = "government_state"
+    GOVERNMENT_LOCAL = "government_local"
+    GOVERNMENT_TRIBAL = "government_tribal"
+    UNIVERSITY_PUBLIC = "university_public"
+    UNIVERSITY_PRIVATE = "university_private"
+    FOR_PROFIT_SMALL = "for_profit_small"
+    FOR_PROFIT_LARGE = "for_profit_large"
+    INDIVIDUAL = "individual"
+    FISCAL_SPONSOR = "fiscal_sponsor"
+    COLLABORATIVE = "collaborative"
+    OTHER = "other"
+
+
+class BaseOpportunity(BaseModel):
+    """
+    Universal base class for all funding opportunities.
+    
+    This provides common fields across government, foundation,
+    corporate, and other funding sources.
+    """
+    # Core Identity
+    id: str = Field(..., description="Unique opportunity identifier")
+    title: str = Field(..., description="Opportunity title")
+    description: str = Field("", description="Detailed description")
+    source_type: FundingSourceType = Field(..., description="Type of funding source")
+    
+    # Funder Information
+    funder_name: str = Field(..., description="Name of funding organization")
+    funder_id: Optional[str] = Field(None, description="Unique funder identifier (EIN, etc.)")
+    program_name: Optional[str] = Field(None, description="Specific program or initiative name")
+    contact_info: Dict[str, str] = Field(default_factory=dict, description="Contact information")
+    
+    # Opportunity Status
+    status: OpportunityStatus = Field(..., description="Current opportunity status")
+    source_url: Optional[str] = Field(None, description="URL to opportunity details")
+    application_url: Optional[str] = Field(None, description="URL to apply")
+    
+    # Financial Details
+    funding_amount_min: Optional[float] = Field(None, description="Minimum funding amount")
+    funding_amount_max: Optional[float] = Field(None, description="Maximum funding amount")
+    total_available: Optional[float] = Field(None, description="Total available funding")
+    expected_awards: Optional[int] = Field(None, description="Expected number of awards")
+    matching_required: bool = Field(False, description="Matching funds required")
+    matching_percentage: Optional[float] = Field(None, description="Required matching percentage")
+    
+    # Timeline
+    posted_date: Optional[datetime] = Field(None, description="Date posted/announced")
+    application_deadline: Optional[datetime] = Field(None, description="Application deadline")
+    award_date: Optional[datetime] = Field(None, description="Expected award date")
+    project_start_date: Optional[datetime] = Field(None, description="Project start date")
+    project_end_date: Optional[datetime] = Field(None, description="Project end date")
+    
+    # Eligibility
+    eligible_applicants: List[EligibilityType] = Field(default_factory=list, description="Eligible applicant types")
+    geographic_restrictions: List[str] = Field(default_factory=list, description="Geographic limitations")
+    sector_restrictions: List[str] = Field(default_factory=list, description="Sector/industry restrictions")
+    organization_size_limits: Dict[str, Any] = Field(default_factory=dict, description="Size limitations")
+    
+    # Focus Areas
+    focus_areas: List[str] = Field(default_factory=list, description="Primary focus areas")
+    keywords: List[str] = Field(default_factory=list, description="Relevant keywords")
+    subject_areas: List[str] = Field(default_factory=list, description="Subject matter areas")
+    
+    # Analysis & Scoring
+    relevance_score: float = Field(0.0, description="Calculated relevance score (0-100)")
+    competition_level: str = Field("unknown", description="Estimated competition level")
+    success_probability: Optional[float] = Field(None, description="Estimated success probability")
+    match_reasons: List[str] = Field(default_factory=list, description="Reasons for match")
+    
+    # Metadata
+    discovered_at: datetime = Field(default_factory=datetime.now, description="Discovery timestamp")
+    last_updated: datetime = Field(default_factory=datetime.now, description="Last update timestamp")
+    data_quality_score: float = Field(0.0, description="Data completeness/quality score")
+    processing_notes: List[str] = Field(default_factory=list, description="Processing notes")
+    
+    def calculate_days_until_deadline(self) -> Optional[int]:
+        """Calculate days until application deadline"""
+        if not self.application_deadline:
+            return None
+        
+        delta = self.application_deadline - datetime.now()
+        return max(0, delta.days)
+    
+    def is_eligible_for(self, applicant_type: EligibilityType) -> bool:
+        """Check if applicant type is eligible"""
+        return applicant_type in self.eligible_applicants
+    
+    def add_match_reason(self, reason: str) -> None:
+        """Add a reason for matching this opportunity"""
+        if reason not in self.match_reasons:
+            self.match_reasons.append(reason)
+    
+    def update_score(self, score: float, reason: Optional[str] = None) -> None:
+        """Update relevance score with optional reason"""
+        self.relevance_score = max(0.0, min(100.0, score))
+        if reason:
+            self.add_match_reason(reason)
+
+
+class GovernmentOpportunity(BaseOpportunity):
+    """
+    Government funding opportunity (Federal, State, Local)
+    Extends BaseOpportunity with government-specific fields.
+    """
+    # Government-specific fields
+    agency_code: str = Field(..., description="Government agency code")
+    sub_agency: Optional[str] = Field(None, description="Sub-agency or office")
+    cfda_numbers: List[str] = Field(default_factory=list, description="CFDA program numbers")
+    funding_instrument: str = Field("grant", description="Type of funding instrument")
+    opportunity_category: Optional[str] = Field(None, description="Opportunity category")
+    
+    # Compliance
+    compliance_requirements: List[str] = Field(default_factory=list, description="Compliance requirements")
+    reporting_requirements: List[str] = Field(default_factory=list, description="Reporting requirements")
+    
+    # Source tracking
+    grants_gov_id: Optional[str] = Field(None, description="Grants.gov opportunity ID")
+    usaspending_data: Dict[str, Any] = Field(default_factory=dict, description="USASpending historical data")
+    
+    def __init__(self, **kwargs):
+        # Set default source_type for government opportunities
+        if 'source_type' not in kwargs:
+            kwargs['source_type'] = FundingSourceType.GOVERNMENT_FEDERAL
+        super().__init__(**kwargs)
+
+
+class FoundationOpportunity(BaseOpportunity):
+    """
+    Foundation funding opportunity (Private, Corporate, Community)
+    Extends BaseOpportunity with foundation-specific fields.
+    """
+    # Foundation-specific fields
+    foundation_type: str = Field(..., description="Type of foundation")
+    assets_range: Optional[str] = Field(None, description="Foundation asset range")
+    giving_history: List[Dict[str, Any]] = Field(default_factory=list, description="Historical giving data")
+    board_connections: List[str] = Field(default_factory=list, description="Board member connections")
+    
+    # Corporate foundation specific
+    parent_company: Optional[str] = Field(None, description="Parent company if corporate foundation")
+    industry_focus: List[str] = Field(default_factory=list, description="Industry focus areas")
+    
+    # Application process
+    application_process: str = Field("standard", description="Application process type")
+    requires_loi: bool = Field(False, description="Requires letter of inquiry")
+    invitation_only: bool = Field(False, description="Invitation only application")
+    
+    def __init__(self, **kwargs):
+        # Set appropriate default source_type
+        if 'source_type' not in kwargs:
+            if kwargs.get('foundation_type') == 'corporate':
+                kwargs['source_type'] = FundingSourceType.FOUNDATION_CORPORATE
+            elif kwargs.get('foundation_type') == 'community':
+                kwargs['source_type'] = FundingSourceType.FOUNDATION_COMMUNITY
+            else:
+                kwargs['source_type'] = FundingSourceType.FOUNDATION_PRIVATE
+        super().__init__(**kwargs)
+
+
+class CorporateOpportunity(BaseOpportunity):
+    """
+    Corporate funding opportunity (CSR, Sponsorship, Partnerships)
+    Extends BaseOpportunity with corporate-specific fields.
+    """
+    # Corporate-specific fields
+    company_name: str = Field(..., description="Corporation name")
+    industry: str = Field(..., description="Corporate industry")
+    company_size: Optional[str] = Field(None, description="Company size category")
+    
+    # CSR Program details
+    csr_focus_areas: List[str] = Field(default_factory=list, description="CSR focus areas")
+    partnership_types: List[str] = Field(default_factory=list, description="Types of partnerships offered")
+    employee_engagement: bool = Field(False, description="Includes employee engagement component")
+    
+    # Corporate giving pattern
+    annual_giving: Optional[float] = Field(None, description="Annual corporate giving amount")
+    giving_priorities: List[str] = Field(default_factory=list, description="Corporate giving priorities")
+    
+    def __init__(self, **kwargs):
+        # Set appropriate default source_type
+        if 'source_type' not in kwargs:
+            partnership_types = kwargs.get('partnership_types', [])
+            if 'sponsorship' in partnership_types:
+                kwargs['source_type'] = FundingSourceType.CORPORATE_SPONSORSHIP
+            else:
+                kwargs['source_type'] = FundingSourceType.CORPORATE_CSR
+        super().__init__(**kwargs)
+
+
+class OpportunityCollection(BaseModel):
+    """
+    Collection of opportunities with metadata and analysis
+    """
+    collection_id: str = Field(..., description="Unique collection identifier")
+    name: str = Field(..., description="Collection name")
+    description: Optional[str] = Field(None, description="Collection description")
+    
+    # Opportunities by type
+    government_opportunities: List[GovernmentOpportunity] = Field(default_factory=list)
+    foundation_opportunities: List[FoundationOpportunity] = Field(default_factory=list)
+    corporate_opportunities: List[CorporateOpportunity] = Field(default_factory=list)
+    
+    # Collection metadata
+    created_at: datetime = Field(default_factory=datetime.now)
+    last_updated: datetime = Field(default_factory=datetime.now)
+    total_count: int = Field(0, description="Total opportunities in collection")
+    source_breakdown: Dict[str, int] = Field(default_factory=dict)
+    
+    # Search/filter criteria used
+    search_criteria: Dict[str, Any] = Field(default_factory=dict)
+    profile_used: Optional[str] = Field(None, description="Organization profile used for matching")
+    
+    def add_opportunity(self, opportunity: BaseOpportunity) -> None:
+        """Add opportunity to appropriate collection"""
+        if isinstance(opportunity, GovernmentOpportunity):
+            self.government_opportunities.append(opportunity)
+        elif isinstance(opportunity, FoundationOpportunity):
+            self.foundation_opportunities.append(opportunity)
+        elif isinstance(opportunity, CorporateOpportunity):
+            self.corporate_opportunities.append(opportunity)
+        
+        self._update_metadata()
+    
+    def get_all_opportunities(self) -> List[BaseOpportunity]:
+        """Get all opportunities regardless of type"""
+        return (self.government_opportunities + 
+                self.foundation_opportunities + 
+                self.corporate_opportunities)
+    
+    def get_top_opportunities(self, limit: int = 10) -> List[BaseOpportunity]:
+        """Get top opportunities by relevance score"""
+        all_opps = self.get_all_opportunities()
+        return sorted(all_opps, key=lambda x: x.relevance_score, reverse=True)[:limit]
+    
+    def _update_metadata(self) -> None:
+        """Update collection metadata"""
+        self.total_count = (len(self.government_opportunities) + 
+                           len(self.foundation_opportunities) + 
+                           len(self.corporate_opportunities))
+        
+        self.source_breakdown = {
+            'government': len(self.government_opportunities),
+            'foundation': len(self.foundation_opportunities),
+            'corporate': len(self.corporate_opportunities)
+        }
+        
+        self.last_updated = datetime.now()
+
+
 class WorkflowStatus(str, Enum):
     """Enumeration of possible workflow states."""
     PENDING = "pending"
