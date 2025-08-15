@@ -3,7 +3,6 @@ Virginia State-Level Grant Database Discovery
 Comprehensive integration of Virginia state agency grant programs
 """
 import asyncio
-import aiohttp
 import json
 import uuid
 import re
@@ -14,6 +13,7 @@ import logging
 from bs4 import BeautifulSoup
 
 # from src.core.base_processor import BaseProcessor  # Disabled for testing
+from src.clients.va_state_client import VAStateClient
 from src.auth.api_key_manager import get_api_key_manager
 
 
@@ -56,14 +56,17 @@ class VirginiaStateGrantsFetch:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         
+        # Initialize VA State client
+        self.va_state_client = VAStateClient()
+        
         # Virginia state agency configurations
         self.state_agencies = self._load_agency_configurations()
         
-        # Web scraping configurations
+        # Processing configurations
         self.scraping_config = {
             "timeout": 30,
             "max_retries": 3,
-            "rate_limit_delay": 2.0,  # Respectful scraping
+            "rate_limit_delay": 2.0,  # Respectful processing
             "user_agent": "Catalynx Grant Research Platform - grant-research@catalynx.org"
         }
         
@@ -82,8 +85,8 @@ class VirginiaStateGrantsFetch:
             
             self.logger.info(f"Searching Virginia state databases for {len(focus_areas)} focus areas")
             
-            # Execute multi-agency discovery
-            state_opportunities = await self._discover_state_opportunities(
+            # Execute multi-agency discovery using VA State client
+            state_opportunities = await self._discover_state_opportunities_with_client(
                 focus_areas=focus_areas,
                 geographic_scope=geographic_scope,
                 funding_range=funding_range,
@@ -143,6 +146,75 @@ class VirginiaStateGrantsFetch:
                 "state_opportunities": [],
                 "total_found": 0
             }
+    
+    async def _discover_state_opportunities_with_client(
+        self,
+        focus_areas: List[str],
+        geographic_scope: List[str],
+        funding_range: Dict[str, int],
+        max_results: int
+    ) -> List[StateGrantOpportunity]:
+        """Discover Virginia state opportunities using the VA State client"""
+        
+        try:
+            # Use the VA State client to search for opportunities
+            raw_opportunities = await self.va_state_client.search_opportunities(
+                eligibility_type="nonprofit",
+                deadline_after=datetime.now(),
+                max_results=max_results
+            )
+            
+            # Convert raw opportunities to StateGrantOpportunity objects
+            state_opportunities = []
+            for opp_data in raw_opportunities:
+                try:
+                    state_opp = self._convert_client_data_to_state_opportunity(
+                        opp_data, focus_areas
+                    )
+                    if state_opp:
+                        state_opportunities.append(state_opp)
+                except Exception as e:
+                    self.logger.warning(f"Failed to convert opportunity data: {e}")
+                    continue
+            
+            self.logger.info(f"Successfully converted {len(state_opportunities)} Virginia state opportunities")
+            return state_opportunities
+            
+        except Exception as e:
+            self.logger.error(f"VA State client search failed: {e}")
+            # Fall back to mock data or empty list
+            return []
+    
+    def _convert_client_data_to_state_opportunity(
+        self, 
+        opp_data: Dict[str, Any], 
+        focus_areas: List[str]
+    ) -> Optional[StateGrantOpportunity]:
+        """Convert VA State client data to StateGrantOpportunity object"""
+        
+        try:
+            return StateGrantOpportunity(
+                agency_name=opp_data.get("agency_name", "Virginia State Agency"),
+                program_name=opp_data.get("title", "State Grant Program"),
+                opportunity_type="grant",
+                focus_area=focus_areas[0] if focus_areas else "Community Development",
+                description=opp_data.get("description", "Virginia state grant opportunity"),
+                eligibility_requirements=["Virginia-based nonprofit", "501(c)(3) status"],
+                funding_amount=opp_data.get("funding_amount"),
+                funding_range=(
+                    opp_data.get("funding_range", {}).get("min"),
+                    opp_data.get("funding_range", {}).get("max")
+                ) if opp_data.get("funding_range") else None,
+                application_deadline=opp_data.get("deadline"),
+                contact_email=opp_data.get("contact_email"),
+                website_url=opp_data.get("website_url"),
+                geographic_scope=["Virginia"],
+                target_populations=["Nonprofits"],
+                confidence_score=0.8  # Higher confidence for client data
+            )
+        except Exception as e:
+            self.logger.warning(f"Failed to convert opportunity: {e}")
+            return None
     
     async def _discover_state_opportunities(
         self,

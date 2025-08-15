@@ -12,7 +12,6 @@ This processor:
 """
 
 import asyncio
-import aiohttp
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import time
@@ -21,6 +20,7 @@ import logging
 from src.core.base_processor import BaseProcessor, ProcessorMetadata
 from src.core.data_models import ProcessorConfig, ProcessorResult, OrganizationProfile
 from src.profiles.models import FormType, FoundationType
+from src.clients.propublica_client import ProPublicaClient
 from src.auth.api_key_manager import get_api_key_manager
 
 
@@ -31,7 +31,7 @@ class ProPublicaFetchProcessor(BaseProcessor):
         metadata = ProcessorMetadata(
             name="propublica_fetch",
             description="Fetch detailed organization data from ProPublica Nonprofit Explorer API",
-            version="1.0.0",
+            version="2.0.0",  # Upgraded to use new client architecture
             dependencies=["bmf_filter"],  # Depends on BMF filter results
             estimated_duration=300,  # 5 minutes for typical dataset
             requires_network=True,
@@ -39,14 +39,12 @@ class ProPublicaFetchProcessor(BaseProcessor):
         )
         super().__init__(metadata)
         
-        # Rate limiting configuration
+        # Initialize API client
+        self.propublica_client = ProPublicaClient()
+        
+        # Processing limits
         self.max_requests_per_second = 10  # Conservative rate limit
         self.request_delay = 1.0 / self.max_requests_per_second
-        self.max_retries = 3
-        self.retry_delay = 2.0
-        
-        # ProPublica API endpoints
-        self.base_url = "https://projects.propublica.org/nonprofits/api/v2"
         
     async def execute(self, config: ProcessorConfig, workflow_state=None) -> ProcessorResult:
         """Execute ProPublica data fetching."""
@@ -64,32 +62,29 @@ class ProPublicaFetchProcessor(BaseProcessor):
             
             self.logger.info(f"Fetching ProPublica data for {len(organizations)} organizations")
             
-            # Process organizations with rate limiting
+            # Process organizations with rate limiting using new client
             enriched_organizations = []
             failed_eins = []
             
-            async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as session:
-                for i, org in enumerate(organizations):
-                    try:
-                        self._update_progress(i + 1, len(organizations), f"Processing {org.name}")
-                        
-                        # Rate limiting delay
-                        if i > 0:
-                            await asyncio.sleep(self.request_delay)
-                        
-                        # Fetch organization data
-                        enriched_org = await self._fetch_organization_data(session, org)
-                        if enriched_org:
-                            enriched_organizations.append(enriched_org)
-                        else:
-                            failed_eins.append(org.ein)
-                            
-                    except Exception as e:
-                        self.logger.warning(f"Failed to process organization {org.ein}: {e}")
+            for i, org in enumerate(organizations):
+                try:
+                    self._update_progress(i + 1, len(organizations), f"Processing {org.name}")
+                    
+                    # Rate limiting delay
+                    if i > 0:
+                        await asyncio.sleep(self.request_delay)
+                    
+                    # Fetch organization data using the client
+                    enriched_org = await self._fetch_organization_data(org)
+                    if enriched_org:
+                        enriched_organizations.append(enriched_org)
+                    else:
                         failed_eins.append(org.ein)
-                        continue
+                        
+                except Exception as e:
+                    self.logger.warning(f"Failed to process organization {org.ein}: {e}")
+                    failed_eins.append(org.ein)
+                    continue
             
             execution_time = time.time() - start_time
             
@@ -173,46 +168,32 @@ class ProPublicaFetchProcessor(BaseProcessor):
     
     async def _fetch_organization_data(
         self, 
-        session: aiohttp.ClientSession, 
         org: OrganizationProfile
     ) -> Optional[OrganizationProfile]:
-        """Fetch detailed data for a single organization from ProPublica API."""
+        """Fetch detailed data for a single organization using the new client."""
         
         try:
-            # Search for organization by EIN
-            search_url = f"{self.base_url}/search.json"
-            params = {"q": org.ein}
+            # Search for organization by EIN using the client
+            search_results = await self.propublica_client.search_organizations(org.ein)
             
-            async with session.get(search_url, params=params) as response:
-                if response.status != 200:
-                    self.logger.warning(f"ProPublica search failed for {org.ein}: HTTP {response.status}")
-                    return None
+            if not search_results:
+                self.logger.info(f"No ProPublica data found for {org.ein}")
+                return org  # Return original org without enrichment
+            
+            # Get the first matching organization
+            pp_org = search_results[0]
+            
+            # Try to fetch detailed organization data by EIN
+            try:
+                detail_data = await self.propublica_client.get_organization_by_ein(org.ein)
+                if detail_data:
+                    return await self._enrich_organization(org, detail_data)
+            except Exception as e:
+                self.logger.debug(f"Failed to get detailed data for {org.ein}: {e}")
+            
+            # If detailed fetch fails, use search data
+            return await self._enrich_organization_from_search(org, pp_org)
                 
-                search_data = await response.json()
-                
-                if not search_data.get('organizations'):
-                    self.logger.info(f"No ProPublica data found for {org.ein}")
-                    return org  # Return original org without enrichment
-                
-                # Get the first matching organization
-                pp_org = search_data['organizations'][0]
-                
-                # Fetch detailed organization data
-                org_id = pp_org.get('id')
-                if org_id:
-                    detail_url = f"{self.base_url}/organizations/{org_id}.json"
-                    
-                    async with session.get(detail_url) as detail_response:
-                        if detail_response.status == 200:
-                            detail_data = await detail_response.json()
-                            return await self._enrich_organization(org, detail_data)
-                
-                # If detailed fetch fails, use search data
-                return await self._enrich_organization_from_search(org, pp_org)
-                
-        except asyncio.TimeoutError:
-            self.logger.warning(f"Timeout fetching ProPublica data for {org.ein}")
-            return None
         except Exception as e:
             self.logger.warning(f"Error fetching ProPublica data for {org.ein}: {e}")
             return None

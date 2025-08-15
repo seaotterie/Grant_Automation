@@ -12,13 +12,11 @@ This processor:
 """
 
 import asyncio
-import aiohttp
 import json
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import time
 import logging
-from urllib.parse import urlencode
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata, SyncProcessorMixin
 from src.core.data_models import ProcessorConfig, ProcessorResult
@@ -26,6 +24,7 @@ from src.core.government_models import (
     GovernmentOpportunity, OpportunityStatus, FundingInstrumentType, 
     EligibilityCategory, GovernmentOpportunityMatch
 )
+from src.clients.grants_gov_client import GrantsGovClient
 from src.auth.api_key_manager import get_api_key_manager
 
 
@@ -36,7 +35,7 @@ class GrantsGovFetchProcessor(BaseProcessor, SyncProcessorMixin):
         metadata = ProcessorMetadata(
             name="grants_gov_fetch",
             description="Fetch federal grant opportunities from Grants.gov API",
-            version="1.0.0",
+            version="2.0.0",  # Upgraded to use new client architecture
             dependencies=[],  # No dependencies - this is a discovery processor
             estimated_duration=120,  # 2 minutes for typical search
             requires_network=True,
@@ -45,12 +44,8 @@ class GrantsGovFetchProcessor(BaseProcessor, SyncProcessorMixin):
         )
         super().__init__(metadata)
         
-        # API Configuration
-        self.base_url = "https://www.grants.gov/grantsws/rest"
-        self.max_requests_per_hour = 1000  # Grants.gov rate limit
-        self.request_delay = 3.6  # Seconds between requests
-        self.max_retries = 3
-        self.retry_delay = 5.0
+        # Initialize API client
+        self.grants_gov_client = GrantsGovClient()
         
         # Search defaults
         self.default_page_size = 25
@@ -64,11 +59,9 @@ class GrantsGovFetchProcessor(BaseProcessor, SyncProcessorMixin):
         if config.get_config("test_mode", False):
             return []  # Skip API key check in test mode
         
-        manager = get_api_key_manager()
-        
-        if not manager.get_api_key("grants_gov"):
-            # For now, we'll try to work without API key (some endpoints may be public)
-            self.logger.warning("No Grants.gov API key found. Will attempt public access.")
+        # Check client initialization
+        if not self.grants_gov_client:
+            errors.append("Failed to initialize Grants.gov API client")
         
         return errors
     
@@ -83,12 +76,8 @@ class GrantsGovFetchProcessor(BaseProcessor, SyncProcessorMixin):
             search_params = self._build_search_parameters(config)
             self.logger.info(f"Search parameters: {search_params}")
             
-            # Perform search with pagination
-            opportunities = []
-            async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=60)
-            ) as session:
-                opportunities = await self._search_opportunities(session, search_params)
+            # Perform search with pagination using the new client
+            opportunities = await self._search_opportunities(search_params)
             
             if not opportunities:
                 return ProcessorResult(
@@ -172,87 +161,61 @@ class GrantsGovFetchProcessor(BaseProcessor, SyncProcessorMixin):
     
     async def _search_opportunities(
         self, 
-        session: aiohttp.ClientSession, 
         search_params: Dict[str, Any]
     ) -> List[GovernmentOpportunity]:
-        """Search for opportunities with pagination."""
-        all_opportunities = []
-        page_num = 0
-        max_pages = (self.max_opportunities // self.default_page_size) + 1
-        
-        manager = get_api_key_manager()
-        api_key = manager.get_api_key("grants_gov")
-        
-        headers = {
-            "Content-Type": "application/json",
-            "User-Agent": "Grant-Research-Automation/1.0"
+        """Search for opportunities using the new client architecture."""
+        try:
+            # Convert our search parameters to client format
+            client_params = self._convert_to_client_params(search_params)
+            
+            # Use the client to search for opportunities
+            raw_opportunities = await self.grants_gov_client.search_opportunities(
+                eligibility_code=client_params.get("eligibility_code", "25"),
+                max_results=self.max_opportunities,
+                **client_params.get("additional_params", {})
+            )
+            
+            # Parse the raw opportunities into our data model
+            parsed_opportunities = []
+            for opp_data in raw_opportunities:
+                try:
+                    opportunity = self._parse_opportunity(opp_data)
+                    if opportunity:
+                        parsed_opportunities.append(opportunity)
+                except Exception as e:
+                    self.logger.warning(f"Failed to parse opportunity: {e}")
+                    continue
+            
+            self.logger.info(f"Successfully parsed {len(parsed_opportunities)} opportunities from client")
+            return parsed_opportunities
+            
+        except Exception as e:
+            self.logger.error(f"Error searching opportunities with client: {e}")
+            return []
+    
+    def _convert_to_client_params(self, search_params: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert processor search parameters to client format."""
+        client_params = {
+            "eligibility_code": search_params.get("eligibilities", "25"),
+            "additional_params": {}
         }
         
-        # Add API key to headers if available
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
+        # Map processor params to client params
+        param_mapping = {
+            "oppStatus": "opportunity_status",
+            "sortBy": "sort_by", 
+            "agencies": "agency_codes",
+            "cfdaNumbers": "cfda_numbers",
+            "awardFloorFrom": "min_award_amount",
+            "awardCeilingTo": "max_award_amount",
+            "eligibleStates": "eligible_states"
+        }
         
-        while page_num < max_pages and len(all_opportunities) < self.max_opportunities:
-            try:
-                # Update pagination parameters
-                current_params = search_params.copy()
-                current_params["startRecordNum"] = page_num * self.default_page_size
-                
-                # Build URL
-                url = f"{self.base_url}/opportunities"
-                query_string = urlencode(current_params, safe="|")
-                full_url = f"{url}?{query_string}"
-                
-                self.logger.debug(f"Fetching page {page_num + 1}: {full_url}")
-                
-                # Rate limiting delay
-                if page_num > 0:
-                    await asyncio.sleep(self.request_delay)
-                
-                async with session.get(full_url, headers=headers) as response:
-                    if response.status != 200:
-                        self.logger.warning(f"API request failed with status {response.status}")
-                        if response.status == 429:  # Rate limited
-                            await asyncio.sleep(60)  # Wait 1 minute
-                            continue
-                        break
-                    
-                    data = await response.json()
-                    opportunities_data = data.get("oppHits", [])
-                    
-                    if not opportunities_data:
-                        self.logger.info("No more opportunities found")
-                        break
-                    
-                    # Parse opportunities
-                    page_opportunities = []
-                    for opp_data in opportunities_data:
-                        try:
-                            opportunity = self._parse_opportunity(opp_data)
-                            if opportunity:
-                                page_opportunities.append(opportunity)
-                        except Exception as e:
-                            self.logger.warning(f"Failed to parse opportunity: {e}")
-                            continue
-                    
-                    all_opportunities.extend(page_opportunities)
-                    
-                    self.logger.info(f"Page {page_num + 1}: Found {len(page_opportunities)} opportunities")
-                    
-                    # Check if we've reached the end
-                    if len(opportunities_data) < self.default_page_size:
-                        break
-                    
-                    page_num += 1
-                    
-            except asyncio.TimeoutError:
-                self.logger.warning(f"Timeout on page {page_num + 1}")
-                break
-            except Exception as e:
-                self.logger.error(f"Error fetching page {page_num + 1}: {e}")
-                break
+        for old_key, new_key in param_mapping.items():
+            if old_key in search_params:
+                client_params["additional_params"][new_key] = search_params[old_key]
         
-        return all_opportunities[:self.max_opportunities]
+        return client_params
     
     def _parse_opportunity(self, opp_data: Dict[str, Any]) -> Optional[GovernmentOpportunity]:
         """Parse opportunity data from Grants.gov API response."""

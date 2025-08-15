@@ -12,7 +12,6 @@ This processor:
 """
 
 import asyncio
-import aiohttp
 import json
 from typing import List, Dict, Any, Optional
 from datetime import datetime, date, timedelta
@@ -22,6 +21,7 @@ import logging
 from src.core.base_processor import BaseProcessor, ProcessorMetadata, SyncProcessorMixin
 from src.core.data_models import ProcessorConfig, ProcessorResult, OrganizationProfile
 from src.core.government_models import HistoricalAward, OrganizationAwardHistory
+from src.clients.usaspending_client import USASpendingClient
 
 
 class USASpendingFetchProcessor(BaseProcessor, SyncProcessorMixin):
@@ -31,7 +31,7 @@ class USASpendingFetchProcessor(BaseProcessor, SyncProcessorMixin):
         metadata = ProcessorMetadata(
             name="usaspending_fetch", 
             description="Fetch historical federal award data from USASpending.gov API",
-            version="1.0.0",
+            version="2.0.0",  # Upgraded to use new client architecture
             dependencies=[],  # Optional dependencies - can run standalone for testing
             estimated_duration=180,  # 3 minutes for typical dataset
             requires_network=True,
@@ -40,12 +40,12 @@ class USASpendingFetchProcessor(BaseProcessor, SyncProcessorMixin):
         )
         super().__init__(metadata)
         
-        # API Configuration
-        self.base_url = "https://api.usaspending.gov/api/v2"
+        # Initialize API client
+        self.usaspending_client = USASpendingClient()
+        
+        # Processing limits
         self.max_requests_per_second = 5  # Conservative rate limit
         self.request_delay = 0.2  # 200ms between requests
-        self.max_retries = 3
-        self.retry_delay = 2.0
         
         # Search configuration
         self.max_awards_per_org = 100
@@ -67,39 +67,36 @@ class USASpendingFetchProcessor(BaseProcessor, SyncProcessorMixin):
             
             self.logger.info(f"Fetching USASpending data for {len(organizations)} organizations")
             
-            # Process organizations with rate limiting
+            # Process organizations with rate limiting using new client
             enriched_organizations = []
             award_histories = []
             failed_eins = []
             
-            async with aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as session:
-                for i, org in enumerate(organizations):
-                    try:
-                        self._update_progress(i + 1, len(organizations), f"Processing {org.name}")
+            for i, org in enumerate(organizations):
+                try:
+                    self._update_progress(i + 1, len(organizations), f"Processing {org.name}")
+                    
+                    # Rate limiting delay
+                    if i > 0:
+                        await asyncio.sleep(self.request_delay)
+                    
+                    # Fetch award history for organization using the client
+                    award_history = await self._fetch_organization_awards(org)
+                    if award_history and award_history.awards:
+                        award_histories.append(award_history)
                         
-                        # Rate limiting delay
-                        if i > 0:
-                            await asyncio.sleep(self.request_delay)
+                        # Enrich organization with award history
+                        enriched_org = await self._enrich_organization_with_awards(org, award_history)
+                        enriched_organizations.append(enriched_org)
+                    else:
+                        # No awards found, but still include organization
+                        enriched_organizations.append(org)
                         
-                        # Fetch award history for organization
-                        award_history = await self._fetch_organization_awards(session, org)
-                        if award_history and award_history.awards:
-                            award_histories.append(award_history)
-                            
-                            # Enrich organization with award history
-                            enriched_org = await self._enrich_organization_with_awards(org, award_history)
-                            enriched_organizations.append(enriched_org)
-                        else:
-                            # No awards found, but still include organization
-                            enriched_organizations.append(org)
-                            
-                    except Exception as e:
-                        self.logger.warning(f"Failed to process organization {org.ein}: {e}")
-                        failed_eins.append(org.ein)
-                        enriched_organizations.append(org)  # Include without enrichment
-                        continue
+                except Exception as e:
+                    self.logger.warning(f"Failed to process organization {org.ein}: {e}")
+                    failed_eins.append(org.ein)
+                    enriched_organizations.append(org)  # Include without enrichment
+                    continue
             
             execution_time = time.time() - start_time
             
@@ -205,81 +202,49 @@ class USASpendingFetchProcessor(BaseProcessor, SyncProcessorMixin):
     
     async def _fetch_organization_awards(
         self,
-        session: aiohttp.ClientSession,
         org: OrganizationProfile
     ) -> Optional[OrganizationAwardHistory]:
-        """Fetch historical awards for a single organization."""
+        """Fetch historical awards for a single organization using the client."""
         
         try:
-            # Build search query
-            search_payload = {
-                "filters": {
-                    "recipient_id": org.ein,
-                    "award_type_codes": ["02", "03", "04", "05"],  # Grant types
-                    "time_period": self._get_time_period_filter()
-                },
-                "fields": [
-                    "Award ID",
-                    "Recipient Name", 
-                    "Award Amount",
-                    "Award Type",
-                    "Award Date",
-                    "Start Date",
-                    "End Date",
-                    "Awarding Agency",
-                    "Awarding Sub Agency",
-                    "CFDA Number",
-                    "CFDA Title",
-                    "Award Description"
-                ],
-                "page": 1,
-                "limit": self.max_awards_per_org,
-                "sort": "Award Date",
-                "order": "desc"
-            }
+            # Use the client to search for awards by recipient EIN
+            award_results = await self.usaspending_client.search_awards_by_recipient(
+                recipient_ein=org.ein,
+                max_results=self.max_awards_per_org,
+                award_types=["02", "03", "04", "05"],  # Grant types only
+                fiscal_year_start=datetime.now().year - self.award_lookback_years,
+                fiscal_year_end=datetime.now().year
+            )
             
-            url = f"{self.base_url}/search/spending_by_award/"
+            if not award_results:
+                self.logger.debug(f"No award history found for {org.ein}")
+                return OrganizationAwardHistory(ein=org.ein, name=org.name)
             
-            async with session.post(url, json=search_payload) as response:
-                if response.status != 200:
-                    self.logger.warning(f"USASpending search failed for {org.ein}: HTTP {response.status}")
-                    return None
+            # Parse awards
+            awards = []
+            for award_data in award_results:
+                try:
+                    award = self._parse_award_data(award_data, org)
+                    if award:
+                        awards.append(award)
+                except Exception as e:
+                    self.logger.warning(f"Failed to parse award data: {e}")
+                    continue
+            
+            # Create award history object
+            award_history = OrganizationAwardHistory(
+                ein=org.ein,
+                name=org.name,
+                awards=awards
+            )
+            
+            # Calculate statistics
+            award_history.calculate_statistics()
+            
+            self.logger.info(f"Found {len(awards)} awards for {org.name} totaling ${award_history.total_award_amount:,.2f}")
+            
+            return award_history
                 
-                data = await response.json()
-                results = data.get("results", [])
-                
-                if not results:
-                    self.logger.debug(f"No award history found for {org.ein}")
-                    return OrganizationAwardHistory(ein=org.ein, name=org.name)
-                
-                # Parse awards
-                awards = []
-                for award_data in results:
-                    try:
-                        award = self._parse_award_data(award_data, org)
-                        if award:
-                            awards.append(award)
-                    except Exception as e:
-                        self.logger.warning(f"Failed to parse award data: {e}")
-                        continue
-                
-                # Create award history object
-                award_history = OrganizationAwardHistory(
-                    ein=org.ein,
-                    name=org.name,
-                    awards=awards
-                )
-                
-                # Calculate statistics
-                award_history.calculate_statistics()
-                
-                self.logger.info(f"Found {len(awards)} awards for {org.name} totaling ${award_history.total_award_amount:,.2f}")
-                
-                return award_history
-                
-        except asyncio.TimeoutError:
-            self.logger.warning(f"Timeout fetching USASpending data for {org.ein}")
-            return None
         except Exception as e:
             self.logger.warning(f"Error fetching USASpending data for {org.ein}: {e}")
             return None
