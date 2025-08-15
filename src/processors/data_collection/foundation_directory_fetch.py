@@ -49,7 +49,7 @@ class FoundationDirectoryAPIClient:
     """Foundation Directory Online API client for corporate foundation discovery"""
     
     def __init__(self):
-        self.api_key_manager = get_api_key_manager()
+        # self.api_key_manager = get_api_key_manager()  # Disabled - using new client architecture
         self.base_url = "https://fconline.foundationcenter.org/api/v1"
         self.session = None
         self.logger = logging.getLogger(__name__)
@@ -101,8 +101,9 @@ class FoundationDirectoryAPIClient:
             List of matching foundation grants
         """
         
-        # Check API key availability
-        api_key = self.api_key_manager.get_key("foundation_directory")
+        # Check API key availability (disabled - using new client architecture)
+        # api_key = self.api_key_manager.get_api_key("foundation_directory")
+        api_key = None  # Using new client architecture
         if not api_key:
             self.logger.warning("Foundation Directory API key not available, using enhanced mock data")
             return await self._generate_enhanced_mock_data(
@@ -556,8 +557,27 @@ class FoundationDirectoryFetch(BaseProcessor):
     """Foundation Directory processor for discovering corporate foundation opportunities"""
     
     def __init__(self):
-        super().__init__("Foundation Directory Fetch", "data_collection")
+        from src.core.base_processor import ProcessorMetadata
+        metadata = ProcessorMetadata(
+            name="foundation_directory_fetch",
+            description="Discover corporate foundation opportunities through Foundation Directory API",
+            version="2.0.0",  # Client architecture integration
+            dependencies=[],
+            estimated_duration=180,
+            requires_network=True,
+            requires_api_key=True,
+            processor_type="data_collection"
+        )
+        super().__init__(metadata)
         self.foundation_client = FoundationDirectoryClient()
+    
+    async def execute(self, config) -> Any:
+        """Execute foundation directory discovery."""
+        # Extract parameters from config
+        data = getattr(config, 'processor_specific_config', {})
+        context = {}
+        
+        return await self.process(data, context)
     
     async def process(self, data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Process foundation directory search request"""

@@ -40,7 +40,7 @@ class BaseAPIClient(ABC):
         # Get API key if required
         if requires_api_key:
             self.api_key_manager = get_api_key_manager()
-            self.api_key = self.api_key_manager.get_key(api_name)
+            self.api_key = self.api_key_manager.get_api_key(api_name)
             if not self.api_key:
                 self.logger.warning(f"No API key configured for {api_name}")
         else:

@@ -117,19 +117,47 @@ class GovernmentDiscoveryStrategy(DiscoveryStrategy):
     
     def __init__(self):
         super().__init__("government", FundingSourceType.GOVERNMENT_FEDERAL)
+        # Phase 2 Integration: Use migrated processors instead of direct clients
+        self.grants_gov_processor = None
+        self.usaspending_processor = None
+        self.va_state_processor = None
+        
+        # Legacy client fallback for immediate operation
         self.grants_gov_client = GrantsGovClient()
         self.usaspending_client = USASpendingClient()
         self.va_state_client = VAStateClient()
+        
+        # Initialize processors
+        self._initialize_processors()
+    
+    def _initialize_processors(self):
+        """Initialize Phase 2 migrated processors"""
+        try:
+            # Import migrated processors
+            from ..processors.data_collection.grants_gov_fetch import GrantsGovFetchProcessor
+            from ..processors.data_collection.usaspending_fetch import USASpendingFetchProcessor
+            from ..processors.data_collection.va_state_grants_fetch import VirginiaStateGrantsFetch
+            
+            self.grants_gov_processor = GrantsGovFetchProcessor()
+            self.usaspending_processor = USASpendingFetchProcessor()
+            self.va_state_processor = VirginiaStateGrantsFetch()
+            
+            self.logger.info("Phase 2 processors initialized successfully")
+            
+        except ImportError as e:
+            self.logger.warning(f"Could not initialize processors, using client fallback: {e}")
+        except Exception as e:
+            self.logger.error(f"Processor initialization failed: {e}")
     
     async def discover_opportunities(self, 
                                    profile: OrganizationProfile,
                                    max_results: int = 100,
                                    progress_callback: Optional[Callable] = None) -> List[GovernmentOpportunity]:
-        """Discover government opportunities"""
+        """Discover government opportunities using Phase 2 processors when available"""
         
         opportunities = []
         
-        # Search federal opportunities via Grants.gov
+        # Search federal opportunities via Grants.gov using processor or client
         if progress_callback:
             progress_callback("Searching federal grant opportunities...")
         
@@ -138,12 +166,17 @@ class GovernmentDiscoveryStrategy(DiscoveryStrategy):
             keywords = self._extract_keywords_from_profile(profile)
             search_keyword = ' '.join(keywords[:3]) if keywords else None
             
-            # Search Grants.gov
-            grants_gov_results = await self.grants_gov_client.search_opportunities(
-                keyword=search_keyword,
-                eligibility_code="25",  # Nonprofits
-                max_results=max_results // 2
-            )
+            # Use processor if available, otherwise fallback to client
+            if self.grants_gov_processor:
+                grants_gov_results = await self._search_grants_gov_with_processor(
+                    profile, keywords, max_results // 2
+                )
+            else:
+                grants_gov_results = await self.grants_gov_client.search_opportunities(
+                    keyword=search_keyword,
+                    eligibility_code="25",  # Nonprofits
+                    max_results=max_results // 2
+                )
             
             # Convert to GovernmentOpportunity objects
             for result in grants_gov_results:
@@ -161,11 +194,18 @@ class GovernmentDiscoveryStrategy(DiscoveryStrategy):
             
         try:
             focus_areas = keywords[:5] if keywords else None
-            va_results = await self.va_state_client.search_opportunities(
-                focus_areas=focus_areas,
-                eligibility_type="nonprofits",
-                max_results=max_results // 2
-            )
+            
+            # Use processor if available, otherwise fallback to client
+            if self.va_state_processor:
+                va_results = await self._search_va_state_with_processor(
+                    profile, focus_areas, max_results // 2
+                )
+            else:
+                va_results = await self.va_state_client.search_opportunities(
+                    focus_areas=focus_areas,
+                    eligibility_type="nonprofits",
+                    max_results=max_results // 2
+                )
             
             # Convert to GovernmentOpportunity objects  
             for result in va_results:
@@ -290,6 +330,75 @@ class GovernmentDiscoveryStrategy(DiscoveryStrategy):
                 return datetime.fromisoformat(date_str)
         except:
             return None
+    
+    async def _search_grants_gov_with_processor(self, profile: OrganizationProfile, keywords: List[str], max_results: int) -> List[Dict[str, Any]]:
+        """Search Grants.gov using Phase 2 processor"""
+        try:
+            # Create mock config for processor
+            from ..core.data_models import ProcessorConfig
+            
+            # Create minimal config for processor execution
+            config = ProcessorConfig(
+                processor_specific_config={
+                    "keywords": keywords[:3],
+                    "eligibility_codes": ["25"],  # Nonprofits
+                    "max_opportunities": max_results,
+                    "organization_profile": {
+                        "name": profile.name,
+                        "state": getattr(profile, 'state', None),
+                        "ntee_code": getattr(profile, 'ntee_code', None)
+                    }
+                }
+            )
+            
+            # Execute processor
+            result = await self.grants_gov_processor.execute(config)
+            
+            if result.success and result.data:
+                opportunities = result.data.get("opportunities", [])
+                self.logger.info(f"Grants.gov processor returned {len(opportunities)} opportunities")
+                return opportunities
+            else:
+                self.logger.warning("Grants.gov processor failed, using client fallback")
+                return []
+                
+        except Exception as e:
+            self.logger.error(f"Grants.gov processor error: {e}")
+            return []
+    
+    async def _search_va_state_with_processor(self, profile: OrganizationProfile, focus_areas: List[str], max_results: int) -> List[Dict[str, Any]]:
+        """Search VA state opportunities using Phase 2 processor"""
+        try:
+            # Create mock config for processor
+            from ..core.data_models import ProcessorConfig
+            
+            config = ProcessorConfig(
+                processor_specific_config={
+                    "focus_areas": focus_areas or [],
+                    "geographic_scope": [getattr(profile, 'state', 'VA')],
+                    "max_results": max_results,
+                    "organization_profile": {
+                        "name": profile.name,
+                        "state": getattr(profile, 'state', None),
+                        "ntee_code": getattr(profile, 'ntee_code', None)
+                    }
+                }
+            )
+            
+            # Execute processor
+            result = await self.va_state_processor.execute(config)
+            
+            if result.success and result.data:
+                opportunities = result.data.get("opportunities", [])
+                self.logger.info(f"VA State processor returned {len(opportunities)} opportunities")
+                return opportunities
+            else:
+                self.logger.warning("VA State processor failed, using client fallback")
+                return []
+                
+        except Exception as e:
+            self.logger.error(f"VA State processor error: {e}")
+            return []
 
 
 class FoundationDiscoveryStrategy(DiscoveryStrategy):
@@ -297,7 +406,25 @@ class FoundationDiscoveryStrategy(DiscoveryStrategy):
     
     def __init__(self):
         super().__init__("foundation", FundingSourceType.FOUNDATION_PRIVATE)
+        # Phase 2 Integration: Use migrated processor
+        self.foundation_processor = None
+        
+        # Legacy client fallback
         self.foundation_client = FoundationDirectoryClient()
+        
+        # Initialize processor
+        self._initialize_processor()
+    
+    def _initialize_processor(self):
+        """Initialize Phase 2 foundation directory processor"""
+        try:
+            from ..processors.data_collection.foundation_directory_fetch import FoundationDirectoryFetch
+            self.foundation_processor = FoundationDirectoryFetch()
+            self.logger.info("Foundation Directory processor initialized successfully")
+        except ImportError as e:
+            self.logger.warning(f"Could not initialize foundation processor, using client fallback: {e}")
+        except Exception as e:
+            self.logger.error(f"Foundation processor initialization failed: {e}")
     
     async def discover_opportunities(self, 
                                    profile: OrganizationProfile,
@@ -314,12 +441,17 @@ class FoundationDiscoveryStrategy(DiscoveryStrategy):
             # Extract focus areas from profile
             keywords = self._extract_keywords_from_profile(profile)
             
-            # Search corporate foundations
-            corporate_results = await self.foundation_client.search_corporate_foundations(
-                giving_areas=keywords[:5] if keywords else None,
-                geographic_focus=profile.state,
-                max_results=max_results // 2
-            )
+            # Use processor if available, otherwise fallback to client
+            if self.foundation_processor:
+                corporate_results = await self._search_foundations_with_processor(
+                    profile, keywords, max_results // 2
+                )
+            else:
+                corporate_results = await self.foundation_client.search_corporate_foundations(
+                    giving_areas=keywords[:5] if keywords else None,
+                    geographic_focus=getattr(profile, 'state', None),
+                    max_results=max_results // 2
+                )
             
             # Convert to FoundationOpportunity objects
             for result in corporate_results:
@@ -367,6 +499,40 @@ class FoundationDiscoveryStrategy(DiscoveryStrategy):
         except Exception as e:
             self.logger.error(f"Failed to convert foundation result: {e}")
             return None
+    
+    async def _search_foundations_with_processor(self, profile: OrganizationProfile, keywords: List[str], max_results: int) -> List[Dict[str, Any]]:
+        """Search foundations using Phase 2 processor"""
+        try:
+            from ..core.data_models import ProcessorConfig
+            
+            config = ProcessorConfig(
+                processor_specific_config={
+                    "focus_areas": keywords[:5] if keywords else [],
+                    "geographic_scope": [getattr(profile, 'state', None)] if getattr(profile, 'state', None) else [],
+                    "funding_range": {"min_amount": 10000, "max_amount": 500000},  # Default range
+                    "max_results": max_results,
+                    "organization_profile": {
+                        "name": profile.name,
+                        "state": getattr(profile, 'state', None),
+                        "ntee_code": getattr(profile, 'ntee_code', None)
+                    }
+                }
+            )
+            
+            # Execute processor
+            result = await self.foundation_processor.execute(config)
+            
+            if result and isinstance(result, dict) and result.get("status") == "completed":
+                opportunities = result.get("foundation_opportunities", [])
+                self.logger.info(f"Foundation processor returned {len(opportunities)} opportunities")
+                return opportunities
+            else:
+                self.logger.warning("Foundation processor failed, using client fallback")
+                return []
+                
+        except Exception as e:
+            self.logger.error(f"Foundation processor error: {e}")
+            return []
 
 
 class CorporateDiscoveryStrategy(DiscoveryStrategy):
