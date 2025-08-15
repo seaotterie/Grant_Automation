@@ -1,17 +1,20 @@
 {
   "profile_id": "profile_67e3aad6f49f",
-  "name": "Organization 36-2167817",
+  "name": "Northwestern University",
   "organization_type": "nonprofit",
   "ein": "36-2167817",
   "mission_statement": "Nonprofit organization with EIN 36-2167817",
+  "keywords": "",
   "focus_areas": [
-    "General nonprofit purposes"
+    "general"
   ],
   "program_areas": [],
   "target_populations": [],
+  "ntee_codes": [],
+  "government_criteria": [],
   "geographic_scope": {
     "states": [
-      "VA"
+      "IL"
     ],
     "regions": [],
     "nationwide": false,
@@ -25,11 +28,23 @@
       "grants"
     ],
     "recurring": false,
-    "multi_year": false
+    "multi_year": false,
+    "grants_gov_categories": []
   },
   "current_funders": [],
   "past_grants": [],
-  "annual_revenue": null,
+  "schedule_i_grantees": [],
+  "schedule_i_status": "no_grantees",
+  "form_type": "unknown",
+  "foundation_type": "unknown",
+  "foundation_code": null,
+  "foundation_grants": [],
+  "application_process": null,
+  "accepts_unsolicited_applications": false,
+  "foundation_board_members": [],
+  "foundation_financial_data": null,
+  "foundation_program_areas": null,
+  "annual_revenue": 3678521388,
   "staff_size": null,
   "volunteer_count": null,
   "board_size": null,
@@ -41,7 +56,7 @@
   "reporting_capabilities": [],
   "status": "active",
   "created_at": "2025-08-07 14:36:51.562518",
-  "updated_at": "2025-08-10T07:39:11.800307",
+  "updated_at": "2025-08-14 21:29:57.589489",
   "created_by": null,
   "tags": [],
   "notes": null,
@@ -49,5 +64,12 @@
   "discovery_count": 0,
   "discovery_status": "never_run",
   "next_recommended_discovery": null,
-  "opportunities_count": 0
+  "opportunities_count": 0,
+  "associated_opportunities": [],
+  "processing_history": {},
+  "ai_analysis_count": 0,
+  "last_ai_analysis_date": null,
+  "cache_usage_stats": {},
+  "cost_tracking": {},
+  "metrics": null
 }

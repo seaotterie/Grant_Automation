@@ -207,13 +207,17 @@ class USASpendingFetchProcessor(BaseProcessor, SyncProcessorMixin):
         """Fetch historical awards for a single organization using the client."""
         
         try:
+            # Calculate date range for award search
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=365 * self.award_lookback_years)
+            
             # Use the client to search for awards by recipient EIN
             award_results = await self.usaspending_client.search_awards_by_recipient(
                 recipient_ein=org.ein,
                 max_results=self.max_awards_per_org,
                 award_types=["02", "03", "04", "05"],  # Grant types only
-                fiscal_year_start=datetime.now().year - self.award_lookback_years,
-                fiscal_year_end=datetime.now().year
+                start_date=start_date.strftime("%Y-%m-%d"),
+                end_date=end_date.strftime("%Y-%m-%d")
             )
             
             if not award_results:

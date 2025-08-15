@@ -563,7 +563,7 @@
                                         <span x-show="discoveryProgress.nonprofit">Running...</span>
                                     </button>
                                 </div>
-                                <p class="text-sm text-blue-700 dark:text-blue-300">IRS data & 990 filings</p>
+                                <p class="text-sm text-blue-700 dark:text-blue-300">IRS data, 990 & 990-PF filings</p>
                             </div>
                             <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
                                 <div class="flex items-center justify-between mb-2">
@@ -825,15 +825,15 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                                 <div class="flex items-center justify-between mb-2">
-                                    <h5 class="font-medium text-blue-900 dark:text-blue-100">990 XML Analysis</h5>
+                                    <h5 class="font-medium text-blue-900 dark:text-blue-100">990 & 990-PF Analysis</h5>
                                     <button @click="start990Analysis()" 
                                             :disabled="analysisProgress.xml_990_running" 
                                             class="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
-                                        <span x-show="!analysisProgress.xml_990_running">Analyze Financials</span>
+                                        <span x-show="!analysisProgress.xml_990_running">Analyze Forms</span>
                                         <span x-show="analysisProgress.xml_990_running">Running...</span>
                                     </button>
                                 </div>
-                                <p class="text-sm text-blue-700 dark:text-blue-300">Schedule I & financial health</p>
+                                <p class="text-sm text-blue-700 dark:text-blue-300">990: Schedule I & financials | 990-PF: Parts I,VIII,XV,XVI</p>
                             </div>
                             <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
                                 <div class="flex items-center justify-between mb-2">
@@ -870,6 +870,291 @@
                                     </button>
                                 </div>
                                 <p class="text-sm text-orange-700 dark:text-orange-300">AI-powered recommendations</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 990 & 990-PF Comprehensive Analysis Results -->
+                    <div x-show="has990Data() || hasFoundationData()" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+                        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                                    <span class="text-2xl mr-3">📊</span>
+                                    990 & 990-PF Analysis Dashboard
+                                </h4>
+                                <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                    <span x-show="has990Data()" x-text="`${get990Count()} 990 Forms`">0 990 Forms</span>
+                                    <span x-show="hasFoundationData()" x-text="`${getFoundationCount()} 990-PF Forms`">0 990-PF Forms</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-6">
+                            <!-- Form Type Overview -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <!-- Regular 990 Analysis -->
+                                <div x-show="has990Data()" class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                                    <h5 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                                        📋 Regular 990 Analysis
+                                        <span class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 rounded-full" x-text="get990Count()">0</span>
+                                    </h5>
+                                    <div class="space-y-4">
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4">
+                                                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" x-text="getScheduleICount()">0</div>
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white">Schedule I Found</div>
+                                                <div class="text-xs text-gray-600 dark:text-gray-400">Grant recipients identified</div>
+                                            </div>
+                                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4">
+                                                <div class="text-2xl font-bold text-green-600 dark:text-green-400" x-text="formatCurrency(getTotal990Revenue())">$0</div>
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white">Total Revenue</div>
+                                                <div class="text-xs text-gray-600 dark:text-gray-400">Across all 990 orgs</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 990-PF Foundation Analysis -->
+                                <div x-show="hasFoundationData()" class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-700">
+                                    <h5 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                                        🏛️ Private Foundation (990-PF) Analysis
+                                        <span class="ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300 rounded-full" x-text="getFoundationCount()">0</span>
+                                    </h5>
+                                    <div class="space-y-4">
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-purple-100 dark:border-purple-800">
+                                                <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" x-text="getFoundationCount('03')">0</div>
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white">Code 03 Foundations</div>
+                                                <div class="text-xs text-gray-600 dark:text-gray-400">Private non-operating</div>
+                                            </div>
+                                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-green-100 dark:border-green-800">
+                                                <div class="text-2xl font-bold text-green-600 dark:text-green-400" x-text="getAcceptsApplicationsCount()">0</div>
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white">Accept Applications</div>
+                                                <div class="text-xs text-gray-600 dark:text-gray-400">Open for outreach</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Detailed Analysis Tabs -->
+                            <div class="border-b border-gray-200 dark:border-gray-700">
+                                <nav class="-mb-px flex space-x-8">
+                                    <button @click="active990Tab = 'overview'" 
+                                            :class="active990Tab === 'overview' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+                                            class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                        Overview
+                                    </button>
+                                    <button x-show="has990Data()" @click="active990Tab = 'schedule-i'" 
+                                            :class="active990Tab === 'schedule-i' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+                                            class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                        Schedule I (Grant Recipients)
+                                    </button>
+                                    <button x-show="hasFoundationData()" @click="active990Tab = 'foundation-intel'" 
+                                            :class="active990Tab === 'foundation-intel' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+                                            class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                        Foundation Intelligence
+                                    </button>
+                                    <button x-show="hasFoundationData()" @click="active990Tab = 'application-strategy'" 
+                                            :class="active990Tab === 'application-strategy' ? 'border-orange-500 text-orange-600 dark:text-orange-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+                                            class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                        Application Strategy
+                                    </button>
+                                </nav>
+                            </div>
+                            
+                            <!-- Tab Content -->
+                            <div class="mt-6">
+                                <!-- Overview Tab -->
+                                <div x-show="active990Tab === 'overview'" class="space-y-6">
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <!-- Financial Summary -->
+                                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                                            <h6 class="font-semibold text-gray-900 dark:text-white mb-4">Financial Overview</h6>
+                                            <div class="space-y-4">
+                                                <template x-for="org in getFinancialSummary()" :key="org.id">
+                                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border">
+                                                        <div class="flex items-center justify-between mb-2">
+                                                            <div class="font-medium text-gray-900 dark:text-white" x-text="org.name">Organization</div>
+                                                            <span :class="org.form_type === '990-PF' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'"
+                                                                  class="px-2 py-1 text-xs font-medium rounded-full" x-text="org.form_type">Form</span>
+                                                        </div>
+                                                        <div class="grid grid-cols-2 gap-4 text-sm">
+                                                            <div>
+                                                                <span class="text-gray-600 dark:text-gray-400">Revenue:</span>
+                                                                <div class="font-semibold text-green-600 dark:text-green-400" x-text="formatCurrency(org.revenue)">$0</div>
+                                                            </div>
+                                                            <div>
+                                                                <span class="text-gray-600 dark:text-gray-400">Assets:</span>
+                                                                <div class="font-semibold text-blue-600 dark:text-blue-400" x-text="formatCurrency(org.assets)">$0</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Strategic Insights -->
+                                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                                            <h6 class="font-semibold text-gray-900 dark:text-white mb-4">Strategic Insights</h6>
+                                            <div class="space-y-3">
+                                                <div class="flex items-start space-x-3">
+                                                    <div class="flex-shrink-0 w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                                                    <div class="text-sm text-gray-700 dark:text-gray-300">
+                                                        <span class="font-medium" x-text="getAcceptsApplicationsCount()">0</span> foundations accept direct applications
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-start space-x-3">
+                                                    <div class="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                                                    <div class="text-sm text-gray-700 dark:text-gray-300">
+                                                        <span class="font-medium" x-text="getScheduleICount()">0</span> organizations have grant-making history
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-start space-x-3">
+                                                    <div class="flex-shrink-0 w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
+                                                    <div class="text-sm text-gray-700 dark:text-gray-300">
+                                                        Foundation Code 03 organizations are priority targets for grant research
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Schedule I Tab -->
+                                <div x-show="active990Tab === 'schedule-i'" class="space-y-6">
+                                    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-700">
+                                        <h6 class="font-semibold text-blue-900 dark:text-blue-300 mb-4">Schedule I Grant Recipients</h6>
+                                        <div class="text-sm text-blue-800 dark:text-blue-200 mb-4">
+                                            Organizations that received grants from nonprofits in your discovery results - potential peer funders or collaboration opportunities.
+                                        </div>
+                                        <template x-for="recipient in getScheduleIRecipients()" :key="recipient.id">
+                                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border mb-4">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <div class="font-medium text-gray-900 dark:text-white" x-text="recipient.recipient_name">Recipient</div>
+                                                    <div class="text-sm font-semibold text-green-600 dark:text-green-400" x-text="formatCurrency(recipient.grant_amount)">$0</div>
+                                                </div>
+                                                <div class="text-sm text-gray-600 dark:text-gray-400" x-text="recipient.grant_purpose">Purpose</div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                                                    Granted by: <span x-text="recipient.grantor_name">Grantor</span> | Year: <span x-text="recipient.grant_year">Year</span>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                                
+                                <!-- Foundation Intelligence Tab -->
+                                <div x-show="active990Tab === 'foundation-intel'" class="space-y-6">
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <!-- Grant-Making Capacity -->
+                                        <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-700">
+                                            <h6 class="font-semibold text-purple-900 dark:text-purple-300 mb-4">Grant-Making Capacity (990-PF Part I)</h6>
+                                            <template x-for="foundation in getFoundationFinancials()" :key="foundation.id">
+                                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border mb-4">
+                                                    <div class="flex items-center justify-between mb-2">
+                                                        <div class="font-medium text-gray-900 dark:text-white" x-text="foundation.name">Foundation</div>
+                                                        <span x-show="foundation.foundation_code === '03'" 
+                                                              class="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300 rounded-full">
+                                                            Code 03
+                                                        </span>
+                                                    </div>
+                                                    <div class="grid grid-cols-2 gap-4 text-sm">
+                                                        <div>
+                                                            <span class="text-gray-600 dark:text-gray-400">Investment Income:</span>
+                                                            <div class="font-semibold text-green-600 dark:text-green-400" x-text="formatCurrency(foundation.investment_income)">$0</div>
+                                                        </div>
+                                                        <div>
+                                                            <span class="text-gray-600 dark:text-gray-400">Grants Paid:</span>
+                                                            <div class="font-semibold text-blue-600 dark:text-blue-400" x-text="formatCurrency(foundation.grants_paid)">$0</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        
+                                        <!-- Board & Decision Makers -->
+                                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                                            <h6 class="font-semibold text-gray-900 dark:text-white mb-4">Board & Decision Makers (990-PF Part VIII)</h6>
+                                            <template x-for="member in getFoundationBoardMembers()" :key="member.id">
+                                                <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border mb-3">
+                                                    <div class="flex items-center justify-between">
+                                                        <div>
+                                                            <div class="font-medium text-gray-900 dark:text-white" x-text="member.name">Board Member</div>
+                                                            <div class="text-sm text-gray-600 dark:text-gray-400" x-text="member.title">Title</div>
+                                                        </div>
+                                                        <div class="text-xs text-gray-500 dark:text-gray-500" x-text="member.foundation_name">Foundation</div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Application Strategy Tab -->
+                                <div x-show="active990Tab === 'application-strategy'" class="space-y-6">
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <!-- Immediate Outreach -->
+                                        <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-6 border border-green-200 dark:border-green-700">
+                                            <h6 class="font-semibold text-green-900 dark:text-green-300 mb-4 flex items-center">
+                                                ✅ Ready for Outreach
+                                                <span class="ml-2 px-2 py-1 text-xs bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 rounded-full" x-text="getAcceptsApplicationsCount()">0</span>
+                                            </h6>
+                                            <template x-for="foundation in getFoundationsAcceptingApplications()" :key="foundation.id">
+                                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border mb-3">
+                                                    <div class="font-medium text-gray-900 dark:text-white text-sm" x-text="foundation.name">Foundation</div>
+                                                    <div class="text-xs text-gray-600 dark:text-gray-400 mt-1" x-text="formatCurrency(foundation.grants_paid) + ' annual grants'">Grant amount</div>
+                                                    <div class="text-xs text-green-700 dark:text-green-300 mt-2">✓ Accepts unsolicited applications</div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        
+                                        <!-- Network Development -->
+                                        <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-6 border border-yellow-200 dark:border-yellow-700">
+                                            <h6 class="font-semibold text-yellow-900 dark:text-yellow-300 mb-4 flex items-center">
+                                                📨 Network Required
+                                                <span class="ml-2 px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded-full" x-text="getInvitationOnlyCount()">0</span>
+                                            </h6>
+                                            <template x-for="foundation in getInvitationOnlyFoundations()" :key="foundation.id">
+                                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border mb-3">
+                                                    <div class="font-medium text-gray-900 dark:text-white text-sm" x-text="foundation.name">Foundation</div>
+                                                    <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Requires board/staff connections</div>
+                                                    <button @click="viewBoardConnections(foundation)" class="mt-2 text-xs bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-800 dark:hover:bg-yellow-700 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded">
+                                                        View Network
+                                                    </button>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        
+                                        <!-- Research Needed -->
+                                        <div class="bg-gray-50 dark:bg-gray-600 rounded-lg p-6 border border-gray-200 dark:border-gray-600">
+                                            <h6 class="font-semibold text-gray-900 dark:text-gray-300 mb-4 flex items-center">
+                                                🔍 Research Required
+                                                <span class="ml-2 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 rounded-full" x-text="getResearchNeededCount()">0</span>
+                                            </h6>
+                                            <div class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                                Foundations with unknown application processes - investigate Part XV for application acceptance policies.
+                                            </div>
+                                            <template x-for="foundation in getResearchNeededFoundations()" :key="foundation.id">
+                                                <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border mb-2">
+                                                    <div class="font-medium text-gray-900 dark:text-white text-sm" x-text="foundation.name">Foundation</div>
+                                                    <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">Application process unknown</div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Strategic Action Plan -->
+                                    <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-6 border border-orange-200 dark:border-orange-700">
+                                        <h6 class="font-semibold text-orange-900 dark:text-orange-300 mb-4">Recommended Action Plan</h6>
+                                        <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                                            <li><strong>Priority 1:</strong> Submit applications to Foundation Code 03 organizations accepting applications</li>
+                                            <li><strong>Priority 2:</strong> Develop board connection strategies for invitation-only foundations</li>
+                                            <li><strong>Priority 3:</strong> Research Part XV application processes for unknown foundations</li>
+                                            <li><strong>Priority 4:</strong> Analyze grant-making patterns from Part XV historical data</li>
+                                            <li><strong>Priority 5:</strong> Create relationship maps using Part VIII board member data</li>
+                                        </ol>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -5705,7 +5990,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                                 <h5 class="font-medium text-blue-900 dark:text-blue-100">Nonprofits</h5>
-                                <p class="text-sm text-blue-700 dark:text-blue-300">IRS data & 990 filings</p>
+                                <p class="text-sm text-blue-700 dark:text-blue-300">IRS data, 990 & 990-PF filings</p>
                             </div>
                             <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
                                 <h5 class="font-medium text-green-900 dark:text-green-100">Federal Grants</h5>

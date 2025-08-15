@@ -3278,12 +3278,64 @@ function catalynxApp() {
             try {
                 console.log('Running nonprofit discovery with criteria:', this.nonprofitDiscovery);
                 
-                // Simulate API call - replace with actual processor call
-                const response = await this.callProcessor('nonprofit_discovery', this.nonprofitDiscovery);
+                // Use real API endpoint for nonprofit discovery
+                const requestData = {
+                    state: this.nonprofitDiscovery.state || 'VA',
+                    max_results: this.nonprofitDiscovery.maxResults || 50,
+                    focus_areas: this.nonprofitDiscovery.focus_areas || [],
+                    ntee_codes: this.nonprofitDiscovery.ntee_codes || [],
+                    profile_context: this.selectedDiscoveryProfile || {}
+                };
                 
-                this.nonprofitTrackStatus.results = response?.results?.length || Math.floor(Math.random() * 50) + 10;
+                const response = await fetch(`/api/discovery/nonprofit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Nonprofit discovery API response:', data);
+                
+                // Process and integrate results into opportunity pipeline
+                // The API returns {status, track, total_found, results} format
+                if (data.status === 'completed' && data.results) {
+                    const allResults = [
+                        ...(data.results.propublica_results || []),
+                        ...(data.results.bmf_results || []),
+                        ...(data.results.results || [])
+                    ];
+                    
+                    if (allResults.length > 0) {
+                        const validatedOpportunities = allResults
+                            .map(opp => CatalynxUtils.standardizeOpportunityData({
+                                ...opp,
+                                organization_name: opp.name || opp.organization_name || 'Unknown Organization',
+                                funnel_stage: 'prospects',
+                                discovery_source: 'nonprofit_discovery',
+                                source_type: 'Nonprofit',
+                                compatibility_score: opp.composite_score || 0.5,
+                                discovered_at: new Date().toISOString(),
+                                opportunity_id: `nonprofit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                            }))
+                            .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
+                        
+                        // Add to unified opportunities array
+                        this.opportunitiesData.push(...validatedOpportunities);
+                        console.log(`Added ${validatedOpportunities.length} nonprofit opportunities to pipeline`);
+                        
+                        this.nonprofitTrackStatus.results = validatedOpportunities.length;
+                    } else {
+                        this.nonprofitTrackStatus.results = 0;
+                    }
+                } else {
+                    this.nonprofitTrackStatus.results = 0;
+                }
+                
                 this.nonprofitTrackStatus.status = 'complete';
-                
                 console.log(`Nonprofit discovery completed: ${this.nonprofitTrackStatus.results} organizations found`);
             } catch (error) {
                 console.error('Nonprofit discovery failed:', error);
@@ -3301,12 +3353,64 @@ function catalynxApp() {
             try {
                 console.log('Running federal discovery with criteria:', this.federalDiscovery);
                 
-                // Simulate API call - replace with actual processor call
-                const response = await this.callProcessor('federal_discovery', this.federalDiscovery);
+                // Use real API endpoint for federal discovery
+                const requestData = {
+                    keywords: this.federalDiscovery.keywords || ['grants', 'funding'],
+                    opportunity_category: this.federalDiscovery.opportunity_category || 'discretionary',
+                    max_results: this.federalDiscovery.maxResults || 50,
+                    funding_types: this.federalDiscovery.funding_types || ['grants'],
+                    profile_context: this.selectedDiscoveryProfile || {}
+                };
                 
-                this.federalTrackStatus.results = response?.results?.length || Math.floor(Math.random() * 30) + 5;
+                const response = await fetch(`/api/discovery/federal`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Federal discovery API response:', data);
+                
+                // Process and integrate results into opportunity pipeline
+                // The API returns {status, track, total_found, results} format
+                if (data.status === 'completed' && data.results) {
+                    const allResults = [
+                        ...(data.results.grants_gov_results || []),
+                        ...(data.results.usaspending_results || []),
+                        ...(data.results.results || [])
+                    ];
+                    
+                    if (allResults.length > 0) {
+                        const validatedOpportunities = allResults
+                            .map(opp => CatalynxUtils.standardizeOpportunityData({
+                                ...opp,
+                                organization_name: opp.title || opp.opportunity_title || opp.organization_name || 'Federal Opportunity',
+                                funnel_stage: 'prospects',
+                                discovery_source: 'federal_discovery',
+                                source_type: 'Federal Grant',
+                                compatibility_score: opp.relevance_score || 0.5,
+                                discovered_at: new Date().toISOString(),
+                                opportunity_id: `federal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                            }))
+                            .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
+                        
+                        // Add to unified opportunities array
+                        this.opportunitiesData.push(...validatedOpportunities);
+                        console.log(`Added ${validatedOpportunities.length} federal opportunities to pipeline`);
+                        
+                        this.federalTrackStatus.results = validatedOpportunities.length;
+                    } else {
+                        this.federalTrackStatus.results = 0;
+                    }
+                } else {
+                    this.federalTrackStatus.results = 0;
+                }
+                
                 this.federalTrackStatus.status = 'complete';
-                
                 console.log(`Federal discovery completed: ${this.federalTrackStatus.results} grants found`);
             } catch (error) {
                 console.error('Federal discovery failed:', error);
@@ -3324,12 +3428,63 @@ function catalynxApp() {
             try {
                 console.log('Running state discovery with criteria:', this.stateDiscovery);
                 
-                // Simulate API call - replace with actual processor call
-                const response = await this.callProcessor('state_discovery', this.stateDiscovery);
+                // Use real API endpoint for state discovery
+                const requestData = {
+                    states: this.stateDiscovery.states || ['VA'],
+                    focus_areas: this.stateDiscovery.focus_areas || [],
+                    max_results: this.stateDiscovery.maxResults || 50,
+                    service_areas: this.stateDiscovery.service_areas || [],
+                    profile_context: this.selectedDiscoveryProfile || {}
+                };
                 
-                this.stateTrackStatus.results = response?.results?.length || Math.floor(Math.random() * 25) + 3;
+                const response = await fetch(`/api/discovery/state`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('State discovery API response:', data);
+                
+                // Process and integrate results into opportunity pipeline
+                // The API returns {status, track, total_found, results} format
+                if (data.status === 'completed' && data.results) {
+                    const allResults = [
+                        ...(data.results.state_results || []),
+                        ...(data.results.results || [])
+                    ];
+                    
+                    if (allResults.length > 0) {
+                        const validatedOpportunities = allResults
+                            .map(opp => CatalynxUtils.standardizeOpportunityData({
+                                ...opp,
+                                organization_name: opp.title || opp.opportunity_title || opp.organization_name || 'State Opportunity',
+                                funnel_stage: 'prospects',
+                                discovery_source: 'state_discovery',
+                                source_type: 'State Grant',
+                                compatibility_score: opp.relevance_score || 0.5,
+                                discovered_at: new Date().toISOString(),
+                                opportunity_id: `state_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                            }))
+                            .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
+                        
+                        // Add to unified opportunities array
+                        this.opportunitiesData.push(...validatedOpportunities);
+                        console.log(`Added ${validatedOpportunities.length} state opportunities to pipeline`);
+                        
+                        this.stateTrackStatus.results = validatedOpportunities.length;
+                    } else {
+                        this.stateTrackStatus.results = 0;
+                    }
+                } else {
+                    this.stateTrackStatus.results = 0;
+                }
+                
                 this.stateTrackStatus.status = 'complete';
-                
                 console.log(`State discovery completed: ${this.stateTrackStatus.results} opportunities found`);
             } catch (error) {
                 console.error('State discovery failed:', error);
@@ -3347,12 +3502,65 @@ function catalynxApp() {
             try {
                 console.log('Running commercial discovery with criteria:', this.commercialDiscovery);
                 
-                // Simulate API call - replace with actual processor call
-                const response = await this.callProcessor('commercial_discovery', this.commercialDiscovery);
+                // Use real API endpoint for commercial discovery
+                const requestData = {
+                    industries: this.commercialDiscovery.industries || [],
+                    company_sizes: this.commercialDiscovery.company_sizes || [],
+                    funding_range: this.commercialDiscovery.funding_range || { min: 0, max: 1000000 },
+                    focus_areas: this.commercialDiscovery.focus_areas || [],
+                    max_results: this.commercialDiscovery.maxResults || 50,
+                    profile_context: this.selectedDiscoveryProfile || {}
+                };
                 
-                this.commercialTrackStatus.results = response?.results?.length || Math.floor(Math.random() * 40) + 8;
+                const response = await fetch(`/api/discovery/commercial`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Commercial discovery API response:', data);
+                
+                // Process and integrate results into opportunity pipeline
+                // The API returns {status, track, total_found, results} format
+                if (data.status === 'completed' && data.results) {
+                    const allResults = [
+                        ...(data.results.commercial_results || []),
+                        ...(data.results.foundation_results || []),
+                        ...(data.results.results || [])
+                    ];
+                    
+                    if (allResults.length > 0) {
+                        const validatedOpportunities = allResults
+                            .map(opp => CatalynxUtils.standardizeOpportunityData({
+                                ...opp,
+                                organization_name: opp.name || opp.foundation_name || opp.organization_name || 'Commercial Opportunity',
+                                funnel_stage: 'prospects',
+                                discovery_source: 'commercial_discovery',
+                                source_type: 'Commercial Foundation',
+                                compatibility_score: opp.relevance_score || 0.5,
+                                discovered_at: new Date().toISOString(),
+                                opportunity_id: `commercial_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                            }))
+                            .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
+                        
+                        // Add to unified opportunities array
+                        this.opportunitiesData.push(...validatedOpportunities);
+                        console.log(`Added ${validatedOpportunities.length} commercial opportunities to pipeline`);
+                        
+                        this.commercialTrackStatus.results = validatedOpportunities.length;
+                    } else {
+                        this.commercialTrackStatus.results = 0;
+                    }
+                } else {
+                    this.commercialTrackStatus.results = 0;
+                }
+                
                 this.commercialTrackStatus.status = 'complete';
-                
                 console.log(`Commercial discovery completed: ${this.commercialTrackStatus.results} foundations found`);
             } catch (error) {
                 console.error('Commercial discovery failed:', error);
@@ -9702,6 +9910,133 @@ function catalynxApp() {
                     console.error('❌ DISCOVER/PLAN Tab: Error during demotion:', error);
                     this.showNotification('Demotion Error', `Failed to demote ${prospect.organization_name}`, 'error');
                 }
+            },
+            
+            // 990 & 990-PF ANALYSIS DASHBOARD FUNCTIONS
+            // Functions to support unified analysis interface in PLAN tab
+            
+            // State management for 990 analysis tabs
+            active990Tab: 'overview',
+            
+            // Check if organization has 990 data available
+            has990Data() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity) return false;
+                
+                return currentOpportunity.xml_990_data || 
+                       currentOpportunity.propublica_990_data ||
+                       (currentOpportunity.analysis_990 && Object.keys(currentOpportunity.analysis_990).length > 0);
+            },
+            
+            // Check if organization has 990-PF foundation data available
+            hasFoundationData() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity) return false;
+                
+                return currentOpportunity.foundation_data ||
+                       currentOpportunity.pf_data ||
+                       currentOpportunity.form_type === '990-PF' ||
+                       (currentOpportunity.foundation_code && currentOpportunity.foundation_code === '03');
+            },
+            
+            // Get foundation count for dashboard
+            getFoundationCount() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity || !currentOpportunity.foundation_data) return 0;
+                
+                return currentOpportunity.foundation_data.grants_awarded ? 
+                       currentOpportunity.foundation_data.grants_awarded.length : 0;
+            },
+            
+            // Check if foundation accepts applications
+            getAcceptsApplicationsCount() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity || !currentOpportunity.foundation_data) return 0;
+                
+                return currentOpportunity.foundation_data.accepts_applications ? 1 : 0;
+            },
+            
+            // Get foundation financial summary
+            getFoundationFinancials() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity || !currentOpportunity.foundation_data) return null;
+                
+                const financials = currentOpportunity.foundation_data.financial_data || 
+                                 currentOpportunity.pf_data?.financial_data;
+                
+                return financials ? {
+                    total_assets: financials.total_assets || 0,
+                    total_giving: financials.total_giving || financials.grants_paid || 0,
+                    net_investment_income: financials.net_investment_income || 0
+                } : null;
+            },
+            
+            // Get Schedule I grant recipients data
+            getScheduleIData() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity || !currentOpportunity.foundation_data) return [];
+                
+                return currentOpportunity.foundation_data.grants_awarded || 
+                       currentOpportunity.pf_data?.grants_awarded || [];
+            },
+            
+            // Get board member data
+            getBoardMemberData() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity || !currentOpportunity.foundation_data) return [];
+                
+                return currentOpportunity.foundation_data.board_members || 
+                       currentOpportunity.pf_data?.board_members || [];
+            },
+            
+            // Get program areas
+            getProgramAreas() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity || !currentOpportunity.foundation_data) return [];
+                
+                return currentOpportunity.foundation_data.program_areas || 
+                       currentOpportunity.pf_data?.program_areas || [];
+            },
+            
+            // Get application process information
+            getApplicationProcess() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity || !currentOpportunity.foundation_data) return null;
+                
+                return currentOpportunity.foundation_data.application_process || 
+                       currentOpportunity.pf_data?.application_process || null;
+            },
+            
+            // Get regular 990 analysis data
+            get990Analysis() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity) return null;
+                
+                return currentOpportunity.analysis_990 || 
+                       currentOpportunity.xml_990_data || 
+                       currentOpportunity.propublica_990_data || null;
+            },
+            
+            // Format currency values for display
+            formatCurrency(value) {
+                if (!value || isNaN(value)) return '$0';
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(value);
+            },
+            
+            // Format percentage values
+            formatPercentage(value) {
+                if (!value || isNaN(value)) return '0%';
+                return `${Math.round(value * 100)}%`;
+            },
+            
+            // Set active tab in 990 analysis dashboard
+            set990Tab(tab) {
+                this.active990Tab = tab;
             },
             
             // Utility functions now defined directly in main context above

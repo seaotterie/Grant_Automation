@@ -1,12 +1,14 @@
 {
-  "profile_id": "profile_4e483defcb9a",
-  "name": "Organization 36-2167817",
+  "profile_id": "profile_285a0992ff24",
+  "name": "Virginia Health Initiative",
   "organization_type": "nonprofit",
-  "ein": "36-2167817",
-  "mission_statement": "Nonprofit organization with EIN 36-2167817",
+  "ein": "12-3456789",
+  "mission_statement": "Improving healthcare access and outcomes in Virginia communities",
   "keywords": null,
   "focus_areas": [
-    "General nonprofit purposes"
+    "health",
+    "community",
+    "education"
   ],
   "program_areas": [],
   "target_populations": [],
@@ -23,7 +25,7 @@
   "service_areas": [],
   "funding_preferences": {
     "min_amount": 10000,
-    "max_amount": 500000,
+    "max_amount": 250000,
     "funding_types": [
       "grants"
     ],
@@ -44,7 +46,7 @@
   "foundation_board_members": [],
   "foundation_financial_data": null,
   "foundation_program_areas": null,
-  "annual_revenue": null,
+  "annual_revenue": 500000,
   "staff_size": null,
   "volunteer_count": null,
   "board_size": null,
@@ -54,9 +56,9 @@
   "certifications": [],
   "compliance_requirements": [],
   "reporting_capabilities": [],
-  "status": "archived",
-  "created_at": "2025-08-07 14:31:37.984972",
-  "updated_at": "2025-08-14 21:29:50.298391",
+  "status": "active",
+  "created_at": "2025-08-14 21:22:22.609829",
+  "updated_at": "2025-08-14 21:22:22.609836",
   "created_by": null,
   "tags": [],
   "notes": null,

@@ -379,6 +379,109 @@ async def websocket_system_monitor(websocket: WebSocket):
     finally:
         logger.info("System monitoring WebSocket disconnected")
 
+@app.websocket("/api/live/discovery/{session_id}")
+async def websocket_unified_discovery(websocket: WebSocket, session_id: str):
+    """
+    PHASE 4B: WebSocket endpoint for real-time unified discovery progress monitoring.
+    Provides live updates during unified multi-track discovery execution.
+    """
+    await websocket.accept()
+    logger.info(f"Unified discovery WebSocket connected for session: {session_id}")
+    
+    try:
+        from src.discovery.unified_multitrack_bridge import get_unified_bridge
+        
+        bridge = get_unified_bridge()
+        
+        # Send initial connection confirmation
+        await websocket.send_text(json.dumps({
+            "type": "connection",
+            "status": "connected",
+            "session_id": session_id,
+            "timestamp": datetime.now().isoformat(),
+            "bridge_architecture": "unified_multitrack_bridge",
+            "phase": "4B"
+        }))
+        
+        # Store WebSocket connection for progress updates
+        # This would be handled by a progress callback in the actual discovery call
+        session = bridge.get_session(session_id)
+        if session:
+            # Send current session status
+            await websocket.send_text(json.dumps({
+                "type": "session_status",
+                "session_id": session_id,
+                "status": session.status.value,
+                "progress_updates": len(session.progress_updates),
+                "total_opportunities": session.total_opportunities,
+                "execution_time": session.execution_time_seconds,
+                "strategies_executed": list(session.results_by_strategy.keys()),
+                "timestamp": datetime.now().isoformat()
+            }))
+            
+            # Send recent progress updates
+            for update in session.progress_updates[-10:]:  # Last 10 updates
+                await websocket.send_text(json.dumps({
+                    "type": "progress_update",
+                    "session_id": session_id,
+                    "update": update,
+                    "timestamp": datetime.now().isoformat()
+                }))
+        
+        # Keep connection alive and handle messages
+        while True:
+            try:
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                message = json.loads(data)
+                
+                if message.get("type") == "ping":
+                    await websocket.send_text(json.dumps({
+                        "type": "pong",
+                        "timestamp": datetime.now().isoformat()
+                    }))
+                
+                elif message.get("type") == "get_session_summary":
+                    summary = bridge.get_session_summary(session_id)
+                    await websocket.send_text(json.dumps({
+                        "type": "session_summary",
+                        "session_id": session_id,
+                        "summary": summary,
+                        "timestamp": datetime.now().isoformat()
+                    }))
+                
+                elif message.get("type") == "get_bridge_status":
+                    bridge_status = bridge.get_bridge_status()
+                    await websocket.send_text(json.dumps({
+                        "type": "bridge_status",
+                        "status": bridge_status,
+                        "timestamp": datetime.now().isoformat()
+                    }))
+                
+            except asyncio.TimeoutError:
+                # Send heartbeat
+                await websocket.send_text(json.dumps({
+                    "type": "heartbeat",
+                    "timestamp": datetime.now().isoformat()
+                }))
+                
+            except WebSocketDisconnect:
+                logger.info(f"Discovery WebSocket disconnected for session: {session_id}")
+                break
+                
+    except Exception as e:
+        logger.error(f"Discovery WebSocket error for session {session_id}: {e}")
+        try:
+            await websocket.send_text(json.dumps({
+                "type": "error",
+                "message": str(e),
+                "session_id": session_id,
+                "timestamp": datetime.now().isoformat()
+            }))
+        except:
+            pass
+    finally:
+        logger.info(f"Discovery WebSocket cleanup for session: {session_id}")
+
 @app.post("/api/testing/export-results")
 async def export_test_results(request: Dict[str, Any]):
     """Export test results in various formats."""
@@ -899,6 +1002,164 @@ async def discover_opportunities(profile_id: str, discovery_params: Dict[str, An
         logger.error(f"Failed to discover opportunities for profile {profile_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/profiles/{profile_id}/discover/unified")
+async def discover_opportunities_unified(profile_id: str, discovery_params: Dict[str, Any]):
+    """
+    PHASE 4B: Enhanced discovery using unified multi-track bridge architecture.
+    Uses the Phase 3 unified discovery bridge for improved performance and real-time progress.
+    """
+    try:
+        # Import the unified discovery bridge
+        from src.discovery.unified_multitrack_bridge import get_unified_bridge
+        from src.core.data_models import FundingSourceType
+        
+        logger.info(f"Starting unified discovery for profile {profile_id}")
+        
+        # Get profile
+        profile_obj = profile_service.get_profile(profile_id)
+        if not profile_obj:
+            raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+        
+        # Parse funding types from request - convert from FundingType to FundingSourceType
+        funding_type_strings = discovery_params.get("funding_types", ["grants"])
+        funding_source_types = []
+        
+        # Map old FundingType to new FundingSourceType
+        funding_type_mapping = {
+            "grants": FundingSourceType.GOVERNMENT_FEDERAL,
+            "government": FundingSourceType.GOVERNMENT_FEDERAL,
+            "commercial": FundingSourceType.FOUNDATION_CORPORATE,
+            "sponsorships": FundingSourceType.CORPORATE_SPONSORSHIP,
+            "partnerships": FundingSourceType.CORPORATE_CSR
+        }
+        
+        for ft_str in funding_type_strings:
+            if ft_str in funding_type_mapping:
+                funding_source_types.append(funding_type_mapping[ft_str])
+            else:
+                logger.warning(f"Unknown funding type: {ft_str}, using default")
+                funding_source_types.append(FundingSourceType.GOVERNMENT_FEDERAL)
+        
+        # Add state funding if applicable
+        if hasattr(profile_obj, 'geographic_scope') and hasattr(profile_obj.geographic_scope, 'states'):
+            if 'VA' in getattr(profile_obj.geographic_scope, 'states', []):
+                funding_source_types.append(FundingSourceType.GOVERNMENT_STATE)
+        
+        max_results_per_type = discovery_params.get("max_results", 100)
+        
+        # Initialize unified bridge
+        bridge = get_unified_bridge()
+        
+        # Track progress updates
+        progress_updates = []
+        
+        def progress_callback(session_id: str, update_data: Dict[str, Any]):
+            """Capture progress updates for response"""
+            progress_updates.append({
+                "timestamp": update_data.get("timestamp"),
+                "status": update_data.get("status"),
+                "message": update_data.get("message", ""),
+                "strategy": update_data.get("strategy"),
+                "results_count": update_data.get("results_count", 0)
+            })
+            logger.info(f"Discovery progress [{session_id}]: {update_data.get('message', '')}")
+        
+        # Execute unified multi-track discovery
+        logger.info(f"Executing unified discovery with {len(funding_source_types)} funding sources")
+        discovery_session = await bridge.discover_opportunities(
+            profile=profile_obj,
+            funding_types=funding_source_types,
+            max_results_per_type=max_results_per_type,
+            progress_callback=progress_callback
+        )
+        
+        logger.info(f"Discovery session completed: {discovery_session.session_id}")
+        
+        # Process and convert results to web interface format
+        opportunities = []
+        opportunities_by_strategy = {}
+        
+        for strategy_name, results in discovery_session.results_by_strategy.items():
+            opportunities_by_strategy[strategy_name] = len(results)
+            
+            for opportunity in results:
+                # Convert unified opportunity to web interface format
+                lead_data = {
+                    "organization_name": getattr(opportunity, 'funder_name', 'Unknown Organization'),
+                    "opportunity_type": strategy_name,
+                    "description": getattr(opportunity, 'description', '') or getattr(opportunity, 'title', ''),
+                    "funding_amount": getattr(opportunity, 'funding_amount_max', 0),
+                    "compatibility_score": getattr(opportunity, 'relevance_score', 0.0),
+                    "match_factors": {
+                        "source_type": str(getattr(opportunity, 'source_type', '')),
+                        "deadline": getattr(opportunity, 'deadline', None),
+                        "eligibility": getattr(opportunity, 'eligibility_requirements', [])
+                    },
+                    "external_data": {
+                        "opportunity_id": getattr(opportunity, 'opportunity_id', ''),
+                        "source_url": getattr(opportunity, 'source_url', ''),
+                        "discovery_session": discovery_session.session_id,
+                        "discovery_timestamp": discovery_session.started_at.isoformat() if discovery_session.started_at else None
+                    }
+                }
+                
+                # Add lead to profile using existing service
+                lead = profile_service.add_opportunity_lead(profile_id, lead_data)
+                if lead:
+                    opportunities.append(lead.model_dump())
+        
+        # Update profile metrics
+        if hasattr(profile_obj, 'metrics') and profile_obj.metrics:
+            profile_obj.metrics.total_discovery_sessions += 1
+            profile_obj.metrics.last_discovery_session = discovery_session.started_at
+            if discovery_session.execution_time_seconds:
+                # Update average session duration
+                total_time = (profile_obj.metrics.avg_session_duration_minutes * 
+                            (profile_obj.metrics.total_discovery_sessions - 1) + 
+                            discovery_session.execution_time_seconds / 60)
+                profile_obj.metrics.avg_session_duration_minutes = total_time / profile_obj.metrics.total_discovery_sessions
+            
+            # Update funnel metrics
+            profile_obj.metrics.update_funnel_metrics("prospects", len(opportunities))
+            
+            # Save updated profile
+            profile_service.update_profile(profile_id, profile_obj)
+        
+        # Get session summary for response
+        session_summary = bridge.get_session_summary(discovery_session.session_id)
+        
+        return {
+            "message": f"Unified discovery completed for profile {profile_id}",
+            "discovery_id": discovery_session.session_id,
+            "status": discovery_session.status.value,
+            "execution_time_seconds": discovery_session.execution_time_seconds,
+            "total_opportunities_found": discovery_session.total_opportunities,
+            "opportunities_by_strategy": opportunities_by_strategy,
+            "strategy_execution_times": discovery_session.strategy_execution_times,
+            "average_relevance_score": discovery_session.avg_relevance_score,
+            "api_calls_made": discovery_session.api_calls_made,
+            "progress_updates": len(progress_updates),
+            "top_opportunities": [
+                {
+                    "organization": getattr(opp, 'funder_name', 'Unknown'),
+                    "title": getattr(opp, 'title', ''),
+                    "amount": getattr(opp, 'funding_amount_max', 0),
+                    "relevance": getattr(opp, 'relevance_score', 0.0),
+                    "source": str(getattr(opp, 'source_type', ''))
+                }
+                for opp in discovery_session.top_opportunities[:5]
+            ],
+            "session_summary": session_summary,
+            "bridge_architecture": "unified_multitrack_bridge",
+            "phase": "4B"
+        }
+        
+    except Exception as e:
+        logger.error(f"Unified discovery failed for profile {profile_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Unified discovery failed: {str(e)}")
+
 @app.post("/api/profiles/{profile_id}/pipeline")
 async def execute_full_pipeline(profile_id: str, pipeline_params: Dict[str, Any]):
     """Execute complete 4-stage processing pipeline for a profile."""
@@ -1204,6 +1465,55 @@ async def execute_processor(processor_name: str, request: Dict[str, Any]):
         raise
     except Exception as e:
         logger.error(f"Failed to execute processor {processor_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/processors/architecture/overview")
+async def get_processor_architecture_overview():
+    """Get comprehensive overview of processor architecture and migration status."""
+    try:
+        from src.processors.registry import get_architecture_overview
+        overview = get_architecture_overview()
+        
+        return {
+            "status": "success",
+            "architecture_overview": overview,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get architecture overview: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/processors/migration/status")
+async def get_migration_status():
+    """Get detailed migration status for client architecture integration."""
+    try:
+        from src.processors.registry import get_processor_summary
+        summary = get_processor_summary()
+        
+        # Extract migration-specific information
+        architecture_stats = summary.get('architecture_stats', {})
+        migration_insights = summary.get('migration_insights', {})
+        
+        return {
+            "status": "success",
+            "migration_status": {
+                "overall_completion": architecture_stats.get('migration_completion', 0),
+                "processors_migrated": architecture_stats.get('client_integrated', 0),
+                "total_processors": architecture_stats.get('total_processors', 0),
+                "data_collection_progress": {
+                    "total": migration_insights.get('data_collection_total', 0),
+                    "migrated": migration_insights.get('data_collection_migrated', 0),
+                    "completion_rate": migration_insights.get('data_collection_migration_rate', 0)
+                },
+                "priority_processors": migration_insights.get('priority_processors_status', {}),
+                "architecture_benefits": migration_insights.get('architecture_benefits', [])
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get migration status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # DISCOMBOBULATOR Track Endpoints

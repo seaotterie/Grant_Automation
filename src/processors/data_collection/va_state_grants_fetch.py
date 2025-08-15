@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 import logging
 from bs4 import BeautifulSoup
 
-# from src.core.base_processor import BaseProcessor  # Disabled for testing
+from src.core.base_processor import BaseProcessor, ProcessorMetadata
 from src.clients.va_state_client import VAStateClient
 from src.auth.api_key_manager import get_api_key_manager
 
@@ -50,11 +50,21 @@ class StateGrantOpportunity:
     confidence_score: float = 0.6  # Default for state-scraped data
 
 
-class VirginiaStateGrantsFetch:
+class VirginiaStateGrantsFetch(BaseProcessor):
     """Virginia state-level grant database discovery and integration"""
     
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        metadata = ProcessorMetadata(
+            name="va_state_grants_fetch",
+            description="Discover Virginia state grant opportunities through multi-agency integration",
+            version="2.0.0",  # Client architecture integration
+            dependencies=[],
+            estimated_duration=240,
+            requires_network=True,
+            requires_api_key=False,
+            processor_type="data_collection"
+        )
+        super().__init__(metadata)
         
         # Initialize VA State client
         self.va_state_client = VAStateClient()
@@ -72,6 +82,14 @@ class VirginiaStateGrantsFetch:
         
         # Grant pattern recognition
         self.grant_patterns = self._load_grant_patterns()
+    
+    async def execute(self, config) -> Any:
+        """Execute Virginia state grants discovery."""
+        # Extract parameters from config
+        data = getattr(config, 'processor_specific_config', {})
+        context = {}
+        
+        return await self.process(data, context)
     
     async def process(self, data: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Process Virginia state grant discovery request"""

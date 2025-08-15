@@ -334,11 +334,22 @@ class GovernmentDiscoveryStrategy(DiscoveryStrategy):
     async def _search_grants_gov_with_processor(self, profile: OrganizationProfile, keywords: List[str], max_results: int) -> List[Dict[str, Any]]:
         """Search Grants.gov using Phase 2 processor"""
         try:
-            # Create mock config for processor
-            from ..core.data_models import ProcessorConfig
+            # Create proper config for processor
+            from ..core.data_models import ProcessorConfig, WorkflowConfig
+            import uuid
             
-            # Create minimal config for processor execution
+            # Create workflow config
+            workflow_config = WorkflowConfig(
+                workflow_id=f"discovery_{uuid.uuid4().hex[:8]}",
+                name="Discovery Bridge Grants.gov Search",
+                description="Grants.gov search via unified discovery bridge"
+            )
+            
+            # Create complete config for processor execution
             config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="grants_gov_fetch",
+                workflow_config=workflow_config,
                 processor_specific_config={
                     "keywords": keywords[:3],
                     "eligibility_codes": ["25"],  # Nonprofits
@@ -369,10 +380,21 @@ class GovernmentDiscoveryStrategy(DiscoveryStrategy):
     async def _search_va_state_with_processor(self, profile: OrganizationProfile, focus_areas: List[str], max_results: int) -> List[Dict[str, Any]]:
         """Search VA state opportunities using Phase 2 processor"""
         try:
-            # Create mock config for processor
-            from ..core.data_models import ProcessorConfig
+            # Create proper config for processor
+            from ..core.data_models import ProcessorConfig, WorkflowConfig
+            import uuid
+            
+            # Create workflow config
+            workflow_config = WorkflowConfig(
+                workflow_id=f"discovery_{uuid.uuid4().hex[:8]}",
+                name="Discovery Bridge VA State Search",
+                description="Virginia state grants search via unified discovery bridge"
+            )
             
             config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="va_state_grants_fetch",
+                workflow_config=workflow_config,
                 processor_specific_config={
                     "focus_areas": focus_areas or [],
                     "geographic_scope": [getattr(profile, 'state', 'VA')],
@@ -503,9 +525,20 @@ class FoundationDiscoveryStrategy(DiscoveryStrategy):
     async def _search_foundations_with_processor(self, profile: OrganizationProfile, keywords: List[str], max_results: int) -> List[Dict[str, Any]]:
         """Search foundations using Phase 2 processor"""
         try:
-            from ..core.data_models import ProcessorConfig
+            from ..core.data_models import ProcessorConfig, WorkflowConfig
+            import uuid
+            
+            # Create workflow config
+            workflow_config = WorkflowConfig(
+                workflow_id=f"discovery_{uuid.uuid4().hex[:8]}",
+                name="Discovery Bridge Foundation Search",
+                description="Foundation Directory search via unified discovery bridge"
+            )
             
             config = ProcessorConfig(
+                workflow_id=workflow_config.workflow_id,
+                processor_name="foundation_directory_fetch",
+                workflow_config=workflow_config,
                 processor_specific_config={
                     "focus_areas": keywords[:5] if keywords else [],
                     "geographic_scope": [getattr(profile, 'state', None)] if getattr(profile, 'state', None) else [],

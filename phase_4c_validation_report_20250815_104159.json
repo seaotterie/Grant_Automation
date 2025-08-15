@@ -1,0 +1,194 @@
+{
+  "phase": "4C",
+  "timestamp": "2025-08-15T10:41:59.947665",
+  "overall_success_rate": 100.0,
+  "successful_tests": 4,
+  "total_tests": 4,
+  "test_results": {
+    "connectivity": {
+      "success": true,
+      "data": {
+        "Grants.gov": {
+          "status": "initialized",
+          "init_time": 0.0004031658172607422,
+          "base_url": "https://www.grants.gov/grantsws/rest",
+          "has_api_key": false,
+          "description": "Federal grant opportunities"
+        },
+        "Foundation Directory": {
+          "status": "initialized",
+          "init_time": 0.0010180473327636719,
+          "base_url": "https://api.foundationcenter.org/v2",
+          "has_api_key": false,
+          "description": "Corporate foundation data"
+        },
+        "ProPublica": {
+          "status": "initialized",
+          "init_time": 2.002716064453125e-05,
+          "base_url": "https://projects.propublica.org/nonprofits/api/v2",
+          "has_api_key": false,
+          "description": "Nonprofit 990 filings"
+        },
+        "USASpending": {
+          "status": "initialized",
+          "init_time": 1.049041748046875e-05,
+          "base_url": "https://api.usaspending.gov/api/v2",
+          "has_api_key": false,
+          "description": "Government spending data"
+        },
+        "VA State": {
+          "status": "initialized",
+          "init_time": 1.52587890625e-05,
+          "base_url": "https://www.commonwealth.virginia.gov/api/grants",
+          "has_api_key": false,
+          "description": "Virginia state grants"
+        }
+      }
+    },
+    "performance": {
+      "success": true,
+      "data": {
+        "Single Strategy Test": {
+          "status": "completed",
+          "total_time": 0.0006468296051025391,
+          "session_id": "bridge_d26bea43a57c",
+          "session_status": "completed",
+          "total_opportunities": 0,
+          "strategies_executed": 1,
+          "strategy_execution_times": {
+            "government": 0.000529
+          },
+          "average_relevance_score": 0.0,
+          "api_calls_made": 0,
+          "progress_updates": 5,
+          "opportunities_by_strategy": {
+            "government": 0
+          }
+        },
+        "Multi-Strategy Test": {
+          "status": "completed",
+          "total_time": 0.0004284381866455078,
+          "session_id": "bridge_842b34211207",
+          "session_status": "completed",
+          "total_opportunities": 0,
+          "strategies_executed": 2,
+          "strategy_execution_times": {
+            "government": 0.000372,
+            "foundation": 1e-06
+          },
+          "average_relevance_score": 0.0,
+          "api_calls_made": 0,
+          "progress_updates": 6,
+          "opportunities_by_strategy": {
+            "government": 0,
+            "foundation": 0
+          }
+        },
+        "Comprehensive Test": {
+          "status": "completed",
+          "total_time": 0.00035691261291503906,
+          "session_id": "bridge_1cb180843323",
+          "session_status": "completed",
+          "total_opportunities": 0,
+          "strategies_executed": 3,
+          "strategy_execution_times": {
+            "government": 0.000305,
+            "foundation": 1e-06,
+            "corporate": 0.0
+          },
+          "average_relevance_score": 0.0,
+          "api_calls_made": 0,
+          "progress_updates": 8,
+          "opportunities_by_strategy": {
+            "government": 0,
+            "foundation": 0,
+            "corporate": 0
+          }
+        }
+      }
+    },
+    "integration": {
+      "success": true,
+      "data": {
+        "bridge_status": {
+          "status": "success",
+          "response_time": 6.198883056640625e-06,
+          "bridge_status": "operational",
+          "strategies_available": 3,
+          "total_sessions": 3,
+          "capabilities": 7
+        },
+        "session_management": {
+          "status": "success",
+          "session_creation_time": 0.00023555755615234375,
+          "session_id": "bridge_4fd90b7066f8",
+          "session_status": "completed",
+          "summary_available": true,
+          "summary_keys": [
+            "session_id",
+            "profile_name",
+            "status",
+            "started_at",
+            "completed_at",
+            "execution_time_seconds",
+            "funding_types_searched",
+            "total_opportunities",
+            "avg_relevance_score",
+            "results_by_strategy",
+            "strategy_execution_times",
+            "errors",
+            "api_calls_made",
+            "cache_hits",
+            "progress_updates_count",
+            "top_opportunities"
+          ]
+        },
+        "progress_callbacks": {
+          "status": "success",
+          "callback_calls": 4,
+          "session_id": "bridge_b200284c2af9",
+          "final_status": "completed",
+          "callback_messages": [
+            "Starting unified multi-track discovery for Test Environmental Nonprofit Organization",
+            "Searching foundation opportunities...",
+            "Completed foundation discovery",
+            "Multi-track discovery completed"
+          ]
+        }
+      }
+    },
+    "concurrent": {
+      "success": true,
+      "data": {
+        "total_sessions": 3,
+        "successful_sessions": 3,
+        "total_execution_time": 0.000518798828125,
+        "total_opportunities": 0,
+        "average_time_per_session": 0.00017293294270833334,
+        "bridge_final_status": "operational",
+        "active_sessions_after": 0,
+        "session_details": [
+          {
+            "status": "completed",
+            "session_id": "bridge_dec24572e19d",
+            "opportunities": 0,
+            "execution_time": 0.000449
+          },
+          {
+            "status": "completed",
+            "session_id": "bridge_f9e0addd63a8",
+            "opportunities": 0,
+            "execution_time": 0.000441
+          },
+          {
+            "status": "completed",
+            "session_id": "bridge_b26845f3b90e",
+            "opportunities": 0,
+            "execution_time": 0.000438
+          }
+        ]
+      }
+    }
+  },
+  "production_ready": true
+}

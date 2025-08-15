@@ -58,8 +58,26 @@
       "Bash(del test_ein_api_fix.py test_schedule_i_ein.py add_test_grantees.py)",
       "Bash(cat:*)",
       "Bash(sed:*)",
-      "Bash(timeout 5 curl -s http://localhost:8000/health)"
+      "Bash(timeout 5 curl -s http://localhost:8000/health)",
+      "Bash(\"grant-research-env\\Scripts\\python.exe\" srcwebmain.py)",
+      "Bash(\"grant-research-env\\Scripts\\python.exe\" src/web/main.py)",
+      "Bash(timeout 5 curl -s http://localhost:8000/api/profiles)",
+      "Bash(grep:*)",
+      "Bash(timeout 5 curl -s http://localhost:8000/api/profiles/metrics/summary)",
+      "Bash(mkdir:*)",
+      "Bash(timeout 5 curl -s http://localhost:8000/api/profiles/profile_test_metrics/metrics)",
+      "Bash(timeout:*)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" test_990_pf_integration.py)",
+      "Bash(del test_990_pf_integration.py)",
+      "Bash(wmic process where processid=18672 delete:*)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" test_ein_lookup_integration.py)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" test_discovery_pipeline.py)",
+      "Bash(wmic process where processid=24968 delete:*)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" test_web_interface_workflow.py)",
+      "Bash(\"grant-research-env/Scripts/python.exe\" debug_funnel.py)",
+      "Bash(\"grant-research-env/Scripts/python.exe\":*)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }

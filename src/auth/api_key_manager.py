@@ -275,3 +275,161 @@ def set_api_key(service: str, api_key: str) -> None:
 def authenticate_api_keys(password: Optional[str] = None) -> bool:
     """Authenticate the API key manager."""
     return get_api_key_manager().authenticate(password)
+
+
+# Service-specific configurations and validation
+SERVICE_CONFIGS = {
+    "openai": {
+        "name": "OpenAI API",
+        "required": True,
+        "description": "Required for AI Lite batch analysis and Deep AI strategic dossiers",
+        "cost_info": "Pay-per-use: ~$0.0001/candidate (AI Lite), ~$0.10-0.25/target (Deep AI)",
+        "setup_url": "https://platform.openai.com/api-keys",
+        "env_var": "OPENAI_API_KEY",
+        "validation": lambda key: key.startswith("sk-") and len(key) >= 48
+    },
+    "foundation_directory": {
+        "name": "Foundation Directory API", 
+        "required": False,
+        "description": "Enhanced foundation data access (premium features)",
+        "cost_info": "May be free for basic access, premium features may require subscription",
+        "setup_url": "https://foundationdirectory.org/",
+        "env_var": "FOUNDATION_DIRECTORY_API_KEY",
+        "validation": lambda key: len(key.strip()) > 0
+    }
+}
+
+# Free APIs that don't need keys (for reference)
+FREE_APIS = {
+    "propublica": "ProPublica Nonprofit Explorer API - Free",
+    "grants_gov": "Grants.gov API - Free", 
+    "usaspending": "USASpending.gov API - Free"
+}
+
+
+def validate_api_key(service: str, api_key: str) -> tuple[bool, str]:
+    """
+    Validate API key format for a specific service.
+    
+    Args:
+        service: Service name (e.g., 'openai', 'foundation_directory')
+        api_key: The API key to validate
+        
+    Returns:
+        Tuple of (is_valid, message)
+    """
+    if not api_key or not api_key.strip():
+        return False, "API key cannot be empty"
+    
+    config = SERVICE_CONFIGS.get(service)
+    if not config:
+        return False, f"Unknown service: {service}"
+    
+    validator = config.get("validation")
+    if validator:
+        try:
+            if validator(api_key):
+                return True, "API key format appears valid"
+            else:
+                if service == "openai":
+                    return False, "OpenAI API keys must start with 'sk-' and be at least 48 characters"
+                else:
+                    return False, "API key format appears invalid"
+        except Exception:
+            return False, "API key validation failed"
+    
+    return True, "API key format not validated but appears non-empty"
+
+
+def get_service_status() -> Dict[str, Any]:
+    """
+    Get configuration status for all API services.
+    
+    Returns:
+        Dictionary with service status information
+    """
+    manager = get_api_key_manager()
+    status = {}
+    
+    # Check configured services
+    for service, config in SERVICE_CONFIGS.items():
+        has_key = manager.get_api_key(service) is not None
+        status[service] = {
+            "name": config["name"],
+            "configured": has_key,
+            "required": config["required"],
+            "description": config["description"],
+            "cost_info": config["cost_info"],
+            "setup_url": config["setup_url"],
+            "env_var": config["env_var"],
+            "status": "✅ Configured" if has_key else ("⚠️ Required" if config["required"] else "ℹ️ Optional")
+        }
+    
+    # Add info about free APIs
+    status["free_apis"] = {
+        "name": "Free APIs",
+        "configured": True,
+        "required": False,
+        "description": "These APIs are free and don't require API keys",
+        "services": FREE_APIS,
+        "status": "✅ Available"
+    }
+    
+    return status
+
+
+def get_missing_required_keys() -> list:
+    """Get list of required services missing API keys."""
+    manager = get_api_key_manager()
+    missing = []
+    
+    for service, config in SERVICE_CONFIGS.items():
+        if config["required"] and not manager.get_api_key(service):
+            missing.append(service)
+    
+    return missing
+
+
+def is_ai_analysis_available() -> bool:
+    """Check if AI analysis features are available (OpenAI key configured)."""
+    manager = get_api_key_manager()
+    return manager.get_api_key("openai") is not None
+
+
+def get_openai_key() -> Optional[str]:
+    """Get OpenAI API key for AI analysis."""
+    return get_api_key_manager().get_api_key("openai")
+
+
+def get_foundation_directory_key() -> Optional[str]:
+    """Get Foundation Directory API key."""
+    return get_api_key_manager().get_api_key("foundation_directory")
+
+
+def generate_setup_instructions() -> str:
+    """Generate user-friendly setup instructions for missing API keys."""
+    missing = get_missing_required_keys()
+    
+    if not missing:
+        return "✅ All required API keys are configured!"
+    
+    instructions = "🔑 **API Key Setup Required**\n\n"
+    
+    for service in missing:
+        config = SERVICE_CONFIGS[service]
+        instructions += f"**{config['name']}** (Required)\n"
+        instructions += f"• Description: {config['description']}\n"
+        instructions += f"• Cost: {config['cost_info']}\n"
+        instructions += f"• Setup URL: {config['setup_url']}\n"
+        instructions += f"• Environment Variable: {config['env_var']}\n\n"
+    
+    instructions += "💡 **Setup Options:**\n"
+    instructions += "1. Set environment variables before starting Catalynx\n"
+    instructions += "2. Use the API key management interface in SETTINGS tab\n"
+    instructions += "3. Add keys to your .env file (not committed to git)\n\n"
+    
+    instructions += "ℹ️ **Free APIs:**\n"
+    for service, description in FREE_APIS.items():
+        instructions += f"• {description}\n"
+    
+    return instructions

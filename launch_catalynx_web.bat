@@ -8,7 +8,8 @@ echo.
 echo Press Ctrl+C to stop the server.
 echo.
 
-cd "%~dp0src\web"
-"..\..\grant-research-env\Scripts\python.exe" main.py
+REM Stay in root directory to access main data/profiles folder
+cd "%~dp0"
+"grant-research-env\Scripts\python.exe" src\web\main.py
 
 pause

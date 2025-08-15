@@ -4,12 +4,15 @@
   "organization_type": "nonprofit",
   "ein": null,
   "mission_statement": "Testing Grants.gov classification functionality",
+  "keywords": null,
   "focus_areas": [
     "testing",
     "grants"
   ],
   "program_areas": [],
   "target_populations": [],
+  "ntee_codes": [],
+  "government_criteria": [],
   "geographic_scope": {
     "states": [],
     "regions": [],
@@ -24,10 +27,22 @@
       "grants"
     ],
     "recurring": false,
-    "multi_year": false
+    "multi_year": false,
+    "grants_gov_categories": []
   },
   "current_funders": [],
   "past_grants": [],
+  "schedule_i_grantees": [],
+  "schedule_i_status": null,
+  "form_type": "unknown",
+  "foundation_type": "unknown",
+  "foundation_code": null,
+  "foundation_grants": [],
+  "application_process": null,
+  "accepts_unsolicited_applications": false,
+  "foundation_board_members": [],
+  "foundation_financial_data": null,
+  "foundation_program_areas": null,
   "annual_revenue": null,
   "staff_size": null,
   "volunteer_count": null,
@@ -38,9 +53,9 @@
   "certifications": [],
   "compliance_requirements": [],
   "reporting_capabilities": [],
-  "status": "active",
+  "status": "archived",
   "created_at": "2025-08-10 14:40:31.595881",
-  "updated_at": "2025-08-10 14:40:31.595894",
+  "updated_at": "2025-08-14 21:23:04.268351",
   "created_by": null,
   "tags": [],
   "notes": null,
@@ -48,5 +63,12 @@
   "discovery_count": 0,
   "discovery_status": "never_run",
   "next_recommended_discovery": null,
-  "opportunities_count": 0
+  "opportunities_count": 0,
+  "associated_opportunities": [],
+  "processing_history": {},
+  "ai_analysis_count": 0,
+  "last_ai_analysis_date": null,
+  "cache_usage_stats": {},
+  "cost_tracking": {},
+  "metrics": null
 }

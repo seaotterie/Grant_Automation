@@ -1,0 +1,52 @@
+{
+  "test_summary": {
+    "total_tests": 8,
+    "passed_tests": 3,
+    "failed_tests": 5,
+    "success_rate": 37.5
+  },
+  "test_results": [
+    {
+      "test": "Grants.gov Processor with GrantsGovClient",
+      "status": "FAILED",
+      "error": ""
+    },
+    {
+      "test": "ProPublica Processor with ProPublicaClient",
+      "status": "FAILED",
+      "error": ""
+    },
+    {
+      "test": "USASpending Processor with USASpendingClient",
+      "status": "FAILED",
+      "error": ""
+    },
+    {
+      "test": "Foundation Directory Processor with FoundationDirectoryClient",
+      "status": "FAILED",
+      "error": "'APIKeyManager' object has no attribute 'get_key'"
+    },
+    {
+      "test": "VA State Processor with VAStateClient",
+      "status": "PASSED",
+      "details": "Processor version 2.0.0, returned 0 opportunities"
+    },
+    {
+      "test": "Processor Registration and Discovery",
+      "status": "PASSED",
+      "details": "Found 3/5 migrated processors: ['grants_gov_fetch', 'propublica_fetch', 'usaspending_fetch']"
+    },
+    {
+      "test": "Architecture Overview and Migration Insights",
+      "status": "PASSED",
+      "details": "Migration 16.7% complete, 3 priority processors migrated"
+    },
+    {
+      "test": "Unified Multi-Processor Workflow",
+      "status": "FAILED",
+      "error": "'APIKeyManager' object has no attribute 'get_key'"
+    }
+  ],
+  "test_timestamp": "2025-08-15T10:14:51.771489",
+  "test_phase": "Phase 2C: Integration Testing"
+}
