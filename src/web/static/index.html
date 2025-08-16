@@ -762,12 +762,6 @@
                                                 <div class="flex items-center space-x-2">
                                                     <button @click="openScoringModal(prospect)" 
                                                             class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View</button>
-                                                    <button @click="promoteProspect(prospect)" 
-                                                            :disabled="prospect.funnel_stage === 'opportunities'"
-                                                            class="px-3 py-1 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 rounded-md transition-colors">Promote</button>
-                                                    <button @click="demoteProspect(prospect)" 
-                                                            :disabled="prospect.funnel_stage === 'prospects'"
-                                                            class="px-3 py-1 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 rounded-md transition-colors">Demote</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1296,11 +1290,6 @@
                                                         <div class="flex items-center space-x-2">
                                                             <button @click="openScoringModal(prospect)" 
                                                                     class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View</button>
-                                                            <button @click="promoteProspect(prospect)" 
-                                                                    :disabled="(prospect.combined_score || 0) < 0.75"
-                                                                    class="px-3 py-1 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 rounded-md transition-colors">Promote</button>
-                                                            <button @click="demoteProspect(prospect)" 
-                                                                    class="px-3 py-1 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 rounded-md transition-colors">Demote</button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -1718,11 +1707,6 @@
                                                 <div class="flex items-center space-x-2">
                                                     <button @click="openScoringModal(candidate)" 
                                                             class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View</button>
-                                                    <button @click="promoteOpportunity(candidate)" 
-                                                            :disabled="(candidate.combined_score || 0) < 0.75"
-                                                            class="px-3 py-1 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 rounded-md transition-colors">Promote</button>
-                                                    <button @click="demoteOpportunity(candidate)" 
-                                                            class="px-3 py-1 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 rounded-md transition-colors">Demote</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1955,12 +1939,6 @@
                                                 <div class="flex items-center space-x-2">
                                                     <button @click="openScoringModal(target)" 
                                                             class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View</button>
-                                                    <button @click="promoteOpportunity(target)" 
-                                                            :disabled="target.funnel_stage === 'opportunities'"
-                                                            class="px-3 py-1 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 rounded-md transition-colors">Promote</button>
-                                                    <button @click="demoteOpportunity(target)" 
-                                                            :disabled="target.funnel_stage === 'targets'"
-                                                            class="px-3 py-1 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-400 rounded-md transition-colors">Demote</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -6218,16 +6196,23 @@
             </div>
 
             <!-- Modal Actions -->
-            <div class="flex items-center justify-end pt-6 space-x-2 border-t border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
                 <button @click="showScoringModal = false" 
                         class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-400 dark:hover:bg-gray-500">
                     Close
                 </button>
-                <button @click="promoteProspect(selectedScoringDetails)" 
-                        :disabled="(selectedScoringDetails?.combined_score || 0) < 0.75"
-                        class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded">
-                    Promote to Candidates
-                </button>
+                <div class="flex space-x-2">
+                    <button @click="demoteProspect(selectedScoringDetails)" 
+                            :disabled="selectedScoringDetails?.funnel_stage === 'prospects'"
+                            class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded">
+                        Demote
+                    </button>
+                    <button @click="promoteProspect(selectedScoringDetails)" 
+                            :disabled="(selectedScoringDetails?.combined_score || 0) < 0.75 || selectedScoringDetails?.funnel_stage === 'opportunities'"
+                            class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded">
+                        Promote
+                    </button>
+                </div>
             </div>
         </div>
     </div>

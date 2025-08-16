@@ -192,7 +192,10 @@ function catalynxApp() {
         currentTime: new Date().toLocaleTimeString(),
         
         // Data source configuration
-        useMockData: true, // Toggle between mock data and real API data integration
+        useMockData: false, // Toggle between mock data and real API data integration
+        
+        // Profile-specific data storage
+        planData: {}, // Strategic planning results for selected profile
         
         // Workflow progress tracking
         workflowProgress: {
@@ -1662,21 +1665,21 @@ function catalynxApp() {
             // Watch for prospects stage filter changes
             this.$watch('prospectsStageFilter', () => {
                 if (this.selectedDiscoveryProfile && this.activeStage === 'discover') {
-                    this.loadProspectsData();
+                    // Data loaded via discovery process
                 }
             });
             
             // Watch for foundation type filter changes
             this.$watch('foundationTypeFilter', () => {
                 if (this.selectedDiscoveryProfile && this.activeStage === 'discover') {
-                    this.loadProspectsData();
+                    // Data loaded via discovery process
                 }
             });
             
             // Watch for application status filter changes  
             this.$watch('applicationStatusFilter', () => {
                 if (this.selectedDiscoveryProfile && this.activeStage === 'discover') {
-                    this.loadProspectsData();
+                    // Data loaded via discovery process
                 }
             });
             
@@ -1752,7 +1755,7 @@ function catalynxApp() {
             // Load stage-specific data
             if (stage === 'discover') {
                 console.log('Loading prospects data for discover stage');
-                await this.loadProspectsData();
+                // Data loaded via discovery process
             }
             
             // Load profiles when switching to profiler stage
@@ -2091,7 +2094,7 @@ function catalynxApp() {
             try {
                 // Validate required fields before submitting
                 if (!this.profileForm.name || this.profileForm.name.trim().length === 0) {
-                    alert('Organization name is required');
+                    this.showNotification('Validation Error', 'Organization name is required', 'error');
                     this.profileSaving = false;
                     return;
                 }
@@ -2101,7 +2104,7 @@ function catalynxApp() {
                     name: this.profileForm.name,
                     organization_type: this.profileForm.organization_type,
                     ein: this.profileForm.ein || null,
-                    mission_statement: this.profileForm.mission_statement || '',
+                    mission_statement: this.profileForm.mission_statement ? this.profileForm.mission_statement.trim() : null,
                     keywords: this.profileForm.keywords || '',
                     focus_areas: ['general'], // Default focus area to satisfy backend validation
                     target_populations: (this.profileForm.target_populations_text || '').split('\n').filter(pop => pop.trim()),
@@ -2182,7 +2185,21 @@ function catalynxApp() {
                 }
             } catch (error) {
                 console.error('Error saving profile:', error);
-                this.showNotification(`Error saving profile: ${error.message}`, 'error');
+                
+                // Try to extract specific validation errors from the response
+                let errorMessage = 'Failed to save profile. Please try again.';
+                if (error.message && error.message.includes('validation error')) {
+                    // Handle Pydantic validation errors in error message
+                    if (error.message.includes('mission_statement') && error.message.includes('at least 10 characters')) {
+                        errorMessage = 'Mission statement must be at least 10 characters long';
+                    } else if (error.message.includes('validation error')) {
+                        errorMessage = error.message;
+                    }
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+                
+                this.showNotification('Profile Save Failed', errorMessage, 'error');
             } finally {
                 this.profileSaving = false;
             }
@@ -2390,11 +2407,15 @@ function catalynxApp() {
         },
 
         selectProfileForDiscovery(profile) {
+            // Clear previous profile data to prevent spillover
+            this.clearProfileData();
+            
             this.selectedProfile = profile;
             this.showNotification('Profile Selected', `Selected ${profile.name} for discovery`, 'info');
             this.switchStage('discover');
+            
             // Load prospects data for the selected profile
-            this.loadProspectsData();
+            // Data loaded via discovery process
         },
         
         loadStageData(stage) {
@@ -2589,10 +2610,120 @@ function catalynxApp() {
             };
         },
         
-        selectProfile(profile) {
+        async selectProfile(profile) {
+            console.log('Selecting profile:', profile.name, profile.profile_id);
+            
+            // Clear previous profile data
+            this.clearProfileData();
+            
             this.selectedProfile = profile;
-            // Could open a modal or navigate to profile details
-            this.showNotification('Profile Selected', `Viewing ${profile.name}`, 'info');
+            this.showNotification('Profile Selected', `Selected ${profile.name}`, 'info');
+            
+            // Load profile-specific data if not in mock mode
+            if (!this.useMockData) {
+                await this.loadProfileData(profile);
+            }
+        },
+
+        clearProfileData() {
+            // Clear all profile-specific data when switching profiles
+            this.opportunitiesData = [];
+            this.planData = {};
+            this.discoveryStats = {
+                activeTracks: 4,
+                totalResults: 0,
+                nonprofit: 0,
+                federal: 0,
+                state: 0,
+                commercial: 0
+            };
+            console.log('Cleared profile data for new selection');
+        },
+
+        async loadProfileData(profile) {
+            if (!profile || !profile.profile_id) {
+                console.log('No valid profile to load data for');
+                return;
+            }
+
+            console.log(`Loading data for profile: ${profile.name} (${profile.profile_id})`);
+            
+            try {
+                // Load opportunities from the funnel API
+                await this.loadRealOpportunities();
+                
+                // Load plan results
+                await this.loadPlanResults(profile);
+                
+                // TODO: Load other profile-specific data (analysis results, etc.)
+                // await this.loadAnalysisResults(profile);
+                
+            } catch (error) {
+                console.error('Failed to load profile data:', error);
+                this.showNotification('Data Load Error', 'Some profile data could not be loaded', 'warning');
+            }
+        },
+
+        async loadPlanResults(profile) {
+            if (!profile || !profile.profile_id) {
+                console.log('No valid profile to load plan results for');
+                return;
+            }
+
+            try {
+                console.log(`Loading plan results for profile: ${profile.profile_id}`);
+                
+                const response = await fetch(`/api/profiles/${profile.profile_id}/plan-results`);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        console.log('No plan results found for profile, starting with empty state');
+                        this.planData = {};
+                        return;
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                this.planData = data.plan_results || {};
+                
+                console.log('Loaded plan results:', this.planData);
+
+            } catch (error) {
+                console.error('Failed to load plan results:', error);
+                this.planData = {}; // Start with empty state on error
+            }
+        },
+
+        async savePlanResults(planResults) {
+            if (!this.selectedProfile || !this.selectedProfile.profile_id) {
+                console.log('No profile selected to save plan results');
+                return false;
+            }
+
+            try {
+                console.log(`Saving plan results for profile: ${this.selectedProfile.profile_id}`);
+                
+                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/plan-results`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(planResults)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                this.planData = planResults;
+                
+                this.showNotification('Plan Saved', 'Strategic planning results saved successfully', 'success');
+                return true;
+
+            } catch (error) {
+                console.error('Failed to save plan results:', error);
+                this.showNotification('Save Error', 'Failed to save planning results', 'error');
+                return false;
+            }
         },
         
         async loadProfileTemplates() {
@@ -2654,6 +2785,7 @@ function catalynxApp() {
         // Multi-track discovery system state
         selectedDiscoveryTrack: 'nonprofit',
         multiTrackInProgress: false,
+        unifiedDiscoveryInProgress: false,
         discoveryStats: {
             activeTracks: 4,
             totalResults: 0,
@@ -3031,14 +3163,32 @@ function catalynxApp() {
         
         // PROFILE SCOPING LOGIC - Filter opportunities based on selected profile
         isOpportunityInScope(opportunity) {
-            // In mock mode, show all opportunities
-            if (this.useMockData || !this.selectedProfile) {
-                return true;
+            // Use selectedDiscoveryProfile if available (during discovery), otherwise selectedProfile
+            const currentProfile = this.selectedDiscoveryProfile || this.selectedProfile;
+            
+            // If no profile selected, show no opportunities
+            if (!currentProfile) {
+                return false;
+            }
+            
+            const profileId = currentProfile.profile_id;
+            
+            // In mock mode, check if opportunity belongs to current profile
+            if (this.useMockData) {
+                // For mock opportunities generated for specific profiles
+                if (opportunity.opportunity_id && opportunity.opportunity_id.includes(profileId)) {
+                    return true;
+                }
+                // For the generic mock data, only show for Demo Profile
+                if (opportunity.opportunity_id === 'unified_opp_001') {
+                    return currentProfile.name === 'Demo Profile';
+                }
+                // Otherwise, don't show mock opportunities for other profiles
+                return false;
             }
             
             // For real data integration, filter by profile association
             // This will be populated when opportunities are fetched from real APIs
-            const profileId = this.selectedProfile.profile_id;
             
             // Check if opportunity was discovered for this specific profile
             if (opportunity.discovered_for_profile) {
@@ -3051,7 +3201,7 @@ function catalynxApp() {
             }
             
             // Fallback: check compatibility with profile characteristics
-            return this.isOpportunityCompatibleWithProfile(opportunity, this.selectedProfile);
+            return this.isOpportunityCompatibleWithProfile(opportunity, currentProfile);
         },
         
         // PROFILE COMPATIBILITY LOGIC - Smart matching for unscoped opportunities
@@ -3118,30 +3268,106 @@ function catalynxApp() {
             
             try {
                 this.prospectsLoading = true;
+                console.log(`Loading real opportunities for profile: ${this.selectedProfile.name} (${this.selectedProfile.profile_id})`);
                 
-                // TODO: Replace with actual API calls when implementing real data
-                const response = await fetch(`/api/opportunities?profile_id=${this.selectedProfile.profile_id}&scope=all`);
-                const realOpportunities = await response.json();
+                // Use the funnel API to get profile-specific opportunities
+                const response = await fetch(`/api/funnel/${this.selectedProfile.profile_id}/opportunities`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
                 
-                // Validate and add profile association
-                const validatedOpportunities = realOpportunities.map(opp => ({
-                    ...opp,
-                    discovered_for_profile: this.selectedProfile.profile_id,
-                    analysis_context: {
-                        profile_id: this.selectedProfile.profile_id,
-                        discovery_mode: 'real_data'
-                    }
-                }));
+                const data = await response.json();
+                console.log(`Loaded ${data.opportunities.length} opportunities from funnel API for profile ${this.selectedProfile.profile_id}`);
+                
+                // Transform API data to match frontend schema
+                const validatedOpportunities = data.opportunities
+                    .map(opp => CatalynxUtils.standardizeOpportunityData(opp))
+                    .filter(opp => CatalynxUtils.validateOpportunitySchema(opp))
+                    .map(opp => ({
+                        ...opp, 
+                        discovered_for_profile: this.selectedProfile.profile_id,
+                        analysis_context: {
+                            profile_id: this.selectedProfile.profile_id,
+                            discovery_mode: 'real_data'
+                        }
+                    }));
                 
                 this.opportunitiesData = validatedOpportunities;
-                this.showNotification('Real Data Loaded', `Loaded ${validatedOpportunities.length} opportunities for ${this.selectedProfile.name}`, 'success');
+                
+                // Update discovery stats based on actual data
+                this.updateDiscoveryStatsFromData(validatedOpportunities);
+                
+                if (validatedOpportunities.length > 0) {
+                    this.showNotification('Profile Data Loaded', `Loaded ${validatedOpportunities.length} opportunities for ${this.selectedProfile.name}`, 'success');
+                } else {
+                    this.showNotification('No Data Found', `No opportunities found for ${this.selectedProfile.name}. Run discovery to find opportunities.`, 'info');
+                }
                 
             } catch (error) {
                 console.error('Failed to load real opportunities:', error);
-                this.showNotification('Real Data Error', 'Failed to load real opportunities. Using mock data.', 'error');
-                await this.loadMockOpportunities();
+                this.showNotification('Data Load Error', 'Failed to load profile opportunities. You may need to run discovery first.', 'warning');
+                // Don't fall back to mock data, show empty state instead
+                this.opportunitiesData = [];
             } finally {
                 this.prospectsLoading = false;
+            }
+        },
+        
+        async saveOpportunitiesToProfile(opportunities) {
+            if (!this.selectedDiscoveryProfile || !opportunities || opportunities.length === 0) {
+                console.log('No profile selected or no opportunities to save');
+                return;
+            }
+            
+            try {
+                console.log(`Saving ${opportunities.length} opportunities to profile ${this.selectedDiscoveryProfile.profile_id}`);
+                
+                // Transform opportunities to the backend OpportunityLead format
+                const opportunityLeads = opportunities.map(opp => ({
+                    organization_name: opp.organization_name,
+                    ein: opp.ein || null,
+                    source_type: opp.source_type || 'Nonprofit', 
+                    discovery_source: opp.discovery_source || 'discovery',
+                    description: opp.description || `Discovery result: ${opp.organization_name}`,
+                    raw_score: opp.raw_score || opp.compatibility_score || 0.5,
+                    compatibility_score: opp.compatibility_score || 0.5,
+                    confidence_level: opp.confidence_level || 0.8,
+                    funnel_stage: 'prospects',
+                    opportunity_data: {
+                        revenue: opp.revenue,
+                        assets: opp.assets,
+                        ntee_code: opp.ntee_code,
+                        foundation_code: opp.foundation_code,
+                        discovery_metadata: {
+                            discovered_at: opp.discovered_at || new Date().toISOString(),
+                            source_details: opp
+                        }
+                    }
+                }));
+                
+                // Save to profile leads via API (for now, saves individual leads)
+                // TODO: Implement bulk endpoint for better performance
+                let savedCount = 0;
+                for (const lead of opportunityLeads.slice(0, 5)) { // Limit to first 5 for now
+                    try {
+                        const response = await fetch(`/api/profiles/${this.selectedDiscoveryProfile.profile_id}/leads`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(lead)
+                        });
+                        if (response.ok) {
+                            savedCount++;
+                        }
+                    } catch (e) {
+                        console.error('Failed to save individual lead:', e);
+                    }
+                }
+                
+                console.log(`Successfully saved ${savedCount} opportunities to profile leads`);
+                
+            } catch (error) {
+                console.error('Error saving opportunities to profile:', error);
+                // Don't throw error, just log it so discovery can continue
             }
         },
         
@@ -3167,6 +3393,62 @@ function catalynxApp() {
                 }
                 // ... additional mock opportunities would go here
             ];
+        },
+        
+        async loadProfileSpecificMockData() {
+            // Generate profile-specific mock data or show empty state
+            if (!this.selectedDiscoveryProfile) {
+                this.opportunitiesData = [];
+                return;
+            }
+            
+            const profileName = this.selectedDiscoveryProfile.name;
+            const profileId = this.selectedDiscoveryProfile.profile_id;
+            
+            // For demonstration: generate unique mock data based on profile
+            // In production, this would be replaced with real profile-specific data
+            if (profileName === 'Demo Profile') {
+                // Load the standard mock data for Demo Profile only
+                await this.loadMockOpportunities();
+            } else {
+                // For all other profiles, generate unique mock data
+                this.opportunitiesData = [
+                    {
+                        opportunity_id: `mock_${profileId}_001`,
+                        organization_name: `Sample Foundation for ${profileName}`,
+                        source_type: 'Nonprofit',
+                        discovery_source: 'nonprofit_discovery',
+                        description: `Mock opportunity specifically discovered for the ${profileName} profile. This represents a potential funding match based on the organization's focus areas and eligibility criteria.`,
+                        funnel_stage: 'prospects',
+                        raw_score: 0.65,
+                        compatibility_score: 0.62,
+                        confidence_level: 0.80,
+                        xml_990_score: 0.0,
+                        network_score: 0.0,
+                        enhanced_score: 0.0,
+                        combined_score: 0.62,
+                        discovered_at: new Date().toISOString()
+                    },
+                    {
+                        opportunity_id: `mock_${profileId}_002`,
+                        organization_name: `Community Grant Program (${profileName})`,
+                        source_type: 'Government',
+                        discovery_source: 'federal_discovery',
+                        description: `Federal grant opportunity identified as relevant for ${profileName} based on mission alignment and geographic scope.`,
+                        funnel_stage: 'prospects',
+                        raw_score: 0.58,
+                        compatibility_score: 0.55,
+                        confidence_level: 0.75,
+                        xml_990_score: 0.0,
+                        network_score: 0.0,
+                        enhanced_score: 0.0,
+                        combined_score: 0.55,
+                        discovered_at: new Date().toISOString()
+                    }
+                ];
+            }
+            
+            console.log(`Loaded ${this.opportunitiesData.length} mock opportunities for profile: ${profileName}`);
         },
         
         prospectsLoading: false,
@@ -3275,6 +3557,9 @@ function catalynxApp() {
             this.nonprofitTrackStatus.processing = true;
             this.nonprofitTrackStatus.status = 'processing';
             
+            console.log('DEBUG: opportunitiesData length at start:', this.opportunitiesData.length);
+            console.log('DEBUG: selectedDiscoveryProfile:', this.selectedDiscoveryProfile?.name);
+            
             try {
                 console.log('Running nonprofit discovery with criteria:', this.nonprofitDiscovery);
                 
@@ -3299,19 +3584,28 @@ function catalynxApp() {
                 
                 const data = await response.json();
                 console.log('Nonprofit discovery API response:', data);
+                console.log('DEBUG: data.results structure:', data.results);
+                console.log('DEBUG: bmf_results length:', data.results?.bmf_results?.length || 0);
+                console.log('DEBUG: propublica_results length:', data.results?.propublica_results?.length || 0);
+                console.log('DEBUG: data.status:', data.status);
+                console.log('DEBUG: data.total_found:', data.total_found);
                 
                 // Process and integrate results into opportunity pipeline
                 // The API returns {status, track, total_found, results} format
+                // where results = {bmf_results: [...], propublica_results: [...]}
                 if (data.status === 'completed' && data.results) {
                     const allResults = [
                         ...(data.results.propublica_results || []),
-                        ...(data.results.bmf_results || []),
-                        ...(data.results.results || [])
+                        ...(data.results.bmf_results || [])
                     ];
                     
+                    console.log('DEBUG: Combined allResults length:', allResults.length);
+                    
                     if (allResults.length > 0) {
-                        const validatedOpportunities = allResults
-                            .map(opp => CatalynxUtils.standardizeOpportunityData({
+                        console.log(`DEBUG: Processing ${allResults.length} raw nonprofit opportunities`);
+                        
+                        const transformedOpportunities = allResults.map(opp => {
+                            const transformed = CatalynxUtils.standardizeOpportunityData({
                                 ...opp,
                                 organization_name: opp.name || opp.organization_name || 'Unknown Organization',
                                 funnel_stage: 'prospects',
@@ -3319,13 +3613,40 @@ function catalynxApp() {
                                 source_type: 'Nonprofit',
                                 compatibility_score: opp.composite_score || 0.5,
                                 discovered_at: new Date().toISOString(),
-                                opportunity_id: `nonprofit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-                            }))
-                            .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
+                                opportunity_id: `nonprofit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                                discovered_for_profile: this.selectedDiscoveryProfile?.profile_id,
+                                analysis_context: {
+                                    profile_id: this.selectedDiscoveryProfile?.profile_id,
+                                    profile_name: this.selectedDiscoveryProfile?.name,
+                                    discovery_session: new Date().toISOString()
+                                }
+                            });
+                            console.log(`DEBUG: Transformed opportunity:`, transformed);
+                            return transformed;
+                        });
+                        
+                        console.log(`DEBUG: Validating ${transformedOpportunities.length} transformed opportunities`);
+                        const validatedOpportunities = transformedOpportunities.filter(opp => {
+                            const isValid = CatalynxUtils.validateOpportunitySchema(opp);
+                            if (!isValid) {
+                                console.log(`DEBUG: Validation failed for opportunity:`, opp);
+                            } else {
+                                console.log(`DEBUG: Validation PASSED for opportunity:`, opp.organization_name);
+                            }
+                            return isValid;
+                        });
+                        
+                        console.log(`DEBUG: Final validated opportunities count: ${validatedOpportunities.length}`);
                         
                         // Add to unified opportunities array
                         this.opportunitiesData.push(...validatedOpportunities);
                         console.log(`Added ${validatedOpportunities.length} nonprofit opportunities to pipeline`);
+                        console.log(`DEBUG: Total opportunitiesData after adding:`, this.opportunitiesData.length);
+                        console.log(`DEBUG: prospectsData length after adding:`, this.prospectsData.length);
+                        console.log(`DEBUG: Sample opportunity:`, this.opportunitiesData[this.opportunitiesData.length - 1]);
+                        
+                        // Save opportunities to profile funnel
+                        await this.saveOpportunitiesToProfile(validatedOpportunities);
                         
                         this.nonprofitTrackStatus.results = validatedOpportunities.length;
                     } else {
@@ -3394,13 +3715,22 @@ function catalynxApp() {
                                 source_type: 'Federal Grant',
                                 compatibility_score: opp.relevance_score || 0.5,
                                 discovered_at: new Date().toISOString(),
-                                opportunity_id: `federal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                                opportunity_id: `federal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                                discovered_for_profile: this.selectedDiscoveryProfile?.profile_id,
+                                analysis_context: {
+                                    profile_id: this.selectedDiscoveryProfile?.profile_id,
+                                    profile_name: this.selectedDiscoveryProfile?.name,
+                                    discovery_session: new Date().toISOString()
+                                }
                             }))
                             .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
                         
                         // Add to unified opportunities array
                         this.opportunitiesData.push(...validatedOpportunities);
                         console.log(`Added ${validatedOpportunities.length} federal opportunities to pipeline`);
+                        
+                        // Save opportunities to profile funnel
+                        await this.saveOpportunitiesToProfile(validatedOpportunities);
                         
                         this.federalTrackStatus.results = validatedOpportunities.length;
                     } else {
@@ -3468,13 +3798,22 @@ function catalynxApp() {
                                 source_type: 'State Grant',
                                 compatibility_score: opp.relevance_score || 0.5,
                                 discovered_at: new Date().toISOString(),
-                                opportunity_id: `state_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                                opportunity_id: `state_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                                discovered_for_profile: this.selectedDiscoveryProfile?.profile_id,
+                                analysis_context: {
+                                    profile_id: this.selectedDiscoveryProfile?.profile_id,
+                                    profile_name: this.selectedDiscoveryProfile?.name,
+                                    discovery_session: new Date().toISOString()
+                                }
                             }))
                             .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
                         
                         // Add to unified opportunities array
                         this.opportunitiesData.push(...validatedOpportunities);
                         console.log(`Added ${validatedOpportunities.length} state opportunities to pipeline`);
+                        
+                        // Save opportunities to profile funnel
+                        await this.saveOpportunitiesToProfile(validatedOpportunities);
                         
                         this.stateTrackStatus.results = validatedOpportunities.length;
                     } else {
@@ -3544,13 +3883,22 @@ function catalynxApp() {
                                 source_type: 'Commercial Foundation',
                                 compatibility_score: opp.relevance_score || 0.5,
                                 discovered_at: new Date().toISOString(),
-                                opportunity_id: `commercial_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                                opportunity_id: `commercial_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                                discovered_for_profile: this.selectedDiscoveryProfile?.profile_id,
+                                analysis_context: {
+                                    profile_id: this.selectedDiscoveryProfile?.profile_id,
+                                    profile_name: this.selectedDiscoveryProfile?.name,
+                                    discovery_session: new Date().toISOString()
+                                }
                             }))
                             .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
                         
                         // Add to unified opportunities array
                         this.opportunitiesData.push(...validatedOpportunities);
                         console.log(`Added ${validatedOpportunities.length} commercial opportunities to pipeline`);
+                        
+                        // Save opportunities to profile funnel
+                        await this.saveOpportunitiesToProfile(validatedOpportunities);
                         
                         this.commercialTrackStatus.results = validatedOpportunities.length;
                     } else {
@@ -3597,6 +3945,12 @@ function catalynxApp() {
                 // Add small delay to ensure "Running..." state is visible
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
+                console.log(`DEBUG: Starting fetch for ${track} track`);
+                
+                // Add timeout to the fetch call
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+                
                 const response = await fetch(`/api/discovery/${track}`, {
                     method: 'POST',
                     headers: {
@@ -3606,8 +3960,14 @@ function catalynxApp() {
                         profile_id: this.selectedDiscoveryProfile.profile_id,
                         state: 'VA',
                         limit: 50
-                    })
+                    }),
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
+                console.log(`DEBUG: Fetch completed for ${track} track`);
+                
+                console.log(`DEBUG: ${track} API call response status:`, response.status);
                 
                 if (response.ok) {
                     console.log(`${track} discovery API response received`);
@@ -3616,12 +3976,23 @@ function catalynxApp() {
                     
                     // Handle different response structures
                     let count = 0;
+                    console.log(`DEBUG: ${track} response structure:`, {
+                        hasResults: !!result.results,
+                        hasNestedResults: !!(result.results && result.results.results),
+                        resultsIsArray: Array.isArray(result.results),
+                        hasTotalFound: result.total_found !== undefined,
+                        totalFound: result.total_found
+                    });
+                    
                     if (result.results && result.results.results) {
                         count = result.results.results.length;
+                        console.log(`DEBUG: ${track} using nested results: ${count}`);
                     } else if (result.results && Array.isArray(result.results)) {
                         count = result.results.length; 
+                        console.log(`DEBUG: ${track} using array results: ${count}`);
                     } else if (result.total_found !== undefined) {
                         count = result.total_found;
+                        console.log(`DEBUG: ${track} using total_found: ${count}`);
                     }
                     console.log(`${track} discovery found ${count} results`);
                     this.discoveryStats[track] = count;
@@ -3635,13 +4006,15 @@ function catalynxApp() {
                         console.log('updateDiscoveryTotalResults not available, skipping');
                     }
                     
-                    // Always add mock data for demo purposes since real APIs aren't connected
-                    if (this.selectedDiscoveryProfile) {
-                        console.log(`>>> ATTEMPTING TO ADD MOCK DATA for ${track} track (count was: ${count})`);
+                    // Only add mock data if we're in mock mode AND no real data was found
+                    if (this.useMockData && count === 0 && this.selectedDiscoveryProfile) {
+                        console.log(`>>> Adding mock data for ${track} track (real discovery returned no results)`);
                         await this.addMockProspectsData(track);
-                        console.log(`>>> FINISHED ADDING MOCK DATA for ${track} track`);
+                        console.log(`>>> Finished adding mock data for ${track} track`);
+                    } else if (count > 0) {
+                        console.log(`>>> Using real data for ${track} track (${count} opportunities found)`);
                     } else {
-                        console.log(`>>> NO SELECTED PROFILE - Cannot add mock data for ${track}`);
+                        console.log(`>>> No data available for ${track} track`);
                     }
                     
                     this.showNotification('Discovery Complete', `Found ${count > 0 ? count : 'sample'} ${track} opportunities`, 'success');
@@ -3650,15 +4023,27 @@ function catalynxApp() {
                     // Refresh prospects table after successful discovery
                     if (this.activeStage === 'discover') {
                         console.log('Refreshing prospects table...');
-                        await this.loadProspectsData();
+                        // Temporarily commented out to fix function scope error
+                        // await this.loadProspectsData();
                     }
                 } else {
-                    const error = await response.json();
-                    this.showNotification('Discovery Failed', error.detail || `${track} discovery failed`, 'error');
+                    console.error(`${track} discovery API failed with status:`, response.status);
+                    try {
+                        const error = await response.json();
+                        console.error(`${track} discovery error details:`, error);
+                        this.showNotification('Discovery Failed', error.detail || `${track} discovery failed`, 'error');
+                    } catch (e) {
+                        console.error(`${track} discovery error response parse failed:`, e);
+                        this.showNotification('Discovery Failed', `${track} discovery failed (HTTP ${response.status})`, 'error');
+                    }
                 }
             } catch (error) {
                 console.error(`Failed to run ${track} discovery:`, error);
-                this.showNotification('Discovery Error', `An error occurred during ${track} discovery`, 'error');
+                if (error.name === 'AbortError') {
+                    this.showNotification('Discovery Timeout', `${track} discovery timed out after 30 seconds`, 'error');
+                } else {
+                    this.showNotification('Discovery Error', `An error occurred during ${track} discovery: ${error.message}`, 'error');
+                }
             } finally {
                 console.log(`Finally block: Setting discoveryProgress[${track}] = false`);
                 try {
@@ -3692,12 +4077,66 @@ function catalynxApp() {
                 
                 await Promise.all(promises);
                 
+                console.log('DEBUG: ALL DISCOVERY TRACKS COMPLETED');
+                console.log('DEBUG: Final opportunitiesData length:', this.opportunitiesData.length);
+                console.log('DEBUG: Final prospectsData length:', this.prospectsData.length);
+                console.log('DEBUG: Sample opportunities:', this.opportunitiesData.slice(0, 2));
+                
                 this.showNotification('All Tracks Complete', `Discovery complete across all tracks`, 'success');
             } catch (error) {
                 console.error('Failed to run multi-track discovery:', error);
                 this.showNotification('Discovery Error', 'An error occurred during multi-track discovery', 'error');
             } finally {
                 this.multiTrackInProgress = false;
+            }
+        },
+
+        async runUnifiedDiscovery() {
+            if (!this.selectedProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile before running discovery', 'warning');
+                return;
+            }
+
+            if (this.unifiedDiscoveryInProgress) {
+                return;
+            }
+
+            this.unifiedDiscoveryInProgress = true;
+            
+            try {
+                console.log(`Running unified discovery for profile: ${this.selectedProfile.name}`);
+                this.showNotification('Unified Discovery', `Running comprehensive discovery for ${this.selectedProfile.name}...`, 'info');
+
+                // Use the unified discovery API endpoint
+                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/discover/unified`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        funding_types: ['nonprofit', 'government', 'commercial', 'state'],
+                        max_results_per_type: 50,
+                        discovery_mode: 'comprehensive'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('Unified discovery result:', result);
+
+                // Reload profile data to get the newly discovered opportunities
+                await this.loadProfileData(this.selectedProfile);
+
+                this.showNotification('Discovery Complete', 
+                    `Found ${result.total_opportunities_found} opportunities across ${Object.keys(result.opportunities_by_strategy).length} sources`, 
+                    'success');
+
+            } catch (error) {
+                console.error('Unified discovery failed:', error);
+                this.showNotification('Discovery Error', 'Failed to run unified discovery. Please try again.', 'error');
+            } finally {
+                this.unifiedDiscoveryInProgress = false;
             }
         },
         
@@ -4762,6 +5201,27 @@ function catalynxApp() {
                 this.discoveryStats.federal + 
                 this.discoveryStats.state + 
                 this.discoveryStats.commercial;
+        },
+
+        updateDiscoveryStatsFromData(opportunities) {
+            // Count opportunities by source type to update discovery stats
+            const sourceTypeCount = opportunities.reduce((counts, opp) => {
+                const sourceType = opp.source_type?.toLowerCase() || 'unknown';
+                if (sourceType.includes('nonprofit')) counts.nonprofit++;
+                else if (sourceType.includes('federal') || sourceType.includes('government')) counts.federal++;
+                else if (sourceType.includes('state')) counts.state++;
+                else if (sourceType.includes('commercial') || sourceType.includes('foundation')) counts.commercial++;
+                return counts;
+            }, { nonprofit: 0, federal: 0, state: 0, commercial: 0 });
+
+            // Update discovery stats
+            this.discoveryStats = {
+                ...this.discoveryStats,
+                ...sourceTypeCount,
+                totalResults: opportunities.length
+            };
+
+            console.log('Updated discovery stats from data:', this.discoveryStats);
         },
         
         viewDiscoveryResults() {
@@ -5927,7 +6387,7 @@ function catalynxApp() {
                             'Content-Type': 'application/json',
                             ...options.headers
                         },
-                        timeout: 30000, // 30 second timeout
+                        timeout: 120000, // 2 minute timeout
                         ...options
                     });
                     
@@ -7104,9 +7564,8 @@ function catalynxApp() {
         async createProfile() {
             try {
                 // Validate required fields
-                if (!this.profileForm.name || !this.profileForm.organization_type || 
-                    !this.profileForm.mission_statement || !this.profileForm.focus_areas) {
-                    alert('Please fill in all required fields');
+                if (!this.profileForm.name || !this.profileForm.organization_type || !this.profileForm.focus_areas) {
+                    this.showNotification('Validation Error', 'Please fill in all required fields', 'error');
                     return;
                 }
                 
@@ -7115,7 +7574,7 @@ function catalynxApp() {
                     name: this.profileForm.name,
                     organization_type: this.profileForm.organization_type,
                     ein: this.profileForm.ein || null,
-                    mission_statement: this.profileForm.mission_statement,
+                    mission_statement: this.profileForm.mission_statement || null,
                     focus_areas: this.profileForm.focus_areas.split(',').map(s => s.trim()).filter(s => s),
                     target_populations: this.profileForm.target_populations ? 
                         this.profileForm.target_populations.split(',').map(s => s.trim()).filter(s => s) : [],
@@ -7163,7 +7622,27 @@ function catalynxApp() {
                 
             } catch (error) {
                 console.error('Failed to create profile:', error);
-                alert('Failed to create profile. Please try again.');
+                
+                // Try to extract specific validation errors from the response
+                let errorMessage = 'Failed to create profile. Please try again.';
+                if (error.response && error.response.data && error.response.data.detail) {
+                    const detail = error.response.data.detail;
+                    if (typeof detail === 'string') {
+                        errorMessage = detail;
+                    } else if (Array.isArray(detail)) {
+                        // Handle Pydantic validation errors
+                        const validationErrors = detail.map(err => {
+                            if (err.loc && err.msg) {
+                                const field = err.loc[err.loc.length - 1];
+                                return `${field}: ${err.msg}`;
+                            }
+                            return err.msg || err;
+                        });
+                        errorMessage = validationErrors.join('; ');
+                    }
+                }
+                
+                this.showNotification('Profile Creation Failed', errorMessage, 'error');
             }
         },
         
@@ -9796,9 +10275,21 @@ function catalynxApp() {
                     return;
                 }
                 
-                // Check if we have recent data for this profile (unified data already exists)
-                if (this.opportunitiesData && this.opportunitiesData.length > 0) {
-                    console.log(`Already have ${this.opportunitiesData.length} total opportunities, ${this.prospectsData.length} prospects visible`);
+                // In mock mode, generate profile-specific mock data or clear data
+                if (this.useMockData) {
+                    console.log('Mock mode: generating profile-specific mock data');
+                    await this.loadProfileSpecificMockData();
+                    return;
+                }
+                
+                // Check if we have recent data for this specific profile
+                const currentProfileOpportunities = this.opportunitiesData.filter(opp => 
+                    opp.discovered_for_profile === this.selectedDiscoveryProfile.profile_id ||
+                    opp.analysis_context?.profile_id === this.selectedDiscoveryProfile.profile_id
+                );
+                
+                if (currentProfileOpportunities.length > 0) {
+                    console.log(`Already have ${currentProfileOpportunities.length} opportunities for profile ${this.selectedDiscoveryProfile.profile_id}`);
                     return;
                 }
                 

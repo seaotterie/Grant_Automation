@@ -333,12 +333,13 @@ class OrganizationProfile(BaseModel):
     ein: Optional[str] = Field(default=None, pattern=r'^\d{2}-?\d{7}$', description="EIN (if applicable)")
     
     # Mission and Focus
-    mission_statement: str = Field(..., min_length=10, max_length=1000, description="Organization mission")
+    mission_statement: Optional[str] = Field(default=None, max_length=1000, description="Organization mission")
     keywords: Optional[str] = Field(default=None, max_length=500, description="Key terms and phrases describing the organization's work")
     focus_areas: List[str] = Field(..., min_items=1, description="Primary focus areas/keywords")
     program_areas: List[str] = Field(default=[], description="Specific program areas")
     target_populations: List[str] = Field(default=[], description="Populations served")
     ntee_codes: List[str] = Field(default=[], description="NTEE (National Taxonomy of Exempt Entities) classification codes")
+    ntee_description: Optional[str] = Field(default=None, max_length=500, description="Human-readable description of NTEE classifications")
     government_criteria: List[str] = Field(default=[], description="Government funding criteria preferences (agencies, funding types, etc.)")
     
     # Geographic and Scope

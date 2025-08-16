@@ -23,8 +23,8 @@ class HTTPConfig:
     max_retries: int = 3
     retry_delay: float = 1.0
     retry_backoff: float = 2.0
-    rate_limit_calls: int = 100
-    rate_limit_window: int = 3600  # 1 hour
+    rate_limit_calls: int = 50  # Reduced from 100
+    rate_limit_window: int = 600  # 10 minutes instead of 1 hour
     cache_ttl: int = 3600  # 1 hour
     user_agent: str = "Catalynx/2.0 Grant Research Platform"
     headers: Dict[str, str] = field(default_factory=dict)
@@ -66,7 +66,7 @@ class CatalynxHTTPClient:
         
         # Rate limiting tracking
         self.rate_limits: Dict[str, APIRateLimit] = {}
-        self.call_history: List[float] = []
+        self.call_history: Dict[str, List[float]] = {}  # Per-API call history
         
         # Session will be created lazily
         self._session: Optional[aiohttp.ClientSession] = None
@@ -287,15 +287,26 @@ class CatalynxHTTPClient:
         """Apply rate limiting for specific API"""
         now = time.time()
         
-        # Clean old calls from history
-        window_start = now - self.config.rate_limit_window
-        self.call_history = [call_time for call_time in self.call_history if call_time > window_start]
+        # Initialize call history for this API if not exists
+        if rate_limit_key not in self.call_history:
+            self.call_history[rate_limit_key] = []
         
-        # Check if we're exceeding rate limit
-        if len(self.call_history) >= self.config.rate_limit_calls:
+        # Clean old calls from history for this specific API
+        window_start = now - self.config.rate_limit_window
+        self.call_history[rate_limit_key] = [call_time for call_time in self.call_history[rate_limit_key] if call_time > window_start]
+        
+        # Check if we're exceeding rate limit for this specific API
+        api_calls = self.call_history[rate_limit_key]
+        if len(api_calls) >= self.config.rate_limit_calls:
             # Calculate wait time until oldest call expires
-            oldest_call = min(self.call_history)
+            oldest_call = min(api_calls)
             wait_time = oldest_call + self.config.rate_limit_window - now
+            
+            # Cap wait time to prevent excessive delays
+            max_wait_time = 300  # Max 5 minutes
+            if wait_time > max_wait_time:
+                self.logger.warning(f"Rate limit wait time for {rate_limit_key} capped at {max_wait_time}s (was {wait_time:.2f}s)")
+                wait_time = max_wait_time
             
             if wait_time > 0:
                 self.logger.info(f"Rate limit reached for {rate_limit_key}, waiting {wait_time:.2f} seconds")
@@ -307,8 +318,8 @@ class CatalynxHTTPClient:
             if rate_limit.delay_between_calls > 0:
                 await asyncio.sleep(rate_limit.delay_between_calls)
         
-        # Record this call
-        self.call_history.append(now)
+        # Record this call for this specific API
+        self.call_history[rate_limit_key].append(now)
     
     def set_api_rate_limit(self, api_key: str, calls_per_hour: int, delay_between_calls: float = 0.0):
         """Set specific rate limiting for an API"""
