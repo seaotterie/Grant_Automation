@@ -207,15 +207,22 @@ class USASpendingFetchProcessor(BaseProcessor, SyncProcessorMixin):
         """Fetch historical awards for a single organization using the client."""
         
         try:
+            # Validate EIN format (should be 9 digits)
+            if not org.ein or len(org.ein) != 9 or not org.ein.isdigit():
+                self.logger.warning(f"Invalid EIN format for {org.name}: {org.ein}")
+                return OrganizationAwardHistory(ein=org.ein, name=org.name)
+            
             # Calculate date range for award search
             end_date = datetime.now()
             start_date = end_date - timedelta(days=365 * self.award_lookback_years)
             
             # Use the client to search for awards by recipient EIN
+            self.logger.debug(f"Searching USASpending for EIN: {org.ein}, Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+            
             award_results = await self.usaspending_client.search_awards_by_recipient(
                 recipient_ein=org.ein,
                 max_results=self.max_awards_per_org,
-                award_types=["02", "03", "04", "05"],  # Grant types only
+                award_types=["02", "03", "04", "05"],  # Grant types (02=Block, 03=Formula, 04=Project, 05=Cooperative Agreement)
                 start_date=start_date.strftime("%Y-%m-%d"),
                 end_date=end_date.strftime("%Y-%m-%d")
             )

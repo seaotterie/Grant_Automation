@@ -120,6 +120,19 @@ async def root():
         </html>
         """)
 
+@app.get("/favicon.ico")
+async def favicon():
+    """Serve favicon to prevent 404 errors."""
+    # Return a simple 1x1 transparent PNG to avoid 404 errors
+    # This prevents favicon requests from showing up as errors in logs
+    favicon_path = Path(__file__).parent / "static" / "CatalynxLogo.png" 
+    if favicon_path.exists():
+        return FileResponse(favicon_path, media_type="image/x-icon")
+    else:
+        # Return empty response to prevent 404
+        from fastapi.responses import Response
+        return Response(status_code=204)
+
 # Dashboard API endpoints
 @app.get("/api/dashboard/overview")
 async def dashboard_overview() -> DashboardStats:
@@ -698,8 +711,13 @@ async def list_profiles(status: Optional[str] = None, limit: Optional[int] = Non
         # Debug: Log what profiles we got from the service
         logger.info(f"ProfileService returned {len(profiles)} profiles")
         if profiles:
-            sample_profile = profiles[0]
-            logger.info(f"Sample profile data: ntee_codes={getattr(sample_profile, 'ntee_codes', 'NOT_FOUND')}, government_criteria={getattr(sample_profile, 'government_criteria', 'NOT_FOUND')}, keywords={getattr(sample_profile, 'keywords', 'NOT_FOUND')}")
+            # Find a profile with actual data for debugging (not just the first one)
+            sample_profile = profiles[0]  # Default to first
+            for profile in profiles:
+                if (profile.ntee_codes and len(profile.ntee_codes) > 0) or (profile.government_criteria and len(profile.government_criteria) > 0):
+                    sample_profile = profile
+                    break
+            logger.info(f"Sample profile data ('{sample_profile.name}'): ntee_codes={getattr(sample_profile, 'ntee_codes', 'NOT_FOUND')}, government_criteria={getattr(sample_profile, 'government_criteria', 'NOT_FOUND')}, keywords={getattr(sample_profile, 'keywords', 'NOT_FOUND')}")
         
         # Convert profiles to dict format and add opportunity counts
         profile_dicts = []
@@ -708,10 +726,15 @@ async def list_profiles(status: Optional[str] = None, limit: Optional[int] = Non
             profile_dict["opportunities_count"] = 0  # TODO: Get actual count from leads
             profile_dicts.append(profile_dict)
         
-        # Debug: Log what we're returning
+        # Debug: Log what we're returning  
         if profile_dicts:
-            sample_dict = profile_dicts[0]
-            logger.info(f"Sample profile dict: ntee_codes={sample_dict.get('ntee_codes', 'NOT_FOUND')}, government_criteria={sample_dict.get('government_criteria', 'NOT_FOUND')}, keywords={sample_dict.get('keywords', 'NOT_FOUND')}")
+            # Find a profile dict with actual data for debugging
+            sample_dict = profile_dicts[0]  # Default to first
+            for profile_dict in profile_dicts:
+                if (profile_dict.get('ntee_codes') and len(profile_dict.get('ntee_codes', [])) > 0) or (profile_dict.get('government_criteria') and len(profile_dict.get('government_criteria', [])) > 0):
+                    sample_dict = profile_dict
+                    break
+            logger.info(f"Sample profile dict ('{sample_dict.get('name', 'UNKNOWN')}'): ntee_codes={sample_dict.get('ntee_codes', 'NOT_FOUND')}, government_criteria={sample_dict.get('government_criteria', 'NOT_FOUND')}, keywords={sample_dict.get('keywords', 'NOT_FOUND')}")
         
         return {"profiles": profile_dicts}
         
@@ -900,6 +923,56 @@ async def start_metrics_session(profile_id: str):
         
     except Exception as e:
         logger.error(f"Failed to start metrics session for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/profiles/{profile_id}/plan-results")
+async def get_profile_plan_results(profile_id: str):
+    """Get strategic planning results for a profile."""
+    try:
+        profile = profile_service.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Extract plan results from processing history
+        plan_results = profile.processing_history.get('plan_results', {})
+        
+        return {
+            "profile_id": profile_id,
+            "plan_results": plan_results,
+            "last_updated": profile.processing_history.get('plan_last_updated'),
+            "status": "success"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get plan results for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/profiles/{profile_id}/plan-results")
+async def save_profile_plan_results(profile_id: str, plan_data: Dict[str, Any]):
+    """Save strategic planning results for a profile."""
+    try:
+        profile = profile_service.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Store plan results in processing history
+        if not profile.processing_history:
+            profile.processing_history = {}
+            
+        profile.processing_history['plan_results'] = plan_data
+        profile.processing_history['plan_last_updated'] = datetime.now().isoformat()
+        
+        # Update the profile
+        updated_profile = profile_service.update_profile(profile_id, profile)
+        
+        return {
+            "message": "Plan results saved successfully",
+            "profile_id": profile_id,
+            "status": "success"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to save plan results for profile {profile_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/profiles/{profile_id}/leads")
@@ -1546,7 +1619,7 @@ async def discover_nonprofits(request: Dict[str, Any]):
             if profile_context.get("target_populations"):
                 target_populations.extend(profile_context["target_populations"])
         
-        results = {"track": "nonprofit", "results": []}
+        results = {"track": "nonprofit"}
         
         # Import configuration objects needed for both BMF and ProPublica
         from src.core.data_models import WorkflowConfig, ProcessorConfig
@@ -1575,7 +1648,7 @@ async def discover_nonprofits(request: Dict[str, Any]):
                 logger.info(f"BMF result success: {bmf_result.success}")
                 logger.info(f"BMF result data keys: {list(bmf_result.data.keys()) if bmf_result.data else 'None'}")
                 if bmf_result.success and bmf_result.data:
-                    results["bmf_results"] = bmf_result.data.get("results", bmf_result.data.get("organizations", []))
+                    results["bmf_results"] = bmf_result.data.get("organizations", [])
                 else:
                     results["bmf_results"] = []
         
@@ -1605,7 +1678,7 @@ async def discover_nonprofits(request: Dict[str, Any]):
             logger.info(f"ProPublica result success: {pp_result.success}")
             logger.info(f"ProPublica result data keys: {list(pp_result.data.keys()) if pp_result.data else 'None'}")
             if pp_result.success and pp_result.data:
-                results["propublica_results"] = pp_result.data.get("results", pp_result.data.get("organizations", []))
+                results["propublica_results"] = pp_result.data.get("organizations", [])
             else:
                 results["propublica_results"] = []
         
@@ -1661,10 +1734,15 @@ async def discover_nonprofits(request: Dict[str, Any]):
         except Exception as e:
             logger.error(f"Failed to integrate with FunnelManager: {str(e)}")
         
+        # Calculate total opportunities found from all sources
+        total_bmf = len(results.get("bmf_results", []))
+        total_propublica = len(results.get("propublica_results", []))
+        total_found = total_bmf + total_propublica
+        
         return {
             "status": "completed",
             "track": "nonprofit",
-            "total_found": len(results.get("propublica_results", [])),
+            "total_found": total_found,
             "results": results,
             "profile_context": profile_context.get('name') if profile_context else None,
             "parameters_used": {
@@ -1691,7 +1769,7 @@ async def discover_federal_opportunities(request: Dict[str, Any]):
         opportunity_category = request.get("opportunity_category")
         max_results = request.get("max_results", 50)
         
-        results = {"track": "federal", "results": []}
+        results = {"track": "federal"}
         
         # Execute Grants.gov fetch
         engine = get_workflow_engine()
@@ -1759,7 +1837,7 @@ async def discover_state_opportunities(request: Dict[str, Any]):
         focus_areas = request.get("focus_areas", [])
         max_results = request.get("max_results", 50)
         
-        results = {"track": "state", "results": []}
+        results = {"track": "state"}
         
         # Execute Virginia state grants fetch
         engine = get_workflow_engine()
@@ -1808,7 +1886,7 @@ async def discover_commercial_enhanced(request: Dict[str, Any]):
         funding_range = request.get("funding_range", {})
         max_results = request.get("max_results", 50)
         
-        results = {"track": "commercial", "results": []}
+        results = {"track": "commercial"}
         
         engine = get_workflow_engine()
         

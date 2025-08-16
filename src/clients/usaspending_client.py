@@ -97,7 +97,13 @@ class USASpendingClient(PaginatedAPIClient):
             filters['recipient_search_text'] = [recipient_name]
         
         if recipient_ein:
-            filters['recipient_id'] = [recipient_ein]
+            # Ensure EIN is properly formatted (9 digits)
+            clean_ein = str(recipient_ein).replace('-', '').strip()
+            if len(clean_ein) == 9 and clean_ein.isdigit():
+                filters['recipient_id'] = [clean_ein]
+            else:
+                self.logger.warning(f"Invalid EIN format: {recipient_ein}")
+                return []
         
         if award_types:
             filters['award_type_codes'] = award_types
@@ -140,12 +146,20 @@ class USASpendingClient(PaginatedAPIClient):
             'order': 'desc'
         }
         
+        # Log the payload for debugging
+        self.logger.debug(f"USASpending API payload: {payload}")
+        
         max_pages = (max_results // 100) + 1
-        return await self.get_all_pages_post(
-            endpoint="search/spending_by_award",
-            initial_payload=payload,
-            max_pages=max_pages
-        )
+        try:
+            return await self.get_all_pages_post(
+                endpoint="search/spending_by_award",
+                initial_payload=payload,
+                max_pages=max_pages
+            )
+        except Exception as e:
+            self.logger.error(f"USASpending API request failed with payload: {payload}")
+            self.logger.error(f"Error details: {e}")
+            return []
     
     async def get_recipient_profile(self, recipient_hash: str) -> Dict[str, Any]:
         """
@@ -211,12 +225,20 @@ class USASpendingClient(PaginatedAPIClient):
             'order': 'desc'
         }
         
+        # Log the payload for debugging
+        self.logger.debug(f"USASpending API payload: {payload}")
+        
         max_pages = (max_results // 100) + 1
-        return await self.get_all_pages_post(
-            endpoint="search/spending_by_award",
-            initial_payload=payload,
-            max_pages=max_pages
-        )
+        try:
+            return await self.get_all_pages_post(
+                endpoint="search/spending_by_award",
+                initial_payload=payload,
+                max_pages=max_pages
+            )
+        except Exception as e:
+            self.logger.error(f"USASpending API request failed with payload: {payload}")
+            self.logger.error(f"Error details: {e}")
+            return []
     
     async def get_all_pages_post(self,
                                endpoint: str,

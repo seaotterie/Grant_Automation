@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 import json
 import hashlib
 
-from .cache_manager import get_cache_manager
+from .cache_manager import get_cache_manager, CacheType
 
 
 @dataclass
@@ -177,7 +177,10 @@ class CatalynxHTTPClient:
         
         # Check cache first for GET requests
         if method == 'GET' and cache_key:
-            cached_data = await self.cache_manager.get(cache_key)
+            cached_data = await self.cache_manager.get(
+                identifier=cache_key,
+                cache_type=CacheType.API_RESPONSE
+            )
             if cached_data:
                 self.logger.debug(f"Cache hit for {cache_key}")
                 return cached_data
@@ -215,7 +218,10 @@ class CatalynxHTTPClient:
                         # Cache successful GET responses
                         if method == 'GET' and cache_key and response.status == 200:
                             await self.cache_manager.set(
-                                cache_key, response_data, ttl=self.config.cache_ttl
+                                identifier=cache_key,
+                                cache_type=CacheType.API_RESPONSE,
+                                content=response_data,
+                                ttl=timedelta(seconds=self.config.cache_ttl)
                             )
                         
                         return response_data

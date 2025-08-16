@@ -200,15 +200,16 @@ class GrantsGovFetchProcessor(BaseProcessor, SyncProcessorMixin):
             "additional_params": {}
         }
         
-        # Map processor params to client params
+        # Map processor params to client params (only include parameters the client supports)
         param_mapping = {
-            "oppStatus": "opportunity_status",
-            "sortBy": "sort_by", 
+            # Note: oppStatus removed as GrantsGovClient doesn't support opportunity_status parameter
+            # "oppStatus": "opportunity_status",  # Client doesn't support this
+            # "sortBy": "sort_by",  # Client doesn't support this 
+            # "eligibleStates": "eligible_states",  # Client doesn't support this
             "agencies": "agency_codes",
             "cfdaNumbers": "cfda_numbers",
             "awardFloorFrom": "min_award_amount",
-            "awardCeilingTo": "max_award_amount",
-            "eligibleStates": "eligible_states"
+            "awardCeilingTo": "max_award_amount"
         }
         
         for old_key, new_key in param_mapping.items():
