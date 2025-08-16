@@ -699,6 +699,92 @@ class FoundationDirectoryFetch(BaseProcessor):
             return False
         
         return True
+    
+    def _generate_mock_foundations_enhanced(self, focus_areas: List[str], geographic_scope: List[str], funding_range: Dict[str, Any], max_results: int) -> List[FoundationGrant]:
+        """Generate mock foundation data for testing when API is unavailable"""
+        import random
+        
+        mock_foundations = [
+            {
+                "foundation_name": "Microsoft Corporate Foundation",
+                "foundation_type": "corporate",
+                "grant_program": "Technology for Good Initiative",
+                "funding_area": "technology education",
+                "grant_amount_min": 25000,
+                "grant_amount_max": 100000,
+                "application_deadline": "2025-12-01",
+                "geographic_focus": ["Virginia", "Maryland", "DC"],
+                "eligibility_requirements": ["501(c)(3) status", "Technology focus", "Youth programs"],
+                "contact_info": {"email": "grants@microsoft.com", "website": "https://microsoft.com/grants"},
+                "description": "Supporting technology education and digital skills training for underserved communities",
+                "foundation_id": "msft_001",
+                "parent_company": "Microsoft Corporation",
+                "corporate_sector": "Technology",
+                "giving_priorities": ["education", "technology", "youth development"],
+                "partnership_types": ["equipment donation", "volunteer support", "expertise sharing"]
+            },
+            {
+                "foundation_name": "Amazon Community Foundation",
+                "foundation_type": "corporate", 
+                "grant_program": "Community Impact Grants",
+                "funding_area": "community development",
+                "grant_amount_min": 10000,
+                "grant_amount_max": 75000,
+                "application_deadline": "2025-11-15",
+                "geographic_focus": ["Virginia", "National"],
+                "eligibility_requirements": ["501(c)(3) status", "Community impact focus"],
+                "contact_info": {"email": "community@amazon.com", "website": "https://amazon.com/community"},
+                "description": "Supporting community development and economic opportunity programs",
+                "foundation_id": "amzn_001",
+                "parent_company": "Amazon Inc.",
+                "corporate_sector": "E-commerce",
+                "giving_priorities": ["economic opportunity", "community development", "education"],
+                "partnership_types": ["funding", "logistics support", "employee volunteering"]
+            },
+            {
+                "foundation_name": "Wells Fargo Community Foundation",
+                "foundation_type": "corporate",
+                "grant_program": "Housing and Community Development",
+                "funding_area": "housing stability",
+                "grant_amount_min": 15000,
+                "grant_amount_max": 50000,
+                "application_deadline": "2025-10-30",
+                "geographic_focus": ["Virginia", "Regional"],
+                "eligibility_requirements": ["501(c)(3) status", "Housing focus", "Community partnerships"],
+                "contact_info": {"email": "foundation@wellsfargo.com", "website": "https://wellsfargo.com/foundation"},
+                "description": "Supporting affordable housing and community stability initiatives",
+                "foundation_id": "wf_001",
+                "parent_company": "Wells Fargo & Company",
+                "corporate_sector": "Financial Services",
+                "giving_priorities": ["housing", "financial literacy", "community development"],
+                "partnership_types": ["grants", "financial education", "capacity building"]
+            }
+        ]
+        
+        # Convert to FoundationGrant objects
+        grants = []
+        for foundation_data in mock_foundations[:max_results]:
+            grant = FoundationGrant(
+                foundation_name=foundation_data["foundation_name"],
+                foundation_type=foundation_data["foundation_type"],
+                grant_program=foundation_data["grant_program"],
+                funding_area=foundation_data["funding_area"],
+                grant_amount_min=foundation_data["grant_amount_min"],
+                grant_amount_max=foundation_data["grant_amount_max"],
+                application_deadline=foundation_data["application_deadline"],
+                geographic_focus=foundation_data["geographic_focus"],
+                eligibility_requirements=foundation_data["eligibility_requirements"],
+                contact_info=foundation_data["contact_info"],
+                description=foundation_data["description"],
+                foundation_id=foundation_data["foundation_id"],
+                parent_company=foundation_data.get("parent_company"),
+                corporate_sector=foundation_data.get("corporate_sector"),
+                giving_priorities=foundation_data.get("giving_priorities", []),
+                partnership_types=foundation_data.get("partnership_types", [])
+            )
+            grants.append(grant)
+        
+        return grants
 
 
 # Import to avoid circular import issues

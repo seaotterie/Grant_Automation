@@ -1,0 +1,59 @@
+{
+  "version": "1.0.0",
+  "created_at": "2025-08-16T12:16:13.194707",
+  "description": "Entity-based data architecture for Catalynx grant research platform",
+  "structure": {
+    "source_data": {
+      "description": "Raw entity data organized by type and ID",
+      "nonprofits": {
+        "organization": "EIN-based directories",
+        "contains": [
+          "bmf.json",
+          "filings/",
+          "schedules/",
+          "propublica.json",
+          "board_members.json"
+        ]
+      },
+      "foundations": {
+        "organization": "Foundation ID-based directories",
+        "contains": [
+          "profile.json",
+          "grants_history.json",
+          "board_members.json",
+          "csr_programs.json"
+        ]
+      },
+      "corporations": {
+        "organization": "Corporate ID-based directories",
+        "contains": [
+          "profile.json",
+          "csr_programs.json",
+          "foundation_arms.json",
+          "giving_history.json"
+        ]
+      },
+      "government": {
+        "organization": "Opportunity/Award ID-based directories",
+        "contains": [
+          "federal/grants_gov/",
+          "federal/usaspending/",
+          "state/virginia/"
+        ]
+      }
+    },
+    "cache": {
+      "description": "Shared computed data and indices",
+      "networks": "Raw network relationship data",
+      "indices": "Search and similarity indices",
+      "market_data": "Market-wide analysis data"
+    },
+    "profiles": {
+      "description": "Profile-specific data and analysis",
+      "profiles": "Profile definitions",
+      "leads": "Opportunity leads per profile",
+      "sessions": "Discovery sessions per profile",
+      "analysis": "Profile-specific analysis results"
+    }
+  }
+}

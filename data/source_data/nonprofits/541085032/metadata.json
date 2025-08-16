@@ -1,0 +1,22 @@
+{
+  "organization_name": "Bay Aging",
+  "ntee_code": "P81Z",
+  "ruling_date": "1979-12-01",
+  "subsection_code": 3,
+  "classification_codes": "1000",
+  "activity_codes": "575153000",
+  "foundation_code": 15,
+  "organization_code": 1,
+  "deductibility_code": 1,
+  "affiliation_code": 3,
+  "state": "VA",
+  "city": "Urbanna",
+  "data_source": "propublica",
+  "last_updated": "2025-08-16T12:18:05.543459",
+  "ein": "541085032",
+  "total_cache_files": 2,
+  "migrated_files": [
+    "propublica.json",
+    "propublica.json"
+  ]
+}

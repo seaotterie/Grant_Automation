@@ -1,0 +1,26 @@
+{
+  "data": {
+    "organization": {
+      "name": "TEST NONPROFIT FOUNDATION",
+      "ein": "123456789",
+      "ntee_code": "P20",
+      "state": "VA"
+    },
+    "filings_with_data": [
+      {
+        "formtype": "990",
+        "tax_prd_yr": 2022,
+        "totrevenue": 500000,
+        "totassetsend": 1000000
+      }
+    ]
+  },
+  "cached_at": "2025-08-16T12:27:48.390103",
+  "data_source": "propublica",
+  "entity_id": "123456789",
+  "entity_type": "nonprofit",
+  "metadata": {
+    "test": true,
+    "cached_at": "2024-08-16"
+  }
+}

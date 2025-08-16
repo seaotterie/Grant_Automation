@@ -157,14 +157,15 @@ class GovernmentDiscoveryStrategy(DiscoveryStrategy):
         
         opportunities = []
         
+        # Extract search terms from profile (shared across all searches)
+        keywords = self._extract_keywords_from_profile(profile)
+        search_keyword = ' '.join(keywords[:3]) if keywords else None
+        
         # Search federal opportunities via Grants.gov using processor or client
         if progress_callback:
             progress_callback("Searching federal grant opportunities...")
         
         try:
-            # Extract search terms from profile
-            keywords = self._extract_keywords_from_profile(profile)
-            search_keyword = ' '.join(keywords[:3]) if keywords else None
             
             # Use processor if available, otherwise fallback to client
             if self.grants_gov_processor:
@@ -510,12 +511,14 @@ class FoundationDiscoveryStrategy(DiscoveryStrategy):
     def _convert_foundation_result(self, result: Dict[str, Any], foundation_type: str) -> Optional[FoundationOpportunity]:
         """Convert foundation API result to FoundationOpportunity"""
         try:
+            from ..core.data_models import OpportunityStatus
             return FoundationOpportunity(
                 id=result.get('id', ''),
                 title=f"{result.get('name', '')} Grants",
                 description=result.get('description', ''),
                 funder_name=result.get('name', ''),
                 foundation_type=foundation_type,
+                status=OpportunityStatus.ACTIVE,  # Set default status for foundation opportunities
                 # Add more field mappings based on API structure
             )
         except Exception as e:

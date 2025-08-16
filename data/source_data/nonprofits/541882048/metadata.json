@@ -1,0 +1,22 @@
+{
+  "organization_name": "Shepherds Center Of Northern Virginia",
+  "ntee_code": "P81",
+  "ruling_date": "1998-10-01",
+  "subsection_code": 3,
+  "classification_codes": "1000",
+  "activity_codes": "994575000",
+  "foundation_code": 15,
+  "organization_code": 1,
+  "deductibility_code": 1,
+  "affiliation_code": 3,
+  "state": "VA",
+  "city": "Vienna",
+  "data_source": "propublica",
+  "last_updated": "2025-08-16T12:18:05.660540",
+  "ein": "541882048",
+  "total_cache_files": 2,
+  "migrated_files": [
+    "propublica.json",
+    "propublica.json"
+  ]
+}

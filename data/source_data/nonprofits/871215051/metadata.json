@@ -1,0 +1,22 @@
+{
+  "organization_name": "Elimisha Kakuma",
+  "ntee_code": "W70",
+  "ruling_date": "2021-09-01",
+  "subsection_code": 3,
+  "classification_codes": "1200",
+  "activity_codes": "000000000",
+  "foundation_code": 15,
+  "organization_code": 1,
+  "deductibility_code": 1,
+  "affiliation_code": 3,
+  "state": "VA",
+  "city": "Willis",
+  "data_source": "propublica",
+  "last_updated": "2025-08-16T12:18:05.600320",
+  "ein": "871215051",
+  "total_cache_files": 2,
+  "migrated_files": [
+    "propublica.json",
+    "propublica.json"
+  ]
+}

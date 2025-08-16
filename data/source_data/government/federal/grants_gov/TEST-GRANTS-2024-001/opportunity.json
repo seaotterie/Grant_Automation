@@ -1,0 +1,22 @@
+{
+  "data": {
+    "opportunity_id": "TEST-GRANTS-2024-001",
+    "funding_opportunity_title": "Test Grant Program",
+    "agency_code": "DOE",
+    "funding_instrument_type": "Grant",
+    "category_of_funding_activity": "Environment",
+    "eligibility": {
+      "codes": [
+        "25"
+      ]
+    }
+  },
+  "cached_at": "2025-08-16T12:27:48.424381",
+  "data_source": "grants_gov",
+  "entity_id": "TEST-GRANTS-2024-001",
+  "entity_type": "government_opportunity",
+  "metadata": {
+    "test": true,
+    "cached_at": "2024-08-16"
+  }
+}

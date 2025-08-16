@@ -552,52 +552,43 @@
                             </div>
                         </div>
                         
+                        <!-- Discovery Track Information -->
+                        <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800 mb-4">
+                            <div class="flex items-center mb-2">
+                                <svg class="h-5 w-5 text-blue-600 dark:text-blue-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <h5 class="font-medium text-blue-900 dark:text-blue-100">Multi-Track Discovery Available</h5>
+                            </div>
+                            <p class="text-sm text-blue-700 dark:text-blue-300">Use the "Run All Tracks" button below to discover opportunities across all sources with proper persistence.</p>
+                        </div>
+                        
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800 opacity-60">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-blue-900 dark:text-blue-100">Nonprofits</h5>
-                                    <button @click="runNonprofitDiscovery()" 
-                                            :disabled="discoveryProgress.nonprofit" 
-                                            class="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
-                                        <span x-show="!discoveryProgress.nonprofit">Start Discovery</span>
-                                        <span x-show="discoveryProgress.nonprofit">Running...</span>
-                                    </button>
+                                    <span class="text-xs bg-gray-400 text-white px-3 py-1 rounded">See Below</span>
                                 </div>
                                 <p class="text-sm text-blue-700 dark:text-blue-300">IRS data, 990 & 990-PF filings</p>
                             </div>
-                            <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                            <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800 opacity-60">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-green-900 dark:text-green-100">Federal Grants</h5>
-                                    <button @click="runFederalDiscovery()" 
-                                            :disabled="discoveryProgress.federal" 
-                                            class="text-xs bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
-                                        <span x-show="!discoveryProgress.federal">Start Discovery</span>
-                                        <span x-show="discoveryProgress.federal">Running...</span>
-                                    </button>
+                                    <span class="text-xs bg-gray-400 text-white px-3 py-1 rounded">See Below</span>
                                 </div>
                                 <p class="text-sm text-green-700 dark:text-green-300">Grants.gov opportunities</p>
                             </div>
-                            <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                            <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800 opacity-60">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-purple-900 dark:text-purple-100">State Agencies</h5>
-                                    <button @click="runStateDiscovery()" 
-                                            :disabled="discoveryProgress.state" 
-                                            class="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
-                                        <span x-show="!discoveryProgress.state">Start Discovery</span>
-                                        <span x-show="discoveryProgress.state">Running...</span>
-                                    </button>
+                                    <span class="text-xs bg-gray-400 text-white px-3 py-1 rounded">See Below</span>
                                 </div>
                                 <p class="text-sm text-purple-700 dark:text-purple-300">Virginia state grants</p>
                             </div>
-                            <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+                            <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800 opacity-60">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-orange-900 dark:text-orange-100">Commercial</h5>
-                                    <button @click="runCommercialDiscovery()" 
-                                            :disabled="discoveryProgress.commercial" 
-                                            class="text-xs bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
-                                        <span x-show="!discoveryProgress.commercial">Start Discovery</span>
-                                        <span x-show="discoveryProgress.commercial">Running...</span>
-                                    </button>
+                                    <span class="text-xs bg-gray-400 text-white px-3 py-1 rounded">See Below</span>
                                 </div>
                                 <p class="text-sm text-orange-700 dark:text-orange-300">Corporate foundations</p>
                             </div>
@@ -605,12 +596,12 @@
                         
                         <!-- Action Buttons -->
                         <div class="flex justify-center gap-2">
-                            <button @click="startAllDiscovery()" 
-                                    :disabled="multiTrackInProgress"
+                            <button @click="runUnifiedDiscovery()" 
+                                    :disabled="unifiedDiscoveryInProgress"
                                     class="bg-blue-100 dark:bg-blue-700 hover:bg-blue-200 dark:hover:bg-blue-600 text-blue-700 dark:text-blue-300 px-4 py-2 rounded-md text-sm transition-colors"
-                                    :class="multiTrackInProgress ? 'opacity-50 cursor-not-allowed' : ''">
-                                <span x-show="!multiTrackInProgress">Run All Tracks</span>
-                                <span x-show="multiTrackInProgress">Running...</span>
+                                    :class="unifiedDiscoveryInProgress ? 'opacity-50 cursor-not-allowed' : ''">
+                                <span x-show="!unifiedDiscoveryInProgress">Run All Tracks</span>
+                                <span x-show="unifiedDiscoveryInProgress">Running...</span>
                             </button>
                             <button @click="viewDiscoveryResults()" 
                                     :disabled="discoveryStats.totalResults === 0"

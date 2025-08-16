@@ -1,0 +1,22 @@
+{
+  "organization_name": "Leadership Training International",
+  "ntee_code": "W70Z",
+  "ruling_date": "1994-03-01",
+  "subsection_code": 3,
+  "classification_codes": "1200",
+  "activity_codes": "007029000",
+  "foundation_code": 15,
+  "organization_code": 1,
+  "deductibility_code": 1,
+  "affiliation_code": 3,
+  "state": "VA",
+  "city": "Chesapeake",
+  "data_source": "propublica",
+  "last_updated": "2025-08-16T12:18:05.520739",
+  "ein": "541670425",
+  "total_cache_files": 2,
+  "migrated_files": [
+    "propublica.json",
+    "propublica.json"
+  ]
+}

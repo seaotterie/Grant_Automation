@@ -174,10 +174,33 @@ class ProfileService:
     # Opportunity Lead Management
     
     def add_opportunity_lead(self, profile_id: str, lead_data: Dict[str, Any]) -> Optional[OpportunityLead]:
-        """Add opportunity lead to profile"""
+        """Add opportunity lead to profile with deduplication"""
         # Verify profile exists
-        if not self.get_profile(profile_id):
+        profile = self.get_profile(profile_id)
+        if not profile:
             return None
+        
+        # Check for duplicate opportunities based on organization name and funding amount
+        existing_leads = self.get_profile_leads(profile_id)
+        org_name = lead_data.get("organization_name", "").strip().lower()
+        funding_amount = lead_data.get("funding_amount", 0)
+        
+        for existing_lead in existing_leads:
+            existing_org = existing_lead.organization_name.strip().lower()
+            existing_amount = existing_lead.funding_amount or 0
+            
+            # Check for duplicate based on organization name and funding amount
+            if existing_org == org_name and existing_amount == funding_amount:
+                # Update the existing lead with new data if it has better score
+                new_score = lead_data.get("compatibility_score", 0.0)
+                if new_score > (existing_lead.compatibility_score or 0.0):
+                    # Update existing lead with better data
+                    existing_lead.compatibility_score = new_score
+                    existing_lead.match_factors.update(lead_data.get("match_factors", {}))
+                    existing_lead.external_data.update(lead_data.get("external_data", {}))
+                    existing_lead.last_analyzed = datetime.now()
+                    self._save_lead(existing_lead)
+                return existing_lead
         
         # Generate lead ID
         lead_id = f"lead_{uuid.uuid4().hex[:12]}"
@@ -191,6 +214,16 @@ class ProfileService:
         
         # Save lead
         self._save_lead(lead)
+        
+        # Update profile opportunities count
+        profile.opportunities_count = len(self.get_profile_leads(profile_id))
+        if lead_id not in profile.associated_opportunities:
+            profile.associated_opportunities.append(lead_id)
+        profile.last_discovery_date = datetime.now()
+        profile.discovery_status = "completed"
+        
+        # Save updated profile
+        self.update_profile(profile_id, profile)
         
         return lead
     
@@ -453,6 +486,15 @@ class ProfileService:
                 profile.next_recommended_discovery < datetime.now()
             )
         }
+    
+    def add_discovery_session(self, session: DiscoverySession) -> bool:
+        """Add a completed discovery session to storage"""
+        try:
+            self._save_session(session)
+            return True
+        except Exception as e:
+            print(f"Error saving discovery session: {e}")
+            return False
     
     # Private helper methods for sessions
     

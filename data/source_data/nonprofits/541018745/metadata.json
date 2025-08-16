@@ -1,0 +1,9 @@
+{
+  "data_source": "propublica",
+  "last_updated": "2025-08-16T12:18:05.627514",
+  "ein": "541018745",
+  "total_cache_files": 1,
+  "migrated_files": [
+    "propublica.json"
+  ]
+}

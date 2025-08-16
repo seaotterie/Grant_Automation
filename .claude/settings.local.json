@@ -75,7 +75,15 @@
       "Bash(wmic process where processid=24968 delete:*)",
       "Bash(\"grant-research-env/Scripts/python.exe\" test_web_interface_workflow.py)",
       "Bash(\"grant-research-env/Scripts/python.exe\" debug_funnel.py)",
-      "Bash(\"grant-research-env/Scripts/python.exe\":*)"
+      "Bash(\"grant-research-env/Scripts/python.exe\":*)",
+      "Bash(wmic process where name=\"python.exe\":*)",
+      "Bash(wmic process where processid=22388 delete:*)",
+      "Bash(wmic:*)",
+      "WebFetch(domain:api.usaspending.gov)",
+      "Bash(del test_api_clients.py test_profile_service.py analyze_profiles.py test_profile_discovery_mapping.py)",
+      "Bash(del test_discovery_timeout_fix.py)",
+      "Bash(del test_entity_cache.py)",
+      "Bash(del test_entity_discovery_phase_4_2.py)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

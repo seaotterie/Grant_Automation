@@ -1,0 +1,22 @@
+{
+  "organization_name": "Valley Program For Aging Services Inc",
+  "ntee_code": "P81Z",
+  "ruling_date": "1974-09-01",
+  "subsection_code": 3,
+  "classification_codes": "1000",
+  "activity_codes": "575000000",
+  "foundation_code": 15,
+  "organization_code": 1,
+  "deductibility_code": 1,
+  "affiliation_code": 3,
+  "state": "VA",
+  "city": "Waynesboro",
+  "data_source": "propublica",
+  "last_updated": "2025-08-16T12:18:05.631376",
+  "ein": "540958526",
+  "total_cache_files": 2,
+  "migrated_files": [
+    "propublica.json",
+    "propublica.json"
+  ]
+}

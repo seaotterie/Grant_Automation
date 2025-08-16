@@ -1,0 +1,33 @@
+{
+  "lead_id": "lead_4cd16ac46295",
+  "profile_id": "profile_f3adef3b653c",
+  "source": "unified_discovery_foundation",
+  "opportunity_type": "commercial",
+  "organization_name": "",
+  "program_name": null,
+  "description": "Supporting affordable housing and community stability initiatives",
+  "funding_amount": null,
+  "pipeline_stage": "discovery",
+  "compatibility_score": 0.15,
+  "success_probability": null,
+  "match_factors": {
+    "source_type": "FundingSourceType.FOUNDATION_CORPORATE",
+    "deadline": null,
+    "eligibility": []
+  },
+  "risk_factors": {},
+  "recommendations": [],
+  "board_connections": [],
+  "network_insights": {},
+  "approach_strategy": null,
+  "discovered_at": "2025-08-16 11:30:08.241950",
+  "last_analyzed": null,
+  "status": "active",
+  "assigned_to": null,
+  "external_data": {
+    "opportunity_id": "",
+    "source_url": null,
+    "discovery_session": "bridge_8effe2a76434",
+    "discovery_timestamp": "2025-08-16T11:30:00.688681"
+  }
+}

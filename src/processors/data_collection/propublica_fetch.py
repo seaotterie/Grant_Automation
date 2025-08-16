@@ -19,6 +19,7 @@ import logging
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata
 from src.core.data_models import ProcessorConfig, ProcessorResult, OrganizationProfile
+from src.core.entity_cache_manager import get_entity_cache_manager, EntityType, DataSourceType
 from src.profiles.models import FormType, FoundationType
 from src.clients.propublica_client import ProPublicaClient
 from src.auth.api_key_manager import get_api_key_manager
@@ -31,7 +32,7 @@ class ProPublicaFetchProcessor(BaseProcessor):
         metadata = ProcessorMetadata(
             name="propublica_fetch",
             description="Fetch detailed organization data from ProPublica Nonprofit Explorer API",
-            version="2.0.0",  # Upgraded to use new client architecture
+            version="3.0.0",  # Upgraded to use entity-based caching
             dependencies=["bmf_filter"],  # Depends on BMF filter results
             estimated_duration=300,  # 5 minutes for typical dataset
             requires_network=True,
@@ -39,8 +40,9 @@ class ProPublicaFetchProcessor(BaseProcessor):
         )
         super().__init__(metadata)
         
-        # Initialize API client
+        # Initialize API client and entity cache manager
         self.propublica_client = ProPublicaClient()
+        self.entity_cache_manager = get_entity_cache_manager()
         
         # Processing limits
         self.max_requests_per_second = 10  # Conservative rate limit
@@ -125,7 +127,25 @@ class ProPublicaFetchProcessor(BaseProcessor):
     async def _get_input_organizations(self, config: ProcessorConfig, workflow_state) -> List[OrganizationProfile]:
         """Get organizations from the BMF filter step using improved data flow."""
         try:
-            # Get organizations from BMF filter processor
+            # First check if input data was provided directly in config
+            if hasattr(config, 'input_data') and config.input_data:
+                input_orgs = config.input_data.get('organizations', [])
+                if input_orgs:
+                    self.logger.info(f"Using direct input data: {len(input_orgs)} organizations")
+                    organizations = []
+                    for org_dict in input_orgs:
+                        try:
+                            if isinstance(org_dict, dict):
+                                org = OrganizationProfile(**org_dict)
+                            else:
+                                org = org_dict
+                            organizations.append(org)
+                        except Exception as e:
+                            self.logger.warning(f"Failed to parse direct input organization data: {e}")
+                            continue
+                    return organizations
+            
+            # Get organizations from BMF filter processor via workflow_state
             if workflow_state and workflow_state.has_processor_succeeded('bmf_filter'):
                 org_dicts = workflow_state.get_organizations_from_processor('bmf_filter')
                 if org_dicts:
@@ -170,9 +190,23 @@ class ProPublicaFetchProcessor(BaseProcessor):
         self, 
         org: OrganizationProfile
     ) -> Optional[OrganizationProfile]:
-        """Fetch detailed data for a single organization using the new client."""
+        """Fetch detailed data for a single organization using entity cache first, then API."""
         
         try:
+            # First check entity cache for existing ProPublica data
+            cached_data = await self.entity_cache_manager.get_entity_data(
+                entity_id=org.ein,
+                entity_type=EntityType.NONPROFIT,
+                data_source=DataSourceType.PROPUBLICA
+            )
+            
+            if cached_data:
+                self.logger.info(f"Using cached ProPublica data for {org.ein}")
+                return await self._enrich_organization(org, cached_data)
+            
+            # No cached data, fetch from API
+            self.logger.info(f"Fetching new ProPublica data for {org.ein}")
+            
             # Search for organization by EIN using the client
             search_results = await self.propublica_client.search_organizations(org.ein)
             
@@ -184,15 +218,28 @@ class ProPublicaFetchProcessor(BaseProcessor):
             pp_org = search_results[0]
             
             # Try to fetch detailed organization data by EIN
+            detail_data = None
             try:
                 detail_data = await self.propublica_client.get_organization_by_ein(org.ein)
                 if detail_data:
+                    # Cache the detailed data in entity-based structure
+                    await self.entity_cache_manager.cache_nonprofit_propublica_data(
+                        propublica_data=detail_data,
+                        ein=org.ein
+                    )
                     return await self._enrich_organization(org, detail_data)
             except Exception as e:
                 self.logger.debug(f"Failed to get detailed data for {org.ein}: {e}")
             
-            # If detailed fetch fails, use search data
-            return await self._enrich_organization_from_search(org, pp_org)
+            # If detailed fetch fails, use search data and cache it
+            if pp_org:
+                await self.entity_cache_manager.cache_nonprofit_propublica_data(
+                    propublica_data=pp_org,
+                    ein=org.ein
+                )
+                return await self._enrich_organization_from_search(org, pp_org)
+            
+            return org
                 
         except Exception as e:
             self.logger.warning(f"Error fetching ProPublica data for {org.ein}: {e}")

@@ -1,0 +1,22 @@
+{
+  "organization_name": "Impact Ministry Hub",
+  "ntee_code": "W70",
+  "ruling_date": "2024-10-01",
+  "subsection_code": 3,
+  "classification_codes": "1700",
+  "activity_codes": "000000000",
+  "foundation_code": 16,
+  "organization_code": 1,
+  "deductibility_code": 1,
+  "affiliation_code": 3,
+  "state": "VA",
+  "city": "Virginia Beach",
+  "data_source": "propublica",
+  "last_updated": "2025-08-16T12:18:05.643792",
+  "ein": "995131351",
+  "total_cache_files": 2,
+  "migrated_files": [
+    "propublica.json",
+    "propublica.json"
+  ]
+}

@@ -1,0 +1,101 @@
+
+You are an expert grant strategist analyzing funding opportunities for optimal compatibility and strategic value.
+
+ORGANIZATION PROFILE:
+Name: Community Tech Foundation
+Mission: To bridge the digital divide and empower underserved communities through accessible technology education, resources, and sustainable digital infrastructure programs.
+Focus Areas: digital_literacy, stem_education, community_development, workforce_development
+NTEE Codes: P20, P30, S20
+Government Criteria: technology_innovation, rural_development, education_training, economic_development
+Geographic Scope: Regional (Mid-Atlantic: VA, MD, DC)
+Typical Grant Size: $50,000-$250,000
+Annual Budget: $2.5M
+
+FUNDING OPPORTUNITY CANDIDATES FOR ANALYSIS:
+
+
+1. Digital Equity Foundation (tech_equity_001)
+   Source: Private Foundation | Funding: $150,000
+   Location: Mid-Atlantic Region | Current Score: 73.0%
+   Deadline: 2025-04-15
+   
+   Description: Technology Access Program supporting digital literacy initiatives in underserved communities. Focus on computer labs, internet access, and training programs for low-income families and seniors. Preference for organizations with existing community partnerships and measurable outcomes. Must demonstrate sustainable program model.
+   
+   Priority Areas: digital_literacy, community_partnerships, sustainability
+   Application Requirements: detailed_budget, outcome_metrics, partnership_letters
+   Competition Level: moderate_competition
+
+2. National Skills Development Corporation (workforce_tech_002)
+   Source: Corporate Foundation | Funding: $300,000
+   Location: National (Rural Priority) | Current Score: 68.0%
+   Deadline: 2025-03-01
+   
+   Description: Workforce Technology Training Grants for programs that prepare unemployed and underemployed adults for technology careers. Must include job placement component and industry partnerships. Priority given to programs serving rural areas and minority communities. Requires 6-month outcome tracking.
+   
+   Priority Areas: workforce_development, job_placement, industry_partnerships
+   Application Requirements: industry_partner_commitments, placement_metrics, rural_focus
+   Competition Level: high_competition
+
+3. Virginia Rural Development Authority (rural_broadband_003)
+   Source: State Government | Funding: $500,000
+   Location: Rural Virginia | Current Score: 82.0%
+   Deadline: 2025-05-30
+   
+   Description: Rural Broadband Access Initiative providing grants for expanding internet infrastructure and digital literacy programming in rural Virginia communities. Must partner with local government and demonstrate community need. Includes both infrastructure and education components.
+   
+   Priority Areas: rural_development, infrastructure, government_partnerships
+   Application Requirements: local_government_partnership, needs_assessment, community_support
+   Competition Level: low_competition
+
+4. STEM Learning Alliance (stem_education_004)
+   Source: Private Foundation | Funding: $200,000
+   Location: National | Current Score: 71.0%
+   Deadline: 2025-06-15
+   
+   Description: K-12 STEM Education Technology Grants supporting innovative technology integration in underperforming schools. Focus on hands-on learning, coding education, and teacher professional development. Must demonstrate measurable student outcome improvements and scalability potential.
+   
+   Priority Areas: k12_education, teacher_training, student_outcomes
+   Application Requirements: school_partnerships, outcome_measurements, scalability_plan
+   Competition Level: high_competition
+
+5. Elder Care Technology Fund (senior_tech_005)
+   Source: Private Foundation | Funding: $75,000
+   Location: Metro DC Area | Current Score: 79.0%
+   Deadline: 2025-02-28
+   
+   Description: Senior Technology Access Program providing tablets, internet access, and digital literacy training for seniors aged 65+. Focus on reducing social isolation and improving access to telehealth services. Must demonstrate cultural competency and accessibility accommodations.
+   
+   Priority Areas: senior_services, digital_inclusion, health_access
+   Application Requirements: cultural_competency, accessibility_plan, health_partnerships
+   Competition Level: moderate_competition
+
+
+ANALYSIS REQUIREMENTS:
+For each opportunity, provide analysis in this EXACT JSON format:
+
+{
+  "opportunity_id": {
+    "compatibility_score": 0.85,
+    "strategic_value": "high",
+    "risk_assessment": ["high_competition", "technical_requirements"],
+    "priority_rank": 1,
+    "funding_likelihood": 0.75,
+    "strategic_rationale": "Clear explanation of strategic fit and key advantages in 1-2 sentences.",
+    "action_priority": "immediate",
+    "confidence_level": 0.9
+  }
+}
+
+SCORING CRITERIA:
+- compatibility_score: 0.0-1.0 based on mission alignment, focus area overlap, geographic fit, and funding size appropriateness
+- strategic_value: "high", "medium", or "low" - overall strategic importance to organization
+- risk_assessment: Choose applicable risks from ["high_competition", "technical_requirements", "geographic_mismatch", "capacity_concerns", "timeline_pressure", "compliance_complex", "matching_required", "reporting_intensive", "board_connections_needed", "sustainability_requirements"]
+- priority_rank: 1=highest priority, rank ALL opportunities 1-5
+- funding_likelihood: 0.0-1.0 probability of successful funding based on fit and competition
+- strategic_rationale: Concise explanation of strategic reasoning (1-2 sentences max)
+- action_priority: "immediate" (apply ASAP), "planned" (include in pipeline), or "monitor" (watch for changes)
+- confidence_level: 0.0-1.0 confidence in analysis based on available information
+
+Focus on practical funding strategy, organizational fit, competitive positioning, and implementation feasibility.
+
+RESPONSE (JSON only, no additional text):

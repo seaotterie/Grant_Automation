@@ -23,6 +23,8 @@ from src.core.government_models import (
     GovernmentOpportunity, GovernmentOpportunityMatch, 
     EligibilityCategory, OpportunityStatus
 )
+from src.analysis.profile_matcher import get_profile_matcher
+from src.profiles.models import OrganizationCriteria
 
 
 class GovernmentOpportunityScorerProcessor(BaseProcessor):
@@ -31,8 +33,8 @@ class GovernmentOpportunityScorerProcessor(BaseProcessor):
     def __init__(self):
         metadata = ProcessorMetadata(
             name="government_opportunity_scorer",
-            description="Score government funding opportunities for organizational fit",
-            version="1.0.0", 
+            description="Score government funding opportunities using profile-specific analysis",
+            version="2.0.0",  # Updated to use profile-specific analysis
             dependencies=[],  # Optional dependencies for testing
             estimated_duration=90,  # 1.5 minutes
             requires_network=False,
@@ -40,6 +42,9 @@ class GovernmentOpportunityScorerProcessor(BaseProcessor):
             processor_type="analysis"
         )
         super().__init__(metadata)
+        
+        # Initialize profile matcher for advanced scoring
+        self.profile_matcher = get_profile_matcher()
         
         # Scoring weights for opportunity matching
         self.match_weights = {

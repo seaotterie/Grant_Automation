@@ -13,6 +13,7 @@ import logging
 from bs4 import BeautifulSoup
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata
+from src.core.entity_cache_manager import get_entity_cache_manager, EntityType, DataSourceType
 from src.clients.va_state_client import VAStateClient
 from src.auth.api_key_manager import get_api_key_manager
 
@@ -57,7 +58,7 @@ class VirginiaStateGrantsFetch(BaseProcessor):
         metadata = ProcessorMetadata(
             name="va_state_grants_fetch",
             description="Discover Virginia state grant opportunities through multi-agency integration",
-            version="2.0.0",  # Client architecture integration
+            version="3.0.0",  # Upgraded to use entity-based caching
             dependencies=[],
             estimated_duration=240,
             requires_network=True,
@@ -66,8 +67,9 @@ class VirginiaStateGrantsFetch(BaseProcessor):
         )
         super().__init__(metadata)
         
-        # Initialize VA State client
+        # Initialize VA State client and entity cache manager
         self.va_state_client = VAStateClient()
+        self.entity_cache_manager = get_entity_cache_manager()
         
         # Virginia state agency configurations
         self.state_agencies = self._load_agency_configurations()

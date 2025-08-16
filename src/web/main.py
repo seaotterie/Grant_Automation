@@ -29,9 +29,12 @@ from src.web.services.progress_service import ProgressService
 from src.web.models.requests import ClassificationRequest, WorkflowRequest
 from src.web.models.responses import DashboardStats, WorkflowResponse, SystemStatus
 from src.profiles.service import ProfileService
+from src.profiles.entity_service import get_entity_profile_service
 from src.profiles.models import OrganizationProfile, FundingType
 from src.profiles.workflow_integration import ProfileWorkflowIntegrator
 from src.profiles.metrics_tracker import get_metrics_tracker
+from src.discovery.entity_discovery_service import get_entity_discovery_service
+from src.discovery.discovery_engine import discovery_engine
 from src.pipeline.pipeline_engine import ProcessingPriority
 from src.pipeline.resource_allocator import resource_allocator
 from src.processors.registry import get_processor_summary
@@ -64,6 +67,8 @@ app.add_middleware(
 workflow_service = WorkflowService()
 progress_service = ProgressService()
 profile_service = ProfileService()
+entity_profile_service = get_entity_profile_service()  # Enhanced entity-based service
+entity_discovery_service = get_entity_discovery_service()  # Enhanced discovery service
 profile_integrator = ProfileWorkflowIntegrator()
 metrics_tracker = get_metrics_tracker()
 
@@ -1011,6 +1016,267 @@ async def get_profile_leads(profile_id: str, stage: Optional[str] = None, min_sc
         logger.error(f"Failed to get leads for profile {profile_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/profiles/{profile_id}/opportunities")
+async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None, min_score: Optional[float] = None):
+    """Get opportunities for a profile (alias for leads endpoint)."""
+    try:
+        from src.profiles.models import PipelineStage
+        
+        # Convert stage parameter if provided
+        pipeline_stage = None
+        if stage:
+            try:
+                pipeline_stage = PipelineStage(stage)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid stage: {stage}")
+        
+        leads = profile_service.get_profile_leads(
+            profile_id=profile_id,
+            stage=pipeline_stage,
+            min_score=min_score
+        )
+        
+        # Convert leads to opportunities format for frontend
+        opportunities = []
+        for lead in leads:
+            opportunity = {
+                "id": lead.lead_id,
+                "organization_name": lead.organization_name,
+                "program_name": lead.program_name,
+                "description": lead.description,
+                "funding_amount": lead.funding_amount,
+                "opportunity_type": lead.opportunity_type.value if hasattr(lead.opportunity_type, 'value') else str(lead.opportunity_type),
+                "compatibility_score": lead.compatibility_score,
+                "success_probability": lead.success_probability,
+                "pipeline_stage": lead.pipeline_stage.value if hasattr(lead.pipeline_stage, 'value') else str(lead.pipeline_stage),
+                "discovered_at": lead.discovered_at.isoformat() if lead.discovered_at else None,
+                "last_analyzed": lead.last_analyzed.isoformat() if lead.last_analyzed else None,
+                "match_factors": lead.match_factors,
+                "recommendations": lead.recommendations,
+                "approach_strategy": lead.approach_strategy,
+                "external_data": lead.external_data
+            }
+            opportunities.append(opportunity)
+        
+        return {
+            "profile_id": profile_id,
+            "total_opportunities": len(opportunities),
+            "opportunities": opportunities,
+            "filters_applied": {
+                "stage": stage,
+                "min_score": min_score
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get opportunities for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Enhanced Entity-Based Profile Endpoints
+
+@app.get("/api/profiles/{profile_id}/entity-analysis")
+async def get_profile_entity_analysis(profile_id: str):
+    """Get comprehensive entity-based analysis for a profile using shared analytics."""
+    try:
+        analysis = await entity_profile_service.analyze_profile_entities(profile_id)
+        return analysis
+    except Exception as e:
+        logger.error(f"Failed to get entity analysis for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/profiles/{profile_id}/add-entity-lead")
+async def add_entity_lead(profile_id: str, lead_data: Dict[str, Any]):
+    """Add opportunity lead using entity references (EIN, opportunity ID)."""
+    try:
+        organization_ein = lead_data.get("organization_ein")
+        opportunity_id = lead_data.get("opportunity_id")
+        
+        if not organization_ein:
+            raise HTTPException(status_code=400, detail="organization_ein is required")
+        
+        lead = await entity_profile_service.add_entity_lead(
+            profile_id=profile_id,
+            organization_ein=organization_ein,
+            opportunity_id=opportunity_id,
+            additional_data=lead_data.get("additional_data", {})
+        )
+        
+        if lead:
+            return {
+                "success": True,
+                "lead_id": lead.lead_id,
+                "message": "Entity lead added successfully"
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Failed to add entity lead")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to add entity lead for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/profiles/leads/{lead_id}/entity-analysis")
+async def get_lead_entity_analysis(lead_id: str):
+    """Get comprehensive entity-based analysis for a specific lead."""
+    try:
+        analysis = await entity_profile_service.get_entity_lead_analysis(lead_id)
+        return analysis
+    except Exception as e:
+        logger.error(f"Failed to get entity analysis for lead {lead_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/profiles/{profile_id}/entity-discovery")
+async def start_entity_discovery(profile_id: str, discovery_params: Dict[str, Any]):
+    """Start discovery session using entity-based data sources."""
+    try:
+        entity_types = discovery_params.get("entity_types", ["nonprofits", "government_opportunities"])
+        filters = discovery_params.get("filters", {})
+        
+        session = entity_profile_service.create_entity_discovery_session(
+            profile_id=profile_id,
+            entity_types=entity_types,
+            filters=filters
+        )
+        
+        if session:
+            return {
+                "success": True,
+                "session_id": session.session_id,
+                "message": "Entity discovery session started"
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Failed to start entity discovery session")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to start entity discovery for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Enhanced Entity-Based Discovery Endpoints
+
+@app.post("/api/profiles/{profile_id}/discover/entity-analytics")
+async def discover_with_entity_analytics(profile_id: str, discovery_params: Dict[str, Any]):
+    """Start discovery using entity-based architecture with shared analytics."""
+    try:
+        # Get profile
+        profile = profile_service.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        entity_types = discovery_params.get("entity_types", ["nonprofits", "government"])
+        max_results = discovery_params.get("max_results", 50)
+        filters = discovery_params.get("filters", {})
+        
+        # Start entity-based discovery
+        session = await discovery_engine.discover_with_entity_analytics(
+            profile=profile,
+            entity_types=entity_types,
+            max_results=max_results,
+            filters=filters
+        )
+        
+        return {
+            "success": True,
+            "session_id": session.session_id,
+            "discovery_mode": "entity_analytics",
+            "message": f"Entity-based discovery started with {len(entity_types)} entity types"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to start entity analytics discovery: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/profiles/{profile_id}/discover/entity-preview")
+async def get_entity_discovery_preview(profile_id: str, entity_types: str = "nonprofits,government"):
+    """Get a quick preview of entity-based discovery results."""
+    try:
+        # Get profile
+        profile = profile_service.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Parse entity types
+        types_list = [t.strip() for t in entity_types.split(",")]
+        
+        # Get preview results
+        preview_results = await discovery_engine.get_entity_discovery_preview(
+            profile=profile,
+            entity_types=types_list,
+            limit=10
+        )
+        
+        # Convert to serializable format
+        results_data = []
+        for result in preview_results:
+            results_data.append({
+                "organization_name": result.organization_name,
+                "organization_ein": result.organization_ein,
+                "opportunity_title": result.opportunity_title,
+                "source_type": result.source_type.value,
+                "discovery_source": result.discovery_source,
+                "final_score": result.final_discovery_score,
+                "funnel_stage": result.funnel_stage.value,
+                "match_reasons": result.match_reasons,
+                "financial_health_score": result.entity_health_score,
+                "profile_compatibility_score": result.profile_compatibility_score
+            })
+        
+        return {
+            "success": True,
+            "preview_results": results_data,
+            "total_results": len(results_data),
+            "entity_types": types_list,
+            "avg_score": sum(r.final_discovery_score for r in preview_results) / len(preview_results) if preview_results else 0
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get entity discovery preview: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/discovery/entity-cache-stats")
+async def get_entity_cache_stats():
+    """Get statistics about available entity data for discovery."""
+    try:
+        from src.core.entity_cache_manager import get_entity_cache_manager, EntityType
+        
+        cache_manager = get_entity_cache_manager()
+        stats = await cache_manager.get_cache_stats()
+        
+        # Get entity counts by type
+        entity_counts = {}
+        for entity_type in EntityType:
+            try:
+                entities = await cache_manager.list_entities(entity_type)
+                entity_counts[entity_type.value] = len(entities)
+            except Exception:
+                entity_counts[entity_type.value] = 0
+        
+        return {
+            "success": True,
+            "cache_stats": stats,
+            "entity_counts": entity_counts,
+            "discovery_ready": {
+                "nonprofits": entity_counts.get("nonprofit", 0) > 0,
+                "government_opportunities": entity_counts.get("government_opportunity", 0) > 0,
+                "foundations": entity_counts.get("foundation", 0) > 0
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get entity cache stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/profiles/{profile_id}/discover")
 async def discover_opportunities(profile_id: str, discovery_params: Dict[str, Any]):
     """Initiate opportunity discovery for a profile using multi-track approach."""
@@ -1157,12 +1423,26 @@ async def discover_opportunities_unified(profile_id: str, discovery_params: Dict
             
             for opportunity in results:
                 # Convert unified opportunity to web interface format
+                # Map strategy names to valid opportunity types
+                opportunity_type_mapping = {
+                    "foundation": "commercial",
+                    "government": "government", 
+                    "commercial": "commercial",
+                    "nonprofit": "grants",
+                    "state": "government"
+                }
+                
+                # Normalize compatibility score to 0-1 range
+                raw_score = getattr(opportunity, 'relevance_score', 0.0)
+                normalized_score = min(1.0, max(0.0, raw_score / 100.0 if raw_score > 1.0 else raw_score))
+                
                 lead_data = {
                     "organization_name": getattr(opportunity, 'funder_name', 'Unknown Organization'),
-                    "opportunity_type": strategy_name,
+                    "opportunity_type": opportunity_type_mapping.get(strategy_name, "grants"),
+                    "source": f"unified_discovery_{strategy_name}",  # Add required source field
                     "description": getattr(opportunity, 'description', '') or getattr(opportunity, 'title', ''),
                     "funding_amount": getattr(opportunity, 'funding_amount_max', 0),
-                    "compatibility_score": getattr(opportunity, 'relevance_score', 0.0),
+                    "compatibility_score": normalized_score,
                     "match_factors": {
                         "source_type": str(getattr(opportunity, 'source_type', '')),
                         "deadline": getattr(opportunity, 'deadline', None),
@@ -1197,6 +1477,22 @@ async def discover_opportunities_unified(profile_id: str, discovery_params: Dict
             
             # Save updated profile
             profile_service.update_profile(profile_id, profile_obj)
+        
+        # Save discovery session for tracking and linkage
+        from src.profiles.models import DiscoverySession as ProfileDiscoverySession
+        profile_discovery_session = ProfileDiscoverySession(
+            session_id=discovery_session.session_id,
+            profile_id=profile_id,
+            started_at=discovery_session.started_at,
+            completed_at=discovery_session.completed_at,
+            status=discovery_session.status.value if hasattr(discovery_session.status, 'value') else str(discovery_session.status),
+            tracks_executed=list(discovery_session.results_by_strategy.keys()),
+            opportunities_found={strategy: len(results) for strategy, results in discovery_session.results_by_strategy.items()},
+            total_opportunities=discovery_session.total_opportunities,
+            execution_time_seconds=int(discovery_session.execution_time_seconds) if discovery_session.execution_time_seconds else 0,
+            notes=f"Unified discovery with {len(funding_source_types)} funding source types"
+        )
+        profile_service.add_discovery_session(profile_discovery_session)
         
         # Get session summary for response
         session_summary = bridge.get_session_summary(discovery_session.session_id)

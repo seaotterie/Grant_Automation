@@ -1,0 +1,54 @@
+{
+  "test_suite": "Entity-Based Discovery Service (Phase 4.2)",
+  "execution_time": "2025-08-16T16:11:20.593734",
+  "summary": {
+    "total_tests": 8,
+    "passed": 2,
+    "failed": 6,
+    "errors": 0,
+    "success_rate": "25.0%"
+  },
+  "test_results": [
+    {
+      "test": "Entity Discovery Service Initialization",
+      "status": "PASSED",
+      "timestamp": "2025-08-16T16:11:20.588345"
+    },
+    {
+      "test": "Entity Cache Integration",
+      "status": "PASSED",
+      "timestamp": "2025-08-16T16:11:20.592740"
+    },
+    {
+      "test": "Nonprofit Discovery with Analytics",
+      "status": "FAILED",
+      "timestamp": "2025-08-16T16:11:20.593109"
+    },
+    {
+      "test": "Government Opportunity Discovery",
+      "status": "FAILED",
+      "timestamp": "2025-08-16T16:11:20.593255"
+    },
+    {
+      "test": "Combined Discovery Functionality",
+      "status": "FAILED",
+      "timestamp": "2025-08-16T16:11:20.593380"
+    },
+    {
+      "test": "Discovery Engine Entity Integration",
+      "status": "FAILED",
+      "timestamp": "2025-08-16T16:11:20.593496"
+    },
+    {
+      "test": "Entity-Based API Preview",
+      "status": "FAILED",
+      "timestamp": "2025-08-16T16:11:20.593602"
+    },
+    {
+      "test": "Cross-Entity Analysis",
+      "status": "FAILED",
+      "timestamp": "2025-08-16T16:11:20.593710"
+    }
+  ],
+  "phase_4_2_status": "NEEDS_ATTENTION"
+}

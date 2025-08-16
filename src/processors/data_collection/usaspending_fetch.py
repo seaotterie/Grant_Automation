@@ -20,6 +20,7 @@ import logging
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata, SyncProcessorMixin
 from src.core.data_models import ProcessorConfig, ProcessorResult, OrganizationProfile
+from src.core.entity_cache_manager import get_entity_cache_manager, EntityType, DataSourceType
 from src.core.government_models import HistoricalAward, OrganizationAwardHistory
 from src.clients.usaspending_client import USASpendingClient
 
@@ -31,7 +32,7 @@ class USASpendingFetchProcessor(BaseProcessor, SyncProcessorMixin):
         metadata = ProcessorMetadata(
             name="usaspending_fetch", 
             description="Fetch historical federal award data from USASpending.gov API",
-            version="2.0.0",  # Upgraded to use new client architecture
+            version="3.0.0",  # Upgraded to use entity-based caching
             dependencies=[],  # Optional dependencies - can run standalone for testing
             estimated_duration=180,  # 3 minutes for typical dataset
             requires_network=True,
@@ -40,8 +41,9 @@ class USASpendingFetchProcessor(BaseProcessor, SyncProcessorMixin):
         )
         super().__init__(metadata)
         
-        # Initialize API client
+        # Initialize API client and entity cache manager
         self.usaspending_client = USASpendingClient()
+        self.entity_cache_manager = get_entity_cache_manager()
         
         # Processing limits
         self.max_requests_per_second = 5  # Conservative rate limit
@@ -231,13 +233,17 @@ class USASpendingFetchProcessor(BaseProcessor, SyncProcessorMixin):
                 self.logger.debug(f"No award history found for {org.ein}")
                 return OrganizationAwardHistory(ein=org.ein, name=org.name)
             
-            # Parse awards
+            # Parse awards and cache them
             awards = []
             for award_data in award_results:
                 try:
                     award = self._parse_award_data(award_data, org)
                     if award:
                         awards.append(award)
+                        
+                        # Cache the award data in entity-based structure
+                        await self._cache_award_data(award, award_data, org.ein)
+                        
                 except Exception as e:
                     self.logger.warning(f"Failed to parse award data: {e}")
                     continue
@@ -259,6 +265,19 @@ class USASpendingFetchProcessor(BaseProcessor, SyncProcessorMixin):
         except Exception as e:
             self.logger.warning(f"Error fetching USASpending data for {org.ein}: {e}")
             return None
+    
+    async def _cache_award_data(self, award: HistoricalAward, raw_data: Dict[str, Any], ein: str):
+        """Cache award data in entity-based structure"""
+        try:
+            award_id = award.award_id
+            if award_id:
+                await self.entity_cache_manager.cache_usaspending_award(
+                    award_data=raw_data,
+                    award_id=award_id
+                )
+                self.logger.debug(f"Cached USASpending award {award_id} for EIN {ein}")
+        except Exception as e:
+            self.logger.warning(f"Failed to cache award data: {e}")
     
     def _get_time_period_filter(self) -> List[Dict[str, str]]:
         """Get time period filter for the last N years."""

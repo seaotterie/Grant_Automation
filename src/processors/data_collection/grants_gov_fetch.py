@@ -20,6 +20,7 @@ import logging
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata, SyncProcessorMixin
 from src.core.data_models import ProcessorConfig, ProcessorResult
+from src.core.entity_cache_manager import get_entity_cache_manager, EntityType, DataSourceType
 from src.core.government_models import (
     GovernmentOpportunity, OpportunityStatus, FundingInstrumentType, 
     EligibilityCategory, GovernmentOpportunityMatch
@@ -35,7 +36,7 @@ class GrantsGovFetchProcessor(BaseProcessor, SyncProcessorMixin):
         metadata = ProcessorMetadata(
             name="grants_gov_fetch",
             description="Fetch federal grant opportunities from Grants.gov API",
-            version="2.0.0",  # Upgraded to use new client architecture
+            version="3.0.0",  # Upgraded to use entity-based caching
             dependencies=[],  # No dependencies - this is a discovery processor
             estimated_duration=120,  # 2 minutes for typical search
             requires_network=True,
@@ -44,8 +45,9 @@ class GrantsGovFetchProcessor(BaseProcessor, SyncProcessorMixin):
         )
         super().__init__(metadata)
         
-        # Initialize API client
+        # Initialize API client and entity cache manager
         self.grants_gov_client = GrantsGovClient()
+        self.entity_cache_manager = get_entity_cache_manager()
         
         # Search defaults
         self.default_page_size = 25
@@ -175,13 +177,17 @@ class GrantsGovFetchProcessor(BaseProcessor, SyncProcessorMixin):
                 **client_params.get("additional_params", {})
             )
             
-            # Parse the raw opportunities into our data model
+            # Parse the raw opportunities into our data model and cache them
             parsed_opportunities = []
             for opp_data in raw_opportunities:
                 try:
                     opportunity = self._parse_opportunity(opp_data)
                     if opportunity:
                         parsed_opportunities.append(opportunity)
+                        
+                        # Cache the opportunity data in entity-based structure
+                        await self._cache_opportunity_data(opportunity, opp_data)
+                        
                 except Exception as e:
                     self.logger.warning(f"Failed to parse opportunity: {e}")
                     continue
@@ -192,6 +198,19 @@ class GrantsGovFetchProcessor(BaseProcessor, SyncProcessorMixin):
         except Exception as e:
             self.logger.error(f"Error searching opportunities with client: {e}")
             return []
+    
+    async def _cache_opportunity_data(self, opportunity: GovernmentOpportunity, raw_data: Dict[str, Any]):
+        """Cache opportunity data in entity-based structure"""
+        try:
+            opportunity_id = opportunity.opportunity_id
+            if opportunity_id:
+                await self.entity_cache_manager.cache_grants_gov_opportunity(
+                    opportunity_data=raw_data,
+                    opportunity_id=opportunity_id
+                )
+                self.logger.debug(f"Cached Grants.gov opportunity {opportunity_id}")
+        except Exception as e:
+            self.logger.warning(f"Failed to cache opportunity data: {e}")
     
     def _convert_to_client_params(self, search_params: Dict[str, Any]) -> Dict[str, Any]:
         """Convert processor search parameters to client format."""

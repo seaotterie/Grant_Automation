@@ -18,6 +18,7 @@ from datetime import datetime
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata
 from src.core.data_models import ProcessorConfig, ProcessorResult, OrganizationProfile
+from src.analytics.financial_analytics import get_financial_analytics
 
 
 class FinancialScorerProcessor(BaseProcessor):
@@ -26,14 +27,17 @@ class FinancialScorerProcessor(BaseProcessor):
     def __init__(self):
         metadata = ProcessorMetadata(
             name="financial_scorer",
-            description="Score organizations using sophisticated financial health algorithm",
-            version="1.0.0",
+            description="Score organizations using shared financial analytics",
+            version="2.0.0",  # Updated to use shared analytics
             dependencies=["propublica_fetch"],
             estimated_duration=120,  # 2 minutes
             requires_network=False,
             requires_api_key=False
         )
         super().__init__(metadata)
+        
+        # Initialize shared analytics
+        self.financial_analytics = get_financial_analytics()
         
         # Original scoring weights from Step_03_score_990s.py
         self.weights = {

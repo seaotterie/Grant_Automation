@@ -1,0 +1,13 @@
+{
+  "entity_id": "TEST-GRANTS-2024-001",
+  "entity_type": "government_opportunity",
+  "created_at": "2025-08-16T12:27:48.426142",
+  "data_sources": {
+    "grants_gov": {
+      "file_path": "opportunity.json",
+      "last_updated": "2025-08-16T12:27:48.426065",
+      "content_hash": "61498c9bcbcc614b8718e4912001305bd2a0c44b4b284c877753675b266703c9"
+    }
+  },
+  "last_updated": "2025-08-16T12:27:48.426151"
+}

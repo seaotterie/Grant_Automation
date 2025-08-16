@@ -1851,6 +1851,41 @@ function catalynxApp() {
                 this.profilesLoading = false;
             }
         },
+        
+        async refreshSelectedProfileOpportunityCounts() {
+            // Update opportunity counts for currently selected profiles
+            if (this.selectedProfile) {
+                await this.updateProfileOpportunityCount(this.selectedProfile);
+            }
+            if (this.selectedDiscoveryProfile && this.selectedDiscoveryProfile.profile_id !== this.selectedProfile?.profile_id) {
+                await this.updateProfileOpportunityCount(this.selectedDiscoveryProfile);
+            }
+        },
+        
+        async updateProfileOpportunityCount(profile) {
+            if (!profile || !profile.profile_id) return;
+            
+            try {
+                const response = await fetch(`/api/profiles/${profile.profile_id}/opportunities`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const count = data.total_opportunities || 0;
+                    
+                    // Update the profile object
+                    profile.opportunities_count = count;
+                    
+                    // Update in the profiles array
+                    const profileIndex = this.profiles.findIndex(p => p.profile_id === profile.profile_id);
+                    if (profileIndex !== -1) {
+                        this.profiles[profileIndex].opportunities_count = count;
+                    }
+                    
+                    console.log(`Updated opportunities count for ${profile.name}: ${count}`);
+                }
+            } catch (error) {
+                console.error(`Failed to update opportunity count for profile ${profile.profile_id}:`, error);
+            }
+        },
 
         async loadProfileStats() {
             // Stub function to prevent JavaScript errors
@@ -3270,25 +3305,32 @@ function catalynxApp() {
                 this.prospectsLoading = true;
                 console.log(`Loading real opportunities for profile: ${this.selectedProfile.name} (${this.selectedProfile.profile_id})`);
                 
-                // Use the funnel API to get profile-specific opportunities
-                const response = await fetch(`/api/funnel/${this.selectedProfile.profile_id}/opportunities`);
+                // Use the new opportunities API to get stored opportunities for this profile
+                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/opportunities`);
                 if (!response.ok) {
+                    if (response.status === 404) {
+                        console.log('No opportunities found for profile, starting with empty state');
+                        this.opportunitiesData = [];
+                        this.updateDiscoveryStatsFromData([]);
+                        this.showNotification('No Data Found', `No opportunities found for ${this.selectedProfile.name}. Run discovery to find opportunities.`, 'info');
+                        return;
+                    }
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
                 const data = await response.json();
-                console.log(`Loaded ${data.opportunities.length} opportunities from funnel API for profile ${this.selectedProfile.profile_id}`);
+                console.log(`Loaded ${data.total_opportunities} stored opportunities for profile ${this.selectedProfile.profile_id}`);
                 
-                // Transform API data to match frontend schema
+                // Transform stored opportunity data to match frontend schema
                 const validatedOpportunities = data.opportunities
-                    .map(opp => CatalynxUtils.standardizeOpportunityData(opp))
+                    .map(opp => this.transformStoredOpportunityToFrontend(opp))
                     .filter(opp => CatalynxUtils.validateOpportunitySchema(opp))
                     .map(opp => ({
                         ...opp, 
                         discovered_for_profile: this.selectedProfile.profile_id,
                         analysis_context: {
                             profile_id: this.selectedProfile.profile_id,
-                            discovery_mode: 'real_data'
+                            discovery_mode: 'stored_data'
                         }
                     }));
                 
@@ -3297,8 +3339,16 @@ function catalynxApp() {
                 // Update discovery stats based on actual data
                 this.updateDiscoveryStatsFromData(validatedOpportunities);
                 
+                // Update profile opportunities count in the UI
+                if (this.selectedProfile) {
+                    this.selectedProfile.opportunities_count = validatedOpportunities.length;
+                }
+                if (this.selectedDiscoveryProfile && this.selectedDiscoveryProfile.profile_id === this.selectedProfile.profile_id) {
+                    this.selectedDiscoveryProfile.opportunities_count = validatedOpportunities.length;
+                }
+                
                 if (validatedOpportunities.length > 0) {
-                    this.showNotification('Profile Data Loaded', `Loaded ${validatedOpportunities.length} opportunities for ${this.selectedProfile.name}`, 'success');
+                    this.showNotification('Profile Data Loaded', `Loaded ${validatedOpportunities.length} stored opportunities for ${this.selectedProfile.name}`, 'success');
                 } else {
                     this.showNotification('No Data Found', `No opportunities found for ${this.selectedProfile.name}. Run discovery to find opportunities.`, 'info');
                 }
@@ -3311,6 +3361,55 @@ function catalynxApp() {
             } finally {
                 this.prospectsLoading = false;
             }
+        },
+        
+        transformStoredOpportunityToFrontend(storedOpp) {
+            // Transform stored opportunity format to frontend format
+            return {
+                id: storedOpp.id || storedOpp.opportunity_id || Date.now(),
+                opportunity_id: storedOpp.external_data?.opportunity_id || storedOpp.id || Date.now().toString(),
+                discovery_source: storedOpp.source || storedOpp.external_data?.discovery_session || 'unified_discovery',
+                organization_name: storedOpp.organization_name || 'Unknown Organization',
+                program_name: storedOpp.program_name || 'Grant Program',
+                description: storedOpp.description || 'No description available',
+                funding_amount: storedOpp.funding_amount || 0,
+                funding_amount_max: storedOpp.funding_amount || 0,
+                funding_amount_min: storedOpp.funding_amount ? Math.floor(storedOpp.funding_amount * 0.5) : 0,
+                opportunity_type: storedOpp.opportunity_type || 'grants',
+                source_type: storedOpp.opportunity_type || 'grants',
+                compatibility_score: storedOpp.compatibility_score || 0.0,
+                success_probability: storedOpp.success_probability || 0.0,
+                pipeline_stage: storedOpp.pipeline_stage || 'discovery',
+                funnel_stage: this.mapPipelineStageToFunnelStage(storedOpp.pipeline_stage || 'discovery'),
+                discovered_at: storedOpp.discovered_at || new Date().toISOString(),
+                last_analyzed: storedOpp.last_analyzed || null,
+                match_factors: storedOpp.match_factors || {},
+                recommendations: storedOpp.recommendations || [],
+                approach_strategy: storedOpp.approach_strategy || null,
+                external_data: storedOpp.external_data || {},
+                deadline: storedOpp.external_data?.deadline || null,
+                eligibility_requirements: storedOpp.match_factors?.eligibility || [],
+                geographic_scope: storedOpp.external_data?.geographic_scope || 'national',
+                website: storedOpp.external_data?.source_url || null,
+                contact_info: storedOpp.external_data?.contact_info || null
+            };
+        },
+        
+        mapPipelineStageToFunnelStage(pipelineStage) {
+            // Map pipeline stages to valid funnel stages
+            const stageMapping = {
+                'discovery': 'prospects',
+                'initial': 'prospects', 
+                'research': 'qualified_prospects',
+                'qualified': 'qualified_prospects',
+                'analysis': 'candidates',
+                'planning': 'candidates',
+                'preparation': 'targets',
+                'ready': 'targets',
+                'application': 'opportunities',
+                'submitted': 'opportunities'
+            };
+            return stageMapping[pipelineStage] || 'prospects';
         },
         
         async saveOpportunitiesToProfile(opportunities) {
@@ -3645,8 +3744,7 @@ function catalynxApp() {
                         console.log(`DEBUG: prospectsData length after adding:`, this.prospectsData.length);
                         console.log(`DEBUG: Sample opportunity:`, this.opportunitiesData[this.opportunitiesData.length - 1]);
                         
-                        // Save opportunities to profile funnel
-                        await this.saveOpportunitiesToProfile(validatedOpportunities);
+                        // Note: Individual track discovery - opportunities saved via unified discovery only
                         
                         this.nonprofitTrackStatus.results = validatedOpportunities.length;
                     } else {
@@ -3729,8 +3827,7 @@ function catalynxApp() {
                         this.opportunitiesData.push(...validatedOpportunities);
                         console.log(`Added ${validatedOpportunities.length} federal opportunities to pipeline`);
                         
-                        // Save opportunities to profile funnel
-                        await this.saveOpportunitiesToProfile(validatedOpportunities);
+                        // Note: Individual track discovery - opportunities saved via unified discovery only
                         
                         this.federalTrackStatus.results = validatedOpportunities.length;
                     } else {
@@ -3812,8 +3909,7 @@ function catalynxApp() {
                         this.opportunitiesData.push(...validatedOpportunities);
                         console.log(`Added ${validatedOpportunities.length} state opportunities to pipeline`);
                         
-                        // Save opportunities to profile funnel
-                        await this.saveOpportunitiesToProfile(validatedOpportunities);
+                        // Note: Individual track discovery - opportunities saved via unified discovery only
                         
                         this.stateTrackStatus.results = validatedOpportunities.length;
                     } else {
@@ -3897,8 +3993,7 @@ function catalynxApp() {
                         this.opportunitiesData.push(...validatedOpportunities);
                         console.log(`Added ${validatedOpportunities.length} commercial opportunities to pipeline`);
                         
-                        // Save opportunities to profile funnel
-                        await this.saveOpportunitiesToProfile(validatedOpportunities);
+                        // Note: Individual track discovery - opportunities saved via unified discovery only
                         
                         this.commercialTrackStatus.results = validatedOpportunities.length;
                     } else {
@@ -4127,6 +4222,12 @@ function catalynxApp() {
 
                 // Reload profile data to get the newly discovered opportunities
                 await this.loadProfileData(this.selectedProfile);
+                
+                // Update opportunities count for UI display
+                await this.updateProfileOpportunityCount(this.selectedProfile);
+                if (this.selectedDiscoveryProfile && this.selectedDiscoveryProfile.profile_id === this.selectedProfile.profile_id) {
+                    await this.updateProfileOpportunityCount(this.selectedDiscoveryProfile);
+                }
 
                 this.showNotification('Discovery Complete', 
                     `Found ${result.total_opportunities_found} opportunities across ${Object.keys(result.opportunities_by_strategy).length} sources`, 

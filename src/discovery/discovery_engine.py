@@ -5,6 +5,7 @@ Orchestrates discovery across multiple funding sources simultaneously
 import asyncio
 import time
 import uuid
+import logging
 from typing import Dict, List, Optional, Any, AsyncIterator, Callable
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -20,6 +21,7 @@ from .nonprofit_discoverer import NonprofitDiscoverer
 from .government_discoverer import GovernmentDiscoverer
 from .commercial_discoverer import CommercialDiscoverer
 from .state_discoverer import StateDiscoverer
+from .entity_discovery_service import get_entity_discovery_service, EntityDiscoveryResult
 
 from src.profiles.models import (
     OrganizationProfile, 
@@ -33,9 +35,13 @@ class MultiTrackDiscoveryEngine:
     """Main discovery engine that coordinates multiple discovery sources"""
     
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         self.search_engine = ProfileSearchEngine()
         self.active_sessions: Dict[str, DiscoverySession] = {}
         self.session_results: Dict[str, List[DiscoveryResult]] = {}
+        
+        # Initialize entity-based discovery service
+        self.entity_discovery_service = get_entity_discovery_service()
         
         # Initialize and register discoverers
         self._initialize_discoverers()
@@ -469,6 +475,147 @@ class MultiTrackDiscoveryEngine:
                 "grantee_matches": len(grantee_matches),
                 "fast_tracked": len([r for r in grantee_matches if r.funnel_stage.value == "candidates"])
             })
+    
+    # Enhanced Entity-Based Discovery Methods
+    
+    async def discover_with_entity_analytics(
+        self,
+        profile: OrganizationProfile,
+        entity_types: List[str] = None,
+        max_results: int = 100,
+        filters: Optional[Dict[str, Any]] = None,
+        progress_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
+    ) -> DiscoverySession:
+        """
+        Enhanced discovery using entity-based architecture and shared analytics.
+        
+        Args:
+            profile: Organization profile for discovery
+            entity_types: Types to discover ['nonprofits', 'government', 'foundations']
+            max_results: Maximum results to return
+            filters: Additional discovery filters
+            progress_callback: Progress update callback
+            
+        Returns:
+            DiscoverySession with entity-based results
+        """
+        # Create discovery session
+        session_id = f"entity_session_{uuid.uuid4().hex[:12]}"
+        
+        # Convert entity types to FundingType for compatibility
+        funding_types = []
+        if 'nonprofits' in (entity_types or []):
+            funding_types.append(FundingType.GRANTS)
+        if 'government' in (entity_types or []):
+            funding_types.append(FundingType.GOVERNMENT)
+        
+        session = DiscoverySession(
+            session_id=session_id,
+            profile_id=profile.profile_id,
+            profile_name=profile.name,
+            funding_types=funding_types,
+            search_params={},  # Empty for entity-based discovery
+            status=DiscoveryStatus.RUNNING,
+            started_at=datetime.now()
+        )
+        
+        # Add entity-specific parameters as external data
+        session.external_data = {
+            "discovery_mode": "entity_based",
+            "max_results": max_results,
+            "filters": filters or {},
+            "use_shared_analytics": True,
+            "entity_types": entity_types or ['nonprofits', 'government']
+        }
+        
+        self.active_sessions[session_id] = session
+        
+        try:
+            if progress_callback:
+                progress_callback(session_id, {
+                    "status": "starting",
+                    "message": "Starting entity-based discovery with shared analytics"
+                })
+            
+            # Use entity discovery service
+            entity_results = await self.entity_discovery_service.discover_combined_opportunities(
+                profile=profile,
+                max_results=max_results,
+                include_types=entity_types or ['nonprofits', 'government'],
+                filters=filters
+            )
+            
+            if progress_callback:
+                progress_callback(session_id, {
+                    "status": "processing",
+                    "message": f"Analyzing {len(entity_results)} entity-based results"
+                })
+            
+            # Convert to legacy format for compatibility
+            legacy_results = []
+            for entity_result in entity_results:
+                legacy_result = entity_result.to_legacy_result()
+                legacy_results.append(legacy_result)
+            
+            # Store results
+            self.session_results[session_id] = legacy_results
+            
+            # Complete session
+            session.status = DiscoveryStatus.COMPLETED
+            session.completed_at = datetime.now()
+            session.total_results = len(legacy_results)
+            
+            if progress_callback:
+                progress_callback(session_id, {
+                    "status": "completed",
+                    "message": f"Entity-based discovery completed: {len(legacy_results)} results",
+                    "results_count": len(legacy_results),
+                    "high_quality_results": len([r for r in entity_results if r.final_discovery_score >= 0.7]),
+                    "avg_score": sum(r.final_discovery_score for r in entity_results) / len(entity_results) if entity_results else 0
+                })
+            
+            return session
+            
+        except Exception as e:
+            session.status = DiscoveryStatus.ERROR
+            session.completed_at = datetime.now()
+            
+            if progress_callback:
+                progress_callback(session_id, {
+                    "status": "error",
+                    "message": f"Entity-based discovery failed: {str(e)}",
+                    "error": str(e)
+                })
+            
+            return session
+    
+    async def get_entity_discovery_preview(
+        self,
+        profile: OrganizationProfile,
+        entity_types: List[str] = None,
+        limit: int = 10
+    ) -> List[EntityDiscoveryResult]:
+        """
+        Get a quick preview of entity-based discovery results.
+        
+        Args:
+            profile: Organization profile
+            entity_types: Types to preview
+            limit: Number of preview results
+            
+        Returns:
+            List of EntityDiscoveryResult objects
+        """
+        try:
+            return await self.entity_discovery_service.discover_combined_opportunities(
+                profile=profile,
+                max_results=limit,
+                include_types=entity_types or ['nonprofits', 'government'],
+                filters={'preview_mode': True}
+            )
+        except Exception as e:
+            self.logger.error(f"Error getting entity discovery preview: {e}")
+            return []
 
 
 # Global engine instance

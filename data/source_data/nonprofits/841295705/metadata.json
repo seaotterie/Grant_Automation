@@ -1,0 +1,22 @@
+{
+  "organization_name": "Trea Senior Citizens League",
+  "ntee_code": "P81",
+  "ruling_date": "1995-06-01",
+  "subsection_code": 4,
+  "classification_codes": "3000",
+  "activity_codes": "559480000",
+  "foundation_code": 0,
+  "organization_code": 1,
+  "deductibility_code": 2,
+  "affiliation_code": 3,
+  "state": "VA",
+  "city": "Alexandria",
+  "data_source": "propublica",
+  "last_updated": "2025-08-16T12:18:05.515663",
+  "ein": "841295705",
+  "total_cache_files": 2,
+  "migrated_files": [
+    "propublica.json",
+    "propublica.json"
+  ]
+}

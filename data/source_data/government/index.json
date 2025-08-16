@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "description": "Index of government funding opportunities",
+  "last_updated": "2025-08-16T12:16:13.195901",
+  "federal": {
+    "grants_gov": {
+      "total_opportunities": 0,
+      "opportunities": {}
+    },
+    "usaspending": {
+      "total_awards": 0,
+      "awards": {}
+    }
+  },
+  "state": {
+    "virginia": {
+      "total_opportunities": 0,
+      "opportunities": {}
+    }
+  }
+}

@@ -1,0 +1,406 @@
+{
+  "version": "1.0.0",
+  "description": "Index of nonprofit organizations by EIN",
+  "last_updated": "2025-08-16T12:18:05.682349",
+  "total_organizations": 40,
+  "organizations": {
+    "540844477": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.497363"
+    },
+    "208649170": {
+      "name": "Leadership Prince William",
+      "ntee_code": "W70",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.505948"
+    },
+    "222414510": {
+      "name": "Association Of Social Work Boards",
+      "ntee_code": "W70",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.511482"
+    },
+    "841295705": {
+      "name": "Trea Senior Citizens League",
+      "ntee_code": "P81",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.515663"
+    },
+    "541670425": {
+      "name": "Leadership Training International",
+      "ntee_code": "W70Z",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.520739"
+    },
+    "510235174": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.525084"
+    },
+    "540916248": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.529915"
+    },
+    "510151069": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.533866"
+    },
+    "541891235": {
+      "name": "Central Virginia Resource Corporation",
+      "ntee_code": "P81Z",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.538491"
+    },
+    "541085032": {
+      "name": "Bay Aging",
+      "ntee_code": "P81Z",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.543459"
+    },
+    "542056732": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.547498"
+    },
+    "396095459": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.551341"
+    },
+    "541907862": {
+      "name": "Leadership Center Of Arlington",
+      "ntee_code": "W70",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.555441"
+    },
+    "541027651": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.561220"
+    },
+    "540990533": {
+      "name": "Appalachian Agency For Senior Citizens",
+      "ntee_code": "P810",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.566645"
+    },
+    "994741995": {
+      "name": "Abingdon Washington County Senior Services Inc",
+      "ntee_code": "P81",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.570844"
+    },
+    "510189604": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.574786"
+    },
+    "475254378": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.578860"
+    },
+    "541506078": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.582651"
+    },
+    "540950714": {
+      "name": "Senior Connections The Capital Area Agency On Aging",
+      "ntee_code": "P81Z",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.587087"
+    },
+    "923180228": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.592256"
+    },
+    "922064394": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.596395"
+    },
+    "871215051": {
+      "name": "Elimisha Kakuma",
+      "ntee_code": "W70",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.600320"
+    },
+    "541283337": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.604532"
+    },
+    "844321893": {
+      "name": "Here To Stay In Wintergreen",
+      "ntee_code": "P81",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.611566"
+    },
+    "540990078": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.617976"
+    },
+    "541008875": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.622468"
+    },
+    "541018745": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.627514"
+    },
+    "540958526": {
+      "name": "Valley Program For Aging Services Inc",
+      "ntee_code": "P81Z",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.631376"
+    },
+    "541230284": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.635683"
+    },
+    "651317810": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.639754"
+    },
+    "995131351": {
+      "name": "Impact Ministry Hub",
+      "ntee_code": "W70",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.643792"
+    },
+    "134014982": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.647555"
+    },
+    "201397614": {
+      "name": "Faithwalk International",
+      "ntee_code": "W70",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.651997"
+    },
+    "541118218": {
+      "name": "Primeplus Senior Centers",
+      "ntee_code": "P81Z",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.656226"
+    },
+    "541882048": {
+      "name": "Shepherds Center Of Northern Virginia",
+      "ntee_code": "P81",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.660540"
+    },
+    "510201327": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.664716"
+    },
+    "593806367": {
+      "name": "Lead Virginia",
+      "ntee_code": "W70",
+      "state": "VA",
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.669605"
+    },
+    "541025257": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json",
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.673978"
+    },
+    "581771391": {
+      "name": "Unknown",
+      "ntee_code": null,
+      "state": null,
+      "data_files": [
+        "propublica.json"
+      ],
+      "last_updated": "2025-08-16T12:18:05.678264"
+    }
+  }
+}
