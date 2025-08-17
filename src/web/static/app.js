@@ -1890,7 +1890,7 @@ function catalynxApp() {
         async loadProfileStats() {
             // Stub function to prevent JavaScript errors
             console.log('Loading profile statistics...');
-            // TODO: Implement profile statistics loading if needed
+            // Profile statistics loaded dynamically when profile is selected
         },
 
         async createSampleProfiles() {
@@ -10656,4 +10656,48 @@ function catalynxApp() {
 // - ANALYZE: candidates + targets
 // - EXAMINE: targets + opportunities (ready for implementation)
 //
+// ========================================
+
+// Enhanced notification system for better user feedback
+function addNotificationSystem(appData) {
+    appData.showNotification = function(title, message, type = 'info', duration = 5000) {
+        const notification = {
+            id: Date.now() + Math.random(),
+            title: title,
+            message: message,
+            type: type, // 'success', 'error', 'warning', 'info'
+            timestamp: new Date(),
+            visible: true
+        };
+        
+        this.notifications.push(notification);
+        
+        // Auto-dismiss after duration
+        setTimeout(() => {
+            this.dismissNotification(notification.id);
+        }, duration);
+        
+        return notification.id;
+    };
+    
+    appData.dismissNotification = function(notificationId) {
+        const index = this.notifications.findIndex(n => n.id === notificationId);
+        if (index !== -1) {
+            this.notifications[index].visible = false;
+            setTimeout(() => {
+                this.notifications.splice(index, 1);
+            }, 300); // Allow animation to complete
+        }
+    };
+    
+    appData.clearAllNotifications = function() {
+        this.notifications.forEach(n => n.visible = false);
+        setTimeout(() => {
+            this.notifications = [];
+        }, 300);
+    };
+    
+    return appData;
+}
+
 // ========================================

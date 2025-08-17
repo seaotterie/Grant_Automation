@@ -298,22 +298,41 @@ These weights and thresholds are based on comprehensive analysis of:
             return None
     
     def _score_eligibility(self, org: OrganizationProfile, opportunity: GovernmentOpportunity) -> float:
-        """Score eligibility match (0-1)."""
+        """Enhanced eligibility scoring with NTEE code matching and data-driven bonuses (0-1)."""
         # Check if nonprofits are eligible
         if not opportunity.is_eligible_for_nonprofits():
             return 0.0
         
         # Base score for nonprofit eligibility
-        score = 0.8
+        score = 0.7  # Slightly reduced to allow for more granular scoring
         
-        # Bonus for university affiliation if applicable
-        if (EligibilityCategory.UNIVERSITY in opportunity.eligible_applicants and 
-            org.ntee_code and org.ntee_code.startswith('B')):  # Education NTEE codes
-            score += 0.1
+        # Enhanced NTEE code matching
+        if org.ntee_code and opportunity.category_code:
+            # Education opportunities favor education organizations
+            if (opportunity.category_code.startswith('EDU') or 'education' in opportunity.description.lower()) and org.ntee_code.startswith('B'):
+                score += 0.15
+            # Health opportunities favor health organizations
+            elif (opportunity.category_code.startswith('HHS') or 'health' in opportunity.description.lower()) and org.ntee_code.startswith('E'):
+                score += 0.15
+            # Environmental opportunities favor environmental organizations
+            elif 'environment' in opportunity.description.lower() and org.ntee_code.startswith('C'):
+                score += 0.15
+            # General NTEE alignment bonus
+            elif self._check_ntee_alignment(org.ntee_code, opportunity):
+                score += 0.1
         
-        # Bonus if multiple categories are eligible (less competitive)
+        # Mission statement keyword matching
+        if org.mission and opportunity.description:
+            keyword_match_score = self._calculate_mission_alignment(org.mission, opportunity.description)
+            score += keyword_match_score * 0.1
+        
+        # Experience bonus for organizations with revenue data (shows established operations)
+        if org.revenue and org.revenue > 100000:  # Organizations with >$100k revenue
+            score += 0.05
+        
+        # Multi-category eligibility bonus (less competitive)
         if len(opportunity.eligible_applicants) > 2:
-            score += 0.1
+            score += 0.05  # Reduced from 0.1 for more precise scoring
         
         return min(1.0, score)
     
@@ -363,7 +382,7 @@ These weights and thresholds are based on comprehensive analysis of:
             return 0.6  # Very far out
     
     def _score_financial_fit(self, org: OrganizationProfile, opportunity: GovernmentOpportunity) -> float:
-        """Score financial size fit between organization and opportunity (0-1)."""
+        """Enhanced financial fit scoring with better capacity analysis (0-1)."""
         if not opportunity.award_ceiling or not org.revenue:
             return 0.5  # Unknown, neutral score
         
@@ -377,13 +396,103 @@ These weights and thresholds are based on comprehensive analysis of:
         if opportunity.award_ceiling < org_capacity * 0.1:
             return 0.3  # Award might be too small to be worth effort
         
-        # Ideal range: 10% to 100% of capacity
-        if org_capacity * 0.1 <= opportunity.award_ceiling <= org_capacity:
-            return 1.0
-        elif org_capacity <= opportunity.award_ceiling <= org_capacity * 2:
-            return 0.8
-        else:
-            return 0.6
+        # Enhanced scoring ranges based on organization size
+        if org.revenue < 500000:  # Small organizations
+            # More flexible for small orgs, awards up to 50% of revenue can work
+            if org_capacity * 0.05 <= opportunity.award_ceiling <= org_capacity * 5:
+                return 1.0
+            elif opportunity.award_ceiling <= org_capacity * 10:
+                return 0.8
+        elif org.revenue < 2000000:  # Medium organizations  
+            # Standard range for medium orgs
+            if org_capacity * 0.1 <= opportunity.award_ceiling <= org_capacity:
+                return 1.0
+            elif org_capacity <= opportunity.award_ceiling <= org_capacity * 2:
+                return 0.8
+        else:  # Large organizations
+            # More conservative for large orgs, they can handle bigger projects
+            if org_capacity * 0.2 <= opportunity.award_ceiling <= org_capacity * 0.8:
+                return 1.0
+            elif org_capacity * 0.1 <= opportunity.award_ceiling <= org_capacity * 1.5:
+                return 0.8
+        
+        return 0.6
+    
+    def _check_ntee_alignment(self, ntee_code: str, opportunity: GovernmentOpportunity) -> bool:
+        """Check if NTEE code aligns with opportunity type."""
+        if not ntee_code or not opportunity.description:
+            return False
+        
+        # NTEE code mapping to opportunity keywords
+        ntee_mapping = {
+            'A': ['arts', 'culture', 'humanities', 'creative'],
+            'B': ['education', 'school', 'university', 'academic', 'learning'],
+            'C': ['environment', 'conservation', 'nature', 'green', 'sustainability'],
+            'D': ['animal', 'wildlife', 'veterinary', 'pet'],
+            'E': ['health', 'medical', 'healthcare', 'hospital', 'clinic'],
+            'F': ['mental health', 'crisis', 'substance', 'addiction'],
+            'G': ['disease', 'research', 'medical research'],
+            'H': ['medical research', 'research'],
+            'I': ['crime', 'legal', 'justice', 'law enforcement'],
+            'J': ['employment', 'job', 'workforce', 'career'],
+            'K': ['food', 'nutrition', 'hunger', 'agriculture'],
+            'L': ['housing', 'shelter', 'homeless', 'residential'],
+            'M': ['disaster', 'emergency', 'relief', 'safety'],
+            'N': ['recreation', 'sports', 'youth', 'community'],
+            'O': ['religion', 'faith', 'spiritual', 'church'],
+            'P': ['science', 'technology', 'research', 'innovation'],
+            'Q': ['international', 'foreign', 'global', 'development'],
+            'R': ['civil rights', 'advocacy', 'social action'],
+            'S': ['community', 'neighborhood', 'local', 'development'],
+            'T': ['philanthropy', 'foundation', 'giving'],
+            'U': ['science', 'technology', 'engineering'],
+            'V': ['social service', 'welfare', 'assistance'],
+            'W': ['public benefit', 'society', 'civic'],
+            'X': ['religion', 'faith'],
+            'Y': ['mutual benefit', 'membership'],
+            'Z': ['unknown']
+        }
+        
+        category = ntee_code[0].upper()
+        if category in ntee_mapping:
+            keywords = ntee_mapping[category]
+            description_lower = opportunity.description.lower()
+            return any(keyword in description_lower for keyword in keywords)
+        
+        return False
+    
+    def _calculate_mission_alignment(self, mission: str, opportunity_description: str) -> float:
+        """Calculate mission-opportunity alignment score (0-1)."""
+        if not mission or not opportunity_description:
+            return 0.0
+        
+        # Convert to lowercase for comparison
+        mission_lower = mission.lower()
+        opp_lower = opportunity_description.lower()
+        
+        # Key mission words that often indicate alignment
+        mission_keywords = []
+        for word in mission_lower.split():
+            if len(word) > 3 and word not in ['the', 'and', 'for', 'with', 'that', 'this', 'from', 'they', 'have', 'been', 'their']:
+                mission_keywords.append(word)
+        
+        if not mission_keywords:
+            return 0.0
+        
+        # Count keyword matches
+        matches = sum(1 for keyword in mission_keywords if keyword in opp_lower)
+        
+        # Calculate alignment score
+        alignment_score = min(matches / len(mission_keywords), 1.0)
+        
+        # Bonus for exact phrase matches
+        if len(mission_keywords) >= 2:
+            mission_phrases = [' '.join(mission_keywords[i:i+2]) for i in range(len(mission_keywords)-1)]
+            phrase_matches = sum(1 for phrase in mission_phrases if phrase in opp_lower)
+            if phrase_matches > 0:
+                alignment_score = min(alignment_score + (phrase_matches * 0.2), 1.0)
+        
+        return alignment_score
     
     def _score_historical_success(self, org: OrganizationProfile, opportunity: GovernmentOpportunity) -> float:
         """Score based on historical success with similar opportunities (0-1)."""
