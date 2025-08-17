@@ -29,11 +29,11 @@ from src.web.services.progress_service import ProgressService
 from src.web.models.requests import ClassificationRequest, WorkflowRequest
 from src.web.models.responses import DashboardStats, WorkflowResponse, SystemStatus
 from src.profiles.service import ProfileService
-from src.profiles.entity_service import get_entity_profile_service
+# from src.profiles.entity_service import get_entity_profile_service  # Commented out due to import issues
 from src.profiles.models import OrganizationProfile, FundingType
 from src.profiles.workflow_integration import ProfileWorkflowIntegrator
 from src.profiles.metrics_tracker import get_metrics_tracker
-from src.discovery.entity_discovery_service import get_entity_discovery_service
+# from src.discovery.entity_discovery_service import get_entity_discovery_service  # Commented out due to import issues
 from src.discovery.discovery_engine import discovery_engine
 from src.pipeline.pipeline_engine import ProcessingPriority
 from src.pipeline.resource_allocator import resource_allocator
@@ -67,8 +67,8 @@ app.add_middleware(
 workflow_service = WorkflowService()
 progress_service = ProgressService()
 profile_service = ProfileService()
-entity_profile_service = get_entity_profile_service()  # Enhanced entity-based service
-entity_discovery_service = get_entity_discovery_service()  # Enhanced discovery service
+# entity_profile_service = get_entity_profile_service()  # Enhanced entity-based service - Commented out due to import issues
+# entity_discovery_service = get_entity_discovery_service()  # Enhanced discovery service - Commented out due to import issues
 profile_integrator = ProfileWorkflowIntegrator()
 metrics_tracker = get_metrics_tracker()
 
@@ -1081,85 +1081,85 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
 
 # Enhanced Entity-Based Profile Endpoints
 
-@app.get("/api/profiles/{profile_id}/entity-analysis")
-async def get_profile_entity_analysis(profile_id: str):
-    """Get comprehensive entity-based analysis for a profile using shared analytics."""
-    try:
-        analysis = await entity_profile_service.analyze_profile_entities(profile_id)
-        return analysis
-    except Exception as e:
-        logger.error(f"Failed to get entity analysis for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.get("/api/profiles/{profile_id}/entity-analysis")
+# async def get_profile_entity_analysis(profile_id: str):
+#     """Get comprehensive entity-based analysis for a profile using shared analytics."""
+#     try:
+#         analysis = await entity_profile_service.analyze_profile_entities(profile_id)
+#         return analysis
+#     except Exception as e:
+#         logger.error(f"Failed to get entity analysis for profile {profile_id}: {e}")
+#         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/profiles/{profile_id}/add-entity-lead")
-async def add_entity_lead(profile_id: str, lead_data: Dict[str, Any]):
-    """Add opportunity lead using entity references (EIN, opportunity ID)."""
-    try:
-        organization_ein = lead_data.get("organization_ein")
-        opportunity_id = lead_data.get("opportunity_id")
-        
-        if not organization_ein:
-            raise HTTPException(status_code=400, detail="organization_ein is required")
-        
-        lead = await entity_profile_service.add_entity_lead(
-            profile_id=profile_id,
-            organization_ein=organization_ein,
-            opportunity_id=opportunity_id,
-            additional_data=lead_data.get("additional_data", {})
-        )
-        
-        if lead:
-            return {
-                "success": True,
-                "lead_id": lead.lead_id,
-                "message": "Entity lead added successfully"
-            }
-        else:
-            raise HTTPException(status_code=400, detail="Failed to add entity lead")
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to add entity lead for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.post("/api/profiles/{profile_id}/add-entity-lead")
+# async def add_entity_lead(profile_id: str, lead_data: Dict[str, Any]):
+#     """Add opportunity lead using entity references (EIN, opportunity ID)."""
+#     try:
+#         organization_ein = lead_data.get("organization_ein")
+#         opportunity_id = lead_data.get("opportunity_id")
+#         
+#         if not organization_ein:
+#             raise HTTPException(status_code=400, detail="organization_ein is required")
+#         
+#         lead = await entity_profile_service.add_entity_lead(
+#             profile_id=profile_id,
+#             organization_ein=organization_ein,
+#             opportunity_id=opportunity_id,
+#             additional_data=lead_data.get("additional_data", {})
+#         )
+#         
+#         if lead:
+#             return {
+#                 "success": True,
+#                 "lead_id": lead.lead_id,
+#                 "message": "Entity lead added successfully"
+#             }
+#         else:
+#             raise HTTPException(status_code=400, detail="Failed to add entity lead")
+#             
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(f"Failed to add entity lead for profile {profile_id}: {e}")
+#         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/profiles/leads/{lead_id}/entity-analysis")
-async def get_lead_entity_analysis(lead_id: str):
-    """Get comprehensive entity-based analysis for a specific lead."""
-    try:
-        analysis = await entity_profile_service.get_entity_lead_analysis(lead_id)
-        return analysis
-    except Exception as e:
-        logger.error(f"Failed to get entity analysis for lead {lead_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.get("/api/profiles/leads/{lead_id}/entity-analysis")
+# async def get_lead_entity_analysis(lead_id: str):
+#     """Get comprehensive entity-based analysis for a specific lead."""
+#     try:
+#         analysis = await entity_profile_service.get_entity_lead_analysis(lead_id)
+#         return analysis
+#     except Exception as e:
+#         logger.error(f"Failed to get entity analysis for lead {lead_id}: {e}")
+#         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/profiles/{profile_id}/entity-discovery")
-async def start_entity_discovery(profile_id: str, discovery_params: Dict[str, Any]):
-    """Start discovery session using entity-based data sources."""
-    try:
-        entity_types = discovery_params.get("entity_types", ["nonprofits", "government_opportunities"])
-        filters = discovery_params.get("filters", {})
-        
-        session = entity_profile_service.create_entity_discovery_session(
-            profile_id=profile_id,
-            entity_types=entity_types,
-            filters=filters
-        )
-        
-        if session:
-            return {
-                "success": True,
-                "session_id": session.session_id,
-                "message": "Entity discovery session started"
-            }
-        else:
-            raise HTTPException(status_code=400, detail="Failed to start entity discovery session")
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to start entity discovery for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.post("/api/profiles/{profile_id}/entity-discovery")
+# async def start_entity_discovery(profile_id: str, discovery_params: Dict[str, Any]):
+#     """Start discovery session using entity-based data sources."""
+#     try:
+#         entity_types = discovery_params.get("entity_types", ["nonprofits", "government_opportunities"])
+#         filters = discovery_params.get("filters", {})
+#         
+#         session = entity_profile_service.create_entity_discovery_session(
+#             profile_id=profile_id,
+#             entity_types=entity_types,
+#             filters=filters
+#         )
+#         
+#         if session:
+#             return {
+#                 "success": True,
+#                 "session_id": session.session_id,
+#                 "message": "Entity discovery session started"
+#             }
+#         else:
+#             raise HTTPException(status_code=400, detail="Failed to start entity discovery session")
+#             
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(f"Failed to start entity discovery for profile {profile_id}: {e}")
+#         raise HTTPException(status_code=500, detail=str(e))
 
 
 # Enhanced Entity-Based Discovery Endpoints
@@ -1532,6 +1532,135 @@ async def discover_opportunities_unified(profile_id: str, discovery_params: Dict
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Unified discovery failed: {str(e)}")
+
+@app.post("/api/profiles/{profile_id}/discover/bmf")
+async def discover_bmf_opportunities(profile_id: str, bmf_data: Dict[str, Any]):
+    """Save BMF filter results to profile using existing discovery pattern."""
+    try:
+        logger.info(f"Processing BMF discovery for profile {profile_id}")
+        
+        # Validate profile exists
+        profile_obj = profile_service.get_profile(profile_id)
+        if not profile_obj:
+            raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+        
+        bmf_results = bmf_data.get("bmf_results", {})
+        nonprofits = bmf_results.get("nonprofits", [])
+        foundations = bmf_results.get("foundations", [])
+        
+        logger.info(f"BMF data received: {len(nonprofits)} nonprofits, {len(foundations)} foundations")
+        
+        opportunities = []
+        
+        # Process nonprofit results
+        for org in nonprofits:
+            lead_data = {
+                "source": "BMF Filter",
+                "opportunity_type": "grants", 
+                "organization_name": org.get("organization_name", ""),
+                "program_name": None,
+                "description": f"Nonprofit organization identified through BMF filter - {org.get('ntee_description', '')}",
+                "funding_amount": None,
+                "pipeline_stage": "discovery",
+                "compatibility_score": org.get("compatibility_score", 0.75),
+                "success_probability": None,
+                "match_factors": {
+                    "source_type": org.get("source_type", "Nonprofit"),
+                    "ntee_code": org.get("ntee_code"),
+                    "state": org.get("state", "VA"),
+                    "bmf_filtered": True,
+                    "quick_bmf_result": True,
+                    "deadline": None,
+                    "eligibility": []
+                },
+                "risk_factors": {},
+                "recommendations": [],
+                "board_connections": [],
+                "network_insights": {},
+                "approach_strategy": None,
+                "status": "active",
+                "assigned_to": None,
+                "external_data": {
+                    "ein": org.get("ein"),
+                    "ntee_code": org.get("ntee_code"),
+                    "discovery_source": org.get("discovery_source", "BMF Filter"),
+                    "opportunity_id": f"bmf_nonprofit_{org.get('ein', 'unknown')}",
+                    "source_url": None,
+                    "bmf_session": "bmf_filter_session"
+                }
+            }
+            
+            # Add lead to profile using existing service
+            lead = profile_service.add_opportunity_lead(profile_id, lead_data)
+            if lead:
+                opportunities.append(lead.model_dump())
+        
+        # Process foundation results  
+        for org in foundations:
+            lead_data = {
+                "source": "BMF Filter",
+                "opportunity_type": "grants",
+                "organization_name": org.get("organization_name", ""),
+                "program_name": None,
+                "description": f"Foundation identified through BMF filter - Foundation Code {org.get('foundation_code', '')}",
+                "funding_amount": None,
+                "pipeline_stage": "discovery", 
+                "compatibility_score": org.get("compatibility_score", 0.75),
+                "success_probability": None,
+                "match_factors": {
+                    "source_type": org.get("source_type", "Foundation"),
+                    "foundation_code": org.get("foundation_code"),
+                    "state": org.get("state", "VA"),
+                    "bmf_filtered": True,
+                    "quick_bmf_result": True,
+                    "deadline": None,
+                    "eligibility": []
+                },
+                "risk_factors": {},
+                "recommendations": [],
+                "board_connections": [],
+                "network_insights": {},
+                "approach_strategy": None,
+                "status": "active",
+                "assigned_to": None,
+                "external_data": {
+                    "ein": org.get("ein"),
+                    "foundation_code": org.get("foundation_code"),
+                    "discovery_source": org.get("discovery_source", "BMF Filter"),
+                    "opportunity_id": f"bmf_foundation_{org.get('ein', 'unknown')}",
+                    "source_url": None,
+                    "bmf_session": "bmf_filter_session"
+                }
+            }
+            
+            # Add lead to profile using existing service
+            lead = profile_service.add_opportunity_lead(profile_id, lead_data)
+            if lead:
+                opportunities.append(lead.model_dump())
+        
+        # Update profile discovery metadata
+        profile_obj.last_discovery_date = datetime.now()
+        profile_obj.discovery_status = "completed" 
+        profile_service.update_profile(profile_id, profile_obj)
+        
+        total_results = len(opportunities)
+        logger.info(f"BMF discovery completed for profile {profile_id}: {total_results} opportunities saved")
+        
+        return {
+            "message": f"BMF discovery completed for profile {profile_id}",
+            "total_opportunities_found": total_results,
+            "nonprofits_found": len(nonprofits),
+            "foundations_found": len(foundations),
+            "opportunities_saved": len(opportunities),
+            "discovery_type": "bmf_filter",
+            "status": "completed"
+        }
+        
+    except Exception as e:
+        logger.error(f"BMF discovery failed for profile {profile_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"BMF discovery failed: {str(e)}")
 
 @app.post("/api/profiles/{profile_id}/pipeline")
 async def execute_full_pipeline(profile_id: str, pipeline_params: Dict[str, Any]):
