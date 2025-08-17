@@ -33,7 +33,11 @@ class ExportProcessor(BaseProcessor):
         self.logger = logging.getLogger(__name__)
     
     async def execute(self, config) -> Dict[str, Any]:
-        """
+        # Parameter validation
+        if not config:
+            raise ValueError("ProcessorConfig is required")
+        
+"""
         Execute export operations based on config parameters.
         
         Args:

@@ -18,6 +18,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Set
 from datetime import datetime
 from dataclasses import dataclass, asdict
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 from .models import OrganizationProfile, OpportunityLead, ProfileSearchParams, FundingType
 from .service import ProfileService
@@ -83,7 +87,7 @@ class IsolatedWorkflowManager:
                     self.active_contexts[context.profile_id] = context
                     
             except Exception as e:
-                print(f"Warning: Failed to load context registry: {e}")
+                logger.warning(f"Warning: Failed to load context registry: {e}")
     
     def _save_context_registry(self):
         """Save workflow contexts to registry."""
@@ -109,7 +113,7 @@ class IsolatedWorkflowManager:
                 json.dump(registry_data, f, indent=2)
                 
         except Exception as e:
-            print(f"Warning: Failed to save context registry: {e}")
+            logger.warning(f"Warning: Failed to save context registry: {e}")
     
     def create_isolated_context(self, profile_id: str) -> IsolatedWorkflowContext:
         """Create a new isolated workflow context for a profile."""
@@ -297,11 +301,11 @@ class IsolatedWorkflowManager:
                 if result.get('success'):
                     workflow_state.mark_processor_complete(processor_name, result.get('data', {}))
                 else:
-                    print(f"Processor {processor_name} failed: {result.get('errors', [])}")
+                    logger.error(f"Processor {processor_name} failed: {result.get('errors', [])}")
                 
             except Exception as e:
                 error_msg = f"Failed to execute {processor_name}: {str(e)}"
-                print(f"Error: {error_msg}")
+                logger.error(f"Error: {error_msg}")
                 workflow_results['processor_states'][processor_name] = {
                     'completed': False,
                     'error': error_msg
@@ -423,7 +427,7 @@ class IsolatedWorkflowManager:
             return True
             
         except Exception as e:
-            print(f"Failed to cleanup context for {profile_id}: {e}")
+            logger.error(f"Failed to cleanup context for {profile_id}: {e}")
             return False
     
     def get_context_summary(self, profile_id: str) -> Optional[Dict[str, Any]]:

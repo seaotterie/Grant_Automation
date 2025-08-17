@@ -1,0 +1,20 @@
+{
+  "entity_id": "TEST-GRANTS-2024-001",
+  "entity_type": "government_opportunity",
+  "opportunity_type": "federal_grant",
+  "source": "grants_gov",
+  "created_at": "2025-08-16T12:27:48.426142",
+  "data_sources": {
+    "grants_gov": {
+      "file_path": "grants_gov_data.json",
+      "last_updated": "2025-08-16T12:27:48.426151",
+      "content_hash": "61498c9bcbcc614b8718e4912001305bd2a0c44b4b284c877753675b266703c9"
+    }
+  },
+  "last_updated": "2025-08-16T22:32:28.655669",
+  "migration_info": {
+    "migrated_from": "data\\source_data\\government\\federal\\grants_gov\\TEST-GRANTS-2024-001",
+    "migration_date": "2025-08-16T22:32:28.655670",
+    "migration_version": "phase_2.2"
+  }
+}

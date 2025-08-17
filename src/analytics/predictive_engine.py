@@ -201,7 +201,9 @@ class PredictiveSuccessEngine:
         predicted_timeline = None
         try:
             predicted_timeline = int(self.timeline_predictor.predict(X_scaled)[0])
-        except:
+        except Exception as e:
+
+            logger.error(f"Unexpected error: {e}")
             predicted_timeline = self._estimate_timeline(success_prob)
         
         # Generate recommendation

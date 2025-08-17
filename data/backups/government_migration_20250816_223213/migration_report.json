@@ -1,0 +1,12 @@
+{
+  "migration_summary": {
+    "migration_version": "phase_2.2",
+    "migration_date": "2025-08-16T22:32:13.328352",
+    "execution_time_seconds": 0.012702,
+    "success": true
+  },
+  "migration_statistics": {
+    "opportunities_migrated": 1,
+    "awards_migrated": 0,
+    "errors": [],
+    "start_time": 

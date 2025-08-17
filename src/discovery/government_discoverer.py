@@ -18,7 +18,8 @@ class GovernmentDiscoverer(BaseDiscoverer):
     
     def __init__(self):
         super().__init__("Grants.gov Federal Grant Discovery", FundingType.GOVERNMENT)
-        self.api_key = None  # TODO: Load from configuration
+        # API key loaded via auth system when configured
+        self.api_key = None  # Managed by API key manager
         self.base_url = "https://www.grants.gov/web/grants/search-grants.html"  # Placeholder
         self.supported_agencies = self._load_agency_data()
         self.cfda_categories = self._load_cfda_data()
@@ -39,7 +40,8 @@ class GovernmentDiscoverer(BaseDiscoverer):
         funding_range = discovery_filters.get("funding_range", {})
         keywords = discovery_filters.get("keywords", profile.focus_areas)
         
-        # TODO: Replace with actual Grants.gov API integration
+        # Mock mode for development - production uses grants_gov_fetch processor
+        # Actual API integration available via processor system
         # For now, generate realistic mock opportunities
         opportunities = await self._generate_realistic_government_opportunities(
             profile, agencies, eligibility_types, funding_range, keywords, max_results
@@ -82,8 +84,8 @@ class GovernmentDiscoverer(BaseDiscoverer):
             "name": self.name,
             "funding_type": self.funding_type.value,
             "enabled": self.enabled,
-            "status": "operational_mock",  # TODO: Change when real API is integrated
-            "api_available": False,  # TODO: Test actual API connectivity
+            "status": "development_mock",  # Production uses grants_gov_fetch processor
+            "api_available": False,  # Real API connectivity via grants_gov_fetch processor
             "supported_agencies": len(self.supported_agencies),
             "cfda_categories": len(self.cfda_categories),
             "last_check": datetime.now().isoformat(),

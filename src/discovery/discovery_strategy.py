@@ -329,7 +329,9 @@ class GovernmentDiscoveryStrategy(DiscoveryStrategy):
                 return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
             else:
                 return datetime.fromisoformat(date_str)
-        except:
+        except Exception as e:
+
+            logger.error(f"Error in operation: {e}")
             return None
     
     async def _search_grants_gov_with_processor(self, profile: OrganizationProfile, keywords: List[str], max_results: int) -> List[Dict[str, Any]]:

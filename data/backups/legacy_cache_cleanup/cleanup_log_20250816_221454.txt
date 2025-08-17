@@ -1,0 +1,6 @@
+Legacy Cache Cleanup Log
+Date: 2025-08-16 22:14:54.633372
+Files deleted: 156
+Space freed: 1.72 MB
+Errors: 0
+Entity directories intact: 41

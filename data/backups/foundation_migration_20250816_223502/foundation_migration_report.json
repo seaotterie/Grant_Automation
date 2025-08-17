@@ -1,0 +1,42 @@
+{
+  "migration_summary": {
+    "migration_version": "phase_2.3",
+    "migration_date": "2025-08-16T22:35:02.897641",
+    "execution_time_seconds": 0.018732,
+    "success": true
+  },
+  "migration_statistics": {
+    "foundations_extracted": 1,
+    "corporate_foundations_found": 0,
+    "private_foundations_found": 1,
+    "foundation_990pf_found": 0,
+    "errors": [],
+    "start_time": "2025-08-16 22:35:02.878912",
+    "directories_created": 5,
+    "files_created": 3
+  },
+  "extraction_criteria": {
+    "foundation_codes": "10-14 (Private foundations)",
+    "ntee_codes": "T* (Grantmaking organizations)",
+    "filing_types": "990-PF forms",
+    "name_patterns": "Foundation keywords in organization name"
+  },
+  "entity_structure": {
+    "foundation_directory": "foundations/",
+    "individual_entities": "{foundation_ein}/",
+    "indices_directory": "indices/",
+    "index_file": "index.json"
+  },
+  "migration_benefits": {
+    "entity_based_organization": "Foundation data organized by EIN/Foundation ID",
+    "extraction_from_nonprofits": "Foundation entities extracted from nonprofit data",
+    "classification_preserved": "Foundation type and classification information maintained",
+    "api_ready_structure": "Ready for Foundation Directory API integration"
+  },
+  "future_enhancements": {
+    "foundation_directory_api": "Corporate foundation data integration",
+    "990pf_data_enhancement": "Dedicated 990-PF filing data organization",
+    "grantmaking_analysis": "Grant recipient and pattern analysis",
+    "board_network_analysis": "Foundation board member relationship mapping"
+  }
+}

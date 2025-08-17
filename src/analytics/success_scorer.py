@@ -346,7 +346,9 @@ class SuccessScorer:
             update_date = datetime.fromisoformat(last_updated)
             days_old = (datetime.now() - update_date).days
             recency = max(0, 1 - days_old / 365)  # Decay over a year
-        except:
+        except Exception as e:
+
+            logger.error(f"Unexpected error: {e}")
             recency = 0.5
         confidence_factors.append(recency * 0.3)
         

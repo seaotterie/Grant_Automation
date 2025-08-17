@@ -1,9 +1,9 @@
 {
   "version": "2.0.0",
   "description": "Entity-based government opportunities and awards index",
-  "last_updated": "2025-08-16T22:32:28.658892",
+  "last_updated": "2025-08-16T22:32:13.327484",
   "migration_info": {
-    "migration_date": "2025-08-16T22:32:28.658898",
+    "migration_date": "2025-08-16T22:32:13.327488",
     "migration_version": "phase_2.2",
     "entity_based": true
   },
@@ -11,7 +11,7 @@
     "TEST-GRANTS-2024-001": {
       "entity_type": "government_opportunity",
       "source": "grants_gov",
-      "last_updated": "2025-08-16T22:32:28.655669",
+      "last_updated": "2025-08-16T22:32:13.325706",
       "directory": "opportunities\\TEST-GRANTS-2024-001"
     }
   },

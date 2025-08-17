@@ -83,7 +83,9 @@
       "Bash(del test_api_clients.py test_profile_service.py analyze_profiles.py test_profile_discovery_mapping.py)",
       "Bash(del test_discovery_timeout_fix.py)",
       "Bash(del test_entity_cache.py)",
-      "Bash(del test_entity_discovery_phase_4_2.py)"
+      "Bash(del test_entity_discovery_phase_4_2.py)",
+      "Bash(del test_*.py cleanup_*.py analyze_*.py fix_*.py)",
+      "Bash(del government_data_migration.py)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

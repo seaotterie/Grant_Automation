@@ -186,7 +186,10 @@ class WorkflowService:
             # Create progress tracker if not exists
             try:
                 await tracker.error(error_msg)
-            except:
+            except Exception as e:
+
+                logger.warning(f"Unexpected error: {e}")
+
                 pass
     
     async def run_workflow_with_progress(self, 
@@ -283,7 +286,10 @@ class WorkflowService:
             
             try:
                 await tracker.error(error_msg)
-            except:
+            except Exception as e:
+
+                logger.warning(f"Unexpected error: {e}")
+
                 pass
     
     async def get_classification_results(self, workflow_id: str, limit: Optional[int] = None) -> Dict[str, Any]:

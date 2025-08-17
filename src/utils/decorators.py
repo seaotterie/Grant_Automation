@@ -349,7 +349,10 @@ def measure_performance(func: Callable) -> Callable:
                 try:
                     end_memory = process.memory_info().rss / 1024 / 1024
                     memory_used = end_memory - start_memory
-                except:
+                except Exception as e:
+
+                    logger.warning(f"Unexpected error: {e}")
+
                     pass
             
             metrics = {
@@ -392,7 +395,10 @@ def measure_performance(func: Callable) -> Callable:
                 try:
                     end_memory = process.memory_info().rss / 1024 / 1024
                     memory_used = end_memory - start_memory
-                except:
+                except Exception as e:
+
+                    logger.warning(f"Unexpected error: {e}")
+
                     pass
             
             metrics = {

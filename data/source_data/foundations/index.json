@@ -1,7 +1,33 @@
 {
-  "version": "1.0.0",
-  "description": "Index of foundations by foundation ID",
-  "last_updated": "2025-08-16T12:16:13.195600",
-  "total_foundations": 0,
-  "foundations": {}
+  "version": "2.0.0",
+  "description": "Entity-based foundation index",
+  "last_updated": "2025-08-16T22:35:02.896838",
+  "migration_info": {
+    "migration_date": "2025-08-16T22:35:02.896841",
+    "migration_version": "phase_2.3",
+    "entity_based": true,
+    "extraction_source": "nonprofit_data_analysis"
+  },
+  "foundations": {
+    "134014982": {
+      "entity_type": "foundation",
+      "foundation_type": "Public Charity/Not a Private Foundation",
+      "source": "propublica",
+      "last_updated": "2025-08-16T22:35:02.894092",
+      "directory": "134014982",
+      "classification": {
+        "foundation_code": 15,
+        "foundation_type": "Public Charity/Not a Private Foundation",
+        "ntee_code": "P81",
+        "total_assets": 2481115,
+        "total_revenue": 2036121
+      }
+    }
+  },
+  "statistics": {
+    "total_foundations": 1,
+    "private_foundations": 1,
+    "community_foundations": 0,
+    "foundations_with_990pf": 0
+  }
 }

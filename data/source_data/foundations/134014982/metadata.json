@@ -1,0 +1,28 @@
+{
+  "entity_id": "134014982",
+  "entity_type": "foundation",
+  "foundation_type": "Public Charity/Not a Private Foundation",
+  "source": "propublica",
+  "created_at": "2025-08-16T22:35:02.894085",
+  "data_sources": {
+    "propublica": {
+      "file_path": "foundation_propublica.json",
+      "last_updated": "2025-08-16T22:35:02.895034",
+      "content_hash": "migrated"
+    }
+  },
+  "foundation_classification": {
+    "foundation_code": 15,
+    "foundation_type": "Public Charity/Not a Private Foundation",
+    "ntee_code": "P81",
+    "total_assets": 2481115,
+    "total_revenue": 2036121
+  },
+  "last_updated": "2025-08-16T22:35:02.894092",
+  "migration_info": {
+    "migrated_from": "data\\source_data\\nonprofits\\134014982",
+    "migration_date": "2025-08-16T22:35:02.894093",
+    "migration_version": "phase_2.3",
+    "extraction_source": "propublica"
+  }
+}

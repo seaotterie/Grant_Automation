@@ -1,0 +1,41 @@
+{
+  "analysis_date": "2025-08-16T22:15:47.137326",
+  "tests": [
+    {
+      "test": "profile_loading",
+      "profiles_count": 45,
+      "total_time": 0.007851600646972656,
+      "avg_time_per_profile": 0.00017448001437717013
+    },
+    {
+      "test": "entity_cache",
+      "entity_count": 42,
+      "list_time": 0.0011258125305175781,
+      "metadata_access_time": 0.002819538116455078
+    },
+    {
+      "test": "filesystem_performance",
+      "file_counts": {
+        "profiles": 45,
+        "entities": 83,
+        "leads": 18
+      },
+      "total_sizes_mb": {
+        "profiles": 0.07950687408447266,
+        "entities": 0.5058422088623047,
+        "leads": 0.017383575439453125
+      }
+    },
+    {
+      "test": "api_simulation",
+      "response_time": 2.5033950805664062e-05
+    },
+    {
+      "test": "concurrent_operations",
+      "total_operations": 5,
+      "successful": 5,
+      "total_time": 0.029213905334472656
+    }
+  ],
+  "recommendations": []
+}

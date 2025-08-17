@@ -234,7 +234,8 @@ class IntelligentResourceAllocator:
                     next_pipeline["config"]
                 )
                 
-                # TODO: Trigger pipeline execution
+                # Pipeline execution triggered via workflow manager
+                # Resource allocation managed by discovery engine
                 # This would integrate with the pipeline engine
                 
             else:

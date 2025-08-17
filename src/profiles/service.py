@@ -6,6 +6,10 @@ import uuid
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 from .models import (
     OrganizationProfile, 
@@ -493,7 +497,7 @@ class ProfileService:
             self._save_session(session)
             return True
         except Exception as e:
-            print(f"Error saving discovery session: {e}")
+            logger.error(f"Error saving discovery session: {e}")
             return False
     
     # Private helper methods for sessions

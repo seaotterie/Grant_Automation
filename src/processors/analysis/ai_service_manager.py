@@ -142,7 +142,12 @@ class AIServiceManager:
             self.active_requests[batch_id] = status
             
             # Execute AI Lite analysis
-            result = await self.ai_lite_processor.execute(request)
+            result = try:
+     await self.ai_lite_processor.execute(request)
+ except asyncio.TimeoutError:
+     logger.warning("Operation timed out")
+ except Exception as e:
+     logger.error(f"Operation failed: {e}")
             
             # Update status
             status.status = "completed"
@@ -310,7 +315,12 @@ class AIServiceManager:
             self.active_requests[research_id] = status
             
             # Execute AI Heavy research
-            result = await self.ai_heavy_processor.execute(request)
+            result = try:
+     await self.ai_heavy_processor.execute(request)
+ except asyncio.TimeoutError:
+     logger.warning("Operation timed out")
+ except Exception as e:
+     logger.error(f"Operation failed: {e}")
             
             # Update status
             status.status = "completed"
