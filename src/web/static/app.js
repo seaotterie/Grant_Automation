@@ -83,6 +83,12 @@ const CatalynxUtils = {
     
     // SCHEMA VALIDATION AND STANDARDIZATION FUNCTIONS
     validateOpportunitySchema(opportunity) {
+        // First check if opportunity is null or undefined (from standardization failures)
+        if (!opportunity || typeof opportunity !== 'object') {
+            console.warn('Invalid opportunity object (null or non-object):', opportunity);
+            return false;
+        }
+        
         const requiredFields = [
             'opportunity_id', 'organization_name', 'funnel_stage', 'source_type',
             'discovery_source', 'compatibility_score', 'discovered_at'
@@ -115,12 +121,30 @@ const CatalynxUtils = {
     },
     
     standardizeOpportunityData(rawOpportunity) {
-        // Convert legacy data to standardized schema
+        // Enhanced data standardization with canonical stage mapping
+        if (!rawOpportunity || typeof rawOpportunity !== 'object') {
+            console.warn('Invalid opportunity object:', rawOpportunity);
+            return null;
+        }
+        
+        // CANONICAL STAGE CONVERSION - Convert pipeline_stage to funnel_stage
+        const pipeline_stage = rawOpportunity.pipeline_stage || rawOpportunity.stage || 'discovery';
+        const funnel_stage = rawOpportunity.funnel_stage || CANONICAL_STAGE_MAPPING[pipeline_stage] || 'prospects';
+        
+        // Log stage transformations for debugging
+        if (rawOpportunity.pipeline_stage && rawOpportunity.pipeline_stage !== pipeline_stage) {
+            console.log(`Stage standardization: ${rawOpportunity.pipeline_stage} → ${pipeline_stage} → ${funnel_stage}`);
+        }
+        
         const standardized = {
-            // Core fields
+            // Core fields with strict validation
             opportunity_id: rawOpportunity.opportunity_id || `opp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             organization_name: rawOpportunity.organization_name || rawOpportunity.name || 'Unknown Organization',
-            funnel_stage: rawOpportunity.funnel_stage || rawOpportunity.stage || 'prospects',
+            
+            // CANONICAL STAGE FIELDS - Both preserved for compatibility
+            pipeline_stage: pipeline_stage,
+            funnel_stage: funnel_stage,
+            
             source_type: rawOpportunity.source_type || rawOpportunity.organization_type || 'Nonprofit',
             discovery_source: rawOpportunity.discovery_source || rawOpportunity.source || 'Unknown Source',
             
@@ -130,10 +154,10 @@ const CatalynxUtils = {
             funding_amount: rawOpportunity.funding_amount || rawOpportunity.amount || null,
             application_deadline: rawOpportunity.application_deadline || rawOpportunity.deadline || null,
             
-            // Scoring
-            raw_score: rawOpportunity.raw_score || rawOpportunity.score || 0.0,
-            compatibility_score: rawOpportunity.compatibility_score || 0.0,
-            confidence_level: rawOpportunity.confidence_level || rawOpportunity.confidence || 0.0,
+            // Scoring with type validation
+            raw_score: parseFloat(rawOpportunity.raw_score || rawOpportunity.score || 0.0),
+            compatibility_score: parseFloat(rawOpportunity.compatibility_score || 0.0),
+            confidence_level: parseFloat(rawOpportunity.confidence_level || rawOpportunity.confidence || 0.0),
             
             // Advanced scoring (for candidates/targets/opportunities)
             xml_990_score: rawOpportunity.xml_990_score || null,
@@ -142,7 +166,7 @@ const CatalynxUtils = {
             combined_score: rawOpportunity.combined_score || null,
             
             // Metadata
-            is_schedule_i_grantee: rawOpportunity.is_schedule_i_grantee || false,
+            is_schedule_i_grantee: Boolean(rawOpportunity.is_schedule_i_grantee),
             discovered_at: rawOpportunity.discovered_at || new Date().toISOString(),
             stage_updated_at: rawOpportunity.stage_updated_at || new Date().toISOString(),
             
@@ -157,15 +181,49 @@ const CatalynxUtils = {
             // Analysis status and AI
             analysis_status: rawOpportunity.analysis_status || {},
             strategic_analysis: rawOpportunity.strategic_analysis || {},
-            ai_analyzed: rawOpportunity.ai_analyzed || false,
-            ai_processing: rawOpportunity.ai_processing || false,
-            ai_error: rawOpportunity.ai_error || false,
+            ai_analyzed: Boolean(rawOpportunity.ai_analyzed),
+            ai_processing: Boolean(rawOpportunity.ai_processing),
+            ai_error: Boolean(rawOpportunity.ai_error),
             ai_summary: rawOpportunity.ai_summary || null,
-            action_plan: rawOpportunity.action_plan || null
+            action_plan: rawOpportunity.action_plan || null,
+            
+            // Preserve any additional fields not covered above
+            ...Object.fromEntries(
+                Object.entries(rawOpportunity).filter(([key]) => 
+                    !['opportunity_id', 'organization_name', 'name', 'pipeline_stage', 'funnel_stage', 'stage',
+                      'source_type', 'organization_type', 'discovery_source', 'source', 'program_name', 'program',
+                      'description', 'summary', 'funding_amount', 'amount', 'application_deadline', 'deadline',
+                      'raw_score', 'score', 'compatibility_score', 'confidence_level', 'confidence',
+                      'xml_990_score', 'network_score', 'enhanced_score', 'combined_score',
+                      'is_schedule_i_grantee', 'discovered_at', 'stage_updated_at',
+                      'contact_info', 'geographic_info', 'match_factors', 'risk_factors',
+                      'analysis_status', 'strategic_analysis', 'ai_analyzed', 'ai_processing', 'ai_error', 
+                      'ai_summary', 'action_plan'].includes(key)
+                )
+            )
         };
         
         return standardized;
     }
+};
+
+// CANONICAL STAGE MAPPING - Aligned with Tab Structure
+const CANONICAL_STAGE_MAPPING = {
+    // All data sources must use these exact mappings - NO exceptions
+    'discovery': 'prospects',        // DISCOVER → #1 prospects
+    'plan': 'qualified_prospects',   // PLAN → #2 qualified  
+    'analyze': 'candidates',         // ANALYZE → #3 candidates
+    'examine': 'targets',            // EXAMINE → #4 targets
+    'approach': 'opportunities'      // APPROACH → #5 opportunities
+};
+
+// Tab to stage alignment for consistency
+const TAB_STAGE_ALIGNMENT = {
+    'DISCOVER': 'prospects',         // #1 prospects
+    'PLAN': 'qualified_prospects',   // #2 qualified
+    'ANALYZE': 'candidates',         // #3 candidates
+    'EXAMINE': 'targets',            // #4 targets
+    'APPROACH': 'opportunities'      // #5 opportunities
 };
 
 // OPPORTUNITY DATA SCHEMA CONSTANTS
@@ -3245,11 +3303,41 @@ function catalynxApp() {
         
         // COMPUTED PROPERTIES - Auto-filtered data for each tab with profile scoping
         get prospectsData() {
-            // DISCOVER tab: prospects + qualified_prospects (profile-scoped)
-            return this.opportunitiesData.filter(opp => 
-                ['prospects', 'qualified_prospects'].includes(opp.funnel_stage) &&
-                this.isOpportunityInScope(opp)
-            );
+            // DISCOVER tab: prospects + qualified_prospects (profile-scoped) with error recovery
+            try {
+                // Ensure opportunitiesData is valid
+                if (!Array.isArray(this.opportunitiesData)) {
+                    console.warn('prospectsData: opportunitiesData is not an array:', typeof this.opportunitiesData);
+                    return [];
+                }
+                
+                // Filter by stage with error recovery
+                const stageFiltered = this.opportunitiesData.filter(opp => {
+                    try {
+                        return opp && ['prospects', 'qualified_prospects'].includes(opp.funnel_stage);
+                    } catch (error) {
+                        console.warn('prospectsData: Error filtering opportunity by stage:', opp, error);
+                        return false;
+                    }
+                });
+                
+                // Filter by profile scope with error recovery
+                const scopeFiltered = stageFiltered.filter(opp => {
+                    try {
+                        return this.isOpportunityInScope(opp);
+                    } catch (error) {
+                        console.warn('prospectsData: Error filtering opportunity by scope:', opp, error);
+                        return false;
+                    }
+                });
+                
+                return scopeFiltered;
+                
+            } catch (error) {
+                console.error('prospectsData: Complete failure:', error);
+                // Return empty array to prevent Alpine.js crashes
+                return [];
+            }
         },
         
         get qualifiedProspects() {
@@ -3401,10 +3489,16 @@ function catalynxApp() {
                 const data = await response.json();
                 console.log(`Loaded ${data.total_opportunities} stored opportunities for profile ${this.selectedProfile.profile_id}`);
                 
-                // Transform stored opportunity data to match frontend schema
-                const validatedOpportunities = data.opportunities
-                    .map(opp => this.transformStoredOpportunityToFrontend(opp))
-                    .filter(opp => CatalynxUtils.validateOpportunitySchema(opp))
+                // Transform stored opportunity data using unified pipeline
+                const transformedOpportunities = data.opportunities
+                    .map(opp => CatalynxUtils.standardizeOpportunityData(opp))
+                    .filter(opp => {
+                        const isValid = CatalynxUtils.validateOpportunitySchema(opp);
+                        if (!isValid) {
+                            console.warn('Opportunity validation failed:', opp?.organization_name);
+                        }
+                        return isValid;
+                    })
                     .map(opp => ({
                         ...opp, 
                         discovered_for_profile: this.selectedProfile.profile_id,
@@ -3414,7 +3508,9 @@ function catalynxApp() {
                         }
                     }));
                 
-                this.opportunitiesData = validatedOpportunities;
+                console.log(`Loaded ${transformedOpportunities.length}/${data.opportunities.length} validated opportunities for ${this.selectedProfile.name}`);
+                
+                this.opportunitiesData = transformedOpportunities;
                 
                 // Update discovery stats based on actual data
                 this.updateDiscoveryStatsFromData(this.opportunitiesData);
@@ -3443,54 +3539,7 @@ function catalynxApp() {
             }
         },
         
-        transformStoredOpportunityToFrontend(storedOpp) {
-            // Transform stored opportunity format to frontend format
-            return {
-                id: storedOpp.id || storedOpp.opportunity_id || Date.now(),
-                opportunity_id: storedOpp.external_data?.opportunity_id || storedOpp.id || Date.now().toString(),
-                discovery_source: storedOpp.source || storedOpp.external_data?.discovery_session || 'unified_discovery',
-                organization_name: storedOpp.organization_name || 'Unknown Organization',
-                program_name: storedOpp.program_name || 'Grant Program',
-                description: storedOpp.description || 'No description available',
-                funding_amount: storedOpp.funding_amount || 0,
-                funding_amount_max: storedOpp.funding_amount || 0,
-                funding_amount_min: storedOpp.funding_amount ? Math.floor(storedOpp.funding_amount * 0.5) : 0,
-                opportunity_type: storedOpp.opportunity_type || 'grants',
-                source_type: storedOpp.opportunity_type || 'grants',
-                compatibility_score: storedOpp.compatibility_score || 0.0,
-                success_probability: storedOpp.success_probability || 0.0,
-                pipeline_stage: storedOpp.pipeline_stage || 'discovery',
-                funnel_stage: this.mapPipelineStageToFunnelStage(storedOpp.pipeline_stage || 'discovery'),
-                discovered_at: storedOpp.discovered_at || new Date().toISOString(),
-                last_analyzed: storedOpp.last_analyzed || null,
-                match_factors: storedOpp.match_factors || {},
-                recommendations: storedOpp.recommendations || [],
-                approach_strategy: storedOpp.approach_strategy || null,
-                external_data: storedOpp.external_data || {},
-                deadline: storedOpp.external_data?.deadline || null,
-                eligibility_requirements: storedOpp.match_factors?.eligibility || [],
-                geographic_scope: storedOpp.external_data?.geographic_scope || 'national',
-                website: storedOpp.external_data?.source_url || null,
-                contact_info: storedOpp.external_data?.contact_info || null
-            };
-        },
         
-        mapPipelineStageToFunnelStage(pipelineStage) {
-            // Map pipeline stages to valid funnel stages
-            const stageMapping = {
-                'discovery': 'prospects',
-                'initial': 'prospects', 
-                'research': 'qualified_prospects',
-                'qualified': 'qualified_prospects',
-                'analysis': 'candidates',
-                'planning': 'candidates',
-                'preparation': 'targets',
-                'ready': 'targets',
-                'application': 'opportunities',
-                'submitted': 'opportunities'
-            };
-            return stageMapping[pipelineStage] || 'prospects';
-        },
         
         async saveOpportunitiesToProfile(opportunities) {
             if (!this.selectedDiscoveryProfile || !opportunities || opportunities.length === 0) {
