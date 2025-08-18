@@ -2798,8 +2798,9 @@ function catalynxApp() {
             this.opportunitiesData = [];
             this.planData = {};
             this.discoveryStats = {
-                activeTracks: 4,
+                activeTracks: 5,
                 totalResults: 0,
+                bmf: 0,
                 nonprofit: 0,
                 federal: 0,
                 state: 0,
@@ -3006,8 +3007,9 @@ function catalynxApp() {
         multiTrackInProgress: false,
         unifiedDiscoveryInProgress: false,
         discoveryStats: {
-            activeTracks: 4,
+            activeTracks: 5,
             totalResults: 0,
+            bmf: 0,
             nonprofit: 0,
             federal: 0,
             state: 0,
@@ -3016,6 +3018,7 @@ function catalynxApp() {
         
         // Discovery progress tracking
         discoveryProgress: {
+            bmf: false,
             nonprofit: false,
             federal: false,
             state: false,
@@ -3831,14 +3834,68 @@ function catalynxApp() {
             }
         },
         
+        // Individual track discovery dispatcher
+        async runDiscoveryTrack(track) {
+            if (!this.selectedDiscoveryProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile first', 'warning');
+                return;
+            }
+
+            // Set track progress
+            this.discoveryProgress[track] = true;
+
+            try {
+                switch(track) {
+                    case 'bmf':
+                        await this.executeBMFFilter();
+                        break;
+                    case 'nonprofit':
+                        await this.runNonprofitDiscovery();
+                        break;
+                    case 'federal':
+                        await this.runFederalDiscovery();
+                        break;
+                    case 'state':
+                        await this.runStateDiscovery();
+                        break;
+                    case 'commercial':
+                        await this.runCommercialDiscovery();
+                        break;
+                    default:
+                        console.error(`Unknown track: ${track}`);
+                        this.showNotification('Error', `Unknown discovery track: ${track}`, 'error');
+                        return;
+                }
+                
+                this.updateDiscoveryStats();
+                this.showNotification('Discovery Complete', `${track.charAt(0).toUpperCase() + track.slice(1)} track completed successfully`, 'success');
+                
+            } catch (error) {
+                console.error(`${track} discovery failed:`, error);
+                this.showNotification('Discovery Error', `${track} discovery failed`, 'error');
+            } finally {
+                this.discoveryProgress[track] = false;
+            }
+        },
+        
         // Individual track runners
-        async runNonprofitDiscovery() {
+        async runNonprofitDiscovery(skipBMFPreprocessing = false) {
             this.nonprofitTrackStatus.processing = true;
             this.nonprofitTrackStatus.status = 'processing';
             
             console.log('Starting nonprofit discovery track...');
             
             try {
+                // Auto-run BMF preprocessing if running nonprofit track independently
+                if (!skipBMFPreprocessing && !this.unifiedDiscoveryInProgress) {
+                    console.log('Auto-running BMF preprocessing for nonprofit track...');
+                    this.discoveryProgress.bmf = true;
+                    const bmfResults = await this.executeBMFFilter();
+                    await this.saveBMFResultsToBackend(bmfResults);
+                    this.discoveryProgress.bmf = false;
+                    console.log('BMF preprocessing completed for nonprofit track');
+                }
+                
                 console.log('Running nonprofit discovery with criteria:', this.nonprofitDiscovery);
                 
                 // Use real API endpoint for nonprofit discovery
@@ -6120,6 +6177,7 @@ function catalynxApp() {
         
         updateDiscoveryTotalResults() {
             this.discoveryStats.totalResults = 
+                this.discoveryStats.bmf + 
                 this.discoveryStats.nonprofit + 
                 this.discoveryStats.federal + 
                 this.discoveryStats.state + 
@@ -6130,12 +6188,16 @@ function catalynxApp() {
             // Count opportunities by source type to update discovery stats
             const sourceTypeCount = opportunities.reduce((counts, opp) => {
                 const sourceType = opp.source_type?.toLowerCase() || 'unknown';
-                if (sourceType.includes('nonprofit')) counts.nonprofit++;
+                const discoverySource = opp.discovery_source?.toLowerCase() || '';
+                
+                // Check for BMF Filter specifically
+                if (discoverySource.includes('bmf') || opp.source === 'BMF Filter') counts.bmf++;
+                else if (sourceType.includes('nonprofit')) counts.nonprofit++;
                 else if (sourceType.includes('federal') || sourceType.includes('government')) counts.federal++;
                 else if (sourceType.includes('state')) counts.state++;
                 else if (sourceType.includes('commercial') || sourceType.includes('foundation')) counts.commercial++;
                 return counts;
-            }, { nonprofit: 0, federal: 0, state: 0, commercial: 0 });
+            }, { bmf: 0, nonprofit: 0, federal: 0, state: 0, commercial: 0 });
 
             // Update discovery stats
             this.discoveryStats = {
@@ -6414,7 +6476,7 @@ function catalynxApp() {
         },
 
 
-        // Enhanced Run All Tracks with BMF Pre-filter
+        // Enhanced Run All Tracks with Sequential BMF + Parallel Others
         async runEnhancedAllTracks() {
             if (!this.selectedDiscoveryProfile) {
                 this.showNotification('No Profile Selected', 'Please select a profile first', 'warning');
@@ -6422,25 +6484,34 @@ function catalynxApp() {
             }
 
             // Prevent multiple simultaneous executions
-            if (this.unifiedDiscoveryInProgress || this.bmfFilterInProgress) {
+            if (this.unifiedDiscoveryInProgress) {
                 return;
             }
 
             this.unifiedDiscoveryInProgress = true;
             
             try {
-                // Part 1: Quick BMF Filter (but don't set bmfFilterInProgress separately)
-                console.log('Running BMF pre-filter for enhanced discovery...');
-                this.showNotification('Enhanced Discovery', 'Running BMF pre-filter and comprehensive track discovery...', 'info');
+                // Phase 1: Run BMF first (fast, provides foundation data for other tracks)
+                console.log('Phase 1: Running BMF Filter first...');
+                this.showNotification('Enhanced Discovery', 'Running BMF Filter then all other tracks...', 'info');
                 
+                this.discoveryProgress.bmf = true;
                 const bmfResults = await this.executeBMFFilter();
-                
-                // Save BMF results to backend for proper persistence
                 await this.saveBMFResultsToBackend(bmfResults);
+                this.discoveryProgress.bmf = false;
                 
-                // Part 2: Comprehensive Track Discovery
-                console.log('Starting comprehensive track discovery...');
-                await this.runUnifiedDiscovery();
+                console.log('BMF Filter completed, starting other tracks in parallel...');
+                
+                // Phase 2: Run other tracks in parallel (skip BMF preprocessing for nonprofit since already done)
+                await Promise.all([
+                    this.runNonprofitDiscovery(true), // skipBMFPreprocessing = true
+                    this.runFederalDiscovery(), 
+                    this.runStateDiscovery(),
+                    this.runCommercialDiscovery()
+                ]);
+                
+                this.updateDiscoveryStats();
+                this.showNotification('Discovery Complete', 'All discovery tracks completed successfully', 'success');
                 
             } catch (error) {
                 console.error('Enhanced discovery failed:', error);
@@ -6468,6 +6539,11 @@ function catalynxApp() {
                 
                 const result = await response.json();
                 console.log('[BMF] BMF discovery completed:', result);
+                
+                // Update BMF stats
+                const totalBMFResults = (bmfResults.nonprofits?.length || 0) + (bmfResults.foundations?.length || 0);
+                this.discoveryStats.bmf = totalBMFResults;
+                console.log(`[BMF] Updated BMF stats: ${totalBMFResults} opportunities`);
                 
                 // Note: Do not call loadRealOpportunities() here to prevent data duplication
                 // Backend handles persistence, let unified discovery flow handle data updates

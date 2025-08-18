@@ -520,3 +520,14 @@ class ProfileService:
                 continue
         
         return None
+
+
+# Singleton instance
+_profile_service = None
+
+def get_profile_service() -> ProfileService:
+    """Get singleton instance of profile service"""
+    global _profile_service
+    if _profile_service is None:
+        _profile_service = ProfileService()
+    return _profile_service
