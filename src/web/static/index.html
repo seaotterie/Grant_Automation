@@ -711,15 +711,15 @@
                                         <div class="flex items-center space-x-3">
                                             <span class="inline-flex items-center">
                                                 <div class="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-                                                <span x-text="`${prospectsData.filter(p => getOpportunityScore(p) >= 0.80).length} Auto-Promote`"></span>
+                                                <span x-text="`${prospectsData.filter(p => getOpportunityScore(p) >= 0.75).length} Auto-Promote`"></span>
                                             </span>
                                             <span class="inline-flex items-center">
                                                 <div class="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
-                                                <span x-text="`${prospectsData.filter(p => getOpportunityScore(p) >= 0.65 && getOpportunityScore(p) < 0.80).length} Review`"></span>
+                                                <span x-text="`${prospectsData.filter(p => getOpportunityScore(p) >= 0.60 && getOpportunityScore(p) < 0.75).length} Review`"></span>
                                             </span>
                                             <span class="inline-flex items-center">
                                                 <div class="w-2 h-2 bg-orange-500 rounded-full mr-1"></div>
-                                                <span x-text="`${prospectsData.filter(p => getOpportunityScore(p) >= 0.45 && getOpportunityScore(p) < 0.65).length} Needs Work`"></span>
+                                                <span x-text="`${prospectsData.filter(p => getOpportunityScore(p) >= 0.45 && getOpportunityScore(p) < 0.60).length} Needs Work`"></span>
                                             </span>
                                         </div>
                                     </template>
@@ -834,8 +834,8 @@
                                             </td>
                                             <td class="px-6 py-3 whitespace-nowrap">
                                                 <span class="px-2 py-1 text-xs font-medium rounded-full" 
-                                                      :class="getStageColor(prospect.funnel_stage || prospect.stage || 'prospects')"
-                                                      x-text="formatStageWithNumber(prospect.funnel_stage || prospect.stage || 'prospects')">
+                                                      :class="getStageColor(getActualStage(prospect))"
+                                                      x-text="formatStageWithNumber(getActualStage(prospect))">
                                                 </span>
                                             </td>
                                             <td class="px-6 py-3 whitespace-nowrap">
@@ -847,13 +847,19 @@
                                                 <div class="flex flex-col space-y-1">
                                                     <!-- Score Bar and Percentage -->
                                                     <div class="flex items-center">
-                                                        <!-- Promotion Ready Indicator -->
-                                                        <div x-show="getOpportunityScore(prospect) >= 0.80" class="mr-1" title="Auto-Promotion Ready (Score ≥ 80%)">
+                                                        <!-- Promotion Ready Indicator (Updated threshold to 75%) -->
+                                                        <div x-show="getOpportunityScore(prospect) >= 0.75" class="mr-1" title="Auto-Promotion Ready (Score ≥ 75%)">
                                                             <span class="inline-flex items-center">
                                                                 <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                                                             </span>
                                                         </div>
-                                                        <div x-show="getOpportunityScore(prospect) >= 0.65 && getOpportunityScore(prospect) < 0.80" class="mr-1" title="Review for Promotion (Score 65-79%)">
+                                                        <!-- Recently Promoted Indicator -->
+                                                        <div x-show="prospect?.match_factors?.auto_promoted" class="mr-1" title="Recently Auto-Promoted">
+                                                            <span class="inline-flex items-center">
+                                                                <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                                            </span>
+                                                        </div>
+                                                        <div x-show="getOpportunityScore(prospect) >= 0.60 && getOpportunityScore(prospect) < 0.75" class="mr-1" title="Review for Promotion (Score 60-74%)">
                                                             <span class="inline-flex items-center">
                                                                 <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
                                                             </span>
@@ -1069,7 +1075,7 @@
                                 <div class="bg-white dark:bg-indigo-900/30 p-4 rounded-lg">
                                     <h6 class="font-medium text-indigo-900 dark:text-indigo-100 mb-2">Auto-Promotion</h6>
                                     <p class="text-sm text-indigo-700 dark:text-indigo-300 mb-3">
-                                        Automatically promote opportunities scoring ≥80% from Discovery to Qualified Prospects
+                                        Automatically promote opportunities scoring ≥75% from Discovery to Qualified Prospects
                                     </p>
                                     <div class="text-xs text-indigo-600 dark:text-indigo-400">
                                         ✓ Multi-dimensional scoring<br>
@@ -1467,8 +1473,8 @@
                                                     </td>
                                                     <td class="px-6 py-4 whitespace-nowrap">
                                                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
-                                                              :class="getStageColor(prospect.funnel_stage)"
-                                                              x-text="formatStageWithNumber(prospect.funnel_stage)"></span>
+                                                              :class="getStageColor(getActualStage(prospect))"
+                                                              x-text="formatStageWithNumber(getActualStage(prospect))"></span>
                                                     </td>
                                                     <td class="px-6 py-4 whitespace-nowrap">
                                                         <span class="px-2 py-1 text-xs font-medium rounded-full"
@@ -1805,8 +1811,8 @@
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
-                                                      :class="getStageColor(candidate.funnel_stage)"
-                                                      x-text="formatStageWithNumber(candidate.funnel_stage)"></span>
+                                                      :class="getStageColor(getActualStage(candidate))"
+                                                      x-text="formatStageWithNumber(getActualStage(candidate))"></span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span class="px-2 py-1 text-xs font-medium rounded-full"
@@ -2070,8 +2076,8 @@
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
-                                                      :class="getStageColor(target.funnel_stage)"
-                                                      x-text="formatStageWithNumber(target.funnel_stage)"></span>
+                                                      :class="getStageColor(getActualStage(target))"
+                                                      x-text="formatStageWithNumber(getActualStage(target))"></span>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span class="px-2 py-1 text-xs font-medium rounded-full"
@@ -6412,7 +6418,7 @@
                     <div class="grid grid-cols-2 gap-4 text-sm">
                         <div class="text-gray-900 dark:text-gray-100"><strong>Source:</strong> <span x-text="selectedScoringDetails?.discovery_source || 'N/A'"></span></div>
                         <div class="text-gray-900 dark:text-gray-100"><strong>Program:</strong> <span x-text="selectedScoringDetails?.program_name || 'N/A'"></span></div>
-                        <div class="text-gray-900 dark:text-gray-100"><strong>Stage:</strong> <span x-text="formatStageWithNumber(selectedScoringDetails?.funnel_stage) || 'N/A'"></span></div>
+                        <div class="text-gray-900 dark:text-gray-100"><strong>Stage:</strong> <span x-text="formatStageWithNumber(getActualStage(selectedScoringDetails || {})) || 'N/A'"></span></div>
                         <div class="text-gray-900 dark:text-gray-100"><strong>Funding Amount:</strong> <span x-text="selectedScoringDetails?.funding_amount ? '$' + selectedScoringDetails.funding_amount.toLocaleString() : 'N/A'"></span></div>
                         <div class="text-gray-900 dark:text-gray-100"><strong>Deadline:</strong> <span x-text="selectedScoringDetails?.application_deadline || 'N/A'"></span></div>
                         <div class="text-gray-900 dark:text-gray-100"><strong>Discovered:</strong> <span x-text="selectedScoringDetails?.discovered_at ? new Date(selectedScoringDetails.discovered_at).toLocaleDateString() : 'N/A'"></span></div>
@@ -6430,7 +6436,7 @@
                 </button>
                 <div class="flex space-x-2">
                     <button @click="demoteProspect(selectedScoringDetails)" 
-                            :disabled="selectedScoringDetails?.funnel_stage === 'prospects'"
+                            :disabled="getActualStage(selectedScoringDetails || {}) === 'discovery'"
                             class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded">
                         Demote
                     </button>
@@ -6735,30 +6741,87 @@
                         </div>
                     </div>
                     
-                    <!-- 990 Data Section (if available) -->
-                    <div x-show="selectedOpportunity?.has_990_data" 
-                         class="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-6">
-                        <h4 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-4">
-                            990 Tax Form Data Available
+                    <!-- Enhanced Organization Intelligence -->
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-6">
+                        <h4 class="text-lg font-bold text-blue-900 dark:text-blue-100 mb-4 flex items-center">
+                            <span class="mr-2" x-text="getTrackSpecificContext(selectedOpportunity).icon">🏢</span>
+                            <span x-text="getTrackSpecificContext(selectedOpportunity).title">Organization Intelligence</span>
+                            <span class="ml-2 px-2 py-1 text-xs rounded-full" 
+                                  :class="getTrackSpecificContext(selectedOpportunity).priority === 'High' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' : 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'"
+                                  x-text="getTrackSpecificContext(selectedOpportunity).priority + ' Priority'"></span>
                         </h4>
                         
-                        <div x-show="selectedOpportunity?.financial_data" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-blue-700 dark:text-blue-300">Total Revenue</label>
-                                <p class="mt-1 text-sm font-semibold text-blue-900 dark:text-blue-100" 
-                                   x-text="formatCurrency(selectedOpportunity?.financial_data?.total_revenue)"></p>
+                        <!-- Track-Specific Context -->
+                        <div class="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-100 dark:border-blue-700">
+                            <p class="text-sm text-blue-700 dark:text-blue-300" x-text="getTrackSpecificContext(selectedOpportunity).description"></p>
+                        </div>
+                        
+                        <!-- Enhanced NTEE Information -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">Organization Type & Focus Area</label>
+                            <div class="flex items-center space-x-3">
+                                <span class="px-3 py-1 bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100 rounded-full text-sm font-medium"
+                                      x-text="selectedOpportunity?.external_data?.ntee_code || 'N/A'"></span>
+                                <span class="text-sm text-blue-900 dark:text-blue-100 font-medium"
+                                      x-text="getNteeCodeDescription(selectedOpportunity?.external_data?.ntee_code)"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Financial Health & Metrics -->
+                        <div x-show="selectedOpportunity?.financial_data" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-100 dark:border-blue-700">
+                                    <label class="block text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">Annual Revenue</label>
+                                    <p class="text-lg font-bold text-blue-900 dark:text-blue-100" 
+                                       x-text="formatCurrency(selectedOpportunity?.financial_data?.total_revenue)"></p>
+                                </div>
+                                
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-100 dark:border-blue-700">
+                                    <label class="block text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">Total Assets</label>
+                                    <p class="text-lg font-bold text-blue-900 dark:text-blue-100" 
+                                       x-text="formatCurrency(selectedOpportunity?.financial_data?.total_assets)"></p>
+                                </div>
                             </div>
                             
-                            <div>
-                                <label class="block text-sm font-medium text-blue-700 dark:text-blue-300">Total Assets</label>
-                                <p class="mt-1 text-sm font-semibold text-blue-900 dark:text-blue-100" 
-                                   x-text="formatCurrency(selectedOpportunity?.financial_data?.total_assets)"></p>
+                            <!-- Financial Health Indicator -->
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-100 dark:border-blue-700">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-sm font-medium text-blue-700 dark:text-blue-300">Financial Health Assessment</label>
+                                    <span class="px-3 py-1 rounded-full text-xs font-medium"
+                                          :class="getFinancialHealthIndicator(selectedOpportunity?.financial_data?.total_revenue, selectedOpportunity?.financial_data?.total_assets).color === 'green' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' : 
+                                                  getFinancialHealthIndicator(selectedOpportunity?.financial_data?.total_revenue, selectedOpportunity?.financial_data?.total_assets).color === 'blue' ? 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100' :
+                                                  getFinancialHealthIndicator(selectedOpportunity?.financial_data?.total_revenue, selectedOpportunity?.financial_data?.total_assets).color === 'yellow' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' :
+                                                  'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100'"
+                                          x-text="getFinancialHealthIndicator(selectedOpportunity?.financial_data?.total_revenue, selectedOpportunity?.financial_data?.total_assets).status.toUpperCase()"></span>
+                                </div>
+                                <p class="text-sm text-blue-900 dark:text-blue-100 mt-2" 
+                                   x-text="getFinancialHealthIndicator(selectedOpportunity?.financial_data?.total_revenue, selectedOpportunity?.financial_data?.total_assets).description"></p>
                             </div>
-                            
-                            <div>
-                                <label class="block text-sm font-medium text-blue-700 dark:text-blue-300">NTEE Code</label>
-                                <p class="mt-1 text-sm font-semibold text-blue-900 dark:text-blue-100" 
-                                   x-text="selectedOpportunity?.external_data?.ntee_code || 'N/A'"></p>
+                        </div>
+                        
+                        <!-- Entity-Specific Intelligence -->
+                        <div x-show="selectedOpportunity?.external_data?.foundation_code === '03'" class="mt-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                            <div class="flex items-center mb-2">
+                                <span class="text-lg mr-2">🏛️</span>
+                                <span class="font-semibold text-purple-900 dark:text-purple-100">Private Foundation Identified</span>
+                            </div>
+                            <p class="text-sm text-purple-700 dark:text-purple-300">This organization is classified as a private foundation (990-PF filer) with potential grant-making capabilities. High value for grant research and partnership opportunities.</p>
+                        </div>
+                        
+                        <!-- State/Location Context -->
+                        <div x-show="selectedOpportunity?.external_data?.state" class="mt-4">
+                            <label class="block text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">Geographic Context</label>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded text-sm font-medium"
+                                      x-text="selectedOpportunity?.external_data?.state"></span>
+                                <span class="text-sm text-blue-900 dark:text-blue-100">
+                                    <template x-if="selectedOpportunity?.external_data?.state === 'VA'">
+                                        <span>Virginia-based organization - Local priority for profile matching</span>
+                                    </template>
+                                    <template x-if="selectedOpportunity?.external_data?.state !== 'VA'">
+                                        <span>Out-of-state organization - Consider geographic factors</span>
+                                    </template>
+                                </span>
                             </div>
                         </div>
                     </div>

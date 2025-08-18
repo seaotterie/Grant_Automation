@@ -40,8 +40,8 @@ class AutoPromotionResult:
 class AutoPromotionConfig:
     """Configuration for automated promotion"""
     enable_auto_promotion: bool = True
-    auto_promotion_threshold: float = 0.80
-    review_promotion_threshold: float = 0.65
+    auto_promotion_threshold: float = 0.75  # Lowered from 0.80 to catch more high-scoring opportunities
+    review_promotion_threshold: float = 0.60  # Lowered from 0.65 for better opportunity capture
     batch_size: int = 50
     max_concurrent_scores: int = 10
     enable_990_fetching: bool = True
@@ -108,7 +108,7 @@ class AutomatedPromotionService:
         
         try:
             # Get profile for context
-            profile = await self.profile_service.get_profile(profile_id)
+            profile = self.profile_service.get_profile(profile_id)
             if not profile:
                 raise ValueError(f"Profile {profile_id} not found")
             

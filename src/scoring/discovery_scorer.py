@@ -60,7 +60,7 @@ class ScoringResult:
     @property
     def auto_promotion_threshold(self) -> bool:
         """Whether this score meets auto-promotion threshold"""
-        return self.overall_score >= 0.80
+        return self.overall_score >= 0.75  # Lowered from 0.80 to catch more high-scoring opportunities
 
 
 class DiscoveryScorer:

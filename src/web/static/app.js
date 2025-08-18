@@ -6,17 +6,29 @@
 const CatalynxUtils = {
     formatStageWithNumber(stage) {
         const stageMapping = {
-            'prospects': '#1 - PROSPECTS',
-            'qualified_prospects': '#2 - QUALIFIED PROSPECTS',
-            'candidates': '#3 - CANDIDATES',
-            'targets': '#4 - TARGETS', 
-            'opportunities': '#5 - OPPORTUNITIES'
+            // New pipeline stage mapping
+            'discovery': '#1 Prospects',
+            'pre_scoring': '#2 Qualified',
+            'deep_analysis': '#3 Candidates',
+            'recommendations': '#4 Targets',
+            // Legacy support for old stages
+            'prospects': '#1 Prospects',
+            'qualified_prospects': '#2 Qualified',
+            'candidates': '#3 Candidates',
+            'targets': '#4 Targets', 
+            'opportunities': '#5 Opportunities'
         };
         return stageMapping[stage] || stage.replace('_', ' ').toUpperCase();
     },
     
     getStageColor(stage) {
         const colorMapping = {
+            // New pipeline stage colors
+            'discovery': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+            'pre_scoring': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+            'deep_analysis': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+            'recommendations': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+            // Legacy support for old stages
             'prospects': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
             'qualified_prospects': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
             'candidates': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
@@ -24,6 +36,11 @@ const CatalynxUtils = {
             'opportunities': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
         };
         return colorMapping[stage] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    },
+    
+    getActualStage(prospect) {
+        // Priority: pipeline_stage > funnel_stage > stage > default
+        return prospect.pipeline_stage || prospect.funnel_stage || prospect.stage || 'discovery';
     },
     
     getOrganizationTypeColor(type) {
@@ -1728,6 +1745,7 @@ function catalynxApp() {
         showOpportunityModal: false,
         selectedOpportunity: null,
         opportunityLoading: false,
+        isProcessing: false,
         
         // EIN fetch functionality
         einFetchLoading: false,
@@ -3390,27 +3408,33 @@ function catalynxApp() {
         },
         
         get qualifiedProspects() {
-            // PLAN tab: qualified_prospects + candidates (profile-scoped)
-            return this.opportunitiesData.filter(opp => 
-                ['qualified_prospects', 'candidates'].includes(opp.funnel_stage) &&
-                this.isOpportunityInScope(opp)
-            );
+            // PLAN tab: pre_scoring + deep_analysis (profile-scoped)
+            // Updated to use pipeline_stage field instead of funnel_stage
+            return this.opportunitiesData.filter(opp => {
+                const stage = opp.pipeline_stage || opp.funnel_stage;
+                return ['pre_scoring', 'deep_analysis', 'qualified_prospects', 'candidates'].includes(stage) &&
+                       this.isOpportunityInScope(opp);
+            });
         },
         
         get candidatesData() {
-            // ANALYZE tab: candidates + targets (profile-scoped)
-            return this.opportunitiesData.filter(opp => 
-                ['candidates', 'targets'].includes(opp.funnel_stage) &&
-                this.isOpportunityInScope(opp)
-            );
+            // ANALYZE tab: deep_analysis + recommendations (profile-scoped)
+            // Updated to use pipeline_stage field instead of funnel_stage
+            return this.opportunitiesData.filter(opp => {
+                const stage = opp.pipeline_stage || opp.funnel_stage;
+                return ['deep_analysis', 'recommendations', 'candidates', 'targets'].includes(stage) &&
+                       this.isOpportunityInScope(opp);
+            });
         },
         
         get targetsData() {
-            // EXAMINE tab: targets + opportunities (profile-scoped)
-            return this.opportunitiesData.filter(opp => 
-                ['targets', 'opportunities'].includes(opp.funnel_stage) &&
-                this.isOpportunityInScope(opp)
-            );
+            // EXAMINE tab: recommendations + future stages (profile-scoped)
+            // Updated to use pipeline_stage field instead of funnel_stage
+            return this.opportunitiesData.filter(opp => {
+                const stage = opp.pipeline_stage || opp.funnel_stage;
+                return ['recommendations', 'targets', 'opportunities'].includes(stage) &&
+                       this.isOpportunityInScope(opp);
+            });
         },
         
         // PROFILE SCOPING LOGIC - Filter opportunities based on selected profile
@@ -4562,22 +4586,39 @@ function catalynxApp() {
         // UTILITY FUNCTIONS FOR STAGE DISPLAY
         formatStageWithNumber(stage) {
             const stageMapping = {
-                'prospects': '#1 - PROSPECTS',
-                'qualified_prospects': '#2 - QUALIFIED PROSPECTS',
-                'candidates': '#3 - CANDIDATES',
-                'targets': '#4 - TARGETS', 
-                'opportunities': '#5 - OPPORTUNITIES'
+                // New pipeline stage mapping (current system)
+                'discovery': '#1 Prospects',
+                'pre_scoring': '#2 Qualified',
+                'deep_analysis': '#3 Candidates',
+                'recommendations': '#4 Targets',
+                // Legacy support for old stages
+                'prospects': '#1 Prospects',
+                'qualified_prospects': '#2 Qualified',
+                'candidates': '#3 Candidates',
+                'targets': '#4 Targets', 
+                'opportunities': '#5 Opportunities'
             };
             return stageMapping[stage] || stage?.replace('_', ' ').toUpperCase() || 'UNKNOWN';
         },
         
+        getActualStage(prospect) {
+            // Priority: pipeline_stage > funnel_stage > stage > default
+            return prospect.pipeline_stage || prospect.funnel_stage || prospect.stage || 'discovery';
+        },
+        
         getStageColor(stage) {
             const colorMapping = {
-                'prospects': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-                'qualified_prospects': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-                'candidates': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-                'targets': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-                'opportunities': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                // New pipeline stage colors (current system)
+                'discovery': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+                'pre_scoring': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                'deep_analysis': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+                'recommendations': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+                // Legacy support for old stages
+                'prospects': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+                'qualified_prospects': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                'candidates': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+                'targets': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+                'opportunities': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
             };
             return colorMapping[stage] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
         },
@@ -4591,6 +4632,138 @@ function catalynxApp() {
                 'Foundation': 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300'
             };
             return colorMapping[type] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+        },
+        
+        // ENHANCED ORGANIZATION DETAILS FUNCTIONS
+        getNteeCodeDescription(nteeCode) {
+            const nteeMapping = {
+                // Arts, Culture, and Humanities
+                'A': 'Arts, Culture & Humanities',
+                'A01': 'Alliances & Advocacy',
+                'A20': 'Arts Education',
+                'A54': 'Botanical Gardens',
+                'A80': 'Cultural Organizations',
+                
+                // Education
+                'B': 'Education',
+                'B20': 'Elementary & Secondary Education',
+                'B25': 'Higher Education',
+                'B30': 'Vocational & Technical Schools',
+                
+                // Environment and Animals
+                'C': 'Environment & Animals',
+                'C32': 'Water Resources Conservation',
+                'C34': 'Land Conservation',
+                
+                // Health
+                'E': 'Health',
+                'E20': 'Hospitals & Primary Care',
+                'E21': 'Community Health Centers',
+                'E22': 'Free Clinics',
+                
+                // Human Services
+                'L': 'Housing & Human Services',
+                'L11': 'Single Organization Support',
+                'L20': 'Housing & Shelter',
+                'L41': 'Food, Agriculture & Nutrition',
+                'L80': 'Legal Services',
+                'L81': 'Public Safety, Disaster Preparedness',
+                'L82': 'Public Safety, Emergency Management',
+                'L99': 'Human Services - Other',
+                
+                // Community Development
+                'S': 'Community Improvement & Capacity Building',
+                'S30': 'Economic Development',
+                
+                // Foundations & Grant-Making
+                'T': 'Philanthropy & Grantmaking',
+                'T31': 'Community Foundations',
+                
+                // Other
+                'P': 'Human Services - Multipurpose',
+                'P20': 'Human Service Organizations',
+                'P81': 'Fundraising Organizations',
+                'F': 'Mental Health & Crisis Intervention',
+                'F40': 'Reproductive Health Care'
+            };
+            
+            if (!nteeCode) return 'Not specified';
+            
+            // Try exact match first
+            if (nteeMapping[nteeCode]) {
+                return nteeMapping[nteeCode];
+            }
+            
+            // Try category match (first letter)
+            const category = nteeCode.charAt(0);
+            if (nteeMapping[category]) {
+                return `${nteeMapping[category]} (${nteeCode})`;
+            }
+            
+            return `NTEE Code: ${nteeCode}`;
+        },
+        
+        getTrackSpecificContext(opportunity) {
+            const source = opportunity?.external_data?.discovery_source || opportunity?.source_type;
+            const context = {
+                icon: '📊',
+                title: 'General Opportunity',
+                description: 'Standard opportunity analysis',
+                priority: 'Medium'
+            };
+            
+            if (source === 'BMF Filter') {
+                if (opportunity?.external_data?.foundation_code === '03') {
+                    context.icon = '🏛️';
+                    context.title = 'Private Foundation';
+                    context.description = 'Foundation identified from IRS 990-PF filings with potential grant-making capacity';
+                    context.priority = 'High';
+                } else {
+                    context.icon = '🏢';
+                    context.title = 'Nonprofit Organization';
+                    context.description = 'IRS-verified nonprofit with current tax-exempt status';
+                    context.priority = 'Medium';
+                }
+            } else if (source === 'Grants.gov') {
+                context.icon = '🏛️';
+                context.title = 'Federal Grant Opportunity';
+                context.description = 'Official federal funding opportunity from Grants.gov';
+                context.priority = 'High';
+            } else if (source === 'USASpending.gov') {
+                context.icon = '💰';
+                context.title = 'Federal Award History';
+                context.description = 'Historical federal funding recipient with proven track record';
+                context.priority = 'Medium';
+            }
+            
+            return context;
+        },
+        
+        formatCurrency(amount) {
+            if (!amount || amount === 0) return 'Not available';
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        },
+        
+        getFinancialHealthIndicator(revenue, assets) {
+            if (!revenue && !assets) return { status: 'unknown', color: 'gray', description: 'Financial data not available' };
+            
+            const totalRevenue = revenue || 0;
+            const totalAssets = assets || 0;
+            
+            if (totalRevenue > 10000000 || totalAssets > 50000000) {
+                return { status: 'excellent', color: 'green', description: 'Large, well-established organization' };
+            } else if (totalRevenue > 1000000 || totalAssets > 5000000) {
+                return { status: 'good', color: 'blue', description: 'Medium-sized organization with solid foundation' };
+            } else if (totalRevenue > 100000 || totalAssets > 500000) {
+                return { status: 'moderate', color: 'yellow', description: 'Small to medium organization' };
+            } else {
+                return { status: 'limited', color: 'orange', description: 'Small organization or limited financial data' };
+            }
         },
         
         // SCORING VISUALIZATION FUNCTIONS
@@ -4772,6 +4945,7 @@ function catalynxApp() {
             this.showOpportunityModal = false;
             this.selectedOpportunity = null;
             this.opportunityLoading = false;
+            this.isProcessing = false;
             console.log('Closing opportunity modal');
         },
 

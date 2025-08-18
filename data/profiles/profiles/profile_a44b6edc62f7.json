@@ -41,7 +41,7 @@
   "reporting_capabilities": [],
   "status": "archived",
   "created_at": "2025-08-07 14:33:36.317265",
-  "updated_at": "2025-08-10T07:39:11.804516",
+  "updated_at": "2025-08-18T15:06:41.618890",
   "created_by": null,
   "tags": [],
   "notes": null,
@@ -49,5 +49,6 @@
   "discovery_count": 0,
   "discovery_status": "never_run",
   "next_recommended_discovery": null,
-  "opportunities_count": 0
+  "opportunities_count": 0,
+  "associated_opportunities": []
 }
