@@ -1724,6 +1724,11 @@ function catalynxApp() {
         showDeleteConfirmation: false,
         deleteConfirmationMessage: '',
         
+        // Opportunity Modal System
+        showOpportunityModal: false,
+        selectedOpportunity: null,
+        opportunityLoading: false,
+        
         // EIN fetch functionality
         einFetchLoading: false,
         pendingDeleteProfileId: null,
@@ -3726,6 +3731,7 @@ function catalynxApp() {
         
         prospectsLoading: false,
         prospectsStageFilter: '', // Filter by funnel stage
+        scoreSortOrder: '', // Sort order for scores
         
         // Discovery track configurations
         nonprofitDiscovery: {
@@ -3917,6 +3923,21 @@ function catalynxApp() {
                 }
                 
                 this.nonprofitTrackStatus.status = 'complete';
+                
+                // Display automated promotion results if available
+                if (data.automated_promotion && data.automated_promotion.enabled) {
+                    const promotion = data.automated_promotion;
+                    const promotionMsg = `Automated Promotion: ${promotion.promoted}/${promotion.processed} opportunities promoted (${promotion.processing_time.toFixed(2)}s)`;
+                    
+                    if (promotion.promoted > 0) {
+                        this.showNotification('Automated Promotion', promotionMsg, 'success');
+                    } else {
+                        console.log('Automated promotion results:', promotionMsg);
+                    }
+                } else if (data.automated_promotion && !data.automated_promotion.enabled) {
+                    console.log('Automated promotion disabled:', data.automated_promotion.reason);
+                }
+                
                 console.log(`Nonprofit discovery completed: ${this.nonprofitTrackStatus.results} organizations found`);
             } catch (error) {
                 console.error('Nonprofit discovery failed:', error);
@@ -4447,6 +4468,91 @@ function catalynxApp() {
             return colorMapping[type] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
         },
         
+        // SCORING VISUALIZATION FUNCTIONS
+        getOpportunityScore(opportunity) {
+            // Use enhanced score if available, otherwise fallback to compatibility_score or default
+            return opportunity?.enhanced_data_score || 
+                   opportunity?.overall_score || 
+                   opportunity?.compatibility_score || 
+                   opportunity?.discovery_score || 
+                   0;
+        },
+
+        getScoreColor(score) {
+            if (score >= 0.80) return 'bg-green-500'; // Auto-promotion ready
+            if (score >= 0.65) return 'bg-yellow-500'; // Review for promotion  
+            if (score >= 0.45) return 'bg-orange-500'; // Needs improvement
+            return 'bg-red-500'; // Low score
+        },
+
+        getScoreTextColor(score) {
+            if (score >= 0.80) return 'text-green-700 dark:text-green-400';
+            if (score >= 0.65) return 'text-yellow-700 dark:text-yellow-400';  
+            if (score >= 0.45) return 'text-orange-700 dark:text-orange-400';
+            return 'text-red-700 dark:text-red-400';
+        },
+
+        getScoreGrade(score) {
+            if (score >= 0.90) return 'A+';
+            if (score >= 0.80) return 'A';
+            if (score >= 0.70) return 'B+';
+            if (score >= 0.65) return 'B';
+            if (score >= 0.55) return 'C+';
+            if (score >= 0.45) return 'C';
+            if (score >= 0.35) return 'D+';
+            if (score >= 0.25) return 'D';
+            return 'F';
+        },
+
+        getScoreGradeColor(score) {
+            if (score >= 0.80) return 'text-green-600 dark:text-green-400 font-bold';
+            if (score >= 0.65) return 'text-yellow-600 dark:text-yellow-400 font-medium';
+            if (score >= 0.45) return 'text-orange-600 dark:text-orange-400 font-medium';
+            return 'text-red-600 dark:text-red-400 font-medium';
+        },
+
+        // SCORING SORT AND FILTER FUNCTIONS
+        sortOpportunitiesByScore() {
+            if (!this.opportunitiesData || !this.scoreSortOrder) return;
+            
+            const sortedData = [...this.opportunitiesData];
+            
+            switch (this.scoreSortOrder) {
+                case 'score_desc':
+                    sortedData.sort((a, b) => this.getOpportunityScore(b) - this.getOpportunityScore(a));
+                    break;
+                case 'score_asc':
+                    sortedData.sort((a, b) => this.getOpportunityScore(a) - this.getOpportunityScore(b));
+                    break;
+                case 'promotion_ready':
+                    sortedData.sort((a, b) => {
+                        const scoreA = this.getOpportunityScore(a);
+                        const scoreB = this.getOpportunityScore(b);
+                        // Sort by promotion readiness: auto-promote (>=0.80) first, then review (0.65-0.79), then others
+                        if (scoreB >= 0.80 && scoreA < 0.80) return 1;
+                        if (scoreA >= 0.80 && scoreB < 0.80) return -1;
+                        if (scoreB >= 0.65 && scoreA < 0.65) return 1;
+                        if (scoreA >= 0.65 && scoreB < 0.65) return -1;
+                        return scoreB - scoreA; // Within same tier, sort by score descending
+                    });
+                    break;
+                default:
+                    // No sorting - keep original order
+                    break;
+            }
+            
+            this.opportunitiesData = sortedData;
+        },
+
+        toggleScoreSort() {
+            // Cycle through sort orders
+            const sortOrders = ['', 'score_desc', 'score_asc', 'promotion_ready'];
+            const currentIndex = sortOrders.indexOf(this.scoreSortOrder || '');
+            const nextIndex = (currentIndex + 1) % sortOrders.length;
+            this.scoreSortOrder = sortOrders[nextIndex];
+            this.sortOpportunitiesByScore();
+        },
+        
         // SCORING MODAL FUNCTIONS
         openScoringModal(opportunity) {
             console.log('Opening scoring modal for:', opportunity.organization_name);
@@ -4515,6 +4621,548 @@ function catalynxApp() {
             this.showScoringModal = false;
             this.selectedScoringDetails = null;
             console.log('Closing scoring modal');
+        },
+
+        // OPPORTUNITY MODAL FUNCTIONS
+        async openOpportunityModal(opportunity) {
+            console.log('Opening opportunity modal for:', opportunity);
+            this.selectedOpportunity = opportunity;
+            this.opportunityLoading = true;
+            this.showOpportunityModal = true;
+            
+            try {
+                // Fetch detailed scoring information if not already present
+                if (!opportunity.dimension_scores) {
+                    await this.fetchOpportunityDetails(opportunity);
+                }
+            } catch (error) {
+                console.error('Error loading opportunity details:', error);
+                this.showNotification('Error', 'Failed to load opportunity details', 'error');
+            } finally {
+                this.opportunityLoading = false;
+            }
+        },
+
+        closeOpportunityModal() {
+            this.showOpportunityModal = false;
+            this.selectedOpportunity = null;
+            this.opportunityLoading = false;
+            console.log('Closing opportunity modal');
+        },
+
+        async fetchOpportunityDetails(opportunity) {
+            if (!this.selectedProfile) {
+                console.warn('No profile selected for scoring');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/opportunities/${opportunity.opportunity_id}/details`);
+                if (response.ok) {
+                    const details = await response.json();
+                    Object.assign(this.selectedOpportunity, details);
+                    console.log('Fetched opportunity details:', details);
+                } else {
+                    console.warn('Failed to fetch opportunity details:', response.status);
+                }
+            } catch (error) {
+                console.error('Error fetching opportunity details:', error);
+            }
+        },
+
+        async manualPromote(opportunity) {
+            if (!opportunity || !this.selectedProfile) {
+                console.warn('Missing opportunity or profile for promotion');
+                return;
+            }
+
+            this.isProcessing = true;
+            try {
+                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/opportunities/${opportunity.opportunity_id}/promote`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'promote',
+                        reason: 'Manual promotion via modal',
+                        user_id: 'web_user'
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    this.showNotification('Success', `Opportunity promoted to ${result.target_stage}`, 'success');
+                    
+                    // Update the opportunity in the current view
+                    await this.loadRealOpportunities();
+                    this.closeOpportunityModal();
+                } else {
+                    const error = await response.json();
+                    this.showNotification('Error', `Failed to promote: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error promoting opportunity:', error);
+                this.showNotification('Error', 'Failed to promote opportunity', 'error');
+            } finally {
+                this.isProcessing = false;
+            }
+        },
+
+        async manualDemote(opportunity) {
+            if (!opportunity || !this.selectedProfile) {
+                console.warn('Missing opportunity or profile for demotion');
+                return;
+            }
+
+            this.isProcessing = true;
+            try {
+                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/opportunities/${opportunity.opportunity_id}/promote`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'demote',
+                        reason: 'Manual demotion via modal',
+                        user_id: 'web_user'
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    this.showNotification('Success', `Opportunity demoted to ${result.target_stage}`, 'success');
+                    
+                    // Update the opportunity in the current view
+                    await this.loadRealOpportunities();
+                    this.closeOpportunityModal();
+                } else {
+                    const error = await response.json();
+                    this.showNotification('Error', `Failed to demote: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error demoting opportunity:', error);
+                this.showNotification('Error', 'Failed to demote opportunity', 'error');
+            } finally {
+                this.isProcessing = false;
+            }
+        },
+
+        async rescoreOpportunity(opportunity) {
+            if (!opportunity || !this.selectedProfile) {
+                console.warn('Missing opportunity or profile for rescoring');
+                return;
+            }
+
+            this.isProcessing = true;
+            try {
+                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/opportunities/${opportunity.opportunity_id}/score`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        opportunity_data: opportunity,
+                        force_rescore: true
+                    })
+                });
+
+                if (response.ok) {
+                    const scoreResult = await response.json();
+                    
+                    // Update the selected opportunity with new scores
+                    this.selectedOpportunity.score = scoreResult.overall_score;
+                    this.selectedOpportunity.dimension_scores = scoreResult.dimension_scores;
+                    this.selectedOpportunity.boost_factors = scoreResult.boost_factors;
+                    this.selectedOpportunity.promotion_recommended = scoreResult.promotion_recommended;
+                    
+                    this.showNotification('Success', `Opportunity re-scored: ${scoreResult.overall_score.toFixed(3)}`, 'success');
+                    
+                    // Update the opportunity in the current view
+                    await this.loadRealOpportunities();
+                } else {
+                    const error = await response.json();
+                    this.showNotification('Error', `Failed to re-score: ${error.detail}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error rescoring opportunity:', error);
+                this.showNotification('Error', 'Failed to re-score opportunity', 'error');
+            } finally {
+                this.isProcessing = false;
+            }
+        },
+
+        // HELPER FUNCTIONS FOR OPPORTUNITY MODAL
+        getScoreBadgeClass(score) {
+            if (!score) return 'bg-gray-100 text-gray-800';
+            if (score >= 0.80) return 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100';
+            if (score >= 0.65) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100';
+            if (score >= 0.45) return 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100';
+            return 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100';
+        },
+
+        getScoreTextClass(score) {
+            if (!score) return 'text-gray-600';
+            if (score >= 0.80) return 'text-green-600 dark:text-green-400';
+            if (score >= 0.65) return 'text-yellow-600 dark:text-yellow-400';
+            if (score >= 0.45) return 'text-orange-600 dark:text-orange-400';
+            return 'text-red-600 dark:text-red-400';
+        },
+
+        getScoreBarClass(score) {
+            if (!score) return 'bg-gray-300';
+            if (score >= 0.80) return 'bg-green-500';
+            if (score >= 0.65) return 'bg-yellow-500';
+            if (score >= 0.45) return 'bg-orange-500';
+            return 'bg-red-500';
+        },
+
+        getStageClass(stage) {
+            const stageClasses = {
+                'prospects': 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100',
+                'qualified_prospects': 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100',
+                'candidates': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100',
+                'targets': 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100',
+                'opportunities': 'bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100'
+            };
+            return stageClasses[stage] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100';
+        },
+
+        formatStageName(stage) {
+            const stageNames = {
+                'prospects': 'Prospects',
+                'qualified_prospects': 'Qualified Prospects',
+                'candidates': 'Candidates',
+                'targets': 'Targets',
+                'opportunities': 'Opportunities'
+            };
+            return stageNames[stage] || (stage || 'Unknown').replace('_', ' ');
+        },
+
+        formatDimensionName(dimension) {
+            const dimensionNames = {
+                'base_compatibility': 'Base Compatibility',
+                'financial_viability': 'Financial Viability',
+                'geographic_advantage': 'Geographic Advantage',
+                'timing_score': 'Timing Score',
+                'strategic_alignment': 'Strategic Alignment'
+            };
+            return dimensionNames[dimension] || dimension.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        },
+
+        formatBoostFactor(factor) {
+            const boostNames = {
+                'has_990_data': '990 Data',
+                'exact_ntee_match': 'NTEE Match',
+                'board_connections': 'Board Connections',
+                'historical_success': 'Historical Success',
+                'geographic_priority': 'Geographic Priority'
+            };
+            return boostNames[factor] || factor.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        },
+
+        formatCurrency(amount) {
+            if (!amount) return 'N/A';
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        },
+
+        // AUTOMATED PROMOTION FUNCTIONS
+        async getPromotionCandidates(stage = 'prospects', limit = 50) {
+            if (!this.selectedProfile) {
+                console.warn('No profile selected for promotion candidates');
+                return [];
+            }
+
+            try {
+                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/automated-promotion/candidates?stage=${stage}&limit=${limit}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`Found ${data.total_candidates} promotion candidates in ${stage}`);
+                    return data.candidates;
+                } else {
+                    console.warn('Failed to get promotion candidates:', response.status);
+                    return [];
+                }
+            } catch (error) {
+                console.error('Error getting promotion candidates:', error);
+                return [];
+            }
+        },
+
+        async bulkPromoteOpportunities(opportunityIds, showNotification = true) {
+            if (!this.selectedProfile || !opportunityIds.length) {
+                console.warn('Cannot bulk promote: missing profile or opportunity IDs');
+                return false;
+            }
+
+            this.isProcessing = true;
+            try {
+                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/automated-promotion/bulk-promote`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        opportunity_ids: opportunityIds,
+                        user_id: 'web_user'
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const bulkResult = result.bulk_promotion_result;
+                    
+                    if (showNotification) {
+                        this.showNotification('Bulk Promotion', `${bulkResult.promoted_count} opportunities promoted, ${bulkResult.failed_count} failed`, 'success');
+                    }
+                    
+                    // Update the opportunity list
+                    await this.loadRealOpportunities();
+                    
+                    return true;
+                } else {
+                    const error = await response.json();
+                    if (showNotification) {
+                        this.showNotification('Error', `Bulk promotion failed: ${error.detail}`, 'error');
+                    }
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error in bulk promotion:', error);
+                if (showNotification) {
+                    this.showNotification('Error', 'Bulk promotion failed', 'error');
+                }
+                return false;
+            } finally {
+                this.isProcessing = false;
+            }
+        },
+
+        async runAutomatedPromotion() {
+            if (!this.selectedProfile) {
+                console.warn('No profile selected for automated promotion');
+                return;
+            }
+
+            // Get promotion candidates
+            const candidates = await this.getPromotionCandidates('prospects', 100);
+            
+            if (candidates.length === 0) {
+                this.showNotification('Automated Promotion', 'No opportunities ready for promotion', 'info');
+                return;
+            }
+
+            // Extract opportunity IDs from candidates
+            const opportunityIds = candidates.map(candidate => candidate.opportunity_id);
+            
+            this.showNotification('Processing', `Evaluating ${candidates.length} opportunities for promotion...`, 'info');
+            
+            // Bulk promote the candidates
+            await this.bulkPromoteOpportunities(opportunityIds, true);
+        },
+
+        async getAutomatedPromotionStats() {
+            try {
+                const response = await fetch('/api/automated-promotion/stats');
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.service_stats;
+                } else {
+                    console.warn('Failed to get promotion stats:', response.status);
+                    return null;
+                }
+            } catch (error) {
+                console.error('Error getting promotion stats:', error);
+                return null;
+            }
+        },
+
+        async updateAutomatedPromotionConfig(config) {
+            try {
+                const response = await fetch('/api/automated-promotion/config', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    this.showNotification('Configuration', 'Automated promotion settings updated', 'success');
+                    return result.updated_config;
+                } else {
+                    const error = await response.json();
+                    this.showNotification('Error', `Failed to update config: ${error.detail}`, 'error');
+                    return null;
+                }
+            } catch (error) {
+                console.error('Error updating promotion config:', error);
+                this.showNotification('Error', 'Failed to update configuration', 'error');
+                return null;
+            }
+        },
+
+        // ENHANCED DATA SERVICE FUNCTIONS (990/990-PF Integration)
+        async fetchEnhancedDataForOpportunity(opportunity, score = null) {
+            if (!this.selectedProfile || !opportunity) {
+                console.warn('Missing profile or opportunity for enhanced data fetch');
+                return null;
+            }
+
+            try {
+                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/opportunities/${opportunity.opportunity_id}/enhanced-data`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        opportunity_data: opportunity,
+                        score: score
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        console.log(`Enhanced data fetched for ${opportunity.organization_name}:`, result.enhanced_data);
+                        return result.enhanced_data;
+                    } else {
+                        console.log(`No enhanced data available: ${result.message}`);
+                        return null;
+                    }
+                } else {
+                    console.warn('Failed to fetch enhanced data:', response.status);
+                    return null;
+                }
+            } catch (error) {
+                console.error('Error fetching enhanced data:', error);
+                return null;
+            }
+        },
+
+        async fetchEnhancedDataBatch(opportunities, scores = null) {
+            if (!this.selectedProfile || !opportunities.length) {
+                console.warn('Missing profile or opportunities for batch enhanced data fetch');
+                return [];
+            }
+
+            try {
+                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/opportunities/enhanced-data/batch`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        opportunities: opportunities,
+                        scores: scores
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log(`Enhanced data batch complete: ${result.successful_results}/${result.batch_size} successful`);
+                    return result.results;
+                } else {
+                    console.warn('Failed to fetch enhanced data batch:', response.status);
+                    return [];
+                }
+            } catch (error) {
+                console.error('Error fetching enhanced data batch:', error);
+                return [];
+            }
+        },
+
+        async getEnhancedDataStats() {
+            try {
+                const response = await fetch('/api/enhanced-data/stats');
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.service_stats;
+                } else {
+                    console.warn('Failed to get enhanced data stats:', response.status);
+                    return null;
+                }
+            } catch (error) {
+                console.error('Error getting enhanced data stats:', error);
+                return null;
+            }
+        },
+
+        async updateEnhancedDataConfig(config) {
+            try {
+                const response = await fetch('/api/enhanced-data/config', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    this.showNotification('Configuration', 'Enhanced data settings updated', 'success');
+                    return result.updated_config;
+                } else {
+                    const error = await response.json();
+                    this.showNotification('Error', `Failed to update config: ${error.detail}`, 'error');
+                    return null;
+                }
+            } catch (error) {
+                console.error('Error updating enhanced data config:', error);
+                this.showNotification('Error', 'Failed to update configuration', 'error');
+                return null;
+            }
+        },
+
+        async clearEnhancedDataCache() {
+            try {
+                const response = await fetch('/api/enhanced-data/cache', {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    this.showNotification('Cache Cleared', result.message, 'success');
+                    return true;
+                } else {
+                    const error = await response.json();
+                    this.showNotification('Error', `Failed to clear cache: ${error.detail}`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error clearing enhanced data cache:', error);
+                this.showNotification('Error', 'Failed to clear cache', 'error');
+                return false;
+            }
+        },
+
+        async enrichOpportunityWithEnhancedData(opportunity) {
+            const enhancedData = await this.fetchEnhancedDataForOpportunity(opportunity);
+            
+            if (enhancedData) {
+                // Merge enhanced data into opportunity object
+                opportunity.has_990_data = enhancedData.has_990_data;
+                opportunity.has_990_pf_data = enhancedData.has_990_pf_data;
+                opportunity.financial_data = enhancedData.financial_data;
+                opportunity.foundation_data = enhancedData.foundation_data;
+                opportunity.board_data = enhancedData.board_data;
+                opportunity.boost_factors = enhancedData.boost_factors;
+                opportunity.data_completeness = enhancedData.data_completeness;
+                
+                // Show notification for significant data enhancement
+                if (enhancedData.has_990_data || enhancedData.has_990_pf_data) {
+                    const dataType = enhancedData.has_990_pf_data ? '990-PF' : '990';
+                    this.showNotification('Enhanced Data', `${dataType} data loaded for ${opportunity.organization_name}`, 'success');
+                }
+            }
+            
+            return opportunity;
         },
         
         // PLAN TAB ANALYSIS FUNCTIONS

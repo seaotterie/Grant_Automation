@@ -700,9 +700,36 @@
                         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                             <div>
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Discovery Results</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400" x-text="`${prospectsData?.length || 0} prospects found`">0 prospects found</p>
+                                <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                                    <span x-text="`${prospectsData?.length || 0} prospects found`">0 prospects found</span>
+                                    <!-- Score Distribution Summary -->
+                                    <template x-if="prospectsData && prospectsData.length > 0">
+                                        <div class="flex items-center space-x-3">
+                                            <span class="inline-flex items-center">
+                                                <div class="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                                                <span x-text="`${prospectsData.filter(p => getOpportunityScore(p) >= 0.80).length} Auto-Promote`"></span>
+                                            </span>
+                                            <span class="inline-flex items-center">
+                                                <div class="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
+                                                <span x-text="`${prospectsData.filter(p => getOpportunityScore(p) >= 0.65 && getOpportunityScore(p) < 0.80).length} Review`"></span>
+                                            </span>
+                                            <span class="inline-flex items-center">
+                                                <div class="w-2 h-2 bg-orange-500 rounded-full mr-1"></div>
+                                                <span x-text="`${prospectsData.filter(p => getOpportunityScore(p) >= 0.45 && getOpportunityScore(p) < 0.65).length} Needs Work`"></span>
+                                            </span>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
-                            <div class="flex items-center space-x-3">
+                            <div class="flex items-center space-x-3 flex-wrap">
+                                <!-- Score Sort -->
+                                <select class="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" x-model="scoreSortOrder" @change="sortOpportunitiesByScore()">
+                                    <option value="">Default Order</option>
+                                    <option value="score_desc">🔥 Highest Score First</option>
+                                    <option value="score_asc">📊 Lowest Score First</option>
+                                    <option value="promotion_ready">⬆️ Promotion Ready</option>
+                                </select>
+
                                 <!-- Stage Filter -->
                                 <select class="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" x-model="prospectsStageFilter">
                                     <option value="">All Stages</option>
@@ -745,7 +772,16 @@
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stage</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Score</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            <div class="flex items-center space-x-1">
+                                                <span>Score</span>
+                                                <button @click="toggleScoreSort()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">App Status</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">990 Grantee</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Source</th>
@@ -804,11 +840,42 @@
                                                       x-text="prospect.organization_type || prospect.source_type || 'Nonprofit'"></span>
                                             </td>
                                             <td class="px-6 py-3 whitespace-nowrap">
-                                                <div class="flex items-center">
-                                                    <div class="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
-                                                        <div class="bg-blue-600 h-2 rounded-full" :style="`width: ${((prospect?.compatibility_score || 0) * 100)}%`"></div>
+                                                <div class="flex flex-col space-y-1">
+                                                    <!-- Score Bar and Percentage -->
+                                                    <div class="flex items-center">
+                                                        <!-- Promotion Ready Indicator -->
+                                                        <div x-show="getOpportunityScore(prospect) >= 0.80" class="mr-1" title="Auto-Promotion Ready (Score ≥ 80%)">
+                                                            <span class="inline-flex items-center">
+                                                                <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                                            </span>
+                                                        </div>
+                                                        <div x-show="getOpportunityScore(prospect) >= 0.65 && getOpportunityScore(prospect) < 0.80" class="mr-1" title="Review for Promotion (Score 65-79%)">
+                                                            <span class="inline-flex items-center">
+                                                                <div class="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                                            </span>
+                                                        </div>
+                                                        
+                                                        <!-- Score Progress Bar -->
+                                                        <div class="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
+                                                            <div class="h-2 rounded-full" 
+                                                                 :class="getScoreColor(getOpportunityScore(prospect))"
+                                                                 :style="`width: ${(getOpportunityScore(prospect) * 100)}%`"></div>
+                                                        </div>
+                                                        
+                                                        <!-- Score Percentage -->
+                                                        <span class="text-sm font-medium" 
+                                                              :class="getScoreTextColor(getOpportunityScore(prospect))" 
+                                                              x-text="(getOpportunityScore(prospect) * 100).toFixed(1) + '%'"></span>
                                                     </div>
-                                                    <span class="text-sm text-gray-900 dark:text-white" x-text="((prospect?.compatibility_score || 0) * 100).toFixed(1) + '%'"></span>
+                                                    
+                                                    <!-- Score Grade -->
+                                                    <div class="text-xs" :class="getScoreGradeColor(getOpportunityScore(prospect))">
+                                                        <span x-text="getScoreGrade(getOpportunityScore(prospect))"></span>
+                                                        <!-- Enhanced Data Indicator -->
+                                                        <span x-show="prospect?.enhanced_data_score" class="ml-1 px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-xs" title="Enhanced with 990 Data">
+                                                            990+
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td class="px-6 py-3 whitespace-nowrap text-center">
@@ -848,8 +915,8 @@
                                             </td>
                                             <td class="px-6 py-3 whitespace-nowrap text-sm font-medium space-x-2">
                                                 <div class="flex items-center space-x-2">
-                                                    <button @click="openScoringModal(prospect)" 
-                                                            class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View</button>
+                                                    <button @click="openOpportunityModal(prospect)" 
+                                                            class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View Details</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -971,6 +1038,76 @@
                                     </button>
                                 </div>
                                 <p class="text-sm text-orange-700 dark:text-orange-300">AI-powered recommendations</p>
+                            </div>
+                        </div>
+
+                        <!-- Automated Promotion Section -->
+                        <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800 p-6 mt-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h5 class="text-lg font-semibold text-indigo-900 dark:text-indigo-100">Automated Promotion Engine</h5>
+                                <div class="flex items-center space-x-2">
+                                    <button @click="getAutomatedPromotionStats().then(stats => console.log('Promotion stats:', stats))" 
+                                            class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-800 px-3 py-1 rounded transition-colors">
+                                        View Stats
+                                    </button>
+                                    <button @click="getEnhancedDataStats().then(stats => console.log('Enhanced data stats:', stats))" 
+                                            class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded transition-colors">
+                                        990 Data Stats
+                                    </button>
+                                    <button @click="runAutomatedPromotion()" 
+                                            :disabled="isProcessing" 
+                                            class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-4 py-2 rounded transition-colors">
+                                        <span x-show="!isProcessing">🚀 Run Automated Promotion</span>
+                                        <span x-show="isProcessing">Processing...</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="bg-white dark:bg-indigo-900/30 p-4 rounded-lg">
+                                    <h6 class="font-medium text-indigo-900 dark:text-indigo-100 mb-2">Auto-Promotion</h6>
+                                    <p class="text-sm text-indigo-700 dark:text-indigo-300 mb-3">
+                                        Automatically promote opportunities scoring ≥80% from Discovery to Qualified Prospects
+                                    </p>
+                                    <div class="text-xs text-indigo-600 dark:text-indigo-400">
+                                        ✓ Multi-dimensional scoring<br>
+                                        ✓ Threshold-based decisions<br>
+                                        ✓ Audit trail maintained
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-white dark:bg-indigo-900/30 p-4 rounded-lg">
+                                    <h6 class="font-medium text-indigo-900 dark:text-indigo-100 mb-2">Bulk Operations</h6>
+                                    <p class="text-sm text-indigo-700 dark:text-indigo-300 mb-3">
+                                        Process multiple opportunities simultaneously with intelligent batching
+                                    </p>
+                                    <div class="text-xs text-indigo-600 dark:text-indigo-400">
+                                        ✓ Concurrent processing<br>
+                                        ✓ Error handling<br>
+                                        ✓ Performance optimized
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-white dark:bg-indigo-900/30 p-4 rounded-lg">
+                                    <h6 class="font-medium text-indigo-900 dark:text-indigo-100 mb-2">990/990-PF Enhancement</h6>
+                                    <p class="text-sm text-indigo-700 dark:text-indigo-300 mb-3">
+                                        Automatically fetches IRS 990 and 990-PF data for high-scoring opportunities (≥65%)
+                                    </p>
+                                    <div class="text-xs text-indigo-600 dark:text-indigo-400">
+                                        ✓ Financial data boost (+10%)<br>
+                                        ✓ Foundation data boost (+15%)<br>
+                                        ✓ Intelligent caching (24h TTL)
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4 p-3 bg-indigo-100 dark:bg-indigo-900/40 rounded border border-indigo-200 dark:border-indigo-700">
+                                <p class="text-sm text-indigo-800 dark:text-indigo-200">
+                                    <strong>💡 How it works:</strong> The automated promotion engine runs after discovery operations, 
+                                    scoring each opportunity across 5 dimensions. For opportunities scoring ≥65%, it automatically fetches 
+                                    990/990-PF tax data to enhance scores with financial details and board information. High-scoring 
+                                    opportunities (≥80%) are automatically promoted to the next funnel stage with boost factors applied.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -1376,8 +1513,8 @@
                                                     </td>
                                                     <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
                                                         <div class="flex items-center space-x-2">
-                                                            <button @click="openScoringModal(prospect)" 
-                                                                    class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View</button>
+                                                            <button @click="openOpportunityModal(prospect)" 
+                                                                    class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View Details</button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -1793,8 +1930,8 @@
                                             </td>
                                             <td class="px-3 py-4 whitespace-nowrap text-sm">
                                                 <div class="flex items-center space-x-2">
-                                                    <button @click="openScoringModal(candidate)" 
-                                                            class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View</button>
+                                                    <button @click="openOpportunityModal(candidate)" 
+                                                            class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View Details</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -2025,8 +2162,8 @@
                                             </td>
                                             <td class="px-3 py-4 whitespace-nowrap text-sm">
                                                 <div class="flex items-center space-x-2">
-                                                    <button @click="openScoringModal(target)" 
-                                                            class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View</button>
+                                                    <button @click="openOpportunityModal(target)" 
+                                                            class="px-3 py-1 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">View Details</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -6300,6 +6437,215 @@
                             class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded">
                         Promote
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Opportunity Details Modal -->
+    <div x-show="showOpportunityModal" 
+         x-transition:enter="ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto">
+        
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+             @click="showOpportunityModal = false"></div>
+        
+        <!-- Modal content -->
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+            <div x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-4 sm:align-middle w-[95vw] max-w-6xl mx-auto border-2 border-gray-300 dark:border-gray-600 sm:p-8">
+                
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-4">
+                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
+                            <span x-text="selectedOpportunity?.organization_name || 'Opportunity Details'"></span>
+                        </h3>
+                        <!-- Compatibility Score Badge -->
+                        <span x-show="selectedOpportunity?.score" 
+                              class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                              :class="getScoreBadgeClass(selectedOpportunity?.score)">
+                            <span x-text="'Score: ' + (selectedOpportunity?.score || 0).toFixed(2)"></span>
+                        </span>
+                    </div>
+                    <button @click="closeOpportunityModal()" 
+                            class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+                        <span class="text-2xl">&times;</span>
+                    </button>
+                </div>
+                
+                <!-- Modal Content -->
+                <div class="h-[600px] flex flex-col space-y-6 overflow-y-auto">
+                    
+                    <!-- Scoring Breakdown Section -->
+                    <div x-show="selectedOpportunity?.dimension_scores" 
+                         class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                            Scoring Breakdown
+                        </h4>
+                        
+                        <!-- Overall Score -->
+                        <div class="mb-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Overall Score</span>
+                                <span class="text-sm font-bold" :class="getScoreTextClass(selectedOpportunity?.score)"
+                                      x-text="(selectedOpportunity?.score || 0).toFixed(3)"></span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="h-2 rounded-full" 
+                                     :class="getScoreBarClass(selectedOpportunity?.score)"
+                                     :style="'width: ' + ((selectedOpportunity?.score || 0) * 100) + '%'"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Dimension Scores -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <template x-for="[dimension, score] in Object.entries(selectedOpportunity?.dimension_scores || {})" :key="dimension">
+                                <div class="space-y-2">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600 dark:text-gray-400" 
+                                              x-text="formatDimensionName(dimension)"></span>
+                                        <span class="text-sm font-medium" 
+                                              :class="getScoreTextClass(score)"
+                                              x-text="score.toFixed(2)"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                                        <div class="h-1.5 rounded-full" 
+                                             :class="getScoreBarClass(score)"
+                                             :style="'width: ' + (score * 100) + '%'"></div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <!-- Boost Factors -->
+                        <div x-show="selectedOpportunity?.boost_factors && Object.keys(selectedOpportunity.boost_factors).length > 0"
+                             class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                            <h5 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Boost Factors Applied</h5>
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="[factor, boost] in Object.entries(selectedOpportunity?.boost_factors || {})" :key="factor">
+                                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                                        <span x-text="formatBoostFactor(factor)"></span>
+                                        <span class="ml-1 text-green-600 dark:text-green-400" x-text="'+' + (boost * 100).toFixed(0) + '%'"></span>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Organization Information -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-6">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                            Organization Information
+                        </h4>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Organization Name</label>
+                                <p class="mt-1 text-sm text-gray-900 dark:text-white" 
+                                   x-text="selectedOpportunity?.organization_name || 'N/A'"></p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Source Type</label>
+                                <p class="mt-1 text-sm text-gray-900 dark:text-white" 
+                                   x-text="selectedOpportunity?.source_type || 'N/A'"></p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Current Stage</label>
+                                <span class="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                      :class="getStageClass(selectedOpportunity?.funnel_stage)"
+                                      x-text="formatStageName(selectedOpportunity?.funnel_stage)"></span>
+                            </div>
+                            
+                            <div x-show="selectedOpportunity?.external_data?.state">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">State</label>
+                                <p class="mt-1 text-sm text-gray-900 dark:text-white" 
+                                   x-text="selectedOpportunity?.external_data?.state || 'N/A'"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 990 Data Section (if available) -->
+                    <div x-show="selectedOpportunity?.has_990_data" 
+                         class="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-6">
+                        <h4 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-4">
+                            990 Tax Form Data Available
+                        </h4>
+                        
+                        <div x-show="selectedOpportunity?.financial_data" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-blue-700 dark:text-blue-300">Total Revenue</label>
+                                <p class="mt-1 text-sm font-semibold text-blue-900 dark:text-blue-100" 
+                                   x-text="formatCurrency(selectedOpportunity?.financial_data?.total_revenue)"></p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-blue-700 dark:text-blue-300">Total Assets</label>
+                                <p class="mt-1 text-sm font-semibold text-blue-900 dark:text-blue-100" 
+                                   x-text="formatCurrency(selectedOpportunity?.financial_data?.total_assets)"></p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-blue-700 dark:text-blue-300">NTEE Code</label>
+                                <p class="mt-1 text-sm font-semibold text-blue-900 dark:text-blue-100" 
+                                   x-text="selectedOpportunity?.external_data?.ntee_code || 'N/A'"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-600">
+                        <div class="flex space-x-3">
+                            <!-- Manual Promote Button -->
+                            <button @click="manualPromote(selectedOpportunity)"
+                                    :disabled="isProcessing"
+                                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5-5 5M6 12h12"></path>
+                                </svg>
+                                Promote
+                            </button>
+                            
+                            <!-- Manual Demote Button -->
+                            <button @click="manualDemote(selectedOpportunity)"
+                                    :disabled="isProcessing"
+                                    class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5 5-5m6 10H6"></path>
+                                </svg>
+                                Demote
+                            </button>
+                            
+                            <!-- Re-score Button -->
+                            <button @click="rescoreOpportunity(selectedOpportunity)"
+                                    :disabled="isProcessing"
+                                    class="inline-flex items-center px-4 py-2 border border-blue-300 dark:border-blue-600 text-sm font-medium rounded-md text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Re-score
+                            </button>
+                        </div>
+                        
+                        <!-- Close Button -->
+                        <button @click="closeOpportunityModal()"
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Close
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
