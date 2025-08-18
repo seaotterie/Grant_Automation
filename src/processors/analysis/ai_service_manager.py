@@ -81,7 +81,7 @@ class AIServiceManager:
                 funding_history = FundingHistory(**profile_data["funding_history"])
             
             profile_context = ProfileContext(
-                organization_name=profile_data.get("name", "Unknown Organization"),
+                organization_name=profile_data.get("name", "[Organization Name Missing]"),
                 mission_statement=profile_data.get("mission", "Mission not specified"),
                 focus_areas=profile_data.get("focus_areas", []),
                 ntee_codes=profile_data.get("ntee_codes", []),
@@ -237,7 +237,7 @@ class AIServiceManager:
             
             # Build context profile data
             context_profile = ContextProfileData(
-                organization_name=profile_data.get("name", "Unknown Organization"),
+                organization_name=profile_data.get("name", "[Organization Name Missing]"),
                 mission_statement=profile_data.get("mission", "Mission not specified"),
                 strategic_priorities=profile_data.get("strategic_priorities", []),
                 leadership_team=profile_data.get("leadership_team", []),

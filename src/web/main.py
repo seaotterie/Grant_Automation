@@ -1445,7 +1445,7 @@ async def discover_opportunities_unified(profile_id: str, discovery_params: Dict
                 normalized_score = min(1.0, max(0.0, raw_score / 100.0 if raw_score > 1.0 else raw_score))
                 
                 lead_data = {
-                    "organization_name": getattr(opportunity, 'funder_name', 'Unknown Organization'),
+                    "organization_name": getattr(opportunity, 'funder_name', '[Organization Name Missing]'),
                     "opportunity_type": opportunity_type_mapping.get(strategy_name, "grants"),
                     "source": f"unified_discovery_{strategy_name}",  # Add required source field
                     "description": getattr(opportunity, 'description', '') or getattr(opportunity, 'title', ''),
@@ -2132,7 +2132,7 @@ async def discover_nonprofits(request: Dict[str, Any]):
             # Convert BMF results
             for bmf_org in results.get("bmf_results", []):
                 discovery_result = DiscoveryResult(
-                    organization_name=bmf_org.get('name', 'Unknown Organization'),
+                    organization_name=bmf_org.get('name', '[Organization Name Missing]'),
                     source_type=FundingType.GRANTS,
                     discovery_source='bmf_filter',
                     opportunity_id=f"bmf_{bmf_org.get('ein', 'unknown')}_{int(datetime.now().timestamp())}",
@@ -2147,7 +2147,7 @@ async def discover_nonprofits(request: Dict[str, Any]):
             # Convert ProPublica results
             for pp_org in results.get("propublica_results", []):
                 discovery_result = DiscoveryResult(
-                    organization_name=pp_org.get('name', 'Unknown Organization'),
+                    organization_name=pp_org.get('name', '[Organization Name Missing]'),
                     source_type=FundingType.GRANTS,
                     discovery_source='propublica_fetch',
                     opportunity_id=f"propublica_{pp_org.get('ein', 'unknown')}_{int(datetime.now().timestamp())}",

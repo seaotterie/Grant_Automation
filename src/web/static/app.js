@@ -139,7 +139,7 @@ const CatalynxUtils = {
         const standardized = {
             // Core fields with strict validation
             opportunity_id: rawOpportunity.opportunity_id || `opp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            organization_name: rawOpportunity.organization_name || rawOpportunity.name || 'Unknown Organization',
+            organization_name: rawOpportunity.organization_name || rawOpportunity.name || '[Organization Name Missing]',
             
             // CANONICAL STAGE FIELDS - Both preserved for compatibility
             pipeline_stage: pipeline_stage,
@@ -3867,7 +3867,7 @@ function catalynxApp() {
                         return;
                 }
                 
-                this.updateDiscoveryStats();
+                // Note: Individual track runners handle their own stats updates via updateDiscoveryStatsFromData()
                 this.showNotification('Discovery Complete', `${track.charAt(0).toUpperCase() + track.slice(1)} track completed successfully`, 'success');
                 
             } catch (error) {
@@ -3935,13 +3935,23 @@ function catalynxApp() {
                     if (allResults.length > 0) {
                         
                         const transformedOpportunities = allResults.map(opp => {
+                            const compatibilityScore = opp.composite_score || 0.5;
+                            
+                            // Intelligent stage assignment based on compatibility score
+                            let funnelStage = 'prospects';
+                            if (compatibilityScore >= 0.80) {
+                                funnelStage = 'qualified_prospects';  // High quality matches
+                            } else if (compatibilityScore >= 0.65) {
+                                funnelStage = 'qualified_prospects';  // Good matches
+                            } // else stays 'prospects' for lower scores
+                            
                             const transformed = CatalynxUtils.standardizeOpportunityData({
                                 ...opp,
-                                organization_name: opp.name || opp.organization_name || 'Unknown Organization',
-                                funnel_stage: 'prospects',
+                                organization_name: opp.name || opp.organization_name || '[Organization Name Missing]',
+                                funnel_stage: funnelStage,
                                 discovery_source: 'nonprofit_discovery',
                                 source_type: 'Nonprofit',
-                                compatibility_score: opp.composite_score || 0.5,
+                                compatibility_score: compatibilityScore,
                                 discovered_at: new Date().toISOString(),
                                 opportunity_id: `nonprofit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                                 discovered_for_profile: this.selectedDiscoveryProfile?.profile_id,
@@ -3962,6 +3972,12 @@ function catalynxApp() {
                             return isValid;
                         });
                         
+                        // Log intelligent stage assignments
+                        const stageBreakdown = validatedOpportunities.reduce((acc, opp) => {
+                            acc[opp.funnel_stage] = (acc[opp.funnel_stage] || 0) + 1;
+                            return acc;
+                        }, {});
+                        console.log(`Nonprofit discovery stage assignment:`, stageBreakdown);
                         
                         // Apply deduplication before adding to unified opportunities array
                         const currentOpportunities = this.opportunitiesData || [];
@@ -3996,6 +4012,10 @@ function catalynxApp() {
                 }
                 
                 console.log(`Nonprofit discovery completed: ${this.nonprofitTrackStatus.results} organizations found`);
+                
+                // Update discovery stats based on actual opportunity data
+                this.updateDiscoveryStatsFromData(this.opportunitiesData);
+                
             } catch (error) {
                 console.error('Nonprofit discovery failed:', error);
                 this.nonprofitTrackStatus.status = 'error';
@@ -4045,22 +4065,34 @@ function catalynxApp() {
                     
                     if (allResults.length > 0) {
                         const validatedOpportunities = allResults
-                            .map(opp => CatalynxUtils.standardizeOpportunityData({
-                                ...opp,
-                                organization_name: opp.title || opp.opportunity_title || opp.organization_name || 'Federal Opportunity',
-                                funnel_stage: 'prospects',
-                                discovery_source: 'federal_discovery',
-                                source_type: 'Federal Grant',
-                                compatibility_score: opp.relevance_score || 0.5,
-                                discovered_at: new Date().toISOString(),
-                                opportunity_id: `federal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                                discovered_for_profile: this.selectedDiscoveryProfile?.profile_id,
-                                analysis_context: {
-                                    profile_id: this.selectedDiscoveryProfile?.profile_id,
-                                    profile_name: this.selectedDiscoveryProfile?.name,
-                                    discovery_session: new Date().toISOString()
-                                }
-                            }))
+                            .map(opp => {
+                                const compatibilityScore = opp.relevance_score || 0.5;
+                                
+                                // Intelligent stage assignment based on compatibility score
+                                let funnelStage = 'prospects';
+                                if (compatibilityScore >= 0.80) {
+                                    funnelStage = 'qualified_prospects';  // High quality matches
+                                } else if (compatibilityScore >= 0.65) {
+                                    funnelStage = 'qualified_prospects';  // Good matches
+                                } // else stays 'prospects' for lower scores
+                                
+                                return CatalynxUtils.standardizeOpportunityData({
+                                    ...opp,
+                                    organization_name: opp.title || opp.opportunity_title || opp.organization_name || 'Federal Opportunity',
+                                    funnel_stage: funnelStage,
+                                    discovery_source: 'federal_discovery',
+                                    source_type: 'Federal Grant',
+                                    compatibility_score: compatibilityScore,
+                                    discovered_at: new Date().toISOString(),
+                                    opportunity_id: `federal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                                    discovered_for_profile: this.selectedDiscoveryProfile?.profile_id,
+                                    analysis_context: {
+                                        profile_id: this.selectedDiscoveryProfile?.profile_id,
+                                        profile_name: this.selectedDiscoveryProfile?.name,
+                                        discovery_session: new Date().toISOString()
+                                    }
+                                });
+                            })
                             .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
                         
                         // Apply deduplication before adding to unified opportunities array
@@ -4081,6 +4113,10 @@ function catalynxApp() {
                 
                 this.federalTrackStatus.status = 'complete';
                 console.log(`Federal discovery completed: ${this.federalTrackStatus.results} grants found`);
+                
+                // Update discovery stats based on actual opportunity data
+                this.updateDiscoveryStatsFromData(this.opportunitiesData);
+                
             } catch (error) {
                 console.error('Federal discovery failed:', error);
                 this.federalTrackStatus.status = 'error';
@@ -4129,22 +4165,34 @@ function catalynxApp() {
                     
                     if (allResults.length > 0) {
                         const validatedOpportunities = allResults
-                            .map(opp => CatalynxUtils.standardizeOpportunityData({
-                                ...opp,
-                                organization_name: opp.title || opp.opportunity_title || opp.organization_name || 'State Opportunity',
-                                funnel_stage: 'prospects',
-                                discovery_source: 'state_discovery',
-                                source_type: 'State Grant',
-                                compatibility_score: opp.relevance_score || 0.5,
-                                discovered_at: new Date().toISOString(),
-                                opportunity_id: `state_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                                discovered_for_profile: this.selectedDiscoveryProfile?.profile_id,
-                                analysis_context: {
-                                    profile_id: this.selectedDiscoveryProfile?.profile_id,
-                                    profile_name: this.selectedDiscoveryProfile?.name,
-                                    discovery_session: new Date().toISOString()
-                                }
-                            }))
+                            .map(opp => {
+                                const compatibilityScore = opp.relevance_score || 0.5;
+                                
+                                // Intelligent stage assignment based on compatibility score
+                                let funnelStage = 'prospects';
+                                if (compatibilityScore >= 0.80) {
+                                    funnelStage = 'qualified_prospects';  // High quality matches
+                                } else if (compatibilityScore >= 0.65) {
+                                    funnelStage = 'qualified_prospects';  // Good matches
+                                } // else stays 'prospects' for lower scores
+                                
+                                return CatalynxUtils.standardizeOpportunityData({
+                                    ...opp,
+                                    organization_name: opp.title || opp.opportunity_title || opp.organization_name || 'State Opportunity',
+                                    funnel_stage: funnelStage,
+                                    discovery_source: 'state_discovery',
+                                    source_type: 'State Grant',
+                                    compatibility_score: compatibilityScore,
+                                    discovered_at: new Date().toISOString(),
+                                    opportunity_id: `state_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                                    discovered_for_profile: this.selectedDiscoveryProfile?.profile_id,
+                                    analysis_context: {
+                                        profile_id: this.selectedDiscoveryProfile?.profile_id,
+                                        profile_name: this.selectedDiscoveryProfile?.name,
+                                        discovery_session: new Date().toISOString()
+                                    }
+                                });
+                            })
                             .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
                         
                         // Apply deduplication before adding to unified opportunities array
@@ -4165,6 +4213,10 @@ function catalynxApp() {
                 
                 this.stateTrackStatus.status = 'complete';
                 console.log(`State discovery completed: ${this.stateTrackStatus.results} opportunities found`);
+                
+                // Update discovery stats based on actual opportunity data
+                this.updateDiscoveryStatsFromData(this.opportunitiesData);
+                
             } catch (error) {
                 console.error('State discovery failed:', error);
                 this.stateTrackStatus.status = 'error';
@@ -4215,22 +4267,34 @@ function catalynxApp() {
                     
                     if (allResults.length > 0) {
                         const validatedOpportunities = allResults
-                            .map(opp => CatalynxUtils.standardizeOpportunityData({
-                                ...opp,
-                                organization_name: opp.name || opp.foundation_name || opp.organization_name || 'Commercial Opportunity',
-                                funnel_stage: 'prospects',
-                                discovery_source: 'commercial_discovery',
-                                source_type: 'Commercial Foundation',
-                                compatibility_score: opp.relevance_score || 0.5,
-                                discovered_at: new Date().toISOString(),
-                                opportunity_id: `commercial_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                                discovered_for_profile: this.selectedDiscoveryProfile?.profile_id,
-                                analysis_context: {
-                                    profile_id: this.selectedDiscoveryProfile?.profile_id,
-                                    profile_name: this.selectedDiscoveryProfile?.name,
-                                    discovery_session: new Date().toISOString()
-                                }
-                            }))
+                            .map(opp => {
+                                const compatibilityScore = opp.relevance_score || 0.5;
+                                
+                                // Intelligent stage assignment based on compatibility score
+                                let funnelStage = 'prospects';
+                                if (compatibilityScore >= 0.80) {
+                                    funnelStage = 'qualified_prospects';  // High quality matches
+                                } else if (compatibilityScore >= 0.65) {
+                                    funnelStage = 'qualified_prospects';  // Good matches
+                                } // else stays 'prospects' for lower scores
+                                
+                                return CatalynxUtils.standardizeOpportunityData({
+                                    ...opp,
+                                    organization_name: opp.name || opp.foundation_name || opp.organization_name || 'Commercial Opportunity',
+                                    funnel_stage: funnelStage,
+                                    discovery_source: 'commercial_discovery',
+                                    source_type: 'Commercial Foundation',
+                                    compatibility_score: compatibilityScore,
+                                    discovered_at: new Date().toISOString(),
+                                    opportunity_id: `commercial_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                                    discovered_for_profile: this.selectedDiscoveryProfile?.profile_id,
+                                    analysis_context: {
+                                        profile_id: this.selectedDiscoveryProfile?.profile_id,
+                                        profile_name: this.selectedDiscoveryProfile?.name,
+                                        discovery_session: new Date().toISOString()
+                                    }
+                                });
+                            })
                             .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
                         
                         // Apply deduplication before adding to unified opportunities array
@@ -4251,6 +4315,10 @@ function catalynxApp() {
                 
                 this.commercialTrackStatus.status = 'complete';
                 console.log(`Commercial discovery completed: ${this.commercialTrackStatus.results} foundations found`);
+                
+                // Update discovery stats based on actual opportunity data
+                this.updateDiscoveryStatsFromData(this.opportunitiesData);
+                
             } catch (error) {
                 console.error('Commercial discovery failed:', error);
                 this.commercialTrackStatus.status = 'error';

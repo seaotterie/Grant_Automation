@@ -289,7 +289,7 @@ class EntityDiscoveryService:
             
             # Extract organization info
             org_info = org_data.get('organization', {})
-            org_name = org_info.get('name', 'Unknown Organization')
+            org_name = org_info.get('name', '[Organization Name Missing]')
             
             # Shared financial analytics
             financial_metrics = self.financial_analytics.analyze_organization_financials(

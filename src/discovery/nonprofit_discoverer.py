@@ -172,7 +172,7 @@ class NonprofitDiscoverer(BaseDiscoverer):
         """Convert workflow result to standardized DiscoveryResult"""
         
         # Extract basic information
-        org_name = workflow_result.get("organization_name", "Unknown Organization")
+        org_name = workflow_result.get("organization_name", "[Organization Name Missing]")
         ein = workflow_result.get("ein", "")
         
         # Calculate compatibility score using existing composite score

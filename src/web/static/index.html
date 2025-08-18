@@ -817,7 +817,7 @@
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700" x-show="prospect">
                                             <td class="px-6 py-3 whitespace-nowrap">
                                                 <div class="flex items-center space-x-2">
-                                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="prospect?.organization_name || 'Unknown Organization'"></div>
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="prospect?.organization_name || '[Organization Name Missing]'"></div>
                                                 <!-- 990-PF Foundation Indicator -->
                                                 <span x-show="prospect?.form_type === '990-PF' || prospect?.foundation_code === '03'" 
                                                       class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 dark:from-purple-900/20 dark:to-pink-900/20 dark:text-purple-300 border border-purple-200 dark:border-purple-700"

@@ -326,7 +326,7 @@ class EntityProfileService(ProfileService):
             
             # Extract organization info
             org_info = org_data.get('organization', {})
-            org_name = org_info.get('name', 'Unknown Organization')
+            org_name = org_info.get('name', '[Organization Name Missing]')
             
             # Get opportunity data if provided
             opportunity_data = {}
