@@ -204,6 +204,47 @@ const CatalynxUtils = {
         };
         
         return standardized;
+    },
+    
+    deduplicateOpportunities(opportunities) {
+        // Deduplicate opportunities based on unique identifiers
+        if (!Array.isArray(opportunities)) {
+            return [];
+        }
+        
+        const seen = new Set();
+        const deduplicated = [];
+        
+        for (const opportunity of opportunities) {
+            if (!opportunity) continue;
+            
+            // Create unique key using multiple identifiers
+            const uniqueKey = this.generateOpportunityKey(opportunity);
+            
+            if (!seen.has(uniqueKey)) {
+                seen.add(uniqueKey);
+                deduplicated.push(opportunity);
+            } else {
+                console.log(`Filtered duplicate opportunity: ${opportunity.organization_name}`);
+            }
+        }
+        
+        return deduplicated;
+    },
+    
+    generateOpportunityKey(opportunity) {
+        // Generate unique key for opportunity identification
+        const orgName = (opportunity.organization_name || '').trim().toLowerCase();
+        const opportunityId = opportunity.external_data?.opportunity_id || 
+                             opportunity.opportunity_id || 
+                             opportunity.external_data?.ein ||
+                             `${orgName}_${opportunity.source_type || 'unknown'}`;
+        
+        // Include source and funding amount for better uniqueness
+        const sourceType = opportunity.source_type || 'unknown';
+        const fundingAmount = opportunity.funding_amount || 0;
+        
+        return `${opportunityId}_${orgName}_${sourceType}_${fundingAmount}`;
     }
 };
 
@@ -3508,9 +3549,13 @@ function catalynxApp() {
                         }
                     }));
                 
-                console.log(`Loaded ${transformedOpportunities.length}/${data.opportunities.length} validated opportunities for ${this.selectedProfile.name}`);
+                // Apply deduplication to ensure no duplicates from backend
+                const deduplicatedOpportunities = CatalynxUtils.deduplicateOpportunities(transformedOpportunities);
                 
-                this.opportunitiesData = transformedOpportunities;
+                console.log(`Loaded ${deduplicatedOpportunities.length}/${data.opportunities.length} deduplicated opportunities for ${this.selectedProfile.name}`);
+                
+                // Always replace data completely to prevent accumulation
+                this.opportunitiesData = deduplicatedOpportunities;
                 
                 // Update discovery stats based on actual data
                 this.updateDiscoveryStatsFromData(this.opportunitiesData);
@@ -3785,8 +3830,7 @@ function catalynxApp() {
             this.nonprofitTrackStatus.processing = true;
             this.nonprofitTrackStatus.status = 'processing';
             
-            console.log('DEBUG: opportunitiesData length at start:', this.opportunitiesData.length);
-            console.log('DEBUG: selectedDiscoveryProfile:', this.selectedDiscoveryProfile?.name);
+            console.log('Starting nonprofit discovery track...');
             
             try {
                 console.log('Running nonprofit discovery with criteria:', this.nonprofitDiscovery);
@@ -3812,11 +3856,7 @@ function catalynxApp() {
                 
                 const data = await response.json();
                 console.log('Nonprofit discovery API response:', data);
-                console.log('DEBUG: data.results structure:', data.results);
-                console.log('DEBUG: bmf_results length:', data.results?.bmf_results?.length || 0);
-                console.log('DEBUG: propublica_results length:', data.results?.propublica_results?.length || 0);
-                console.log('DEBUG: data.status:', data.status);
-                console.log('DEBUG: data.total_found:', data.total_found);
+                console.log(`Nonprofit API returned ${data.total_found} total results`);
                 
                 // Process and integrate results into opportunity pipeline
                 // The API returns {status, track, total_found, results} format
@@ -3827,10 +3867,9 @@ function catalynxApp() {
                         ...(data.results.bmf_results || [])
                     ];
                     
-                    console.log('DEBUG: Combined allResults length:', allResults.length);
+                    console.log(`Processing ${allResults.length} combined nonprofit results`);
                     
                     if (allResults.length > 0) {
-                        console.log(`DEBUG: Processing ${allResults.length} raw nonprofit opportunities`);
                         
                         const transformedOpportunities = allResults.map(opp => {
                             const transformed = CatalynxUtils.standardizeOpportunityData({
@@ -3849,29 +3888,23 @@ function catalynxApp() {
                                     discovery_session: new Date().toISOString()
                                 }
                             });
-                            console.log(`DEBUG: Transformed opportunity:`, transformed);
                             return transformed;
                         });
                         
-                        console.log(`DEBUG: Validating ${transformedOpportunities.length} transformed opportunities`);
                         const validatedOpportunities = transformedOpportunities.filter(opp => {
                             const isValid = CatalynxUtils.validateOpportunitySchema(opp);
                             if (!isValid) {
-                                console.log(`DEBUG: Validation failed for opportunity:`, opp);
-                            } else {
-                                console.log(`DEBUG: Validation PASSED for opportunity:`, opp.organization_name);
+                                console.warn(`Nonprofit validation failed for:`, opp?.organization_name);
                             }
                             return isValid;
                         });
                         
-                        console.log(`DEBUG: Final validated opportunities count: ${validatedOpportunities.length}`);
                         
-                        // Add to unified opportunities array
-                        this.opportunitiesData.push(...validatedOpportunities);
-                        console.log(`Added ${validatedOpportunities.length} nonprofit opportunities to pipeline`);
-                        console.log(`DEBUG: Total opportunitiesData after adding:`, this.opportunitiesData.length);
-                        console.log(`DEBUG: prospectsData length after adding:`, this.prospectsData.length);
-                        console.log(`DEBUG: Sample opportunity:`, this.opportunitiesData[this.opportunitiesData.length - 1]);
+                        // Apply deduplication before adding to unified opportunities array
+                        const currentOpportunities = this.opportunitiesData || [];
+                        const combinedOpportunities = [...currentOpportunities, ...validatedOpportunities];
+                        this.opportunitiesData = CatalynxUtils.deduplicateOpportunities(combinedOpportunities);
+                        console.log(`Added ${validatedOpportunities.length} nonprofit opportunities (total: ${this.opportunitiesData.length})`);
                         
                         // Note: Individual track discovery - opportunities saved via unified discovery only
                         
@@ -3952,8 +3985,10 @@ function catalynxApp() {
                             }))
                             .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
                         
-                        // Add to unified opportunities array
-                        this.opportunitiesData.push(...validatedOpportunities);
+                        // Apply deduplication before adding to unified opportunities array
+                        const currentOpportunities = this.opportunitiesData || [];
+                        const combinedOpportunities = [...currentOpportunities, ...validatedOpportunities];
+                        this.opportunitiesData = CatalynxUtils.deduplicateOpportunities(combinedOpportunities);
                         console.log(`Added ${validatedOpportunities.length} federal opportunities to pipeline`);
                         
                         // Note: Individual track discovery - opportunities saved via unified discovery only
@@ -4034,8 +4069,10 @@ function catalynxApp() {
                             }))
                             .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
                         
-                        // Add to unified opportunities array
-                        this.opportunitiesData.push(...validatedOpportunities);
+                        // Apply deduplication before adding to unified opportunities array
+                        const currentOpportunities = this.opportunitiesData || [];
+                        const combinedOpportunities = [...currentOpportunities, ...validatedOpportunities];
+                        this.opportunitiesData = CatalynxUtils.deduplicateOpportunities(combinedOpportunities);
                         console.log(`Added ${validatedOpportunities.length} state opportunities to pipeline`);
                         
                         // Note: Individual track discovery - opportunities saved via unified discovery only
@@ -4118,8 +4155,10 @@ function catalynxApp() {
                             }))
                             .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
                         
-                        // Add to unified opportunities array
-                        this.opportunitiesData.push(...validatedOpportunities);
+                        // Apply deduplication before adding to unified opportunities array
+                        const currentOpportunities = this.opportunitiesData || [];
+                        const combinedOpportunities = [...currentOpportunities, ...validatedOpportunities];
+                        this.opportunitiesData = CatalynxUtils.deduplicateOpportunities(combinedOpportunities);
                         console.log(`Added ${validatedOpportunities.length} commercial opportunities to pipeline`);
                         
                         // Note: Individual track discovery - opportunities saved via unified discovery only
@@ -4169,7 +4208,7 @@ function catalynxApp() {
                 // Add small delay to ensure "Running..." state is visible
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
-                console.log(`DEBUG: Starting fetch for ${track} track`);
+                console.log(`Starting ${track} discovery...`);
                 
                 // Add timeout to the fetch call
                 const controller = new AbortController();
@@ -4189,9 +4228,7 @@ function catalynxApp() {
                 });
                 
                 clearTimeout(timeoutId);
-                console.log(`DEBUG: Fetch completed for ${track} track`);
-                
-                console.log(`DEBUG: ${track} API call response status:`, response.status);
+                console.log(`${track} discovery completed with status:`, response.status);
                 
                 if (response.ok) {
                     console.log(`${track} discovery API response received`);
@@ -4200,23 +4237,14 @@ function catalynxApp() {
                     
                     // Handle different response structures
                     let count = 0;
-                    console.log(`DEBUG: ${track} response structure:`, {
-                        hasResults: !!result.results,
-                        hasNestedResults: !!(result.results && result.results.results),
-                        resultsIsArray: Array.isArray(result.results),
-                        hasTotalFound: result.total_found !== undefined,
-                        totalFound: result.total_found
-                    });
+                    console.log(`${track} found ${result.total_found} results`);
                     
                     if (result.results && result.results.results) {
                         count = result.results.results.length;
-                        console.log(`DEBUG: ${track} using nested results: ${count}`);
                     } else if (result.results && Array.isArray(result.results)) {
                         count = result.results.length; 
-                        console.log(`DEBUG: ${track} using array results: ${count}`);
                     } else if (result.total_found !== undefined) {
                         count = result.total_found;
-                        console.log(`DEBUG: ${track} using total_found: ${count}`);
                     }
                     console.log(`${track} discovery found ${count} results`);
                     this.discoveryStats[track] = count;
@@ -4301,10 +4329,7 @@ function catalynxApp() {
                 
                 await Promise.all(promises);
                 
-                console.log('DEBUG: ALL DISCOVERY TRACKS COMPLETED');
-                console.log('DEBUG: Final opportunitiesData length:', this.opportunitiesData.length);
-                console.log('DEBUG: Final prospectsData length:', this.prospectsData.length);
-                console.log('DEBUG: Sample opportunities:', this.opportunitiesData.slice(0, 2));
+                console.log(`All discovery tracks completed - found ${this.opportunitiesData.length} total opportunities`);
                 
                 this.showNotification('All Tracks Complete', `Discovery complete across all tracks`, 'success');
             } catch (error) {
@@ -5431,8 +5456,10 @@ function catalynxApp() {
                     .map(opp => CatalynxUtils.standardizeOpportunityData(opp))
                     .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
                 
-                // Add validated opportunities to unified data
-                this.opportunitiesData.push(...validatedOpportunities);
+                // Apply deduplication before adding validated opportunities to unified data
+                const currentOpportunities = this.opportunitiesData || [];
+                const combinedOpportunities = [...currentOpportunities, ...validatedOpportunities];
+                this.opportunitiesData = CatalynxUtils.deduplicateOpportunities(combinedOpportunities);
                 console.log(`Added ${validatedOpportunities.length}/${enhancedMockOpportunities.length} validated opportunities, total opportunities now: ${this.opportunitiesData.length}`);
                 
                 this.$nextTick(() => {
@@ -5794,8 +5821,9 @@ function catalynxApp() {
                 const result = await response.json();
                 console.log('[BMF] BMF discovery completed:', result);
                 
-                // Reload opportunities to get the persisted BMF results
-                await this.loadRealOpportunities();
+                // Note: Do not call loadRealOpportunities() here to prevent data duplication
+                // Backend handles persistence, let unified discovery flow handle data updates
+                console.log('[BMF] BMF results saved to backend - awaiting unified discovery reload');
                 
                 return result;
                 
@@ -10890,7 +10918,10 @@ function catalynxApp() {
                                 .map(opp => CatalynxUtils.standardizeOpportunityData(opp))
                                 .filter(opp => CatalynxUtils.validateOpportunitySchema(opp));
                             
-                            this.opportunitiesData.push(...validatedOpportunities);
+                            // Apply deduplication before adding to unified opportunities
+                            const currentOpportunities = this.opportunitiesData || [];
+                            const combinedOpportunities = [...currentOpportunities, ...validatedOpportunities];
+                            this.opportunitiesData = CatalynxUtils.deduplicateOpportunities(combinedOpportunities);
                             
                             if (validatedOpportunities.length !== data.opportunities.length) {
                                 console.warn(`Filtered ${data.opportunities.length - validatedOpportunities.length} invalid opportunities from API`);
