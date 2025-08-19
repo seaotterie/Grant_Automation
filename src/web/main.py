@@ -2137,7 +2137,8 @@ async def websocket_endpoint(websocket: WebSocket):
 async def discovery_dashboard():
     """Discovery Dashboard interface"""
     try:
-        with open("src/web/templates/discovery_dashboard.html", "r") as f:
+        template_path = Path(__file__).parent / "templates" / "discovery_dashboard.html"
+        with open(template_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Dashboard template not found")
@@ -2148,15 +2149,21 @@ async def get_recent_discovery_sessions(limit: Optional[int] = 20):
     try:
         all_sessions = []
         
-        # Get all profiles from unified service
-        profiles = unified_service.get_all_profiles()
+        # Get all profiles from profile service
+        profiles = profile_service.list_profiles()
         
         for profile in profiles:
-            # Get recent discovery sessions for each profile
-            discovery_sessions = [
-                activity for activity in profile.recent_activity 
-                if activity.type == "discovery_session"
-            ]
+            # Try to get unified profile for enhanced data, fall back to basic profile
+            unified_profile = unified_service.get_profile(profile.profile_id)
+            if unified_profile and hasattr(unified_profile, 'recent_activity'):
+                # Get recent discovery sessions for each profile
+                discovery_sessions = [
+                    activity for activity in unified_profile.recent_activity 
+                    if activity.type == "discovery_session"
+                ]
+            else:
+                # No discovery sessions in legacy profile
+                discovery_sessions = []
             
             # Add profile info to sessions
             for session in discovery_sessions:
@@ -2191,7 +2198,7 @@ async def get_recent_discovery_sessions(limit: Optional[int] = 20):
 async def get_global_discovery_stats():
     """Get global discovery statistics across all profiles"""
     try:
-        profiles = unified_service.get_all_profiles()
+        profiles = profile_service.list_profiles()
         
         total_opportunities = 0
         total_sessions = 0
@@ -2200,16 +2207,22 @@ async def get_global_discovery_stats():
         active_sessions = 0  # Mock active sessions
         
         for profile in profiles:
-            if profile.analytics:
-                total_opportunities += profile.analytics.opportunity_count or 0
-                total_sessions += profile.analytics.discovery_stats.get('total_sessions', 0)
+            # Try to get unified profile for analytics, fall back to counting opportunities
+            unified_profile = unified_service.get_profile(profile.profile_id)
+            if unified_profile and unified_profile.analytics:
+                total_opportunities += unified_profile.analytics.opportunity_count or 0
+                total_sessions += unified_profile.analytics.discovery_stats.get('total_sessions', 0)
                 
                 # Calculate weighted average score
-                avg_score = profile.analytics.scoring_stats.get('avg_score', 0.0)
-                opp_count = profile.analytics.opportunity_count or 0
+                avg_score = unified_profile.analytics.scoring_stats.get('avg_score', 0.0)
+                opp_count = unified_profile.analytics.opportunity_count or 0
                 if avg_score > 0 and opp_count > 0:
                     total_score_sum += avg_score * opp_count
                     scored_opportunities += opp_count
+            else:
+                # For legacy profiles, count opportunities manually
+                opportunities = unified_service.get_profile_opportunities(profile.profile_id)
+                total_opportunities += len(opportunities)
         
         # Calculate global averages
         global_avg_score = (total_score_sum / scored_opportunities) if scored_opportunities > 0 else 0.0
@@ -2248,6 +2261,7 @@ from src.web.services.search_export_service import (
     SortDirection, ExportFormat
 )
 from fastapi.responses import StreamingResponse
+import io
 
 search_service = get_search_export_service()
 
@@ -2417,7 +2431,7 @@ async def export_opportunities(
 async def get_search_stats():
     """Get search and export statistics"""
     try:
-        profiles = unified_service.get_all_profiles()
+        profiles = profile_service.list_profiles()
         total_opportunities = 0
         
         # Calculate stats across all profiles

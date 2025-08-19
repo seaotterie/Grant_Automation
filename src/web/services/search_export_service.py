@@ -16,6 +16,7 @@ from enum import Enum
 import pandas as pd
 
 from src.profiles.unified_service import get_unified_profile_service
+from src.profiles.service import ProfileService 
 from src.profiles.models import UnifiedOpportunity
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ class AdvancedSearchService:
     
     def __init__(self):
         self.unified_service = get_unified_profile_service()
+        self.profile_service = ProfileService()
         self.logger = logging.getLogger(__name__)
     
     def search_opportunities(
@@ -107,8 +109,8 @@ class AdvancedSearchService:
             else:
                 # Search across all profiles
                 opportunities = []
-                profiles = self.unified_service.get_all_profiles()
-                for profile in profiles:
+                all_profiles = self.profile_service.list_profiles()
+                for profile in all_profiles:
                     profile_opportunities = self.unified_service.get_profile_opportunities(profile.profile_id)
                     opportunities.extend(profile_opportunities)
                 total_count = len(opportunities)
