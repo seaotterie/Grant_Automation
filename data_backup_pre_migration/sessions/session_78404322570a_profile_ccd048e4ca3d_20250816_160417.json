@@ -1,0 +1,16 @@
+{
+  "session_id": "session_78404322570a",
+  "profile_id": "profile_ccd048e4ca3d",
+  "started_at": "2025-08-16 16:04:17.993827",
+  "completed_at": null,
+  "status": "in_progress",
+  "tracks_executed": [
+    "nonprofits",
+    "government_opportunities"
+  ],
+  "opportunities_found": {},
+  "total_opportunities": 0,
+  "execution_time_seconds": null,
+  "error_messages": [],
+  "notes": null
+}

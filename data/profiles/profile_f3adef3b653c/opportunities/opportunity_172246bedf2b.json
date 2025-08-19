@@ -1,0 +1,93 @@
+{
+  "opportunity_id": "opp_lead_172246bedf2b",
+  "profile_id": "profile_f3adef3b653c",
+  "organization_name": "Norfolk Foundation",
+  "ein": "54-0505982",
+  "current_stage": "deep_analysis",
+  "stage_history": [
+    {
+      "stage": "discovery",
+      "entered_at": "2025-08-18 15:37:54.713496",
+      "exited_at": "2025-08-19T05:11:56.389213",
+      "duration_hours": 13.567132143611111
+    },
+    {
+      "stage": "pre_scoring",
+      "entered_at": "2025-08-19T05:11:56.389213",
+      "exited_at": "2025-08-19T05:17:57.334642",
+      "duration_hours": 0.10026261916666666
+    },
+    {
+      "stage": "deep_analysis",
+      "entered_at": "2025-08-19T05:17:57.334642",
+      "exited_at": null,
+      "duration_hours": null
+    }
+  ],
+  "scoring": {
+    "overall_score": 0.8903013845842568,
+    "auto_promotion_eligible": true,
+    "promotion_recommended": true,
+    "dimension_scores": {},
+    "confidence_level": null,
+    "scored_at": "2025-08-18 15:37:54.713496",
+    "scorer_version": "1.0.0"
+  },
+  "analysis": {
+    "discovery": {
+      "match_factors": {
+        "source_type": "Foundation",
+        "foundation_code": "03",
+        "state": "VA",
+        "bmf_filtered": true,
+        "quick_bmf_result": true,
+        "deadline": null,
+        "eligibility": []
+      },
+      "risk_factors": {},
+      "recommendations": [],
+      "network_insights": {},
+      "analyzed_at": "2025-08-18 15:37:54.713496",
+      "source": "BMF Filter",
+      "opportunity_type": "grants",
+      "enhanced_data": null
+    }
+  },
+  "user_assessment": {
+    "user_rating": null,
+    "priority_level": null,
+    "assessment_notes": null,
+    "tags": [],
+    "last_assessed_at": null
+  },
+  "promotion_history": [
+    {
+      "from_stage": "discovery",
+      "to_stage": "pre_scoring",
+      "decision_type": "stage_update",
+      "score_at_promotion": 0.8903013845842568,
+      "reason": "Auto-promotion test - high score",
+      "promoted_at": "2025-08-19T05:11:56.389213",
+      "promoted_by": "test_system"
+    },
+    {
+      "from_stage": "pre_scoring",
+      "to_stage": "deep_analysis",
+      "decision_type": "stage_update",
+      "score_at_promotion": 0.8903013845842568,
+      "reason": "API integration test",
+      "promoted_at": "2025-08-19T05:17:57.334642",
+      "promoted_by": "test_api"
+    }
+  ],
+  "source": "BMF Filter",
+  "opportunity_type": "grants",
+  "discovered_at": "2025-08-18 15:37:54.713496",
+  "last_updated": "2025-08-19T05:17:57.334898",
+  "status": "active",
+  "legacy_lead_id": "lead_172246bedf2b",
+  "legacy_pipeline_stage": "discovery",
+  "description": "Foundation identified through BMF filter - Foundation Code 03",
+  "funding_amount": null,
+  "program_name": null
+}

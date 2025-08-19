@@ -1,0 +1,69 @@
+{
+  "profile_id": "profile_9a8e94fc617a",
+  "name": "Test Nonprofit",
+  "organization_type": "nonprofit",
+  "ein": "12-3456789",
+  "mission_statement": "Test mission for debugging profile persistence",
+  "keywords": "updated, test, keywords",
+  "focus_areas": [
+    "Education",
+    "Health"
+  ],
+  "program_areas": [],
+  "target_populations": [
+    "Children",
+    "Adults"
+  ],
+  "ntee_codes": [
+    "A20",
+    "B40",
+    "C50"
+  ],
+  "government_criteria": [
+    "Federal Only",
+    "State Only"
+  ],
+  "geographic_scope": {
+    "states": [
+      "VA"
+    ],
+    "regions": [],
+    "nationwide": false,
+    "international": false
+  },
+  "service_areas": [],
+  "funding_preferences": {
+    "min_amount": 10000,
+    "max_amount": 100000,
+    "funding_types": [
+      "grants"
+    ],
+    "recurring": false,
+    "multi_year": false,
+    "grants_gov_categories": []
+  },
+  "current_funders": [],
+  "past_grants": [],
+  "annual_revenue": 250000,
+  "staff_size": 5,
+  "volunteer_count": null,
+  "board_size": null,
+  "strategic_priorities": [],
+  "growth_goals": [],
+  "partnership_interests": [],
+  "certifications": [],
+  "compliance_requirements": [],
+  "reporting_capabilities": [],
+  "status": "archived",
+  "created_at": "2025-08-11 00:04:42.222923",
+  "updated_at": "2025-08-18T15:06:41.617410",
+  "created_by": null,
+  "tags": [],
+  "notes": null,
+  "last_discovery_date": null,
+  "discovery_count": 0,
+  "discovery_status": "never_run",
+  "next_recommended_discovery": null,
+  "opportunities_count": 0,
+  "associated_opportunities": []
+}

@@ -1,0 +1,69 @@
+{
+  "opportunity_id": "opp_lead_ecc7e607d622",
+  "profile_id": "profile_aefa1d788b1e",
+  "organization_name": "Richmond Memorial Health Foundation",
+  "ein": "54-1456789",
+  "current_stage": "pre_scoring",
+  "stage_history": [
+    {
+      "stage": "pre_scoring",
+      "entered_at": "2025-08-17 17:20:10.698235",
+      "exited_at": null,
+      "duration_hours": null
+    }
+  ],
+  "scoring": {
+    "overall_score": 0.8681335356605828,
+    "auto_promotion_eligible": true,
+    "promotion_recommended": true,
+    "confidence_level": null,
+    "scored_at": "2025-08-18T15:08:23.541415",
+    "scorer_version": "1.0.0"
+  },
+  "analysis": {
+    "pre_scoring": {
+      "match_factors": {
+        "source_type": "Nonprofit",
+        "ntee_code": "E20",
+        "state": "VA",
+        "bmf_filtered": true,
+        "quick_bmf_result": true,
+        "deadline": null,
+        "eligibility": [],
+        "auto_promoted": true,
+        "promotion_reason": "Auto-promoted for high score: 86.8%",
+        "promoted_at": "2025-08-18T15:08:23.541419"
+      },
+      "risk_factors": {},
+      "recommendations": [],
+      "network_insights": {},
+      "analyzed_at": "2025-08-18T15:08:23.541415",
+      "enhanced_data": {
+        "ein": "54-1456789",
+        "ntee_code": "E20",
+        "discovery_source": "BMF Filter",
+        "opportunity_id": "bmf_nonprofit_54-1456789",
+        "source_url": null,
+        "bmf_session": "bmf_filter_session"
+      }
+    }
+  },
+  "user_assessment": {
+    "user_rating": null,
+    "priority_level": null,
+    "assessment_notes": null,
+    "tags": [],
+    "last_assessed_at": null
+  },
+  "promotion_history": [],
+  "source": "BMF Filter",
+  "opportunity_type": "grants",
+  "discovered_at": "2025-08-17 17:20:10.698235",
+  "last_updated": "2025-08-19T05:07:59.517210",
+  "status": "active",
+  "legacy_lead_id": "lead_ecc7e607d622",
+  "legacy_pipeline_stage": "pre_scoring",
+  "description": "Nonprofit organization identified through BMF filter - ",
+  "funding_amount": null,
+  "program_name": null
+}

@@ -1,0 +1,19 @@
+{
+  "session_id": "bridge_d2e6e7113767",
+  "profile_id": "profile_f3adef3b653c",
+  "started_at": "2025-08-16 11:29:50.537770",
+  "completed_at": "2025-08-16 11:29:58.264122",
+  "status": "completed",
+  "tracks_executed": [
+    "government",
+    "foundation"
+  ],
+  "opportunities_found": {
+    "government": 0,
+    "foundation": 3
+  },
+  "total_opportunities": 3,
+  "execution_time_seconds": 7,
+  "error_messages": [],
+  "notes": "Unified discovery with 5 funding source types"
+}

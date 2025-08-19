@@ -1,0 +1,60 @@
+{
+  "opportunity_id": "opp_lead_86c65fd4bfea",
+  "profile_id": "profile_f3adef3b653c",
+  "organization_name": "Richmond Memorial Health Foundation",
+  "ein": "54-1456789",
+  "current_stage": "discovery",
+  "stage_history": [
+    {
+      "stage": "discovery",
+      "entered_at": "2025-08-18 19:15:16.560548",
+      "exited_at": null,
+      "duration_hours": null
+    }
+  ],
+  "scoring": {
+    "overall_score": 0.8777611035807228,
+    "auto_promotion_eligible": true,
+    "promotion_recommended": true,
+    "confidence_level": null,
+    "scored_at": "2025-08-18 19:15:16.560548",
+    "scorer_version": "1.0.0"
+  },
+  "analysis": {
+    "discovery": {
+      "match_factors": {
+        "source_type": "Nonprofit",
+        "ntee_code": "E20",
+        "state": "VA",
+        "bmf_filtered": true,
+        "quick_bmf_result": true,
+        "deadline": null,
+        "eligibility": []
+      },
+      "risk_factors": {},
+      "recommendations": [],
+      "network_insights": {},
+      "analyzed_at": "2025-08-18 19:15:16.560548",
+      "source": "BMF Filter",
+      "opportunity_type": "grants"
+    }
+  },
+  "user_assessment": {
+    "user_rating": null,
+    "priority_level": null,
+    "assessment_notes": null,
+    "tags": [],
+    "last_assessed_at": null
+  },
+  "promotion_history": [],
+  "source": "BMF Filter",
+  "opportunity_type": "grants",
+  "discovered_at": "2025-08-18 19:15:16.560548",
+  "last_updated": "2025-08-19T05:07:59.426430",
+  "status": "active",
+  "legacy_lead_id": "lead_86c65fd4bfea",
+  "legacy_pipeline_stage": "discovery",
+  "description": "Nonprofit organization identified through BMF filter - ",
+  "funding_amount": null,
+  "program_name": null
+}

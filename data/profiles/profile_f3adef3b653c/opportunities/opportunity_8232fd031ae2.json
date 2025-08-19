@@ -1,0 +1,59 @@
+{
+  "opportunity_id": "opp_lead_8232fd031ae2",
+  "profile_id": "profile_f3adef3b653c",
+  "organization_name": "RAPPAHANNOCK AREA AGENCY ON AGING INC",
+  "ein": "541027651",
+  "current_stage": "discovery",
+  "stage_history": [
+    {
+      "stage": "discovery",
+      "entered_at": "2025-08-18 19:15:27.565335",
+      "exited_at": null,
+      "duration_hours": null
+    }
+  ],
+  "scoring": {
+    "overall_score": 0.6,
+    "auto_promotion_eligible": false,
+    "promotion_recommended": false,
+    "confidence_level": null,
+    "scored_at": "2025-08-18 19:15:27.565335",
+    "scorer_version": "1.0.0"
+  },
+  "analysis": {
+    "discovery": {
+      "match_factors": {
+        "source_type": "Nonprofit",
+        "ntee_code": "P81Z",
+        "state": "VA",
+        "bmf_filtered": true,
+        "deadline": null,
+        "eligibility": []
+      },
+      "risk_factors": {},
+      "recommendations": [],
+      "network_insights": {},
+      "analyzed_at": "2025-08-18 19:15:27.565335",
+      "source": "Nonprofit Discovery - BMF",
+      "opportunity_type": "grants"
+    }
+  },
+  "user_assessment": {
+    "user_rating": null,
+    "priority_level": null,
+    "assessment_notes": null,
+    "tags": [],
+    "last_assessed_at": null
+  },
+  "promotion_history": [],
+  "source": "Nonprofit Discovery - BMF",
+  "opportunity_type": "grants",
+  "discovered_at": "2025-08-18 19:15:27.565335",
+  "last_updated": "2025-08-19T05:07:59.423702",
+  "status": "active",
+  "legacy_lead_id": "lead_8232fd031ae2",
+  "legacy_pipeline_stage": "discovery",
+  "description": "Nonprofit organization from IRS Business Master File. Revenue: $2,247,392.0",
+  "funding_amount": null,
+  "program_name": null
+}

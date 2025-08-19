@@ -1,0 +1,58 @@
+{
+  "profile_id": "profile_aefa1d788b1e",
+  "organization_name": "Unknown Organization",
+  "focus_areas": [
+    "general"
+  ],
+  "geographic_scope": {
+    "states": [
+      "VA"
+    ],
+    "regions": [],
+    "nationwide": false,
+    "international": false
+  },
+  "ntee_codes": [
+    "E03",
+    "E19",
+    "E21",
+    "E24",
+    "E31",
+    "F70",
+    "F11"
+  ],
+  "created_at": "2025-08-15 17:10:22.689858",
+  "updated_at": "2025-08-19T05:07:59.518553",
+  "analytics": {
+    "opportunity_count": 12,
+    "stages_distribution": {
+      "pre_scoring": 12
+    },
+    "scoring_stats": {
+      "avg_score": 0.851,
+      "high_potential_count": 11,
+      "auto_promotion_eligible": 12,
+      "last_scored": "2025-08-18T15:08:23.542119"
+    },
+    "discovery_stats": {
+      "total_sessions": 1,
+      "last_discovery": "2025-08-17 21:09:14.437746",
+      "last_session_results": 12,
+      "avg_results_per_session": 12.0
+    },
+    "promotion_stats": {
+      "total_promotions": 0,
+      "auto_promotions": 0,
+      "manual_promotions": 0,
+      "promotion_rate": 0.0
+    }
+  },
+  "recent_activity": [
+    {
+      "type": "discovery_session",
+      "date": "2025-08-17T12:00:00",
+      "results": 12,
+      "source": "Multiple Sources"
+    }
+  ]
+}

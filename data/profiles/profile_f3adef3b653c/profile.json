@@ -1,0 +1,95 @@
+{
+  "profile_id": "profile_f3adef3b653c",
+  "organization_name": "Unknown Organization",
+  "focus_areas": [
+    "general"
+  ],
+  "geographic_scope": {
+    "states": [
+      "VA"
+    ],
+    "regions": [],
+    "nationwide": false,
+    "international": false
+  },
+  "ntee_codes": [
+    "L11",
+    "L20",
+    "L99",
+    "L82",
+    "L81",
+    "L80",
+    "L41",
+    "L24",
+    "F40"
+  ],
+  "created_at": "2025-08-10 14:40:01.485534",
+  "updated_at": "2025-08-19T05:17:57.369398",
+  "analytics": {
+    "opportunity_count": 266,
+    "stages_distribution": {
+      "discovery": 252,
+      "deep_analysis": 1,
+      "pre_scoring": 13
+    },
+    "scoring_stats": {
+      "avg_score": 0.64,
+      "high_potential_count": 29,
+      "auto_promotion_eligible": 35,
+      "last_scored": "2025-08-18T15:08:23.540404"
+    },
+    "discovery_stats": {
+      "total_sessions": 2,
+      "last_discovery": "2025-08-18 19:29:43.273264",
+      "last_session_results": 256,
+      "avg_results_per_session": 133.0
+    },
+    "promotion_stats": {
+      "total_promotions": 2,
+      "auto_promotions": 0,
+      "manual_promotions": 2,
+      "promotion_rate": 0.01
+    }
+  },
+  "recent_activity": [
+    {
+      "type": "manual_promotion",
+      "date": "2025-08-19T05:17:57.334642",
+      "results": null,
+      "source": null,
+      "opportunity": "Norfolk Foundation",
+      "from_stage": "pre_scoring",
+      "to_stage": "deep_analysis"
+    },
+    {
+      "type": "manual_promotion",
+      "date": "2025-08-19T05:11:56.389213",
+      "results": null,
+      "source": null,
+      "opportunity": "Norfolk Foundation",
+      "from_stage": "discovery",
+      "to_stage": "pre_scoring"
+    },
+    {
+      "type": "discovery_session",
+      "date": "2025-08-18T12:00:00",
+      "results": 256,
+      "source": "Multiple Sources",
+      "opportunity": null,
+      "from_stage": null,
+      "to_stage": null
+    },
+    {
+      "type": "discovery_session",
+      "date": "2025-08-17T12:00:00",
+      "results": 10,
+      "source": "Multiple Sources",
+      "opportunity": null,
+      "from_stage": null,
+      "to_stage": null
+    }
+  ],
+  "status": "active",
+  "tags": [],
+  "notes": null
+}

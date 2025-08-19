@@ -29,6 +29,7 @@ from src.web.services.progress_service import ProgressService
 from src.web.models.requests import ClassificationRequest, WorkflowRequest
 from src.web.models.responses import DashboardStats, WorkflowResponse, SystemStatus
 from src.profiles.service import ProfileService
+from src.profiles.unified_service import get_unified_profile_service
 # from src.profiles.entity_service import get_entity_profile_service  # Commented out due to import issues
 from src.profiles.models import OrganizationProfile, FundingType
 from src.profiles.workflow_integration import ProfileWorkflowIntegrator
@@ -122,6 +123,7 @@ app.add_middleware(
 workflow_service = WorkflowService()
 progress_service = ProgressService()
 profile_service = ProfileService()
+unified_service = get_unified_profile_service()
 # entity_profile_service = get_entity_profile_service()  # Enhanced entity-based service - Commented out due to import issues
 # entity_discovery_service = get_entity_discovery_service()  # Enhanced discovery service - Commented out due to import issues
 profile_integrator = ProfileWorkflowIntegrator()
@@ -764,42 +766,34 @@ async def fetch_ein_data(request: dict):
 
 @app.get("/api/profiles")
 async def list_profiles(status: Optional[str] = None, limit: Optional[int] = None):
-    """List all organization profiles."""
+    """List all organization profiles with unified analytics."""
     try:
-        profiles = profile_service.list_profiles(
-            status=status,
-            limit=limit
-        )
+        # Use both services - old for profile metadata, unified for opportunity analytics
+        old_profiles = profile_service.list_profiles(status=status, limit=limit)
+        unified_profile_ids = unified_service.list_profiles()
         
-        # Debug: Log what profiles we got from the service
-        logger.info(f"ProfileService returned {len(profiles)} profiles")
-        if profiles:
-            # Find a profile with actual data for debugging (not just the first one)
-            sample_profile = profiles[0]  # Default to first
-            for profile in profiles:
-                if (profile.ntee_codes and len(profile.ntee_codes) > 0) or (profile.government_criteria and len(profile.government_criteria) > 0):
-                    sample_profile = profile
-                    break
-            logger.info(f"Sample profile data ('{sample_profile.name}'): ntee_codes={getattr(sample_profile, 'ntee_codes', 'NOT_FOUND')}, government_criteria={getattr(sample_profile, 'government_criteria', 'NOT_FOUND')}, keywords={getattr(sample_profile, 'keywords', 'NOT_FOUND')}")
-        
-        # Convert profiles to dict format and add opportunity counts
+        # Convert profiles to dict format and add analytics from unified service
         profile_dicts = []
-        for profile in profiles:
+        for profile in old_profiles:
             profile_dict = profile.model_dump()
-            # Get actual opportunities count from associated leads
-            profile_dict["opportunities_count"] = len(profile.associated_opportunities)
+            
+            # Try to get unified profile analytics for enhanced data
+            if profile.profile_id in unified_profile_ids:
+                unified_profile = unified_service.get_profile(profile.profile_id)
+                if unified_profile and unified_profile.analytics:
+                    # Use unified analytics for accurate opportunity counts
+                    profile_dict["opportunities_count"] = unified_profile.analytics.opportunity_count
+                    profile_dict["analytics"] = unified_profile.analytics.model_dump()
+                else:
+                    # Fallback to old method
+                    profile_dict["opportunities_count"] = len(profile.associated_opportunities)
+            else:
+                # Fallback to old method
+                profile_dict["opportunities_count"] = len(profile.associated_opportunities)
+            
             profile_dicts.append(profile_dict)
         
-        # Debug: Log what we're returning  
-        if profile_dicts:
-            # Find a profile dict with actual data for debugging
-            sample_dict = profile_dicts[0]  # Default to first
-            for profile_dict in profile_dicts:
-                if (profile_dict.get('ntee_codes') and len(profile_dict.get('ntee_codes', [])) > 0) or (profile_dict.get('government_criteria') and len(profile_dict.get('government_criteria', [])) > 0):
-                    sample_dict = profile_dict
-                    break
-            logger.info(f"Sample profile dict ('{sample_dict.get('name', 'UNKNOWN')}'): ntee_codes={sample_dict.get('ntee_codes', 'NOT_FOUND')}, government_criteria={sample_dict.get('government_criteria', 'NOT_FOUND')}, keywords={sample_dict.get('keywords', 'NOT_FOUND')}")
-        
+        logger.info(f"Returned {len(profile_dicts)} profiles with unified analytics")
         return {"profiles": profile_dicts}
         
     except Exception as e:
@@ -826,8 +820,14 @@ async def create_profile(profile_data: Dict[str, Any]):
 
 @app.get("/api/profiles/{profile_id}")
 async def get_profile(profile_id: str):
-    """Get a specific organization profile."""
+    """Get a specific organization profile with unified analytics."""
     try:
+        # Try unified service first for enhanced analytics
+        unified_profile = unified_service.get_profile(profile_id)
+        if unified_profile:
+            return {"profile": unified_profile.model_dump()}
+        
+        # Fallback to old service
         profile = profile_service.get_profile(profile_id)
         if not profile:
             raise HTTPException(status_code=404, detail="Profile not found")
@@ -1544,8 +1544,52 @@ def _convert_lead_to_opportunity(lead):
 
 @app.get("/api/profiles/{profile_id}/opportunities")
 async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None, min_score: Optional[float] = None):
-    """Get opportunities for a profile (alias for leads endpoint)."""
+    """Get opportunities for a profile using unified service."""
     try:
+        # Try unified service first for enhanced data
+        unified_opportunities = unified_service.get_profile_opportunities(
+            profile_id=profile_id,
+            stage_filter=stage
+        )
+        
+        if unified_opportunities:
+            # Filter by min_score if provided
+            filtered_opportunities = []
+            for opp in unified_opportunities:
+                if min_score is None or (opp.scoring and opp.scoring.overall_score >= min_score):
+                    # Convert to frontend format
+                    opportunity = {
+                        "id": opp.opportunity_id,
+                        "opportunity_id": opp.opportunity_id,
+                        "organization_name": opp.organization_name,
+                        "current_stage": opp.current_stage,
+                        "compatibility_score": opp.scoring.overall_score if opp.scoring else 0.0,
+                        "auto_promotion_eligible": opp.scoring.auto_promotion_eligible if opp.scoring else False,
+                        "discovered_at": opp.discovered_at,
+                        "last_updated": opp.last_updated,
+                        "ein": opp.ein,
+                        "funding_amount": opp.funding_amount,
+                        "program_name": opp.program_name,
+                        "source": opp.source,
+                        "opportunity_type": opp.opportunity_type,
+                        "description": opp.description,
+                        "stage_history": [h.model_dump() for h in opp.stage_history] if opp.stage_history else [],
+                        "promotion_history": [p.model_dump() for p in opp.promotion_history] if opp.promotion_history else []
+                    }
+                    filtered_opportunities.append(opportunity)
+            
+            return {
+                "profile_id": profile_id,
+                "total_opportunities": len(filtered_opportunities),
+                "opportunities": filtered_opportunities,
+                "filters_applied": {
+                    "stage": stage,
+                    "min_score": min_score
+                },
+                "source": "unified_service"
+            }
+        
+        # Fallback to old service logic
         from src.profiles.models import PipelineStage
         
         # Convert stage parameter if provided
@@ -4831,9 +4875,63 @@ async def score_opportunity(profile_id: str, opportunity_id: str, request: Score
 
 @app.post("/api/profiles/{profile_id}/opportunities/{opportunity_id}/promote", response_model=PromotionResponse)
 async def promote_opportunity(profile_id: str, opportunity_id: str, request: PromotionRequest):
-    """Promote or demote an opportunity"""
-    scoring_service = get_scoring_service()
-    return await scoring_service.promote_opportunity(profile_id, opportunity_id, request)
+    """Promote or demote an opportunity using unified service"""
+    try:
+        # Try unified service first for stage updates
+        if request.action in ["promote", "next_stage"]:
+            # Get current opportunity to determine next stage
+            opportunity = unified_service.get_opportunity(profile_id, opportunity_id)
+            if opportunity:
+                # Determine target stage based on current stage
+                stage_progression = {
+                    "discovery": "pre_scoring",
+                    "pre_scoring": "deep_analysis", 
+                    "deep_analysis": "recommendations",
+                    "recommendations": "recommendations"  # Stay in final stage
+                }
+                
+                target_stage = stage_progression.get(opportunity.current_stage, opportunity.current_stage)
+                if target_stage != opportunity.current_stage:
+                    success = unified_service.update_opportunity_stage(
+                        profile_id, 
+                        opportunity_id,
+                        target_stage,
+                        reason=f"Manual promotion via API - {request.action}",
+                        promoted_by="user"
+                    )
+                    
+                    if success:
+                        return PromotionResponse(
+                            success=True,
+                            message=f"Promoted to {target_stage}",
+                            new_stage=target_stage,
+                            opportunity_id=opportunity_id
+                        )
+                    else:
+                        return PromotionResponse(
+                            success=False,
+                            message="Failed to update stage",
+                            opportunity_id=opportunity_id
+                        )
+                else:
+                    return PromotionResponse(
+                        success=False,
+                        message=f"Already in final stage: {opportunity.current_stage}",
+                        new_stage=opportunity.current_stage,
+                        opportunity_id=opportunity_id
+                    )
+        
+        # Fallback to scoring service for complex promotion logic
+        scoring_service = get_scoring_service()
+        return await scoring_service.promote_opportunity(profile_id, opportunity_id, request)
+        
+    except Exception as e:
+        logger.error(f"Error promoting opportunity {opportunity_id}: {e}")
+        return PromotionResponse(
+            success=False,
+            message=str(e),
+            opportunity_id=opportunity_id
+        )
 
 @app.post("/api/profiles/{profile_id}/opportunities/{opportunity_id}/evaluate", response_model=PromotionResponse)
 async def evaluate_promotion(profile_id: str, opportunity_id: str, request: PromotionRequest):
@@ -4843,8 +4941,17 @@ async def evaluate_promotion(profile_id: str, opportunity_id: str, request: Prom
 
 @app.get("/api/profiles/{profile_id}/opportunities/{opportunity_id}/details")
 async def get_opportunity_details(profile_id: str, opportunity_id: str):
-    """Get detailed opportunity information including scores"""
+    """Get detailed opportunity information using unified service"""
     try:
+        # Try unified service first for complete data
+        opportunity = unified_service.get_opportunity(profile_id, opportunity_id)
+        if opportunity:
+            return {
+                "opportunity": opportunity.model_dump(),
+                "source": "unified_service"
+            }
+        
+        # Fallback to scoring service
         scoring_service = get_scoring_service()
         
         # Get opportunity data (placeholder implementation)

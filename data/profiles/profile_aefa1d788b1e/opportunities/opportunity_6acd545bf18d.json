@@ -1,0 +1,69 @@
+{
+  "opportunity_id": "opp_lead_6acd545bf18d",
+  "profile_id": "profile_aefa1d788b1e",
+  "organization_name": "Grantmakers In Aging Inc",
+  "ein": "13-4014982",
+  "current_stage": "pre_scoring",
+  "stage_history": [
+    {
+      "stage": "pre_scoring",
+      "entered_at": "2025-08-17 17:30:52.407574",
+      "exited_at": null,
+      "duration_hours": null
+    }
+  ],
+  "scoring": {
+    "overall_score": 0.8387737273721106,
+    "auto_promotion_eligible": true,
+    "promotion_recommended": true,
+    "confidence_level": null,
+    "scored_at": "2025-08-18T15:08:23.533549",
+    "scorer_version": "1.0.0"
+  },
+  "analysis": {
+    "pre_scoring": {
+      "match_factors": {
+        "source_type": "Nonprofit",
+        "ntee_code": "P81",
+        "state": "VA",
+        "bmf_filtered": true,
+        "quick_bmf_result": true,
+        "deadline": null,
+        "eligibility": [],
+        "auto_promoted": true,
+        "promotion_reason": "Auto-promoted for high score: 83.9%",
+        "promoted_at": "2025-08-18T15:08:23.533553"
+      },
+      "risk_factors": {},
+      "recommendations": [],
+      "network_insights": {},
+      "analyzed_at": "2025-08-18T15:08:23.533549",
+      "enhanced_data": {
+        "ein": "13-4014982",
+        "ntee_code": "P81",
+        "discovery_source": "BMF Filter",
+        "opportunity_id": "bmf_nonprofit_13-4014982",
+        "source_url": null,
+        "bmf_session": "bmf_filter_session"
+      }
+    }
+  },
+  "user_assessment": {
+    "user_rating": null,
+    "priority_level": null,
+    "assessment_notes": null,
+    "tags": [],
+    "last_assessed_at": null
+  },
+  "promotion_history": [],
+  "source": "BMF Filter",
+  "opportunity_type": "grants",
+  "discovered_at": "2025-08-17 17:30:52.407574",
+  "last_updated": "2025-08-19T05:07:59.514794",
+  "status": "active",
+  "legacy_lead_id": "lead_6acd545bf18d",
+  "legacy_pipeline_stage": "pre_scoring",
+  "description": "Nonprofit organization identified through BMF filter - ",
+  "funding_amount": null,
+  "program_name": null
+}

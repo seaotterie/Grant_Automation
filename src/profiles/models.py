@@ -536,3 +536,152 @@ class ProfileSearchParams(BaseModel):
                 "priority_level": "high"
             }
         }
+
+
+# ============================================================================
+# UNIFIED OPPORTUNITY ARCHITECTURE MODELS
+# ============================================================================
+
+class StageTransition(BaseModel):
+    """Individual stage transition record"""
+    stage: str = Field(..., description="Stage name (discovery, pre_scoring, etc.)")
+    entered_at: Optional[str] = Field(default=None, description="ISO timestamp when stage entered")
+    exited_at: Optional[str] = Field(default=None, description="ISO timestamp when stage exited")
+    duration_hours: Optional[float] = Field(default=None, description="Time spent in this stage")
+
+
+class ScoringResult(BaseModel):
+    """Unified scoring result"""
+    overall_score: float = Field(..., ge=0.0, le=1.0, description="Overall compatibility score")
+    auto_promotion_eligible: bool = Field(default=False, description="Eligible for automatic promotion")
+    promotion_recommended: bool = Field(default=False, description="Manual promotion recommended")
+    dimension_scores: Dict[str, float] = Field(default_factory=dict, description="Scoring breakdown by dimension")
+    confidence_level: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Confidence in scoring")
+    scored_at: Optional[str] = Field(default=None, description="ISO timestamp when scored")
+    scorer_version: str = Field(default="1.0.0", description="Scoring algorithm version")
+
+
+class StageAnalysis(BaseModel):
+    """Analysis data for a specific stage"""
+    match_factors: Dict[str, Any] = Field(default_factory=dict, description="Factors contributing to match")
+    risk_factors: Dict[str, Any] = Field(default_factory=dict, description="Identified risk factors")
+    recommendations: List[str] = Field(default=[], description="Stage-specific recommendations")
+    network_insights: Dict[str, Any] = Field(default_factory=dict, description="Network analysis results")
+    analyzed_at: Optional[str] = Field(default=None, description="ISO timestamp when analyzed")
+    
+    # Stage-specific fields
+    source: Optional[str] = Field(default=None, description="Discovery source (for discovery stage)")
+    opportunity_type: Optional[str] = Field(default=None, description="Opportunity type (for discovery stage)")
+    enhanced_data: Optional[Dict[str, Any]] = Field(default=None, description="Enhanced data (for pre_scoring+ stages)")
+
+
+class UserAssessment(BaseModel):
+    """User assessment and rating of opportunity"""
+    user_rating: Optional[int] = Field(default=None, ge=1, le=5, description="User rating (1-5 stars)")
+    priority_level: Optional[str] = Field(default=None, description="Priority level (high, medium, low)")
+    assessment_notes: Optional[str] = Field(default=None, description="User notes and assessment")
+    tags: List[str] = Field(default=[], description="User-assigned tags")
+    last_assessed_at: Optional[str] = Field(default=None, description="ISO timestamp of last assessment")
+
+
+class PromotionEvent(BaseModel):
+    """Individual promotion/demotion event"""
+    from_stage: str = Field(..., description="Source stage")
+    to_stage: str = Field(..., description="Target stage")
+    decision_type: str = Field(..., description="Type of promotion decision")
+    score_at_promotion: float = Field(default=0.0, description="Score when promotion occurred")
+    reason: str = Field(default="", description="Reason for promotion/demotion")
+    promoted_at: Optional[str] = Field(default=None, description="ISO timestamp of promotion")
+    promoted_by: str = Field(default="system", description="Who/what made the promotion")
+
+
+class UnifiedOpportunity(BaseModel):
+    """Unified opportunity record - single source of truth"""
+    
+    # Core Identity
+    opportunity_id: str = Field(..., description="Unique opportunity identifier (opp_*)")
+    profile_id: str = Field(..., description="Associated profile ID")
+    organization_name: str = Field(..., description="Target organization name")
+    ein: Optional[str] = Field(default=None, description="EIN if available")
+    
+    # Pipeline Status - Single Source of Truth
+    current_stage: str = Field(default="discovery", description="Current pipeline stage")
+    stage_history: List[StageTransition] = Field(default=[], description="Complete stage history")
+    
+    # Scoring - Computed Once, Referenced Forever
+    scoring: Optional[ScoringResult] = Field(default=None, description="Latest scoring results")
+    
+    # Stage-Specific Analysis - Accumulated Knowledge
+    analysis: Dict[str, StageAnalysis] = Field(default_factory=dict, description="Analysis by stage")
+    
+    # User Assessments - Persistent Across Sessions
+    user_assessment: Optional[UserAssessment] = Field(default=None, description="User ratings and notes")
+    
+    # Promotion History - Complete Audit Trail
+    promotion_history: List[PromotionEvent] = Field(default=[], description="Complete promotion history")
+    
+    # Metadata
+    source: Optional[str] = Field(default=None, description="Original discovery source")
+    opportunity_type: str = Field(default="grants", description="Type of opportunity")
+    discovered_at: Optional[str] = Field(default=None, description="ISO timestamp of discovery")
+    last_updated: Optional[str] = Field(default=None, description="ISO timestamp of last update")
+    status: str = Field(default="active", description="Opportunity status")
+    
+    # Legacy Compatibility Fields
+    legacy_lead_id: Optional[str] = Field(default=None, description="Original lead_id from migration")
+    legacy_pipeline_stage: Optional[str] = Field(default=None, description="Original pipeline stage")
+    description: Optional[str] = Field(default=None, description="Opportunity description")
+    funding_amount: Optional[int] = Field(default=None, description="Funding amount if known")
+    program_name: Optional[str] = Field(default=None, description="Program name if applicable")
+
+
+class ProfileAnalytics(BaseModel):
+    """Real-time analytics computed from opportunities"""
+    
+    # Basic Counts
+    opportunity_count: int = Field(default=0, description="Total opportunities")
+    stages_distribution: Dict[str, int] = Field(default_factory=dict, description="Count by stage")
+    
+    # Scoring Statistics
+    scoring_stats: Dict[str, Any] = Field(default_factory=dict, description="Scoring analytics")
+    
+    # Discovery Statistics
+    discovery_stats: Dict[str, Any] = Field(default_factory=dict, description="Discovery session analytics")
+    
+    # Promotion Statistics
+    promotion_stats: Dict[str, Any] = Field(default_factory=dict, description="Promotion analytics")
+
+
+class RecentActivity(BaseModel):
+    """Recent activity item"""
+    type: str = Field(..., description="Activity type")
+    date: Optional[str] = Field(default=None, description="ISO timestamp")
+    results: Optional[int] = Field(default=None, description="Results count for discovery sessions")
+    source: Optional[str] = Field(default=None, description="Source for discovery sessions")
+    opportunity: Optional[str] = Field(default=None, description="Opportunity name for promotions")
+    from_stage: Optional[str] = Field(default=None, description="From stage for promotions")
+    to_stage: Optional[str] = Field(default=None, description="To stage for promotions")
+
+
+class UnifiedProfile(BaseModel):
+    """Unified profile with embedded analytics"""
+    
+    # Core Profile Information
+    profile_id: str = Field(..., description="Unique profile identifier")
+    organization_name: str = Field(..., description="Organization name")
+    focus_areas: List[str] = Field(default=[], description="Focus areas")
+    geographic_scope: Optional[Any] = Field(default=None, description="Geographic scope")
+    ntee_codes: List[str] = Field(default=[], description="NTEE codes")
+    created_at: Optional[str] = Field(default=None, description="ISO timestamp of creation")
+    updated_at: Optional[str] = Field(default=None, description="ISO timestamp of last update")
+    
+    # Embedded Analytics - Computed from Opportunities
+    analytics: ProfileAnalytics = Field(default_factory=ProfileAnalytics, description="Real-time analytics")
+    
+    # Recent Activity Summary
+    recent_activity: List[RecentActivity] = Field(default=[], description="Recent activity summary")
+    
+    # Legacy compatibility
+    status: str = Field(default="active", description="Profile status")
+    tags: List[str] = Field(default=[], description="Profile tags")
+    notes: Optional[str] = Field(default=None, description="Profile notes")
