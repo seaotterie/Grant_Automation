@@ -1,0 +1,50 @@
+{
+  "profile_id": "f3adef3b653c",
+  "generated_at": "2025-08-17T06:31:29.596794",
+  "analytics": {
+    "profile_id": "f3adef3b653c",
+    "generated_at": "2025-08-17T06:31:29.596794",
+    "stage_distribution": {
+      "prospects": 0,
+      "qualified_prospects": 0,
+      "candidates": 0,
+      "targets": 0,
+      "opportunities": 0
+    },
+    "performance_metrics": {
+      "total_entities": 0,
+      "conversion_rates": {
+        "prospects_to_qualified_prospects": 0.0,
+        "qualified_prospects_to_candidates": 0.0,
+        "candidates_to_targets": 0.0,
+        "targets_to_opportunities": 0.0
+      },
+      "average_match_scores": {
+        "prospects": 0.0,
+        "qualified_prospects": 0.0,
+        "candidates": 0.0,
+        "targets": 0.0,
+        "opportunities": 0.0
+      },
+      "processing_efficiency": {
+        "total_entities": 0,
+        "recent_activity_rate": 0,
+        "entities_per_stage": 0
+      }
+    },
+    "optimization_opportunities": [],
+    "trend_analysis": {
+      "discovery_rate": 0,
+      "progression_rate": 0,
+      "quality_trend": "stable"
+    }
+  },
+  "optimizations": [],
+  "batch_recommendations": {
+    "profile_id": "f3adef3b653c",
+    "batch_opportunities": [],
+    "estimated_time_savings": 0,
+    "processing_order": []
+  },
+  "search_demo_results": 0
+}

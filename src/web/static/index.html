@@ -6508,7 +6508,36 @@
                 </div>
                 
                 <!-- Modal Content -->
-                <div class="h-[600px] flex flex-col space-y-6 overflow-y-auto">
+                <div class="h-[600px] flex flex-col overflow-y-auto">
+                    
+                    <!-- Tab Navigation -->
+                    <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+                        <nav class="-mb-px flex space-x-8">
+                            <button @click="modalActiveTab = 'overview'" 
+                                    :class="modalActiveTab === 'overview' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+                                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                Overview
+                            </button>
+                            <button @click="modalActiveTab = 'scoring-analysis'" 
+                                    :class="modalActiveTab === 'scoring-analysis' ? 'border-green-500 text-green-600 dark:text-green-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+                                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                <span class="flex items-center">
+                                    🎯 Scoring Analysis
+                                </span>
+                            </button>
+                            <button @click="modalActiveTab = 'organization'" 
+                                    :class="modalActiveTab === 'organization' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+                                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                                🏢 Organization Intel
+                            </button>
+                        </nav>
+                    </div>
+                    
+                    <!-- Tab Content -->
+                    <div class="flex-1">
+                        
+                        <!-- Overview Tab -->
+                        <div x-show="modalActiveTab === 'overview'" class="space-y-6">
                     
                     <!-- Comprehensive 5-Dimensional Scoring Breakdown -->
                     <div class="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-lg border border-purple-200 dark:border-purple-800 p-6">
@@ -6822,6 +6851,232 @@
                                         <span>Out-of-state organization - Consider geographic factors</span>
                                     </template>
                                 </span>
+                            </div>
+                        </div>
+                    </div>
+                        </div> <!-- End Overview Tab -->
+                        
+                        <!-- Scoring Analysis Tab -->
+                        <div x-show="modalActiveTab === 'scoring-analysis'" class="space-y-6">
+                            <div x-data="{ scoringRationale: null, loadingRationale: false }" 
+                                 x-init="if (modalActiveTab === 'scoring-analysis') loadScoringRationale()">
+                                
+                                <!-- Loading State -->
+                                <div x-show="loadingRationale" class="text-center py-8">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
+                                    <p class="text-gray-600 dark:text-gray-400 mt-2">Analyzing scoring rationale...</p>
+                                </div>
+                                
+                                <!-- Scoring Rationale Content -->
+                                <div x-show="!loadingRationale && scoringRationale" class="space-y-6">
+                                    
+                                    <!-- Overall Assessment -->
+                                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800 p-6">
+                                        <h4 class="text-xl font-bold text-green-900 dark:text-green-100 mb-4">
+                                            🎯 Scoring Analysis & Recommendation
+                                        </h4>
+                                        
+                                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                            <div class="space-y-4">
+                                                <div>
+                                                    <h5 class="font-semibold text-green-900 dark:text-green-100 mb-2">Overall Assessment</h5>
+                                                    <p class="text-green-800 dark:text-green-200" x-text="scoringRationale?.overall_assessment"></p>
+                                                </div>
+                                                
+                                                <div>
+                                                    <h5 class="font-semibold text-green-900 dark:text-green-100 mb-2">Recommendation</h5>
+                                                    <p class="text-green-800 dark:text-green-200 font-medium" x-text="scoringRationale?.recommendation"></p>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Score Breakdown Chart -->
+                                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4">
+                                                <h5 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">Dimension Scores</h5>
+                                                <div class="space-y-3">
+                                                    <template x-for="[dimension, analysis] in Object.entries(scoringRationale?.score_breakdown || {})" :key="dimension">
+                                                        <div class="flex items-center space-x-3">
+                                                            <div class="w-20 text-sm text-gray-600 dark:text-gray-400 capitalize" x-text="dimension.replace('_', ' ')"></div>
+                                                            <div class="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                                                                <div class="bg-green-500 h-2 rounded-full transition-all duration-500" 
+                                                                     :style="`width: ${(analysis.score * 100).toFixed(0)}%`"></div>
+                                                            </div>
+                                                            <div class="w-12 text-sm font-medium text-gray-900 dark:text-gray-100" 
+                                                                 x-text="(analysis.score * 100).toFixed(0) + '%'"></div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Strengths & Challenges -->
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <!-- Strengths -->
+                                        <div class="bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800 p-6">
+                                            <h5 class="text-lg font-semibold text-green-900 dark:text-green-100 mb-4 flex items-center">
+                                                ✅ Key Strengths
+                                            </h5>
+                                            <ul class="space-y-2">
+                                                <template x-for="strength in scoringRationale?.strengths || []" :key="strength">
+                                                    <li class="flex items-start space-x-2">
+                                                        <div class="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                                                        <span class="text-green-800 dark:text-green-200 text-sm" x-text="strength"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                        
+                                        <!-- Challenges -->
+                                        <div class="bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800 p-6">
+                                            <h5 class="text-lg font-semibold text-red-900 dark:text-red-100 mb-4 flex items-center">
+                                                ⚠️ Key Challenges
+                                            </h5>
+                                            <ul class="space-y-2">
+                                                <template x-for="challenge in scoringRationale?.challenges || []" :key="challenge">
+                                                    <li class="flex items-start space-x-2">
+                                                        <div class="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                                                        <span class="text-red-800 dark:text-red-200 text-sm" x-text="challenge"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Strategic Insights & Next Steps -->
+                                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <!-- Strategic Insights -->
+                                        <div class="bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200 dark:border-blue-800 p-6">
+                                            <h5 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-4 flex items-center">
+                                                💡 Strategic Insights
+                                            </h5>
+                                            <ul class="space-y-2">
+                                                <template x-for="insight in scoringRationale?.strategic_insights || []" :key="insight">
+                                                    <li class="flex items-start space-x-2">
+                                                        <div class="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                                                        <span class="text-blue-800 dark:text-blue-200 text-sm" x-text="insight"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                        
+                                        <!-- Next Steps -->
+                                        <div class="bg-purple-50 dark:bg-purple-900/10 rounded-lg border border-purple-200 dark:border-purple-800 p-6">
+                                            <h5 class="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-4 flex items-center">
+                                                🚀 Recommended Next Steps
+                                            </h5>
+                                            <ol class="space-y-2">
+                                                <template x-for="(step, index) in scoringRationale?.next_steps || []" :key="step">
+                                                    <li class="flex items-start space-x-2">
+                                                        <span class="w-5 h-5 bg-purple-500 text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5 flex-shrink-0" 
+                                                              x-text="index + 1"></span>
+                                                        <span class="text-purple-800 dark:text-purple-200 text-sm" x-text="step"></span>
+                                                    </li>
+                                                </template>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Improvement Recommendations -->
+                                    <div x-show="scoringRationale?.improvement_recommendations?.length > 0" 
+                                         class="bg-yellow-50 dark:bg-yellow-900/10 rounded-lg border border-yellow-200 dark:border-yellow-800 p-6">
+                                        <h5 class="text-lg font-semibold text-yellow-900 dark:text-yellow-100 mb-4 flex items-center">
+                                            🔧 Improvement Recommendations
+                                        </h5>
+                                        <ul class="space-y-2">
+                                            <template x-for="recommendation in scoringRationale?.improvement_recommendations || []" :key="recommendation">
+                                                <li class="flex items-start space-x-2">
+                                                    <div class="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
+                                                    <span class="text-yellow-800 dark:text-yellow-200 text-sm" x-text="recommendation"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                    
+                                    <!-- Risk Factors -->
+                                    <div x-show="scoringRationale?.risk_factors?.length > 0" 
+                                         class="bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800 p-6">
+                                        <h5 class="text-lg font-semibold text-orange-900 dark:text-orange-100 mb-4 flex items-center">
+                                            ⚡ Risk Factors
+                                        </h5>
+                                        <ul class="space-y-2">
+                                            <template x-for="risk in scoringRationale?.risk_factors || []" :key="risk">
+                                                <li class="flex items-start space-x-2">
+                                                    <div class="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
+                                                    <span class="text-orange-800 dark:text-orange-200 text-sm" x-text="risk"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <!-- Error State -->
+                                <div x-show="!loadingRationale && !scoringRationale" class="text-center py-8">
+                                    <div class="text-gray-400 dark:text-gray-600">
+                                        <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.137 0-4.146-.832-5.657-2.343m0 0L3.515 9.829C2.48 8.793 1.924 7.329 2.004 5.849c.08-1.48.957-2.813 2.283-3.379C5.612 1.904 7.068 2.096 8.343 3.343l2.829 2.828c.195.195.293.45.293.707s-.098.512-.293.707L8.343 9.414z" />
+                                        </svg>
+                                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Unable to load scoring analysis</h3>
+                                        <p class="text-gray-500 dark:text-gray-400">Try refreshing or contact support if the issue persists</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Organization Intel Tab -->
+                        <div x-show="modalActiveTab === 'organization'" class="space-y-6">
+                            <!-- Move existing organization content here -->
+                            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-6">
+                                <h4 class="text-lg font-bold text-blue-900 dark:text-blue-100 mb-4 flex items-center">
+                                    <span class="mr-2" x-text="getTrackSpecificContext(selectedOpportunity).icon">🏢</span>
+                                    <span x-text="getTrackSpecificContext(selectedOpportunity).title">Organization Intelligence</span>
+                                    <span class="ml-2 px-2 py-1 text-xs rounded-full" 
+                                          :class="getTrackSpecificContext(selectedOpportunity).priority === 'High' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' : 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100'"
+                                          x-text="getTrackSpecificContext(selectedOpportunity).priority + ' Priority'"></span>
+                                </h4>
+                                
+                                <!-- Basic Organization Information -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-blue-700 dark:text-blue-300">Organization Name</label>
+                                        <p class="mt-1 text-sm text-blue-900 dark:text-blue-100" 
+                                           x-text="selectedOpportunity?.organization_name || 'N/A'"></p>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-blue-700 dark:text-blue-300">Source Type</label>
+                                        <p class="mt-1 text-sm text-blue-900 dark:text-blue-100" 
+                                           x-text="selectedOpportunity?.source_type || 'N/A'"></p>
+                                    </div>
+                                    
+                                    <div x-show="selectedOpportunity?.external_data?.state">
+                                        <label class="block text-sm font-medium text-blue-700 dark:text-blue-300">State</label>
+                                        <p class="mt-1 text-sm text-blue-900 dark:text-blue-100" 
+                                           x-text="selectedOpportunity?.external_data?.state || 'N/A'"></p>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-blue-700 dark:text-blue-300">Current Stage</label>
+                                        <span class="mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                              :class="getStageClass(selectedOpportunity?.funnel_stage)"
+                                              x-text="formatStageName(selectedOpportunity?.funnel_stage)"></span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Enhanced NTEE Information -->
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">Organization Type & Focus Area</label>
+                                    <div class="flex items-center space-x-3">
+                                        <span class="px-3 py-1 bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100 rounded-full text-sm font-medium"
+                                              x-text="selectedOpportunity?.external_data?.ntee_code || 'N/A'"></span>
+                                        <span class="text-sm text-blue-900 dark:text-blue-100 font-medium"
+                                              x-text="getNteeCodeDescription(selectedOpportunity?.external_data?.ntee_code)"></span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Track-Specific Context -->
+                                <div class="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-100 dark:border-blue-700">
+                                    <p class="text-sm text-blue-700 dark:text-blue-300" x-text="getTrackSpecificContext(selectedOpportunity).description"></p>
+                                </div>
                             </div>
                         </div>
                     </div>

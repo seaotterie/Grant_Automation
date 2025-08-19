@@ -1746,6 +1746,7 @@ function catalynxApp() {
         selectedOpportunity: null,
         opportunityLoading: false,
         isProcessing: false,
+        modalActiveTab: 'overview', // Tab state for opportunity modal
         
         // EIN fetch functionality
         einFetchLoading: false,
@@ -2581,7 +2582,13 @@ function catalynxApp() {
             return '🚀 Discover';
         },
 
-        selectProfileForDiscovery(profile) {
+        async selectProfileForDiscovery(profile) {
+            // Save current profile's opportunity scores before switching
+            if (this.selectedProfile && this.selectedProfile.profile_id !== profile.profile_id) {
+                console.log('Saving current profile scores before discovery profile switch...');
+                await this.saveCurrentOpportunityScores();
+            }
+            
             // Clear previous profile data to prevent spillover
             this.clearProfileData();
             
@@ -2795,6 +2802,12 @@ function catalynxApp() {
         async selectProfile(profile) {
             console.log('Selecting profile:', profile.name, profile.profile_id);
             
+            // Save current profile's opportunity scores before switching
+            if (this.selectedProfile && this.selectedProfile.profile_id !== profile.profile_id) {
+                console.log('Saving current profile scores before switching...');
+                await this.saveCurrentOpportunityScores();
+            }
+            
             // Clear previous profile data
             this.clearProfileData();
             
@@ -2808,6 +2821,42 @@ function catalynxApp() {
             // Load profile-specific data (including opportunities) if not in mock mode
             if (!this.useMockData) {
                 await this.loadProfileData(profile);
+            }
+        },
+
+        async saveCurrentOpportunityScores() {
+            if (!this.selectedProfile || !this.opportunitiesData.length) {
+                return;
+            }
+            
+            try {
+                // Extract opportunity scores from current data
+                const scoresToSave = {};
+                let hasScoresToSave = false;
+                
+                this.opportunitiesData.forEach(opp => {
+                    if (opp.saved_compatibility_score || opp.user_rating || opp.assessment_notes || opp.priority_level) {
+                        scoresToSave[opp.opportunity_id] = {
+                            compatibility_score: opp.saved_compatibility_score || opp.compatibility_score,
+                            user_rating: opp.user_rating,
+                            priority_level: opp.priority_level,
+                            assessment_notes: opp.assessment_notes,
+                            tags: opp.tags || [],
+                            last_scored: new Date().toISOString(),
+                            scored_by: 'user'
+                        };
+                        hasScoresToSave = true;
+                    }
+                });
+                
+                if (hasScoresToSave) {
+                    await this.savePlanResults(this.planData, true); // Save with opportunity scores
+                    console.log(`Saved scores for ${Object.keys(scoresToSave).length} opportunities before profile switch`);
+                }
+                
+            } catch (error) {
+                console.error('Failed to save opportunity scores before profile switch:', error);
+                // Don't block profile switching on save errors
             }
         },
 
@@ -2924,7 +2973,35 @@ function catalynxApp() {
                 const data = await response.json();
                 this.planData = data.plan_results || {};
                 
-                console.log('Loaded plan results:', this.planData);
+                // Restore opportunity scores to opportunities data
+                const opportunityScores = data.opportunity_scores || {};
+                const opportunityAssessments = data.opportunity_assessments || {};
+                
+                if (Object.keys(opportunityScores).length > 0) {
+                    console.log(`Restoring scores for ${Object.keys(opportunityScores).length} opportunities`);
+                    
+                    // Apply saved scores to current opportunities data
+                    this.opportunitiesData.forEach(opp => {
+                        const savedScore = opportunityScores[opp.opportunity_id];
+                        const savedAssessment = opportunityAssessments[opp.opportunity_id];
+                        
+                        if (savedScore) {
+                            opp.saved_compatibility_score = savedScore.compatibility_score;
+                            opp.user_rating = savedScore.user_rating;
+                            opp.priority_level = savedScore.priority_level;
+                            opp.assessment_notes = savedScore.assessment_notes;
+                            opp.tags = savedScore.tags || [];
+                            opp.last_scored = savedScore.last_scored;
+                            console.log(`Restored score for ${opp.organization_name}: ${savedScore.compatibility_score}`);
+                        }
+                        
+                        if (savedAssessment) {
+                            opp.assessment_data = savedAssessment;
+                        }
+                    });
+                }
+                
+                console.log('Loaded plan results and restored opportunity scores:', this.planData);
 
             } catch (error) {
                 console.error('Failed to load plan results:', error);
@@ -2932,7 +3009,7 @@ function catalynxApp() {
             }
         },
 
-        async savePlanResults(planResults) {
+        async savePlanResults(planResults, includeOpportunityScores = true) {
             if (!this.selectedProfile || !this.selectedProfile.profile_id) {
                 console.log('No profile selected to save plan results');
                 return false;
@@ -2941,10 +3018,48 @@ function catalynxApp() {
             try {
                 console.log(`Saving plan results for profile: ${this.selectedProfile.profile_id}`);
                 
+                const saveData = {
+                    plan_results: planResults
+                };
+                
+                // Include opportunity scores if requested
+                if (includeOpportunityScores) {
+                    const opportunityScores = {};
+                    const opportunityAssessments = {};
+                    
+                    // Extract current opportunity scores from opportunities data
+                    this.opportunitiesData.forEach(opp => {
+                        if (opp.saved_compatibility_score || opp.user_rating || opp.assessment_notes) {
+                            opportunityScores[opp.opportunity_id] = {
+                                compatibility_score: opp.saved_compatibility_score || opp.compatibility_score,
+                                user_rating: opp.user_rating,
+                                priority_level: opp.priority_level,
+                                assessment_notes: opp.assessment_notes,
+                                tags: opp.tags || [],
+                                last_scored: opp.last_scored || new Date().toISOString(),
+                                scored_by: 'user'
+                            };
+                        }
+                        
+                        if (opp.assessment_data) {
+                            opportunityAssessments[opp.opportunity_id] = opp.assessment_data;
+                        }
+                    });
+                    
+                    if (Object.keys(opportunityScores).length > 0) {
+                        saveData.opportunity_scores = opportunityScores;
+                        console.log(`Saving scores for ${Object.keys(opportunityScores).length} opportunities`);
+                    }
+                    
+                    if (Object.keys(opportunityAssessments).length > 0) {
+                        saveData.opportunity_assessments = opportunityAssessments;
+                    }
+                }
+                
                 const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/plan-results`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(planResults)
+                    body: JSON.stringify(saveData)
                 });
 
                 if (!response.ok) {
@@ -2954,12 +3069,41 @@ function catalynxApp() {
                 const result = await response.json();
                 this.planData = planResults;
                 
-                this.showNotification('Plan Saved', 'Strategic planning results saved successfully', 'success');
+                this.showNotification('Plan Saved', 'Strategic planning results and opportunity scores saved successfully', 'success');
                 return true;
 
             } catch (error) {
                 console.error('Failed to save plan results:', error);
                 this.showNotification('Save Error', 'Failed to save planning results', 'error');
+                return false;
+            }
+        },
+
+        async saveOpportunityScore(opportunityId, scoreData) {
+            if (!this.selectedProfile || !this.selectedProfile.profile_id) {
+                console.log('No profile selected to save opportunity score');
+                return false;
+            }
+
+            try {
+                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/opportunity-scores`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        opportunity_id: opportunityId,
+                        ...scoreData
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                console.log(`Saved score for opportunity ${opportunityId}`);
+                return true;
+
+            } catch (error) {
+                console.error('Failed to save opportunity score:', error);
                 return false;
             }
         },
@@ -3544,6 +3688,9 @@ function catalynxApp() {
             
             try {
                 this.prospectsLoading = true;
+                
+                // Clear existing opportunities data to prevent accumulation and duplicates
+                this.opportunitiesData = [];
                 console.log(`Loading real opportunities for profile: ${this.selectedProfile.name} (${this.selectedProfile.profile_id})`);
                 
                 // Use the new opportunities API to get stored opportunities for this profile
@@ -4946,7 +5093,38 @@ function catalynxApp() {
             this.selectedOpportunity = null;
             this.opportunityLoading = false;
             this.isProcessing = false;
+            this.modalActiveTab = 'overview'; // Reset to default tab
             console.log('Closing opportunity modal');
+        },
+
+        async loadScoringRationale() {
+            if (!this.selectedOpportunity || !this.selectedProfile) {
+                console.warn('Missing opportunity or profile for scoring rationale');
+                return;
+            }
+
+            try {
+                this.loadingRationale = true;
+                console.log(`Loading scoring rationale for ${this.selectedOpportunity.organization_name}`);
+
+                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/opportunities/${this.selectedOpportunity.opportunity_id}/scoring-rationale`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                this.scoringRationale = data.scoring_rationale;
+                
+                console.log('Loaded scoring rationale:', this.scoringRationale);
+
+            } catch (error) {
+                console.error('Failed to load scoring rationale:', error);
+                this.scoringRationale = null;
+                this.showNotification('Analysis Error', 'Failed to load scoring analysis. Please try again.', 'error');
+            } finally {
+                this.loadingRationale = false;
+            }
         },
 
         async fetchOpportunityDetails(opportunity) {

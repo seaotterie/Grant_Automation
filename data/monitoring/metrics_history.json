@@ -1,0 +1,16 @@
+{
+  "metrics": [
+    {
+      "timestamp": "2025-08-17T06:33:50.886900",
+      "cpu_percent": 14.9,
+      "memory_percent": 67.9,
+      "memory_used_gb": 10.661605834960938,
+      "memory_total_gb": 15.692127227783203,
+      "disk_percent": 28.97225850797292,
+      "disk_used_gb": 269.83641052246094,
+      "disk_total_gb": 931.3613243103027,
+      "active_processes": 294,
+      "response_time_ms": 14.796018600463867
+    }
+  ]
+}

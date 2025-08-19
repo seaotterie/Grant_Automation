@@ -1,0 +1,72 @@
+{
+  "generated_at": "2025-08-17T06:29:00.819905",
+  "summary": {
+    "total_entities": 86,
+    "average_score": 0.6640243902439025,
+    "total_issues": 47
+  },
+  "reports": {
+    "nonprofits": {
+      "total_entities": 41,
+      "quality_level": "fair",
+      "scores": {
+        "overall": 0.6920731707317073,
+        "completeness": 0.35365853658536583,
+        "accuracy": 0.9024390243902439,
+        "consistency": 1.0,
+        "freshness": 0.5121951219512195
+      },
+      "issues_count": 23,
+      "recommendations": [
+        "Improve data completeness - 23 entities need attention"
+      ]
+    },
+    "government_opportunities": {
+      "total_entities": 2,
+      "quality_level": "poor",
+      "scores": {
+        "overall": 0.5,
+        "completeness": 0.0,
+        "accuracy": 1.0,
+        "consistency": 0.8,
+        "freshness": 0.9
+      },
+      "issues_count": 0,
+      "recommendations": [
+        "Consider data cleanup and validation procedures"
+      ]
+    },
+    "government_awards": {
+      "total_entities": 0,
+      "quality_level": "good",
+      "scores": {
+        "overall": 0.8,
+        "completeness": 0.8,
+        "accuracy": 0.8,
+        "consistency": 0.8,
+        "freshness": 0.8
+      },
+      "issues_count": 0,
+      "recommendations": [
+        "Award data validation completed successfully"
+      ]
+    },
+    "cross_entity": {
+      "total_entities": 43,
+      "quality_level": "fair",
+      "scores": {
+        "overall": 0.6640243902439025,
+        "completeness": 0.6640243902439025,
+        "accuracy": 0.6640243902439025,
+        "consistency": 0.6640243902439025,
+        "freshness": 0.6640243902439025
+      },
+      "issues_count": 24,
+      "recommendations": [
+        "Cross-entity validation completed",
+        "Total entities validated: 43",
+        "Overall system quality: fair"
+      ]
+    }
+  }
+}

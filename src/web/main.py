@@ -49,6 +49,57 @@ from src.web.services.scoring_service import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def similar_organization_names(name1: str, name2: str, threshold: float = 0.85) -> bool:
+    """
+    Check if two organization names are similar enough to be considered the same organization.
+    Handles common variations like Heroes/Heros, Inc/Inc., etc.
+    
+    Args:
+        name1: First organization name
+        name2: Second organization name
+        threshold: Similarity threshold (0.0 to 1.0)
+        
+    Returns:
+        True if names are similar enough to be considered the same organization
+    """
+    if not name1 or not name2:
+        return False
+        
+    # Normalize names for comparison
+    def normalize_name(name: str) -> str:
+        name = name.lower().strip()
+        # Remove common suffixes and variations
+        suffixes = [' inc', ' inc.', ' incorporated', ' llc', ' ltd', ' ltd.', ' corp', ' corp.', ' corporation']
+        for suffix in suffixes:
+            if name.endswith(suffix):
+                name = name[:-len(suffix)].strip()
+        return name
+    
+    norm1 = normalize_name(name1)
+    norm2 = normalize_name(name2)
+    
+    # Exact match after normalization
+    if norm1 == norm2:
+        return True
+    
+    # Simple character-based similarity for fuzzy matching
+    # This handles cases like "Heroes Bridge" vs "Heros Bridge"
+    if len(norm1) == 0 or len(norm2) == 0:
+        return False
+        
+    # Calculate character overlap similarity
+    chars1 = set(norm1.replace(' ', ''))
+    chars2 = set(norm2.replace(' ', ''))
+    
+    if len(chars1) == 0 or len(chars2) == 0:
+        return False
+        
+    intersection = len(chars1.intersection(chars2))
+    union = len(chars1.union(chars2))
+    similarity = intersection / union if union > 0 else 0
+    
+    return similarity >= threshold
+
 # Create FastAPI application
 app = FastAPI(
     title="Catalynx - Grant Research Automation",
@@ -940,7 +991,7 @@ async def start_metrics_session(profile_id: str):
 
 @app.get("/api/profiles/{profile_id}/plan-results")
 async def get_profile_plan_results(profile_id: str):
-    """Get strategic planning results for a profile."""
+    """Get strategic planning results for a profile including opportunity scores."""
     try:
         profile = profile_service.get_profile(profile_id)
         if not profile:
@@ -949,10 +1000,19 @@ async def get_profile_plan_results(profile_id: str):
         # Extract plan results from processing history
         plan_results = profile.processing_history.get('plan_results', {})
         
+        # Get opportunity scores from profile data
+        opportunity_scores = profile.processing_history.get('opportunity_scores', {})
+        
+        # Get opportunity assessments (user ratings/notes)
+        opportunity_assessments = profile.processing_history.get('opportunity_assessments', {})
+        
         return {
             "profile_id": profile_id,
             "plan_results": plan_results,
+            "opportunity_scores": opportunity_scores,
+            "opportunity_assessments": opportunity_assessments,
             "last_updated": profile.processing_history.get('plan_last_updated'),
+            "scores_last_updated": profile.processing_history.get('scores_last_updated'),
             "status": "success"
         }
         
@@ -962,7 +1022,7 @@ async def get_profile_plan_results(profile_id: str):
 
 @app.post("/api/profiles/{profile_id}/plan-results")
 async def save_profile_plan_results(profile_id: str, plan_data: Dict[str, Any]):
-    """Save strategic planning results for a profile."""
+    """Save strategic planning results for a profile including opportunity scores."""
     try:
         profile = profile_service.get_profile(profile_id)
         if not profile:
@@ -971,9 +1031,25 @@ async def save_profile_plan_results(profile_id: str, plan_data: Dict[str, Any]):
         # Store plan results in processing history
         if not profile.processing_history:
             profile.processing_history = {}
-            
-        profile.processing_history['plan_results'] = plan_data
-        profile.processing_history['plan_last_updated'] = datetime.now().isoformat()
+        
+        current_time = datetime.now().isoformat()
+        
+        # Save general plan results
+        if 'plan_results' in plan_data:
+            profile.processing_history['plan_results'] = plan_data['plan_results']
+            profile.processing_history['plan_last_updated'] = current_time
+        
+        # Save opportunity scores (compatibility scores, user ratings, etc.)
+        if 'opportunity_scores' in plan_data:
+            profile.processing_history['opportunity_scores'] = plan_data['opportunity_scores']
+            profile.processing_history['scores_last_updated'] = current_time
+            logger.info(f"Saved scores for {len(plan_data['opportunity_scores'])} opportunities")
+        
+        # Save opportunity assessments (user notes, manual ratings, etc.)
+        if 'opportunity_assessments' in plan_data:
+            profile.processing_history['opportunity_assessments'] = plan_data['opportunity_assessments']
+            profile.processing_history['assessments_last_updated'] = current_time
+            logger.info(f"Saved assessments for {len(plan_data['opportunity_assessments'])} opportunities")
         
         # Update the profile
         updated_profile = profile_service.update_profile(profile_id, profile)
@@ -987,6 +1063,422 @@ async def save_profile_plan_results(profile_id: str, plan_data: Dict[str, Any]):
     except Exception as e:
         logger.error(f"Failed to save plan results for profile {profile_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/profiles/{profile_id}/opportunity-scores")
+async def save_opportunity_scores(profile_id: str, scores_data: Dict[str, Any]):
+    """Save individual opportunity scores and assessments for persistence."""
+    try:
+        profile = profile_service.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Initialize processing history if needed
+        if not profile.processing_history:
+            profile.processing_history = {}
+        
+        current_time = datetime.now().isoformat()
+        opportunity_id = scores_data.get('opportunity_id')
+        
+        if not opportunity_id:
+            raise HTTPException(status_code=400, detail="opportunity_id is required")
+        
+        # Initialize opportunity scores dictionary
+        if 'opportunity_scores' not in profile.processing_history:
+            profile.processing_history['opportunity_scores'] = {}
+        
+        # Save the score data for this specific opportunity
+        profile.processing_history['opportunity_scores'][opportunity_id] = {
+            'compatibility_score': scores_data.get('compatibility_score'),
+            'user_rating': scores_data.get('user_rating'),
+            'priority_level': scores_data.get('priority_level'),
+            'assessment_notes': scores_data.get('assessment_notes'),
+            'tags': scores_data.get('tags', []),
+            'last_scored': current_time,
+            'scored_by': scores_data.get('scored_by', 'user')
+        }
+        
+        # Update timestamps
+        profile.processing_history['scores_last_updated'] = current_time
+        
+        # Update the profile
+        updated_profile = profile_service.update_profile(profile_id, profile)
+        
+        logger.info(f"Saved score data for opportunity {opportunity_id} in profile {profile_id}")
+        
+        return {
+            "message": "Opportunity score saved successfully",
+            "profile_id": profile_id,
+            "opportunity_id": opportunity_id,
+            "score_data": profile.processing_history['opportunity_scores'][opportunity_id],
+            "status": "success"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to save opportunity score for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/profiles/{profile_id}/opportunities/{opportunity_id}/scoring-rationale")
+async def get_scoring_rationale(profile_id: str, opportunity_id: str):
+    """Get detailed scoring rationale and analysis for an opportunity."""
+    try:
+        # Get the profile and opportunity
+        profile = profile_service.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Get the opportunity/lead
+        leads = profile_service.get_profile_leads(profile_id=profile_id)
+        opportunity = None
+        for lead in leads:
+            if lead.lead_id == opportunity_id:
+                opportunity = lead
+                break
+        
+        if not opportunity:
+            raise HTTPException(status_code=404, detail="Opportunity not found")
+        
+        # Generate scoring rationale analysis
+        scoring_rationale = await _generate_scoring_rationale(profile, opportunity)
+        
+        return {
+            "profile_id": profile_id,
+            "opportunity_id": opportunity_id,
+            "organization_name": opportunity.organization_name,
+            "overall_score": opportunity.compatibility_score,
+            "scoring_rationale": scoring_rationale,
+            "generated_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to generate scoring rationale for {opportunity_id} in profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def _generate_scoring_rationale(profile, opportunity):
+    """Generate comprehensive scoring rationale with pros/cons analysis."""
+    
+    # Extract data for analysis
+    org_name = opportunity.organization_name
+    score = opportunity.compatibility_score or 0.0
+    match_factors = opportunity.match_factors or {}
+    external_data = opportunity.external_data or {}
+    
+    # Profile criteria for comparison
+    profile_focus_areas = getattr(profile, 'focus_areas', '').split(',') if hasattr(profile, 'focus_areas') else []
+    profile_geographic_scope = getattr(profile, 'geographic_scope', '') if hasattr(profile, 'geographic_scope') else ''
+    
+    # Scoring dimension analysis
+    scoring_dimensions = {
+        "eligibility": _analyze_eligibility_fit(profile, opportunity),
+        "geographic": _analyze_geographic_fit(profile, opportunity),
+        "mission_alignment": _analyze_mission_alignment(profile, opportunity),
+        "financial_fit": _analyze_financial_fit(profile, opportunity),
+        "timing": _analyze_timing_factors(opportunity)
+    }
+    
+    # Generate pros and cons
+    pros = []
+    cons = []
+    improvement_recommendations = []
+    risk_factors = []
+    
+    # Analyze each dimension for pros/cons
+    for dimension, analysis in scoring_dimensions.items():
+        if analysis["score"] >= 0.7:
+            pros.extend(analysis["positive_factors"])
+        elif analysis["score"] <= 0.4:
+            cons.extend(analysis["negative_factors"])
+            improvement_recommendations.extend(analysis["recommendations"])
+        
+        risk_factors.extend(analysis.get("risks", []))
+    
+    # Overall assessment
+    if score >= 0.8:
+        overall_assessment = "Excellent match with strong alignment across multiple dimensions"
+        recommendation = "High priority - proceed with application preparation"
+    elif score >= 0.65:
+        overall_assessment = "Good match with some areas for optimization"
+        recommendation = "Medium priority - address identified gaps before proceeding"
+    elif score >= 0.45:
+        overall_assessment = "Moderate match requiring significant preparation"
+        recommendation = "Low priority - substantial work needed to improve fit"
+    else:
+        overall_assessment = "Poor match with fundamental misalignment"
+        recommendation = "Not recommended - consider alternative opportunities"
+    
+    return {
+        "overall_assessment": overall_assessment,
+        "recommendation": recommendation,
+        "score_breakdown": scoring_dimensions,
+        "strengths": pros[:5],  # Top 5 strengths
+        "challenges": cons[:5],  # Top 5 challenges
+        "improvement_recommendations": improvement_recommendations[:3],  # Top 3 recommendations
+        "risk_factors": risk_factors[:3],  # Top 3 risks
+        "strategic_insights": _generate_strategic_insights(profile, opportunity, score),
+        "next_steps": _generate_next_steps(score, scoring_dimensions)
+    }
+
+def _analyze_eligibility_fit(profile, opportunity):
+    """Analyze eligibility alignment between profile and opportunity."""
+    match_factors = opportunity.match_factors or {}
+    external_data = opportunity.external_data or {}
+    
+    positive_factors = []
+    negative_factors = []
+    recommendations = []
+    risks = []
+    
+    # NTEE code alignment
+    profile_focus = getattr(profile, 'focus_areas', '') if hasattr(profile, 'focus_areas') else ''
+    ntee_code = external_data.get('ntee_code', '')
+    
+    if ntee_code:
+        # Map NTEE codes to focus areas (simplified)
+        ntee_focus_map = {
+            'A': 'arts', 'B': 'education', 'C': 'environment', 'D': 'animals',
+            'E': 'health', 'F': 'mental health', 'G': 'medical', 'H': 'medical research',
+            'I': 'crime', 'J': 'employment', 'K': 'food', 'L': 'housing',
+            'M': 'safety', 'N': 'recreation', 'O': 'youth', 'P': 'human services',
+            'Q': 'international', 'R': 'civil rights', 'S': 'community', 'T': 'philanthropy'
+        }
+        
+        primary_category = ntee_code[0] if ntee_code else ''
+        mapped_focus = ntee_focus_map.get(primary_category, '')
+        
+        if mapped_focus and mapped_focus in profile_focus.lower():
+            positive_factors.append(f"Strong NTEE alignment: {ntee_code} matches profile focus on {mapped_focus}")
+        else:
+            negative_factors.append(f"NTEE mismatch: {ntee_code} may not align with profile focus areas")
+    
+    # Organization type compatibility
+    source_type = match_factors.get('source_type', 'Unknown')
+    if source_type == 'Nonprofit' and 'nonprofit' in profile_focus.lower():
+        positive_factors.append("Organization type aligns with nonprofit focus")
+    elif source_type in ['Foundation', 'Government']:
+        positive_factors.append(f"{source_type} source provides credible funding opportunity")
+    
+    score = max(0.1, min(1.0, len(positive_factors) * 0.3 - len(negative_factors) * 0.2 + 0.5))
+    
+    return {
+        "score": score,
+        "positive_factors": positive_factors,
+        "negative_factors": negative_factors,
+        "recommendations": recommendations,
+        "risks": risks
+    }
+
+def _analyze_geographic_fit(profile, opportunity):
+    """Analyze geographic alignment."""
+    match_factors = opportunity.match_factors or {}
+    external_data = opportunity.external_data or {}
+    
+    positive_factors = []
+    negative_factors = []
+    recommendations = []
+    
+    org_state = match_factors.get('state', external_data.get('state', ''))
+    profile_scope = getattr(profile, 'geographic_scope', '') if hasattr(profile, 'geographic_scope') else ''
+    
+    if org_state:
+        if org_state in profile_scope or 'national' in profile_scope.lower():
+            positive_factors.append(f"Geographic match: Organization in {org_state} aligns with profile scope")
+        else:
+            negative_factors.append(f"Geographic mismatch: {org_state} location may not align with target areas")
+            recommendations.append("Consider if geographic expansion is strategic")
+    
+    score = 0.7 if positive_factors else 0.3
+    
+    return {
+        "score": score,
+        "positive_factors": positive_factors,
+        "negative_factors": negative_factors,
+        "recommendations": recommendations,
+        "risks": []
+    }
+
+def _analyze_mission_alignment(profile, opportunity):
+    """Analyze mission and program alignment."""
+    positive_factors = []
+    negative_factors = []
+    
+    # Simple keyword matching for mission alignment
+    org_name = opportunity.organization_name.lower()
+    description = (opportunity.description or '').lower()
+    profile_focus = getattr(profile, 'focus_areas', '').lower() if hasattr(profile, 'focus_areas') else ''
+    
+    # Check for mission keywords
+    focus_keywords = profile_focus.split(',') if profile_focus else []
+    mission_matches = 0
+    
+    for keyword in focus_keywords:
+        keyword = keyword.strip()
+        if keyword and (keyword in org_name or keyword in description):
+            positive_factors.append(f"Mission alignment: '{keyword}' appears in organization context")
+            mission_matches += 1
+    
+    if mission_matches == 0:
+        negative_factors.append("Limited mission alignment detected in available information")
+    
+    score = min(1.0, 0.4 + mission_matches * 0.2)
+    
+    return {
+        "score": score,
+        "positive_factors": positive_factors,
+        "negative_factors": negative_factors,
+        "recommendations": [],
+        "risks": []
+    }
+
+def _analyze_financial_fit(profile, opportunity):
+    """Analyze financial capacity and funding alignment."""
+    positive_factors = []
+    negative_factors = []
+    recommendations = []
+    
+    # Revenue analysis if available
+    external_data = opportunity.external_data or {}
+    description = opportunity.description or ''
+    
+    # Extract revenue if mentioned in description
+    import re
+    revenue_match = re.search(r'\$?([\d,]+(?:\.\d+)?)', description)
+    if revenue_match:
+        try:
+            revenue_str = revenue_match.group(1).replace(',', '')
+            revenue = float(revenue_str)
+            
+            if revenue > 1000000:
+                positive_factors.append(f"Strong financial capacity: ${revenue:,.0f} annual revenue")
+            elif revenue > 100000:
+                positive_factors.append(f"Moderate financial capacity: ${revenue:,.0f} annual revenue")
+            else:
+                negative_factors.append(f"Limited financial capacity: ${revenue:,.0f} annual revenue")
+                recommendations.append("Verify financial stability and grant management capacity")
+        except:
+            pass
+    
+    funding_amount = opportunity.funding_amount
+    if funding_amount:
+        positive_factors.append(f"Specific funding amount available: ${funding_amount:,.0f}")
+    
+    score = 0.6 + len(positive_factors) * 0.15 - len(negative_factors) * 0.2
+    score = max(0.1, min(1.0, score))
+    
+    return {
+        "score": score,
+        "positive_factors": positive_factors,
+        "negative_factors": negative_factors,
+        "recommendations": recommendations,
+        "risks": []
+    }
+
+def _analyze_timing_factors(opportunity):
+    """Analyze timing and deadline factors."""
+    positive_factors = []
+    negative_factors = []
+    risks = []
+    
+    # Check for deadline information
+    match_factors = opportunity.match_factors or {}
+    deadline = match_factors.get('deadline')
+    
+    if deadline:
+        positive_factors.append("Clear application deadline provided")
+    else:
+        negative_factors.append("No clear deadline information available")
+        risks.append("Risk of missing application windows without deadline clarity")
+    
+    # Check discovery recency
+    discovered_at = opportunity.discovered_at
+    if discovered_at:
+        from datetime import datetime, timedelta
+        try:
+            discovered_date = datetime.fromisoformat(discovered_at.replace('Z', '+00:00'))
+            days_since_discovery = (datetime.now().astimezone() - discovered_date).days
+            
+            if days_since_discovery <= 7:
+                positive_factors.append("Recently discovered opportunity - information is current")
+            elif days_since_discovery <= 30:
+                positive_factors.append("Opportunity discovered within last month")
+            else:
+                negative_factors.append("Opportunity information may be outdated")
+                risks.append("Risk of changed requirements or closed applications")
+        except:
+            pass
+    
+    score = 0.5 + len(positive_factors) * 0.2 - len(negative_factors) * 0.15
+    score = max(0.1, min(1.0, score))
+    
+    return {
+        "score": score,
+        "positive_factors": positive_factors,
+        "negative_factors": negative_factors,
+        "recommendations": [],
+        "risks": risks
+    }
+
+def _generate_strategic_insights(profile, opportunity, score):
+    """Generate strategic insights for the opportunity."""
+    insights = []
+    
+    org_name = opportunity.organization_name
+    external_data = opportunity.external_data or {}
+    
+    # Foundation-specific insights
+    if external_data.get('foundation_code') == '03':
+        insights.append(f"{org_name} is a private foundation - may offer flexible funding terms")
+    
+    # Revenue-based insights
+    description = opportunity.description or ''
+    if 'million' in description.lower():
+        insights.append("Large organization with potentially substantial grant-making capacity")
+    
+    # NTEE-based insights
+    ntee_code = external_data.get('ntee_code', '')
+    if ntee_code and ntee_code.startswith('T'):
+        insights.append("Philanthropy/voluntarism focus suggests potential for collaborative partnerships")
+    
+    # Score-based strategic advice
+    if score >= 0.8:
+        insights.append("High-scoring opportunity - prioritize for immediate action")
+    elif score >= 0.6:
+        insights.append("Solid opportunity - develop targeted approach based on strengths")
+    else:
+        insights.append("Challenging opportunity - consider if strategic investment is warranted")
+    
+    return insights[:3]  # Return top 3 insights
+
+def _generate_next_steps(score, scoring_dimensions):
+    """Generate actionable next steps based on scoring analysis."""
+    next_steps = []
+    
+    if score >= 0.8:
+        next_steps.extend([
+            "Begin application preparation immediately",
+            "Research organization's recent funding patterns",
+            "Identify key contacts and decision makers"
+        ])
+    elif score >= 0.6:
+        # Focus on improving lowest-scoring dimensions
+        lowest_dimension = min(scoring_dimensions.items(), key=lambda x: x[1]["score"])
+        next_steps.extend([
+            f"Address {lowest_dimension[0]} alignment gaps first",
+            "Gather additional information to strengthen application",
+            "Consider strategic partnerships to enhance fit"
+        ])
+    else:
+        next_steps.extend([
+            "Reassess strategic fit before proceeding",
+            "Explore alternative opportunities with better alignment",
+            "Consider if significant changes could improve compatibility"
+        ])
+    
+    # Add universal steps
+    next_steps.extend([
+        "Review organization's 990 filings for deeper insights",
+        "Analyze past grant recipients for pattern recognition"
+    ])
+    
+    return next_steps[:5]  # Return top 5 next steps
 
 @app.get("/api/profiles/{profile_id}/leads")
 async def get_profile_leads(profile_id: str, stage: Optional[str] = None, min_score: Optional[float] = None):
@@ -1024,6 +1516,32 @@ async def get_profile_leads(profile_id: str, stage: Optional[str] = None, min_sc
         logger.error(f"Failed to get leads for profile {profile_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+def _convert_lead_to_opportunity(lead):
+    """Convert a lead object to opportunity dictionary format"""
+    return {
+        "id": lead.lead_id,
+        "opportunity_id": lead.lead_id,  # Add for frontend compatibility
+        "organization_name": lead.organization_name,
+        "program_name": lead.program_name,
+        "description": lead.description,
+        "funding_amount": lead.funding_amount,
+        "opportunity_type": lead.opportunity_type.value if hasattr(lead.opportunity_type, 'value') else str(lead.opportunity_type),
+        "compatibility_score": lead.compatibility_score,
+        "success_probability": lead.success_probability,
+        "pipeline_stage": lead.pipeline_stage.value if hasattr(lead.pipeline_stage, 'value') else str(lead.pipeline_stage),
+        "discovered_at": lead.discovered_at.isoformat() if lead.discovered_at else None,
+        "last_analyzed": lead.last_analyzed.isoformat() if lead.last_analyzed else None,
+        "match_factors": lead.match_factors,
+        "recommendations": lead.recommendations,
+        "approach_strategy": lead.approach_strategy,
+        "external_data": lead.external_data,
+        # Enhanced data for frontend columns
+        "source_type": lead.match_factors.get('source_type', 'Unknown') if lead.match_factors else 'Unknown',
+        "discovery_source": lead.external_data.get('discovery_source', 'Unknown Source') if lead.external_data else 'Unknown Source',
+        "application_status": lead.match_factors.get('application_status', None) if lead.match_factors else None,
+        "is_schedule_i_grantee": lead.external_data.get('is_schedule_i_grantee', False) if lead.external_data else False
+    }
+
 @app.get("/api/profiles/{profile_id}/opportunities")
 async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None, min_score: Optional[float] = None):
     """Get opportunities for a profile (alias for leads endpoint)."""
@@ -1044,27 +1562,54 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
             min_score=min_score
         )
         
-        # Convert leads to opportunities format for frontend
+        # Convert leads to opportunities format for frontend with deduplication
         opportunities = []
+        seen_organizations = set()  # Track unique organizations by EIN + name
+        
         for lead in leads:
-            opportunity = {
-                "id": lead.lead_id,
-                "organization_name": lead.organization_name,
-                "program_name": lead.program_name,
-                "description": lead.description,
-                "funding_amount": lead.funding_amount,
-                "opportunity_type": lead.opportunity_type.value if hasattr(lead.opportunity_type, 'value') else str(lead.opportunity_type),
-                "compatibility_score": lead.compatibility_score,
-                "success_probability": lead.success_probability,
-                "pipeline_stage": lead.pipeline_stage.value if hasattr(lead.pipeline_stage, 'value') else str(lead.pipeline_stage),
-                "discovered_at": lead.discovered_at.isoformat() if lead.discovered_at else None,
-                "last_analyzed": lead.last_analyzed.isoformat() if lead.last_analyzed else None,
-                "match_factors": lead.match_factors,
-                "recommendations": lead.recommendations,
-                "approach_strategy": lead.approach_strategy,
-                "external_data": lead.external_data
-            }
+            # Create unique key for deduplication (EIN + Organization Name)
+            ein = lead.external_data.get('ein', '') if lead.external_data else ''
+            org_name = lead.organization_name or ''
+            unique_key = f"{ein.strip()}|{org_name.strip().lower()}"
+            
+            # Skip duplicates - keep the highest scoring or most recent entry
+            if unique_key in seen_organizations:
+                # Find existing opportunity to potentially replace
+                existing_idx = None
+                for i, opp in enumerate(opportunities):
+                    existing_ein = opp.get('external_data', {}).get('ein', '')
+                    existing_name = opp.get('organization_name', '')
+                    existing_key = f"{existing_ein.strip()}|{existing_name.strip().lower()}"
+                    
+                    if existing_key == unique_key:
+                        existing_idx = i
+                        break
+                
+                # Replace if this lead has higher score or is more recent
+                if existing_idx is not None:
+                    existing_score = opportunities[existing_idx].get('compatibility_score', 0)
+                    current_score = lead.compatibility_score or 0
+                    
+                    # Keep higher scoring opportunity, or if scores are equal, keep more recent
+                    if current_score > existing_score:
+                        # Replace with higher scoring opportunity
+                        opportunities[existing_idx] = _convert_lead_to_opportunity(lead)
+                        logger.debug(f"Replaced duplicate {org_name} with higher score: {current_score:.3f} vs {existing_score:.3f}")
+                    # If same score, keep the more recent one
+                    elif current_score == existing_score and lead.discovered_at:
+                        existing_discovered = opportunities[existing_idx].get('discovered_at')
+                        if not existing_discovered or lead.discovered_at.isoformat() > existing_discovered:
+                            opportunities[existing_idx] = _convert_lead_to_opportunity(lead)
+                            logger.debug(f"Replaced duplicate {org_name} with more recent discovery")
+                
+                continue  # Skip adding this duplicate
+            
+            # Add unique organization
+            seen_organizations.add(unique_key)
+            opportunity = _convert_lead_to_opportunity(lead)
             opportunities.append(opportunity)
+        
+        logger.info(f"Deduplicated opportunities: {len(leads)} leads -> {len(opportunities)} unique opportunities")
         
         return {
             "profile_id": profile_id,
@@ -1554,10 +2099,36 @@ async def discover_bmf_opportunities(profile_id: str, bmf_data: Dict[str, Any]):
         
         logger.info(f"BMF data received: {len(nonprofits)} nonprofits, {len(foundations)} foundations")
         
+        # Get profile's EIN and name for enhanced self-exclusion check
+        profile_ein = getattr(profile_obj, 'ein', '').strip()
+        profile_name = getattr(profile_obj, 'name', '').strip()
+        if profile_ein:
+            # Normalize EIN format for comparison (remove dashes)
+            profile_ein = profile_ein.replace('-', '').replace(' ', '')
+        
         opportunities = []
+        excluded_self_count = 0
         
         # Process nonprofit results
         for org in nonprofits:
+            # Enhanced self-exclusion check: skip if this organization is the profile itself
+            org_ein = org.get("ein", "").strip().replace('-', '').replace(' ', '')
+            org_name = org.get("organization_name", "").strip()
+            
+            # Check both EIN match and name similarity for comprehensive exclusion
+            is_self_match = False
+            if profile_ein and org_ein and profile_ein == org_ein:
+                # EIN match - check name similarity for confirmation
+                if similar_organization_names(org_name, profile_name):
+                    is_self_match = True
+                    logger.info(f"Excluded self-match for profile {profile_id}: {org_name} (EIN: {org.get('ein')}) - similar to profile '{profile_name}'")
+                else:
+                    # EIN match but names significantly different - log for review
+                    logger.warning(f"EIN match but name difference for profile {profile_id}: org='{org_name}' vs profile='{profile_name}' (EIN: {org.get('ein')})")
+            
+            if is_self_match:
+                excluded_self_count += 1
+                continue
             lead_data = {
                 "source": "BMF Filter",
                 "opportunity_type": "grants", 
@@ -1597,10 +2168,32 @@ async def discover_bmf_opportunities(profile_id: str, bmf_data: Dict[str, Any]):
             # Add lead to profile using existing service
             lead = profile_service.add_opportunity_lead(profile_id, lead_data)
             if lead:
-                opportunities.append(lead.model_dump())
+                # Create opportunity data with both discovery ID and actual lead ID
+                opportunity_data = lead.model_dump()
+                opportunity_data['discovery_opportunity_id'] = f"bmf_nonprofit_{org.get('ein', 'unknown')}"
+                opportunity_data['lead_id'] = lead.lead_id
+                opportunities.append(opportunity_data)
         
         # Process foundation results  
         for org in foundations:
+            # Enhanced self-exclusion check: skip if this organization is the profile itself
+            org_ein = org.get("ein", "").strip().replace('-', '').replace(' ', '')
+            org_name = org.get("organization_name", "").strip()
+            
+            # Check both EIN match and name similarity for comprehensive exclusion
+            is_self_match = False
+            if profile_ein and org_ein and profile_ein == org_ein:
+                # EIN match - check name similarity for confirmation
+                if similar_organization_names(org_name, profile_name):
+                    is_self_match = True
+                    logger.info(f"Excluded self-match for profile {profile_id}: {org_name} (EIN: {org.get('ein')}) - similar to profile '{profile_name}'")
+                else:
+                    # EIN match but names significantly different - log for review
+                    logger.warning(f"EIN match but name difference for profile {profile_id}: org='{org_name}' vs profile='{profile_name}' (EIN: {org.get('ein')})")
+            
+            if is_self_match:
+                excluded_self_count += 1
+                continue
             lead_data = {
                 "source": "BMF Filter",
                 "opportunity_type": "grants",
@@ -1640,7 +2233,11 @@ async def discover_bmf_opportunities(profile_id: str, bmf_data: Dict[str, Any]):
             # Add lead to profile using existing service
             lead = profile_service.add_opportunity_lead(profile_id, lead_data)
             if lead:
-                opportunities.append(lead.model_dump())
+                # Create opportunity data with both discovery ID and actual lead ID
+                opportunity_data = lead.model_dump()
+                opportunity_data['discovery_opportunity_id'] = f"bmf_foundation_{org.get('ein', 'unknown')}"
+                opportunity_data['lead_id'] = lead.lead_id
+                opportunities.append(opportunity_data)
         
         # Update profile discovery metadata
         profile_obj.last_discovery_date = datetime.now()
@@ -1648,7 +2245,10 @@ async def discover_bmf_opportunities(profile_id: str, bmf_data: Dict[str, Any]):
         profile_service.update_profile(profile_id, profile_obj)
         
         total_results = len(opportunities)
-        logger.info(f"BMF discovery completed for profile {profile_id}: {total_results} opportunities saved")
+        if excluded_self_count > 0:
+            logger.info(f"BMF discovery completed for profile {profile_id}: {total_results} opportunities saved, {excluded_self_count} self-matches excluded")
+        else:
+            logger.info(f"BMF discovery completed for profile {profile_id}: {total_results} opportunities saved")
         
         return {
             "message": f"BMF discovery completed for profile {profile_id}",
@@ -2116,57 +2716,157 @@ async def discover_nonprofits(request: Dict[str, Any]):
             else:
                 results["propublica_results"] = []
         
-        # Phase 3.1: Integrate with FunnelManager for web interface
+        # Phase 3.1: Store opportunities directly through profile service like BMF endpoint
         try:
-            from src.discovery.funnel_manager import FunnelManager
-            from src.discovery.base_discoverer import DiscoveryResult, FunnelStage, FundingType
+            stored_opportunities = []
             
-            # Get or create funnel manager instance
-            if not hasattr(app.state, 'funnel_manager'):
-                app.state.funnel_manager = FunnelManager()
-            funnel_manager = app.state.funnel_manager
+            # Get profile's EIN and name for enhanced self-exclusion check  
+            profile_ein = profile_context.get('ein', '').strip().replace('-', '').replace(' ', '') if profile_context else ''
+            profile_name = profile_context.get('name', '').strip() if profile_context else ''
             
-            # Convert results to DiscoveryResult objects
-            discovery_results = []
-            
-            # Convert BMF results
-            for bmf_org in results.get("bmf_results", []):
-                discovery_result = DiscoveryResult(
-                    organization_name=bmf_org.get('name', '[Organization Name Missing]'),
-                    source_type=FundingType.GRANTS,
-                    discovery_source='bmf_filter',
-                    opportunity_id=f"bmf_{bmf_org.get('ein', 'unknown')}_{int(datetime.now().timestamp())}",
-                    description=f"Nonprofit organization from IRS Business Master File. Revenue: ${bmf_org.get('revenue', 0) or 0:,}",
-                    raw_score=0.7,
-                    compatibility_score=0.6,
-                    confidence_level=0.8,
-                    funnel_stage=FunnelStage.PROSPECTS
-                )
-                discovery_results.append(discovery_result)
-            
-            # Convert ProPublica results
-            for pp_org in results.get("propublica_results", []):
-                discovery_result = DiscoveryResult(
-                    organization_name=pp_org.get('name', '[Organization Name Missing]'),
-                    source_type=FundingType.GRANTS,
-                    discovery_source='propublica_fetch',
-                    opportunity_id=f"propublica_{pp_org.get('ein', 'unknown')}_{int(datetime.now().timestamp())}",
-                    description=f"Nonprofit organization from ProPublica database. Revenue: ${pp_org.get('revenue', 0) or 0:,}",
-                    raw_score=0.8,
-                    compatibility_score=0.7,
-                    confidence_level=0.9,
-                    funnel_stage=FunnelStage.PROSPECTS
-                )
-                discovery_results.append(discovery_result)
-            
-            # Add to funnel manager if we have a profile context
-            if profile_context and discovery_results:
+            if profile_context:
                 profile_id = profile_context.get('profile_id', 'test_profile')
-                funnel_manager.add_opportunities(profile_id, discovery_results)
-                logger.info(f"Added {len(discovery_results)} opportunities to funnel for profile {profile_id}")
+                from src.profiles.service import get_profile_service
+                profile_service = get_profile_service()
+            
+                # Process BMF results
+                for bmf_org in results.get("bmf_results", []):
+                    org_name = bmf_org.get('name', '').strip()
+                    if not org_name or org_name == '[Organization Name Missing]':
+                        # Skip organizations with missing names
+                        logger.debug(f"Skipping BMF organization with missing name: {bmf_org}")
+                        continue
+                        
+                    # Enhanced self-exclusion check: skip if this organization is the profile itself
+                    org_ein = bmf_org.get('ein', '').strip().replace('-', '').replace(' ', '')
+                    
+                    # Check both EIN match and name similarity for comprehensive exclusion
+                    is_self_match = False
+                    if profile_ein and org_ein and profile_ein == org_ein:
+                        # EIN match - check name similarity for confirmation
+                        if similar_organization_names(org_name, profile_name):
+                            is_self_match = True
+                            logger.info(f"Excluded self-match in nonprofit discovery: {org_name} (EIN: {bmf_org.get('ein')}) - similar to profile '{profile_name}'")
+                        else:
+                            # EIN match but names significantly different - log for review
+                            logger.warning(f"EIN match but name difference in nonprofit discovery: org='{org_name}' vs profile='{profile_name}' (EIN: {bmf_org.get('ein')})")
+                    
+                    if is_self_match:
+                        continue
+                    
+                    # Create lead data similar to BMF endpoint pattern
+                    lead_data = {
+                        "source": "Nonprofit Discovery - BMF",
+                        "opportunity_type": "grants", 
+                        "organization_name": org_name,
+                        "program_name": None,
+                        "description": f"Nonprofit organization from IRS Business Master File. Revenue: ${bmf_org.get('revenue', 0) or 0:,}",
+                        "funding_amount": None,
+                        "pipeline_stage": "discovery",
+                        "compatibility_score": 0.6,
+                        "success_probability": None,
+                        "match_factors": {
+                            "source_type": "Nonprofit",
+                            "ntee_code": bmf_org.get("ntee_code"),
+                            "state": bmf_org.get("state", "VA"),
+                            "bmf_filtered": True,
+                            "deadline": None,
+                            "eligibility": []
+                        },
+                        "risk_factors": {},
+                        "recommendations": [],
+                        "board_connections": [],
+                        "network_insights": {},
+                        "approach_strategy": None,
+                        "status": "active",
+                        "assigned_to": None,
+                        "external_data": {
+                            "ein": bmf_org.get("ein"),
+                            "ntee_code": bmf_org.get("ntee_code"),
+                            "discovery_source": "bmf_filter",
+                            "source_url": None
+                        }
+                    }
+                    
+                    # Store lead and capture actual lead_id
+                    lead = profile_service.add_opportunity_lead(profile_id, lead_data)
+                    if lead:
+                        opportunity_data = lead.model_dump()
+                        opportunity_data['discovery_opportunity_id'] = f"bmf_{bmf_org.get('ein', 'unknown')}"
+                        opportunity_data['lead_id'] = lead.lead_id
+                        stored_opportunities.append(opportunity_data)
+            
+                # Process ProPublica results
+                for pp_org in results.get("propublica_results", []):
+                    org_name = pp_org.get('name', '').strip()
+                    if not org_name or org_name == '[Organization Name Missing]':
+                        # Skip organizations with missing names
+                        logger.debug(f"Skipping ProPublica organization with missing name: {pp_org}")
+                        continue
+                        
+                    # Enhanced self-exclusion check: skip if this organization is the profile itself
+                    org_ein = pp_org.get('ein', '').strip().replace('-', '').replace(' ', '')
+                    
+                    # Check both EIN match and name similarity for comprehensive exclusion
+                    is_self_match = False
+                    if profile_ein and org_ein and profile_ein == org_ein:
+                        # EIN match - check name similarity for confirmation
+                        if similar_organization_names(org_name, profile_name):
+                            is_self_match = True
+                            logger.info(f"Excluded self-match in nonprofit discovery (ProPublica): {org_name} (EIN: {pp_org.get('ein')}) - similar to profile '{profile_name}'")
+                        else:
+                            # EIN match but names significantly different - log for review
+                            logger.warning(f"EIN match but name difference in nonprofit discovery (ProPublica): org='{org_name}' vs profile='{profile_name}' (EIN: {pp_org.get('ein')})")
+                    
+                    if is_self_match:
+                        continue
+                    
+                    # Create lead data for ProPublica results
+                    lead_data = {
+                        "source": "Nonprofit Discovery - ProPublica",
+                        "opportunity_type": "grants", 
+                        "organization_name": org_name,
+                        "program_name": None,
+                        "description": f"Nonprofit organization from ProPublica database. Revenue: ${pp_org.get('revenue', 0) or 0:,}",
+                        "funding_amount": None,
+                        "pipeline_stage": "discovery",
+                        "compatibility_score": 0.7,
+                        "success_probability": None,
+                        "match_factors": {
+                            "source_type": "Nonprofit",
+                            "ntee_code": pp_org.get("ntee_code"),
+                            "state": pp_org.get("state", "VA"),
+                            "propublica_data": True,
+                            "deadline": None,
+                            "eligibility": []
+                        },
+                        "risk_factors": {},
+                        "recommendations": [],
+                        "board_connections": [],
+                        "network_insights": {},
+                        "approach_strategy": None,
+                        "status": "active",
+                        "assigned_to": None,
+                        "external_data": {
+                            "ein": pp_org.get("ein"),
+                            "ntee_code": pp_org.get("ntee_code"),
+                            "discovery_source": "propublica_fetch",
+                            "source_url": None
+                        }
+                    }
+                    
+                    # Store lead and capture actual lead_id
+                    lead = profile_service.add_opportunity_lead(profile_id, lead_data)
+                    if lead:
+                        opportunity_data = lead.model_dump()
+                        opportunity_data['discovery_opportunity_id'] = f"propublica_{pp_org.get('ein', 'unknown')}"
+                        opportunity_data['lead_id'] = lead.lead_id
+                        stored_opportunities.append(opportunity_data)
+                
+                logger.info(f"Added {len(stored_opportunities)} opportunities to profile {profile_id}")
             
         except Exception as e:
-            logger.error(f"Failed to integrate with FunnelManager: {str(e)}")
+            logger.error(f"Failed to store nonprofit discovery opportunities: {str(e)}")
         
         # Calculate total opportunities found from all sources
         total_bmf = len(results.get("bmf_results", []))
@@ -2175,25 +2875,22 @@ async def discover_nonprofits(request: Dict[str, Any]):
         
         # Automated Promotion Integration
         promotion_result = None
-        if profile_context and discovery_results:
+        if profile_context and stored_opportunities:
             try:
                 from src.web.services.automated_promotion_service import get_automated_promotion_service
                 
-                # Convert discovery results to opportunity format for automated promotion
+                # Use stored opportunities directly (they have the correct lead_id format)
                 opportunities = []
-                for result in discovery_results:
+                for stored_opp in stored_opportunities:
                     opportunity = {
-                        "opportunity_id": result.opportunity_id,
-                        "organization_name": result.organization_name,
-                        "source_type": result.source_type.value if hasattr(result.source_type, 'value') else str(result.source_type),
-                        "discovery_source": result.discovery_source,
-                        "funnel_stage": result.funnel_stage.value if hasattr(result.funnel_stage, 'value') else str(result.funnel_stage),
-                        "compatibility_score": result.compatibility_score,
-                        "description": result.description,
-                        "external_data": {
-                            "raw_score": result.raw_score,
-                            "confidence_level": result.confidence_level
-                        }
+                        "opportunity_id": stored_opp.get("lead_id"),  # Use actual lead_id for lookups
+                        "organization_name": stored_opp.get("organization_name"),
+                        "source_type": stored_opp.get("opportunity_type", "grants"),
+                        "discovery_source": stored_opp.get("source", "nonprofit_discovery"),
+                        "funnel_stage": stored_opp.get("pipeline_stage", "discovery"),
+                        "compatibility_score": stored_opp.get("compatibility_score", 0.7),
+                        "description": stored_opp.get("description", ""),
+                        "external_data": stored_opp.get("external_data", {})
                     }
                     opportunities.append(opportunity)
                 

@@ -94,7 +94,7 @@ class ScoringService:
         """Score an opportunity against a profile"""
         try:
             # Get the profile
-            profile = await self.profile_service.get_profile(profile_id)
+            profile = self.profile_service.get_profile(profile_id)
             if not profile:
                 raise HTTPException(status_code=404, detail="Profile not found")
             
@@ -319,7 +319,7 @@ class ScoringService:
             confidence_level=scoring_result.confidence_level,
             boost_factors=scoring_result.boost_factors,
             promotion_recommended=scoring_result.promotion_recommended,
-            auto_promotion_eligible=scoring_result.auto_promotion_threshold,
+            auto_promotion_eligible=(scoring_result.overall_score >= scoring_result.auto_promotion_threshold),
             scoring_metadata=scoring_result.scoring_metadata,
             scored_at=scoring_result.scored_at
         )

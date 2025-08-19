@@ -1,0 +1,42 @@
+{
+  "lead_id": "lead_d346d5230a34",
+  "profile_id": "profile_f3adef3b653c",
+  "source": "BMF Filter",
+  "opportunity_type": "grants",
+  "organization_name": "Dominion Energy Foundation",
+  "program_name": null,
+  "description": "Foundation identified through BMF filter - Foundation Code 03",
+  "funding_amount": null,
+  "pipeline_stage": "pre_scoring",
+  "compatibility_score": 0.8899696703190366,
+  "success_probability": null,
+  "match_factors": {
+    "source_type": "Foundation",
+    "foundation_code": "03",
+    "state": "VA",
+    "bmf_filtered": true,
+    "quick_bmf_result": true,
+    "deadline": null,
+    "eligibility": [],
+    "auto_promoted": true,
+    "promotion_reason": "Auto-promoted for high score: 89.0%",
+    "promoted_at": "2025-08-18T15:08:23.539282"
+  },
+  "risk_factors": {},
+  "recommendations": [],
+  "board_connections": [],
+  "network_insights": {},
+  "approach_strategy": null,
+  "discovered_at": "2025-08-17 16:52:58.001911",
+  "last_analyzed": "2025-08-18T15:08:23.539278",
+  "status": "active",
+  "assigned_to": null,
+  "external_data": {
+    "ein": "54-1817715",
+    "foundation_code": "03",
+    "discovery_source": "BMF Filter",
+    "opportunity_id": "bmf_foundation_54-1817715",
+    "source_url": null,
+    "bmf_session": "bmf_filter_session"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "lead_id": "lead_714a10255347",
+  "profile_id": "profile_f3adef3b653c",
+  "source": "Nonprofit Discovery - BMF",
+  "opportunity_type": "grants",
+  "organization_name": "CENTRAL VIRGINIA RESOURCE CORPORATION",
+  "program_name": null,
+  "description": "Nonprofit organization from IRS Business Master File. Revenue: $1,006,587.0",
+  "funding_amount": null,
+  "pipeline_stage": "discovery",
+  "compatibility_score": 0.6,
+  "success_probability": null,
+  "match_factors": {
+    "source_type": "Nonprofit",
+    "ntee_code": "P81Z",
+    "state": "VA",
+    "bmf_filtered": true,
+    "deadline": null,
+    "eligibility": []
+  },
+  "risk_factors": {},
+  "recommendations": [],
+  "board_connections": [],
+  "network_insights": {},
+  "approach_strategy": null,
+  "discovered_at": "2025-08-18 19:29:37.916638",
+  "last_analyzed": null,
+  "status": "active",
+  "assigned_to": null,
+  "external_data": {
+    "ein": "541891235",
+    "ntee_code": "P81Z",
+    "discovery_source": "bmf_filter",
+    "source_url": null
+  }
+}

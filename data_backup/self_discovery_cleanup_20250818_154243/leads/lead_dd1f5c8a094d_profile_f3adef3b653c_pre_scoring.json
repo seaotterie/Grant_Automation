@@ -1,0 +1,42 @@
+{
+  "lead_id": "lead_dd1f5c8a094d",
+  "profile_id": "profile_f3adef3b653c",
+  "source": "BMF Filter",
+  "opportunity_type": "grants",
+  "organization_name": "United Way of Greater Richmond",
+  "program_name": null,
+  "description": "Nonprofit organization identified through BMF filter - ",
+  "funding_amount": null,
+  "pipeline_stage": "pre_scoring",
+  "compatibility_score": 0.8955637680436992,
+  "success_probability": null,
+  "match_factors": {
+    "source_type": "Nonprofit",
+    "ntee_code": "T31",
+    "state": "VA",
+    "bmf_filtered": true,
+    "quick_bmf_result": true,
+    "deadline": null,
+    "eligibility": [],
+    "auto_promoted": true,
+    "promotion_reason": "Auto-promoted for high score: 89.6%",
+    "promoted_at": "2025-08-18T15:08:23.540410"
+  },
+  "risk_factors": {},
+  "recommendations": [],
+  "board_connections": [],
+  "network_insights": {},
+  "approach_strategy": null,
+  "discovered_at": "2025-08-17 16:44:25.698647",
+  "last_analyzed": "2025-08-18T15:08:23.540404",
+  "status": "active",
+  "assigned_to": null,
+  "external_data": {
+    "ein": "54-0505964",
+    "ntee_code": "T31",
+    "discovery_source": "BMF Filter",
+    "opportunity_id": "bmf_nonprofit_54-0505964",
+    "source_url": null,
+    "bmf_session": "bmf_filter_session"
+  }
+}

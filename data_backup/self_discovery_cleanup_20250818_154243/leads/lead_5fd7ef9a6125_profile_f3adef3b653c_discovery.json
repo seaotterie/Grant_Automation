@@ -1,0 +1,39 @@
+{
+  "lead_id": "lead_5fd7ef9a6125",
+  "profile_id": "profile_f3adef3b653c",
+  "source": "BMF Filter",
+  "opportunity_type": "grants",
+  "organization_name": "Grantmakers In Aging Inc",
+  "program_name": null,
+  "description": "Nonprofit organization identified through BMF filter - ",
+  "funding_amount": null,
+  "pipeline_stage": "discovery",
+  "compatibility_score": 0.7295618478016429,
+  "success_probability": null,
+  "match_factors": {
+    "source_type": "Nonprofit",
+    "ntee_code": "P81",
+    "state": "VA",
+    "bmf_filtered": true,
+    "quick_bmf_result": true,
+    "deadline": null,
+    "eligibility": []
+  },
+  "risk_factors": {},
+  "recommendations": [],
+  "board_connections": [],
+  "network_insights": {},
+  "approach_strategy": null,
+  "discovered_at": "2025-08-18 15:37:54.473973",
+  "last_analyzed": null,
+  "status": "active",
+  "assigned_to": null,
+  "external_data": {
+    "ein": "13-4014982",
+    "ntee_code": "P81",
+    "discovery_source": "BMF Filter",
+    "opportunity_id": "bmf_nonprofit_13-4014982",
+    "source_url": null,
+    "bmf_session": "bmf_filter_session"
+  }
+}
