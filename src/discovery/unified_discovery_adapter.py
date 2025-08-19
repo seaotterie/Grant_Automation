@@ -12,6 +12,7 @@ import uuid
 
 from src.profiles.unified_service import get_unified_profile_service
 from src.profiles.models import UnifiedOpportunity, ScoringResult, StageAnalysis
+from src.scoring.promotion_engine import PromotionEngine, PromotionDecision
 from .base_discoverer import DiscoveryResult, DiscoverySession
 
 
@@ -21,6 +22,7 @@ class UnifiedDiscoveryAdapter:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.unified_service = get_unified_profile_service()
+        self.promotion_engine = PromotionEngine()
     
     def convert_discovery_result_to_opportunity(
         self, 
@@ -120,7 +122,10 @@ class UnifiedDiscoveryAdapter:
                         break
                 
                 if not is_duplicate:
-                    # Save to unified service
+                    # Check for auto-promotion before saving (to modify opportunity in-memory)
+                    await self._check_auto_promotion(opportunity, profile_id)
+                    
+                    # Save to unified service (with updated stage if auto-promoted)
                     success = self.unified_service.save_opportunity(profile_id, opportunity)
                     
                     if success:
@@ -197,6 +202,95 @@ class UnifiedDiscoveryAdapter:
         except Exception as e:
             self.logger.error(f"Failed to update discovery session analytics: {e}")
             return {"error": str(e), "success": False}
+    
+    async def _check_auto_promotion(self, opportunity: UnifiedOpportunity, profile_id: str) -> None:
+        """Check if opportunity qualifies for auto-promotion and advance through stages"""
+        
+        try:
+            if not opportunity.scoring:
+                self.logger.debug(f"No scoring data for opportunity {opportunity.opportunity_id}, skipping auto-promotion")
+                return
+            
+            score = opportunity.scoring.overall_score
+            
+            # Check if opportunity qualifies for auto-promotion (score >= 0.80)
+            if score >= 0.80:
+                self.logger.info(f"Opportunity {opportunity.organization_name} ({score:.2f}) qualifies for auto-promotion")
+                
+                # Evaluate promotion using promotion engine
+                opportunity_dict = {
+                    "opportunity_id": opportunity.opportunity_id,
+                    "organization_name": opportunity.organization_name,
+                    "current_stage": opportunity.current_stage,
+                    "score": score,
+                    "ein": opportunity.ein
+                }
+                
+                promotion_result = await self.promotion_engine.evaluate_promotion(
+                    opportunity=opportunity_dict,
+                    current_score=opportunity.scoring
+                )
+                
+                # If auto-promotion recommended, advance through stages
+                if promotion_result.decision == PromotionDecision.AUTO_PROMOTE:
+                    # Auto-promote through discovery -> pre_scoring -> deep_analysis
+                    final_stage = "deep_analysis"  # Target stage for high-scoring opportunities
+                    
+                    if opportunity.current_stage == "discovery":
+                        final_stage = "deep_analysis"  # Skip intermediate stages for high scores
+                    elif opportunity.current_stage == "pre_scoring":
+                        final_stage = "deep_analysis"
+                    
+                    # Update opportunity in-memory (before saving)
+                    old_stage = opportunity.current_stage
+                    opportunity.current_stage = final_stage
+                    
+                    # Add stage transition to history
+                    from src.profiles.models import StageTransition, PromotionEvent
+                    now = datetime.now().isoformat()
+                    
+                    # Close current stage
+                    if opportunity.stage_history:
+                        last_stage = opportunity.stage_history[-1]
+                        if not last_stage.exited_at:
+                            last_stage.exited_at = now
+                    
+                    # Add new stage transition
+                    new_transition = StageTransition(
+                        stage=final_stage,
+                        entered_at=now,
+                        exited_at=None,
+                        duration_hours=None
+                    )
+                    opportunity.stage_history.append(new_transition)
+                    
+                    # Add promotion event
+                    promotion_event = PromotionEvent(
+                        from_stage=old_stage,
+                        to_stage=final_stage,
+                        promoted_at=now,
+                        promoted_by="auto_promotion_engine",
+                        reason=f"Auto-promotion based on score {score:.2f}",
+                        decision_type="auto_promote"
+                    )
+                    opportunity.promotion_history.append(promotion_event)
+                    
+                    # Update scoring result to reflect auto-promotion status
+                    opportunity.scoring.auto_promotion_eligible = True
+                    opportunity.scoring.promotion_recommended = True
+                    
+                    self.logger.info(f"Auto-promoted {opportunity.organization_name} from {old_stage} to {final_stage} (score: {score:.2f})")
+                    
+                else:
+                    self.logger.info(f"Promotion engine did not recommend auto-promotion for {opportunity.organization_name}: {promotion_result.reasoning}")
+                    
+            elif score >= 0.65:
+                self.logger.info(f"Opportunity {opportunity.organization_name} ({score:.2f}) qualifies for manual review")
+                # Mark as eligible for manual review but don't auto-promote
+                opportunity.scoring.promotion_recommended = True
+                
+        except Exception as e:
+            self.logger.error(f"Failed to check auto-promotion for {opportunity.opportunity_id}: {e}")
 
 
 # Singleton instance
