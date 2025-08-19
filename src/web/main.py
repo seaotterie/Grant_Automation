@@ -2098,6 +2098,373 @@ async def get_real_time_analytics(profile_id: str):
         logger.error(f"Failed to get real-time analytics for profile {profile_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# === DISCOVERY DASHBOARD ENDPOINTS ===
+
+# WebSocket connection manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+    
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+    
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+    
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(json.dumps(message))
+            except:
+                # Remove dead connections
+                self.active_connections.remove(connection)
+
+manager = ConnectionManager()
+
+@app.websocket("/ws/discovery")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time discovery updates"""
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def discovery_dashboard():
+    """Discovery Dashboard interface"""
+    try:
+        with open("src/web/templates/discovery_dashboard.html", "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Dashboard template not found")
+
+@app.get("/api/discovery/sessions/recent")
+async def get_recent_discovery_sessions(limit: Optional[int] = 20):
+    """Get recent discovery sessions across all profiles"""
+    try:
+        all_sessions = []
+        
+        # Get all profiles from unified service
+        profiles = unified_service.get_all_profiles()
+        
+        for profile in profiles:
+            # Get recent discovery sessions for each profile
+            discovery_sessions = [
+                activity for activity in profile.recent_activity 
+                if activity.type == "discovery_session"
+            ]
+            
+            # Add profile info to sessions
+            for session in discovery_sessions:
+                session_data = {
+                    "session_id": f"session_{profile.profile_id}_{session.date}",
+                    "profile_id": profile.profile_id,
+                    "profile_name": profile.organization_name,
+                    "started_at": session.date,
+                    "completed_at": session.date,  # Mock completion time
+                    "execution_time_seconds": random.randint(30, 300),  # Mock duration
+                    "total_results_discovered": session.results or 0,
+                    "funding_types": ["grants", "government", "commercial"],  # Mock types
+                    "api_calls_made": random.randint(5, 50),  # Mock API calls
+                    "status": "completed"
+                }
+                all_sessions.append(session_data)
+        
+        # Sort by date descending
+        all_sessions.sort(key=lambda x: x["started_at"], reverse=True)
+        
+        # Limit results
+        if limit:
+            all_sessions = all_sessions[:limit]
+        
+        return all_sessions
+        
+    except Exception as e:
+        logger.error(f"Failed to get recent discovery sessions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/discovery/stats/global")
+async def get_global_discovery_stats():
+    """Get global discovery statistics across all profiles"""
+    try:
+        profiles = unified_service.get_all_profiles()
+        
+        total_opportunities = 0
+        total_sessions = 0
+        total_score_sum = 0.0
+        scored_opportunities = 0
+        active_sessions = 0  # Mock active sessions
+        
+        for profile in profiles:
+            if profile.analytics:
+                total_opportunities += profile.analytics.opportunity_count or 0
+                total_sessions += profile.analytics.discovery_stats.get('total_sessions', 0)
+                
+                # Calculate weighted average score
+                avg_score = profile.analytics.scoring_stats.get('avg_score', 0.0)
+                opp_count = profile.analytics.opportunity_count or 0
+                if avg_score > 0 and opp_count > 0:
+                    total_score_sum += avg_score * opp_count
+                    scored_opportunities += opp_count
+        
+        # Calculate global averages
+        global_avg_score = (total_score_sum / scored_opportunities) if scored_opportunities > 0 else 0.0
+        success_rate = 0.85 if total_sessions > 0 else 0.0  # Mock success rate
+        
+        return {
+            "active_sessions": active_sessions,
+            "total_opportunities": total_opportunities,
+            "avg_score": global_avg_score,
+            "success_rate": success_rate,
+            "total_profiles": len(profiles),
+            "total_sessions": total_sessions,
+            "updated_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get global discovery stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Broadcast discovery events to WebSocket clients
+async def broadcast_discovery_event(event_type: str, data: dict):
+    """Broadcast discovery events to all connected WebSocket clients"""
+    message = {
+        "type": event_type,
+        "timestamp": datetime.now().isoformat(),
+        **data
+    }
+    await manager.broadcast(message)
+
+# === END DISCOVERY DASHBOARD ENDPOINTS ===
+
+# === ADVANCED SEARCH & EXPORT ENDPOINTS ===
+
+from src.web.services.search_export_service import (
+    get_search_export_service, SearchCriteria, SearchFilter, SearchOperator, 
+    SortDirection, ExportFormat
+)
+from fastapi.responses import StreamingResponse
+
+search_service = get_search_export_service()
+
+@app.post("/api/search/opportunities")
+async def search_opportunities(
+    search_request: Dict[str, Any],
+    profile_id: Optional[str] = None
+):
+    """Advanced search across opportunities with flexible filtering"""
+    try:
+        # Parse search criteria
+        filters = []
+        if 'filters' in search_request:
+            for f in search_request['filters']:
+                filter_obj = SearchFilter(
+                    field=f['field'],
+                    operator=SearchOperator(f['operator']),
+                    value=f['value'],
+                    value2=f.get('value2')
+                )
+                filters.append(filter_obj)
+        
+        criteria = SearchCriteria(
+            filters=filters,
+            sort_by=search_request.get('sort_by'),
+            sort_direction=SortDirection(search_request.get('sort_direction', 'desc')),
+            limit=search_request.get('limit'),
+            offset=search_request.get('offset', 0)
+        )
+        
+        # Perform search
+        results = search_service.search_opportunities(criteria, profile_id)
+        
+        # Convert to JSON-serializable format
+        opportunities_data = [opp.model_dump() for opp in results.opportunities]
+        
+        return {
+            "opportunities": opportunities_data,
+            "total_count": results.total_count,
+            "filtered_count": results.filtered_count,
+            "page_info": results.page_info,
+            "search_metadata": results.search_metadata
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to search opportunities: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/search/fields")
+async def get_searchable_fields():
+    """Get available fields for advanced search"""
+    return {
+        "basic_fields": [
+            {"field": "organization_name", "type": "string", "label": "Organization Name"},
+            {"field": "ein", "type": "string", "label": "EIN"},
+            {"field": "current_stage", "type": "string", "label": "Current Stage"},
+            {"field": "opportunity_type", "type": "string", "label": "Opportunity Type"},
+            {"field": "funding_amount", "type": "number", "label": "Funding Amount"},
+            {"field": "program_name", "type": "string", "label": "Program Name"},
+            {"field": "status", "type": "string", "label": "Status"},
+            {"field": "discovered_at", "type": "datetime", "label": "Discovered Date"},
+            {"field": "last_updated", "type": "datetime", "label": "Last Updated"}
+        ],
+        "scoring_fields": [
+            {"field": "scoring.overall_score", "type": "number", "label": "Overall Score"},
+            {"field": "scoring.confidence_level", "type": "number", "label": "Confidence Level"},
+            {"field": "scoring.auto_promotion_eligible", "type": "boolean", "label": "Auto Promotion Eligible"},
+            {"field": "scoring.promotion_recommended", "type": "boolean", "label": "Promotion Recommended"}
+        ],
+        "analysis_fields": [
+            {"field": "analysis.discovery.match_factors.source_type", "type": "string", "label": "Source Type"},
+            {"field": "analysis.discovery.match_factors.state", "type": "string", "label": "State"}
+        ],
+        "operators": [
+            {"value": "equals", "label": "Equals", "types": ["string", "number", "boolean"]},
+            {"value": "contains", "label": "Contains", "types": ["string"]},
+            {"value": "starts_with", "label": "Starts With", "types": ["string"]},
+            {"value": "ends_with", "label": "Ends With", "types": ["string"]},
+            {"value": "gt", "label": "Greater Than", "types": ["number", "datetime"]},
+            {"value": "lt", "label": "Less Than", "types": ["number", "datetime"]},
+            {"value": "between", "label": "Between", "types": ["number", "datetime"]},
+            {"value": "in", "label": "In List", "types": ["string", "number"]},
+            {"value": "not_in", "label": "Not In List", "types": ["string", "number"]}
+        ]
+    }
+
+@app.post("/api/export/opportunities")
+async def export_opportunities(
+    export_request: Dict[str, Any]
+):
+    """Export opportunities with advanced filtering and format options"""
+    try:
+        # Get search criteria (same as search endpoint)
+        filters = []
+        if 'filters' in export_request:
+            for f in export_request['filters']:
+                filter_obj = SearchFilter(
+                    field=f['field'],
+                    operator=SearchOperator(f['operator']),
+                    value=f['value'],
+                    value2=f.get('value2')
+                )
+                filters.append(filter_obj)
+        
+        criteria = SearchCriteria(
+            filters=filters,
+            sort_by=export_request.get('sort_by'),
+            sort_direction=SortDirection(export_request.get('sort_direction', 'desc')),
+            limit=None,  # Export all results
+            offset=0
+        )
+        
+        # Get export format and options
+        format_str = export_request.get('format', 'csv')
+        include_analytics = export_request.get('include_analytics', True)
+        profile_id = export_request.get('profile_id')
+        
+        try:
+            export_format = ExportFormat(format_str)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid export format: {format_str}")
+        
+        # Perform search to get opportunities
+        results = search_service.search_opportunities(criteria, profile_id)
+        
+        # Export data
+        export_data = search_service.export_opportunities(
+            results.opportunities, 
+            export_format, 
+            include_analytics
+        )
+        
+        # Determine content type and filename
+        content_types = {
+            ExportFormat.JSON: "application/json",
+            ExportFormat.CSV: "text/csv",
+            ExportFormat.XLSX: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        }
+        
+        file_extensions = {
+            ExportFormat.JSON: "json",
+            ExportFormat.CSV: "csv", 
+            ExportFormat.XLSX: "xlsx"
+        }
+        
+        content_type = content_types.get(export_format, "application/octet-stream")
+        file_extension = file_extensions.get(export_format, "txt")
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"opportunities_export_{timestamp}.{file_extension}"
+        
+        # Create streaming response
+        return StreamingResponse(
+            io.BytesIO(export_data),
+            media_type=content_type,
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Length": str(len(export_data))
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to export opportunities: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/search/stats")
+async def get_search_stats():
+    """Get search and export statistics"""
+    try:
+        profiles = unified_service.get_all_profiles()
+        total_opportunities = 0
+        
+        # Calculate stats across all profiles
+        stage_distribution = {}
+        source_distribution = {}
+        score_ranges = {"high": 0, "medium": 0, "low": 0}
+        
+        for profile in profiles:
+            opportunities = unified_service.get_profile_opportunities(profile.profile_id)
+            total_opportunities += len(opportunities)
+            
+            for opp in opportunities:
+                # Stage distribution
+                stage = opp.current_stage
+                stage_distribution[stage] = stage_distribution.get(stage, 0) + 1
+                
+                # Source distribution
+                source = opp.opportunity_type
+                source_distribution[source] = source_distribution.get(source, 0) + 1
+                
+                # Score distribution
+                if opp.scoring:
+                    score = opp.scoring.overall_score
+                    if score >= 0.80:
+                        score_ranges["high"] += 1
+                    elif score >= 0.60:
+                        score_ranges["medium"] += 1
+                    else:
+                        score_ranges["low"] += 1
+        
+        return {
+            "total_opportunities": total_opportunities,
+            "total_profiles": len(profiles),
+            "stage_distribution": stage_distribution,
+            "source_distribution": source_distribution,
+            "score_distribution": score_ranges,
+            "searchable_fields": 15,  # Based on fields defined above
+            "export_formats": 3,
+            "updated_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get search stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# === END ADVANCED SEARCH & EXPORT ENDPOINTS ===
+
 @app.post("/api/profiles/{profile_id}/discover/unified")
 async def discover_opportunities_unified(profile_id: str, discovery_params: Dict[str, Any]):
     """
