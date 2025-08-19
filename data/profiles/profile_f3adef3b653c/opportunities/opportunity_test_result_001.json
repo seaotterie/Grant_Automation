@@ -1,0 +1,50 @@
+{
+  "opportunity_id": "opp_test_result_001",
+  "profile_id": "profile_f3adef3b653c",
+  "organization_name": "Test Foundation for Enhanced Discovery",
+  "ein": "99-8888888",
+  "current_stage": "discovery",
+  "stage_history": [],
+  "scoring": {
+    "overall_score": 0.85,
+    "auto_promotion_eligible": true,
+    "promotion_recommended": true,
+    "dimension_scores": {},
+    "confidence_level": 0.9,
+    "scored_at": "2025-08-19T05:32:55.341484",
+    "scorer_version": "discovery_v1.0"
+  },
+  "analysis": {
+    "discovery": {
+      "match_factors": {
+        "source_type": "Foundation",
+        "foundation_code": "03",
+        "state": "VA",
+        "test_integration": true
+      },
+      "risk_factors": {},
+      "recommendations": [],
+      "network_insights": {},
+      "analyzed_at": "2025-08-19T05:32:55.341500",
+      "source": "test_integration",
+      "opportunity_type": "grants",
+      "enhanced_data": {
+        "ein": "99-8888888",
+        "program_name": "Enhanced Discovery Test Program",
+        "test_data": true
+      }
+    }
+  },
+  "user_assessment": null,
+  "promotion_history": [],
+  "source": "test_integration",
+  "opportunity_type": "grants",
+  "discovered_at": "2025-08-19T05:32:55.340561",
+  "last_updated": "2025-08-19T05:32:55.365054",
+  "status": "active",
+  "legacy_lead_id": "lead_test_result_001",
+  "legacy_pipeline_stage": "discovery",
+  "description": "Test foundation discovered through enhanced discovery integration",
+  "funding_amount": 50000,
+  "program_name": "Enhanced Discovery Test Program"
+}

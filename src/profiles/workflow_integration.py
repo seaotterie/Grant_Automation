@@ -8,6 +8,8 @@ from datetime import datetime
 from .models import OrganizationProfile, ProfileSearchParams, FundingType, PipelineStage
 from .search_engine import ProfileSearchEngine
 from .service import ProfileService
+from .unified_service import get_unified_profile_service
+from src.discovery.unified_discovery_adapter import get_unified_discovery_adapter
 from src.core.workflow_engine import get_workflow_engine
 from src.core.data_models import WorkflowConfig
 from src.discovery.discovery_engine import discovery_engine
@@ -20,6 +22,8 @@ class ProfileWorkflowIntegrator:
     def __init__(self):
         self.search_engine = ProfileSearchEngine()
         self.profile_service = ProfileService()
+        self.unified_service = get_unified_profile_service()
+        self.discovery_adapter = get_unified_discovery_adapter()
         self.workflow_engine = get_workflow_engine()
     
     async def discover_opportunities_for_profile(
@@ -110,6 +114,33 @@ class ProfileWorkflowIntegrator:
                     }
                 }
         
+        # Enhanced: Save raw results to unified service
+        unified_integration_results = None
+        try:
+            # Get raw discovery results for unified service integration
+            raw_session_results = discovery_engine.get_session_results(discovery_session.session_id)
+            
+            # Save to unified service using adapter
+            unified_integration_results = await self.discovery_adapter.save_discovery_results(
+                discovery_results=raw_session_results,
+                profile_id=profile_id,
+                session_id=discovery_session.session_id
+            )
+            
+            # Update session analytics in unified profile
+            session_analytics = await self.discovery_adapter.update_discovery_session_analytics(
+                session=discovery_session,
+                save_results=unified_integration_results,
+                profile_id=profile_id
+            )
+            
+        except Exception as e:
+            # Log error but don't fail the entire discovery process
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed unified service integration: {e}")
+            unified_integration_results = {"error": str(e), "saved_count": 0}
+        
         # Create enhanced summary using session data
         enhanced_summary = self._create_enhanced_discovery_summary(session_summary, profile)
         
@@ -123,7 +154,15 @@ class ProfileWorkflowIntegrator:
             "summary": enhanced_summary,
             "execution_time_seconds": discovery_session.execution_time_seconds,
             "api_calls_made": discovery_session.api_calls_made,
-            "session_status": discovery_session.status.value
+            "session_status": discovery_session.status.value,
+            "unified_integration": {
+                "enabled": True,
+                "saved_to_unified": unified_integration_results.get("saved_count", 0) if unified_integration_results else 0,
+                "failed_saves": unified_integration_results.get("failed_count", 0) if unified_integration_results else 0,
+                "duplicates_skipped": unified_integration_results.get("duplicates_skipped", 0) if unified_integration_results else 0,
+                "analytics_refreshed": unified_integration_results.get("analytics_refreshed", False) if unified_integration_results else False,
+                "error": unified_integration_results.get("error") if unified_integration_results else None
+            }
         }
     
     async def _discover_grant_opportunities(

@@ -24,25 +24,25 @@
     "F40"
   ],
   "created_at": "2025-08-10 14:40:01.485534",
-  "updated_at": "2025-08-19T05:17:57.369398",
+  "updated_at": "2025-08-19T05:32:55.390893",
   "analytics": {
-    "opportunity_count": 266,
+    "opportunity_count": 267,
     "stages_distribution": {
-      "discovery": 252,
+      "discovery": 253,
       "deep_analysis": 1,
       "pre_scoring": 13
     },
     "scoring_stats": {
-      "avg_score": 0.64,
-      "high_potential_count": 29,
-      "auto_promotion_eligible": 35,
-      "last_scored": "2025-08-18T15:08:23.540404"
+      "avg_score": 0.641,
+      "high_potential_count": 30,
+      "auto_promotion_eligible": 36,
+      "last_scored": "2025-08-19T05:32:55.341484"
     },
     "discovery_stats": {
-      "total_sessions": 2,
-      "last_discovery": "2025-08-18 19:29:43.273264",
-      "last_session_results": 256,
-      "avg_results_per_session": 133.0
+      "total_sessions": 3,
+      "last_discovery": "2025-08-19T05:32:55.340561",
+      "last_session_results": 1,
+      "avg_results_per_session": 89.0
     },
     "promotion_stats": {
       "total_promotions": 2,
@@ -52,6 +52,15 @@
     }
   },
   "recent_activity": [
+    {
+      "type": "discovery_session",
+      "date": "2025-08-19T12:00:00",
+      "results": 1,
+      "source": "Multiple Sources",
+      "opportunity": null,
+      "from_stage": null,
+      "to_stage": null
+    },
     {
       "type": "manual_promotion",
       "date": "2025-08-19T05:17:57.334642",

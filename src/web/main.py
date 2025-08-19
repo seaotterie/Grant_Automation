@@ -30,6 +30,7 @@ from src.web.models.requests import ClassificationRequest, WorkflowRequest
 from src.web.models.responses import DashboardStats, WorkflowResponse, SystemStatus
 from src.profiles.service import ProfileService
 from src.profiles.unified_service import get_unified_profile_service
+from src.discovery.unified_discovery_adapter import get_unified_discovery_adapter
 # from src.profiles.entity_service import get_entity_profile_service  # Commented out due to import issues
 from src.profiles.models import OrganizationProfile, FundingType
 from src.profiles.workflow_integration import ProfileWorkflowIntegrator
@@ -124,6 +125,7 @@ workflow_service = WorkflowService()
 progress_service = ProgressService()
 profile_service = ProfileService()
 unified_service = get_unified_profile_service()
+unified_discovery_adapter = get_unified_discovery_adapter()
 # entity_profile_service = get_entity_profile_service()  # Enhanced entity-based service - Commented out due to import issues
 # entity_discovery_service = get_entity_discovery_service()  # Enhanced discovery service - Commented out due to import issues
 profile_integrator = ProfileWorkflowIntegrator()
@@ -1900,7 +1902,29 @@ async def discover_opportunities(profile_id: str, discovery_params: Dict[str, An
             max_results_per_type=max_results
         )
         
-        # Store results as opportunity leads
+        # Enhanced: Get raw discovery results for unified service integration
+        from src.discovery.discovery_engine import discovery_engine
+        raw_session_results = []
+        session_id = discovery_results.get("discovery_timestamp", "")
+        
+        try:
+            # Get the raw DiscoveryResult objects from the session
+            raw_session_results = discovery_engine.get_session_results(session_id)
+            logger.info(f"Retrieved {len(raw_session_results)} raw discovery results for unified integration")
+            
+            # Save to unified service using adapter
+            unified_save_results = await unified_discovery_adapter.save_discovery_results(
+                discovery_results=raw_session_results,
+                profile_id=profile_id,
+                session_id=session_id
+            )
+            logger.info(f"Unified service save results: {unified_save_results['saved_count']} saved, {unified_save_results['failed_count']} failed, {unified_save_results['duplicates_skipped']} duplicates")
+            
+        except Exception as e:
+            logger.error(f"Failed to save to unified service: {e}")
+            unified_save_results = {"error": str(e), "saved_count": 0}
+        
+        # Store results as opportunity leads (legacy compatibility)
         opportunities = []
         for funding_type, results in discovery_results["results"].items():
             if results.get("status") == "completed":
@@ -1916,7 +1940,7 @@ async def discover_opportunities(profile_id: str, discovery_params: Dict[str, An
                         "external_data": opp.get("metadata", {})
                     }
                     
-                    # Add lead to profile
+                    # Add lead to profile (legacy)
                     lead = profile_service.add_opportunity_lead(profile_id, lead_data)
                     if lead:
                         opportunities.append(lead.model_dump())
@@ -1931,11 +1955,147 @@ async def discover_opportunities(profile_id: str, discovery_params: Dict[str, An
                 ft: len([o for o in opportunities if o.get("opportunity_type") == ft])
                 for ft in funding_type_strings
             },
-            "top_matches": discovery_results.get("summary", {}).get("top_matches", [])[:5]
+            "top_matches": discovery_results.get("summary", {}).get("top_matches", [])[:5],
+            "unified_integration": {
+                "enabled": True,
+                "saved_to_unified": unified_save_results.get("saved_count", 0),
+                "failed_saves": unified_save_results.get("failed_count", 0),
+                "duplicates_skipped": unified_save_results.get("duplicates_skipped", 0),
+                "analytics_refreshed": unified_save_results.get("analytics_refreshed", False)
+            }
         }
         
     except Exception as e:
         logger.error(f"Failed to discover opportunities for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/profiles/{profile_id}/discovery/sessions")
+async def get_discovery_sessions(profile_id: str, limit: Optional[int] = 10):
+    """Get recent discovery sessions for a profile with unified analytics"""
+    try:
+        # Get unified profile for enhanced session data
+        unified_profile = unified_service.get_profile(profile_id)
+        if not unified_profile:
+            # Fallback to old service
+            old_profile = profile_service.get_profile(profile_id)
+            if not old_profile:
+                raise HTTPException(status_code=404, detail="Profile not found")
+            
+            return {
+                "profile_id": profile_id,
+                "sessions": [],
+                "current_analytics": None,
+                "source": "legacy_service"
+            }
+        
+        # Get recent activity filtered for discovery sessions
+        discovery_sessions = [
+            activity for activity in unified_profile.recent_activity 
+            if activity.type == "discovery_session"
+        ]
+        
+        # Limit results
+        discovery_sessions = discovery_sessions[:limit] if limit else discovery_sessions
+        
+        # Enhanced session data with unified analytics
+        enhanced_sessions = []
+        for session in discovery_sessions:
+            enhanced_session = {
+                "date": session.date,
+                "results_found": session.results,
+                "source": session.source,
+                "type": session.type,
+                "analytics_snapshot": {
+                    "total_opportunities": unified_profile.analytics.opportunity_count,
+                    "stage_distribution": unified_profile.analytics.stages_distribution,
+                    "high_potential_count": unified_profile.analytics.scoring_stats.get('high_potential_count', 0),
+                    "avg_score": unified_profile.analytics.scoring_stats.get('avg_score', 0.0)
+                }
+            }
+            enhanced_sessions.append(enhanced_session)
+        
+        return {
+            "profile_id": profile_id,
+            "organization_name": unified_profile.organization_name,
+            "sessions": enhanced_sessions,
+            "current_analytics": unified_profile.analytics.model_dump() if unified_profile.analytics else None,
+            "total_sessions": len(discovery_sessions),
+            "source": "unified_service"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get discovery sessions for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/profiles/{profile_id}/analytics/real-time")
+async def get_real_time_analytics(profile_id: str):
+    """Get real-time analytics for a profile using unified service"""
+    try:
+        # Get unified profile for real-time data
+        unified_profile = unified_service.get_profile(profile_id)
+        if not unified_profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Get opportunities for detailed analytics
+        opportunities = unified_service.get_profile_opportunities(profile_id)
+        
+        # Calculate real-time metrics
+        stage_progression = {}
+        score_distribution = {"high": 0, "medium": 0, "low": 0}
+        recent_discoveries = 0
+        
+        for opp in opportunities:
+            # Stage progression tracking
+            if opp.stage_history:
+                for stage in opp.stage_history:
+                    stage_name = stage.stage
+                    if stage_name not in stage_progression:
+                        stage_progression[stage_name] = {"count": 0, "avg_duration_hours": 0}
+                    stage_progression[stage_name]["count"] += 1
+                    if stage.duration_hours:
+                        current_avg = stage_progression[stage_name]["avg_duration_hours"]
+                        stage_progression[stage_name]["avg_duration_hours"] = (
+                            (current_avg + stage.duration_hours) / 2
+                        )
+            
+            # Score distribution
+            if opp.scoring:
+                score = opp.scoring.overall_score
+                if score >= 0.80:
+                    score_distribution["high"] += 1
+                elif score >= 0.60:
+                    score_distribution["medium"] += 1
+                else:
+                    score_distribution["low"] += 1
+            
+            # Recent discoveries (last 24 hours)
+            if opp.discovered_at:
+                try:
+                    discovered = datetime.fromisoformat(opp.discovered_at.replace('Z', '+00:00'))
+                    if (datetime.now() - discovered).days < 1:
+                        recent_discoveries += 1
+                except:
+                    pass
+        
+        return {
+            "profile_id": profile_id,
+            "organization_name": unified_profile.organization_name,
+            "real_time_metrics": {
+                "total_opportunities": len(opportunities),
+                "stage_distribution": unified_profile.analytics.stages_distribution,
+                "stage_progression": stage_progression,
+                "score_distribution": score_distribution,
+                "recent_discoveries_24h": recent_discoveries,
+                "avg_score": unified_profile.analytics.scoring_stats.get('avg_score', 0.0),
+                "high_potential_count": unified_profile.analytics.scoring_stats.get('high_potential_count', 0),
+                "auto_promotion_eligible": unified_profile.analytics.scoring_stats.get('auto_promotion_eligible', 0)
+            },
+            "last_updated": unified_profile.updated_at,
+            "source": "unified_service"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get real-time analytics for profile {profile_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/profiles/{profile_id}/discover/unified")
