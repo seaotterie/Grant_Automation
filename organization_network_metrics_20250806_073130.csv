@@ -1,4 +1,0 @@
-EIN,Organization_Name,Betweenness_Centrality,Closeness_Centrality,Degree_Centrality,Eigenvector_Centrality,Total_Connections,Network_Degree
-123456789,Health Foundation of Virginia,1.0,1.0,2.0,0.7369765049934975,3,4
-987654321,Community Health Alliance,0.0,0.6666666666666666,1.5,0.5910084285772988,2,3
-456789123,Virginia Food Bank Network,0.0,0.6666666666666666,0.5,0.3279857747497,1,1
