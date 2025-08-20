@@ -1,0 +1,66 @@
+{
+  "opportunity_id": "opp_test_norfolk_foundation_1755640392",
+  "profile_id": "profile_f3adef3b653c",
+  "organization_name": "Norfolk Foundation Test 1755640392",
+  "ein": "54-1755640392",
+  "current_stage": "deep_analysis",
+  "stage_history": [
+    {
+      "stage": "deep_analysis",
+      "entered_at": "2025-08-19T17:53:12.549615",
+      "exited_at": null,
+      "duration_hours": null
+    }
+  ],
+  "scoring": {
+    "overall_score": 0.89,
+    "auto_promotion_eligible": true,
+    "promotion_recommended": true,
+    "dimension_scores": {},
+    "confidence_level": 0.85,
+    "scored_at": "2025-08-19T17:53:12.519484",
+    "scorer_version": "discovery_v1.0"
+  },
+  "analysis": {
+    "discovery": {
+      "match_factors": {
+        "mission_alignment": true,
+        "geographic_match": true,
+        "program_focus": "veterans services"
+      },
+      "risk_factors": {},
+      "recommendations": [],
+      "network_insights": {},
+      "analyzed_at": "2025-08-19T17:53:12.519541",
+      "source": "test_auto_promotion",
+      "opportunity_type": "grants",
+      "enhanced_data": {
+        "ein": "54-1755640392",
+        "revenue": 50000000,
+        "assets": 100000000
+      }
+    }
+  },
+  "user_assessment": null,
+  "promotion_history": [
+    {
+      "from_stage": "discovery",
+      "to_stage": "deep_analysis",
+      "decision_type": "auto_promote",
+      "score_at_promotion": 0.0,
+      "reason": "Auto-promotion based on score 0.89",
+      "promoted_at": "2025-08-19T17:53:12.549615",
+      "promoted_by": "auto_promotion_engine"
+    }
+  ],
+  "source": "test_auto_promotion",
+  "opportunity_type": "grants",
+  "discovered_at": "2025-08-19T17:53:12.519277",
+  "last_updated": "2025-08-19T17:53:12.549887",
+  "status": "active",
+  "legacy_lead_id": "lead_test_norfolk_foundation_1755640392",
+  "legacy_pipeline_stage": "discovery",
+  "description": "Norfolk Foundation - Test high-scoring opportunity for auto-promotion",
+  "funding_amount": null,
+  "program_name": null
+}

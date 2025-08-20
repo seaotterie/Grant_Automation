@@ -1548,26 +1548,56 @@ def _convert_lead_to_opportunity(lead):
 async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None, min_score: Optional[float] = None):
     """Get opportunities for a profile using unified service."""
     try:
-        # Try unified service first for enhanced data
-        unified_opportunities = unified_service.get_profile_opportunities(
-            profile_id=profile_id,
-            stage_filter=stage
-        )
+        # Convert frontend stage filter to unified stage
+        frontend_to_unified_stage = {
+            "prospects": "discovery",
+            "qualified_prospects": "pre_scoring",
+            "candidates": "deep_analysis", 
+            "targets": "recommendations"
+        }
         
-        if unified_opportunities:
+        unified_stage_filter = frontend_to_unified_stage.get(stage, stage) if stage else None
+        
+        # Try unified service first for enhanced data
+        logger.info(f"DEBUG: Trying unified service for profile {profile_id} with stage_filter={unified_stage_filter}")
+        try:
+            unified_opportunities = unified_service.get_profile_opportunities(
+                profile_id=profile_id,
+                stage_filter=unified_stage_filter
+            )
+            logger.info(f"DEBUG: Unified service returned {len(unified_opportunities) if unified_opportunities else 0} opportunities")
+        except Exception as e:
+            logger.error(f"DEBUG: Unified service failed with error: {e}")
+            unified_opportunities = None
+        
+        logger.info(f"DEBUG: Unified opportunities check: {unified_opportunities is not None} and length: {len(unified_opportunities) if unified_opportunities else 'None'}")
+        
+        if unified_opportunities is not None:
+            logger.info(f"DEBUG: Using unified service with {len(unified_opportunities)} opportunities")
+            # Stage mapping from unified backend to frontend
+            stage_mapping = {
+                "discovery": "prospects",
+                "pre_scoring": "qualified_prospects", 
+                "deep_analysis": "candidates",
+                "recommendations": "targets"
+            }
+            
             # Filter by min_score if provided
             filtered_opportunities = []
             for opp in unified_opportunities:
                 if min_score is None or (opp.scoring and opp.scoring.overall_score >= min_score):
+                    # Map unified stage to frontend stage
+                    frontend_stage = stage_mapping.get(opp.current_stage, opp.current_stage)
+                    
                     # Convert to frontend format
                     opportunity = {
                         "id": opp.opportunity_id,
                         "opportunity_id": opp.opportunity_id,
                         "organization_name": opp.organization_name,
-                        "current_stage": opp.current_stage,
-                        "stage": opp.current_stage,  # For frontend compatibility
-                        "pipeline_stage": opp.current_stage,  # For frontend compatibility
-                        "funnel_stage": opp.current_stage,  # For frontend compatibility
+                        "current_stage": opp.current_stage,  # Keep original for backend compatibility
+                        "stage": frontend_stage,  # For frontend compatibility
+                        "pipeline_stage": frontend_stage,  # For frontend compatibility
+                        "funnel_stage": frontend_stage,  # For frontend compatibility
                         "compatibility_score": opp.scoring.overall_score if opp.scoring else 0.0,
                         "auto_promotion_eligible": opp.scoring.auto_promotion_eligible if opp.scoring else False,
                         "discovered_at": opp.discovered_at,
@@ -1595,6 +1625,7 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
             }
         
         # Fallback to old service logic
+        logger.info(f"DEBUG: Falling back to legacy service for profile {profile_id}")
         from src.profiles.models import PipelineStage
         
         # Convert stage parameter if provided
