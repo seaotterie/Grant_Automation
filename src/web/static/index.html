@@ -514,6 +514,7 @@
                                         <template x-for="profile in filteredProfiles" :key="profile.profile_id">
                                             <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                                 :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedProfile?.profile_id === profile.profile_id}"
+                                                x-init="addProfileContextMenu && addProfileContextMenu($el, profile)"
                                                 @click="selectedProfile = profile">
                                                 <td class="px-6 py-3 whitespace-nowrap">
                                                     <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="profile.name"></div>
@@ -1466,7 +1467,10 @@
                                         </thead>
                                         <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                             <template x-for="prospect in qualifiedProspects" :key="prospect.opportunity_id">
-                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer" 
+                                                    x-init="addOpportunityContextMenu && addOpportunityContextMenu($el, prospect)"
+                                                    :class="{'!bg-blue-100 dark:!bg-blue-900 border-l-4 border-blue-500': isSelected && isSelected(prospect.opportunity_id)}"
+                                                    @click="toggleSelection && toggleSelection(prospect, $event)">
                                                     <td class="px-6 py-4 whitespace-nowrap">
                                                         <div class="text-sm font-medium text-gray-900 dark:text-white" 
                                                              x-text="prospect.organization_name"></div>
@@ -1804,7 +1808,10 @@
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                     <template x-for="candidate in candidatesData" :key="candidate.opportunity_id">
-                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                                            x-init="addOpportunityContextMenu && addOpportunityContextMenu($el, candidate)"
+                                            :class="{'!bg-blue-100 dark:!bg-blue-900 border-l-4 border-blue-500': isSelected && isSelected(candidate.opportunity_id)}"
+                                            @click="toggleSelection && toggleSelection(candidate, $event)">
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="text-sm font-medium text-gray-900 dark:text-white" 
                                                      x-text="candidate.organization_name"></div>
@@ -2067,7 +2074,10 @@
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                     <template x-for="target in targetsData" :key="target.opportunity_id">
-                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                                            x-init="addOpportunityContextMenu && addOpportunityContextMenu($el, target)"
+                                            :class="{'!bg-blue-100 dark:!bg-blue-900 border-l-4 border-blue-500': isSelected && isSelected(target.opportunity_id)}"
+                                            @click="toggleSelection && toggleSelection(target, $event)">
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="text-sm font-medium text-gray-900 dark:text-white" 
                                                      x-text="target.organization_name"></div>
@@ -4321,6 +4331,7 @@
                                     <template x-for="profile in filteredProfiles" :key="profile.profile_id">
                                         <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                             :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedDiscoveryProfile?.profile_id === profile.profile_id}"
+                                            x-init="addProfileContextMenu && addProfileContextMenu($el, profile)"
                                             @click="selectedDiscoveryProfile = profile">
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div>
@@ -6562,10 +6573,10 @@
                                     <span class="text-xs text-purple-600 dark:text-purple-400 font-medium">35% Weight</span>
                                 </div>
                                 <div class="text-xl font-bold text-purple-900 dark:text-purple-100 mb-2" 
-                                     x-text="((selectedOpportunity?.dimension_scores?.base_compatibility || getOpportunityScore(selectedOpportunity) * 0.7) * 100).toFixed(1) + '%'"></div>
+                                     x-text="((selectedOpportunity?.dimension_scores?.eligibility_match || getOpportunityScore(selectedOpportunity) * 0.7) * 100).toFixed(1) + '%'"></div>
                                 <div class="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2 mb-2">
                                     <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" 
-                                         :style="`width: ${(selectedOpportunity?.dimension_scores?.base_compatibility || getOpportunityScore(selectedOpportunity) * 0.7) * 100}%`"></div>
+                                         :style="`width: ${(selectedOpportunity?.dimension_scores?.eligibility_match || getOpportunityScore(selectedOpportunity) * 0.7) * 100}%`"></div>
                                 </div>
                                 <p class="text-xs text-purple-700 dark:text-purple-300">Core match between opportunity and profile criteria</p>
                             </div>
@@ -6592,10 +6603,10 @@
                                     <span class="text-xs text-purple-600 dark:text-purple-400 font-medium">20% Weight</span>
                                 </div>
                                 <div class="text-xl font-bold text-purple-900 dark:text-purple-100 mb-2" 
-                                     x-text="((selectedOpportunity?.dimension_scores?.geographic_advantage || getOpportunityScore(selectedOpportunity) * 0.9) * 100).toFixed(1) + '%'"></div>
+                                     x-text="((selectedOpportunity?.dimension_scores?.geographic_match || getOpportunityScore(selectedOpportunity) * 0.9) * 100).toFixed(1) + '%'"></div>
                                 <div class="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2 mb-2">
                                     <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" 
-                                         :style="`width: ${(selectedOpportunity?.dimension_scores?.geographic_advantage || getOpportunityScore(selectedOpportunity) * 0.9) * 100}%`"></div>
+                                         :style="`width: ${(selectedOpportunity?.dimension_scores?.geographic_match || getOpportunityScore(selectedOpportunity) * 0.9) * 100}%`"></div>
                                 </div>
                                 <p class="text-xs text-purple-700 dark:text-purple-300">Location-based competitive advantage assessment</p>
                             </div>
@@ -6607,10 +6618,10 @@
                                     <span class="text-xs text-purple-600 dark:text-purple-400 font-medium">12% Weight</span>
                                 </div>
                                 <div class="text-xl font-bold text-purple-900 dark:text-purple-100 mb-2" 
-                                     x-text="((selectedOpportunity?.dimension_scores?.timing_score || getOpportunityScore(selectedOpportunity) * 0.85) * 100).toFixed(1) + '%'"></div>
+                                     x-text="((selectedOpportunity?.dimension_scores?.timing_appropriateness || getOpportunityScore(selectedOpportunity) * 0.85) * 100).toFixed(1) + '%'"></div>
                                 <div class="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2 mb-2">
                                     <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" 
-                                         :style="`width: ${(selectedOpportunity?.dimension_scores?.timing_score || getOpportunityScore(selectedOpportunity) * 0.85) * 100}%`"></div>
+                                         :style="`width: ${(selectedOpportunity?.dimension_scores?.timing_appropriateness || getOpportunityScore(selectedOpportunity) * 0.85) * 100}%`"></div>
                                 </div>
                                 <p class="text-xs text-purple-700 dark:text-purple-300">Deadline urgency and preparation time analysis</p>
                             </div>
@@ -6622,10 +6633,10 @@
                                     <span class="text-xs text-purple-600 dark:text-purple-400 font-medium">8% Weight</span>
                                 </div>
                                 <div class="text-xl font-bold text-purple-900 dark:text-purple-100 mb-2" 
-                                     x-text="((selectedOpportunity?.dimension_scores?.financial_viability || getOpportunityScore(selectedOpportunity) * 0.75) * 100).toFixed(1) + '%'"></div>
+                                     x-text="((selectedOpportunity?.dimension_scores?.funding_fit || getOpportunityScore(selectedOpportunity) * 0.75) * 100).toFixed(1) + '%'"></div>
                                 <div class="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2 mb-2">
                                     <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" 
-                                         :style="`width: ${(selectedOpportunity?.dimension_scores?.financial_viability || getOpportunityScore(selectedOpportunity) * 0.75) * 100}%`"></div>
+                                         :style="`width: ${(selectedOpportunity?.dimension_scores?.funding_fit || getOpportunityScore(selectedOpportunity) * 0.75) * 100}%`"></div>
                                 </div>
                                 <p class="text-xs text-purple-700 dark:text-purple-300">Award size vs organization capacity matching</p>
                             </div>
@@ -7076,6 +7087,80 @@
                                 <!-- Track-Specific Context -->
                                 <div class="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-100 dark:border-blue-700">
                                     <p class="text-sm text-blue-700 dark:text-blue-300" x-text="getTrackSpecificContext(selectedOpportunity).description"></p>
+                                </div>
+                                
+                                <!-- Enhanced Strategic Insights Section -->
+                                <div x-show="selectedOpportunity?.strategic_insights" class="mt-6 space-y-4">
+                                    <h5 class="text-lg font-bold text-blue-900 dark:text-blue-100">
+                                        💡 Strategic Intelligence Analysis
+                                    </h5>
+                                    
+                                    <!-- Key Strengths -->
+                                    <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                                        <h6 class="font-semibold text-green-900 dark:text-green-100 mb-2">Key Strengths</h6>
+                                        <ul class="space-y-1">
+                                            <template x-for="strength in selectedOpportunity?.strategic_insights?.key_strengths || []" :key="strength">
+                                                <li class="flex items-start space-x-2">
+                                                    <span class="text-green-600 mt-1">✓</span>
+                                                    <span class="text-sm text-green-800 dark:text-green-200" x-text="strength"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                    
+                                    <!-- Potential Concerns -->
+                                    <div x-show="selectedOpportunity?.strategic_insights?.potential_concerns?.length" 
+                                         class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+                                        <h6 class="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">Areas for Consideration</h6>
+                                        <ul class="space-y-1">
+                                            <template x-for="concern in selectedOpportunity?.strategic_insights?.potential_concerns || []" :key="concern">
+                                                <li class="flex items-start space-x-2">
+                                                    <span class="text-yellow-600 mt-1">⚠</span>
+                                                    <span class="text-sm text-yellow-800 dark:text-yellow-200" x-text="concern"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                    
+                                    <!-- Recommended Next Steps -->
+                                    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                                        <h6 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">Recommended Next Steps</h6>
+                                        <ul class="space-y-2">
+                                            <template x-for="(step, index) in selectedOpportunity?.strategic_insights?.recommended_next_steps || []" :key="step">
+                                                <li class="flex items-start space-x-3">
+                                                    <span class="inline-flex items-center justify-center w-6 h-6 bg-blue-600 text-white rounded-full text-xs font-bold" 
+                                                          x-text="index + 1"></span>
+                                                    <span class="text-sm text-blue-800 dark:text-blue-200" x-text="step"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                    
+                                    <!-- Discovery Metadata -->
+                                    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                                        <h6 class="font-semibold text-gray-900 dark:text-gray-100 mb-3">Discovery Metadata</h6>
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Data Completeness</label>
+                                                <div class="flex items-center space-x-2">
+                                                    <div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                        <div class="h-2 rounded-full transition-all duration-300"
+                                                             :class="(selectedOpportunity?.discovery_metadata?.data_completeness || 0) >= 80 ? 'bg-green-500' : 
+                                                                     (selectedOpportunity?.discovery_metadata?.data_completeness || 0) >= 60 ? 'bg-yellow-500' : 'bg-orange-500'"
+                                                             :style="`width: ${selectedOpportunity?.discovery_metadata?.data_completeness || 0}%`"></div>
+                                                    </div>
+                                                    <span class="text-xs font-medium text-gray-700 dark:text-gray-300" 
+                                                          x-text="(selectedOpportunity?.discovery_metadata?.data_completeness || 0) + '%'"></span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Verification Status</label>
+                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                                                      :class="selectedOpportunity?.discovery_metadata?.verification_status === 'Verified' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100'"
+                                                      x-text="selectedOpportunity?.discovery_metadata?.verification_status || 'Pending'"></span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -7809,6 +7894,32 @@
                     }
                 });
                 console.log('[INLINE FIX] Alpine instances patched');
+                
+                // Initialize desktop UX features
+                setTimeout(() => {
+                    const bodyElement = document.querySelector('[x-data="catalynxApp()"]');
+                    if (bodyElement && bodyElement._x_dataStack && bodyElement._x_dataStack[0]) {
+                        const appData = bodyElement._x_dataStack[0];
+                        
+                        // Initialize keyboard shortcuts
+                        if (typeof addDesktopKeyboardShortcuts === 'function') {
+                            addDesktopKeyboardShortcuts(appData);
+                            console.log('[DESKTOP UX] Keyboard shortcuts initialized');
+                        }
+                        
+                        // Initialize context menus
+                        if (typeof addDesktopContextMenus === 'function') {
+                            addDesktopContextMenus(appData);
+                            console.log('[DESKTOP UX] Context menus initialized');
+                        }
+                        
+                        // Initialize bulk selection
+                        if (typeof addDesktopBulkSelection === 'function') {
+                            addDesktopBulkSelection(appData);
+                            console.log('[DESKTOP UX] Bulk selection initialized');
+                        }
+                    }
+                }, 1500); // Wait a bit longer for Alpine to fully initialize
             }, 1000);
         });
     </script>

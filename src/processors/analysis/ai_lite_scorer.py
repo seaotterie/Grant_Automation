@@ -132,11 +132,7 @@ class AILiteScorer(BaseProcessor):
         self.estimated_cost_per_candidate = 0.0001  # Conservative estimate
         
     async def execute(self, request_data: AILiteRequest) -> AILiteBatchResult:
-        # Parameter validation
-        if not config:
-            raise ValueError("ProcessorConfig is required")
-        
-"""
+        """
         Execute AI Lite analysis using comprehensive data packet
         
         Args:
@@ -155,12 +151,7 @@ class AILiteScorer(BaseProcessor):
             batch_prompt = self._create_enhanced_batch_prompt(request_data)
             
             # Call OpenAI API with cost optimization
-            response = try:
-     await self._call_openai_api(batch_prompt, request_data.request_metadata.model_preference)
- except asyncio.TimeoutError:
-     logger.warning("Operation timed out")
- except Exception as e:
-     logger.error(f"Operation failed: {e}")
+            response = await self._call_openai_api(batch_prompt, request_data.request_metadata.model_preference)
             
             # Parse and validate enhanced results
             analysis_results = self._parse_enhanced_api_response(response, request_data.candidates)

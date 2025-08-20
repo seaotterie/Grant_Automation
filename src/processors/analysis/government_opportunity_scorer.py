@@ -27,11 +27,12 @@ from src.analysis.profile_matcher import get_profile_matcher
 
 
 class GovernmentOpportunityScorerProcessor(BaseProcessor):
-    """Processor for scoring government opportunity matches."""
-"""
-Government Opportunity Scoring Algorithm Documentation
+    """
+    Processor for scoring government opportunity matches.
+    
+    Government Opportunity Scoring Algorithm Documentation
 
-## Overview
+    ## Overview
 This processor implements a data-driven scoring algorithm for matching government funding 
 opportunities with organizational profiles. The algorithm uses weighted scoring across 
 multiple dimensions to provide accurate compatibility assessments.
@@ -95,7 +96,7 @@ These weights and thresholds are based on comprehensive analysis of:
 - Machine learning-based weight optimization
 - Dynamic thresholds based on data quality
 - Real-time feedback integration for continuous improvement
-"""
+    """
     
     def __init__(self):
         metadata = ProcessorMetadata(

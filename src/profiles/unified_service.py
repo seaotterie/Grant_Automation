@@ -104,10 +104,13 @@ class UnifiedProfileService:
         """Get single opportunity by ID"""
         opportunities_dir = self.data_dir / profile_id / "opportunities"
         
-        # Try different possible filename formats
+        # Try different possible filename formats to handle legacy naming
+        clean_id = opportunity_id.replace('opp_', '').replace('lead_', '')
         possible_files = [
             opportunities_dir / f"{opportunity_id}.json",
-            opportunities_dir / f"opportunity_{opportunity_id}.json"
+            opportunities_dir / f"opportunity_{opportunity_id}.json",
+            opportunities_dir / f"opportunity_{clean_id}.json",
+            opportunities_dir / f"{clean_id}.json"
         ]
         
         for opp_file in possible_files:

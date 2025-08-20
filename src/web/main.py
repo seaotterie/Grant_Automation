@@ -5477,23 +5477,33 @@ async def promote_opportunity(profile_id: str, opportunity_id: str, request: Pro
                     
                     if success:
                         return PromotionResponse(
-                            success=True,
-                            message=f"Promoted to {target_stage}",
-                            new_stage=target_stage,
-                            opportunity_id=opportunity_id
+                            decision="approved",
+                            reason=f"Manual promotion to {target_stage}",
+                            current_score=opportunity.scoring.overall_score if opportunity.scoring else 0.5,
+                            target_stage=target_stage,
+                            confidence_level=0.95,
+                            requires_manual_review=False,
+                            promotion_metadata={"source": "manual_api", "original_stage": opportunity.current_stage}
                         )
                     else:
                         return PromotionResponse(
-                            success=False,
-                            message="Failed to update stage",
-                            opportunity_id=opportunity_id
+                            decision="failed",
+                            reason="Failed to update stage",
+                            current_score=opportunity.scoring.overall_score if opportunity.scoring else 0.5,
+                            target_stage=opportunity.current_stage,
+                            confidence_level=0.1,
+                            requires_manual_review=True,
+                            promotion_metadata={"error": "stage_update_failed"}
                         )
                 else:
                     return PromotionResponse(
-                        success=False,
-                        message=f"Already in final stage: {opportunity.current_stage}",
-                        new_stage=opportunity.current_stage,
-                        opportunity_id=opportunity_id
+                        decision="no_change",
+                        reason=f"Already in final stage: {opportunity.current_stage}",
+                        current_score=opportunity.scoring.overall_score if opportunity.scoring else 0.5,
+                        target_stage=opportunity.current_stage,
+                        confidence_level=0.8,
+                        requires_manual_review=False,
+                        promotion_metadata={"status": "already_at_target"}
                     )
         
         # Fallback to scoring service for complex promotion logic
@@ -5503,9 +5513,13 @@ async def promote_opportunity(profile_id: str, opportunity_id: str, request: Pro
     except Exception as e:
         logger.error(f"Error promoting opportunity {opportunity_id}: {e}")
         return PromotionResponse(
-            success=False,
-            message=str(e),
-            opportunity_id=opportunity_id
+            decision="error",
+            reason=f"System error: {str(e)}",
+            current_score=0.0,
+            target_stage="unknown",
+            confidence_level=0.0,
+            requires_manual_review=True,
+            promotion_metadata={"error": str(e), "error_type": type(e).__name__}
         )
 
 @app.post("/api/profiles/{profile_id}/opportunities/{opportunity_id}/evaluate", response_model=PromotionResponse)
