@@ -105,21 +105,58 @@ class UnifiedDiscoveryAdapter:
                     result, profile_id, session_id
                 )
                 
-                # Check for duplicates by organization name + EIN
+                # Enhanced duplicate detection
                 existing_opportunities = self.unified_service.get_profile_opportunities(profile_id)
                 
                 is_duplicate = False
+                duplicate_reason = None
+                
                 for existing in existing_opportunities:
-                    if (existing.organization_name == opportunity.organization_name and 
-                        existing.ein == opportunity.ein and 
-                        existing.ein is not None):
-                        duplicates_skipped.append({
-                            "organization_name": opportunity.organization_name,
-                            "ein": opportunity.ein,
-                            "reason": "duplicate_by_ein_and_name"
-                        })
+                    # Method 1: Exact EIN match (most reliable)
+                    if (opportunity.ein and existing.ein and 
+                        opportunity.ein == existing.ein):
+                        duplicate_reason = "duplicate_by_ein"
                         is_duplicate = True
                         break
+                    
+                    # Method 2: Exact organization name match (case-insensitive)
+                    if (opportunity.organization_name and existing.organization_name and
+                        opportunity.organization_name.lower().strip() == existing.organization_name.lower().strip()):
+                        duplicate_reason = "duplicate_by_name"
+                        is_duplicate = True
+                        break
+                    
+                    # Method 3: Fuzzy name matching for similar organizations
+                    if (opportunity.organization_name and existing.organization_name):
+                        name1 = opportunity.organization_name.lower().strip()
+                        name2 = existing.organization_name.lower().strip()
+                        
+                        # Remove common suffixes/prefixes for comparison
+                        name1_clean = self._clean_org_name(name1)
+                        name2_clean = self._clean_org_name(name2)
+                        
+                        # Check for high similarity (>= 85% match)
+                        similarity = self._calculate_name_similarity(name1_clean, name2_clean)
+                        if similarity >= 0.85:
+                            duplicate_reason = f"duplicate_by_fuzzy_name_similarity_{similarity:.2f}"
+                            is_duplicate = True
+                            break
+                    
+                    # Method 4: Cross-source duplicate detection
+                    if (opportunity.organization_name and existing.organization_name and
+                        opportunity.source != existing.source and
+                        opportunity.organization_name.lower().strip() == existing.organization_name.lower().strip()):
+                        duplicate_reason = "duplicate_cross_source"
+                        is_duplicate = True
+                        break
+                
+                if is_duplicate:
+                    duplicates_skipped.append({
+                        "organization_name": opportunity.organization_name,
+                        "ein": opportunity.ein,
+                        "reason": duplicate_reason
+                    })
+                    self.logger.info(f"Skipping duplicate: {opportunity.organization_name} ({duplicate_reason})")
                 
                 if not is_duplicate:
                     # Check for auto-promotion before saving (to modify opportunity in-memory)
@@ -291,6 +328,75 @@ class UnifiedDiscoveryAdapter:
                 
         except Exception as e:
             self.logger.error(f"Failed to check auto-promotion for {opportunity.opportunity_id}: {e}")
+    
+    def _clean_org_name(self, name: str) -> str:
+        """Clean organization name for better duplicate detection"""
+        import re
+        
+        # Convert to lowercase and strip
+        name = name.lower().strip()
+        
+        # Remove common organizational suffixes
+        suffixes = [
+            r'\b(inc\.?|incorporated)\b',
+            r'\b(llc\.?|l\.l\.c\.?)\b',
+            r'\b(corp\.?|corporation)\b',
+            r'\b(ltd\.?|limited)\b',
+            r'\b(foundation|fund)\b',
+            r'\b(org\.?|organization)\b',
+            r'\b(assoc\.?|association)\b',
+            r'\b(inst\.?|institute)\b',
+            r'\b(center|centre)\b',
+            r'\b(society|soc\.?)\b',
+            r'\b(trust|company|co\.?)\b'
+        ]
+        
+        for suffix in suffixes:
+            name = re.sub(suffix, '', name).strip()
+        
+        # Remove extra whitespace and punctuation
+        name = re.sub(r'[^\w\s]', '', name)  # Remove punctuation
+        name = re.sub(r'\s+', ' ', name)     # Normalize whitespace
+        
+        return name.strip()
+    
+    def _calculate_name_similarity(self, name1: str, name2: str) -> float:
+        """Calculate similarity between two organization names using Levenshtein distance"""
+        if not name1 or not name2:
+            return 0.0
+        
+        if name1 == name2:
+            return 1.0
+        
+        # Simple character-based similarity calculation
+        # Using a basic approach since we want to avoid external dependencies
+        def levenshtein_distance(s1: str, s2: str) -> int:
+            if len(s1) < len(s2):
+                return levenshtein_distance(s2, s1)
+            
+            if len(s2) == 0:
+                return len(s1)
+            
+            previous_row = list(range(len(s2) + 1))
+            for i, c1 in enumerate(s1):
+                current_row = [i + 1]
+                for j, c2 in enumerate(s2):
+                    insertions = previous_row[j + 1] + 1
+                    deletions = current_row[j] + 1
+                    substitutions = previous_row[j] + (c1 != c2)
+                    current_row.append(min(insertions, deletions, substitutions))
+                previous_row = current_row
+            
+            return previous_row[-1]
+        
+        max_len = max(len(name1), len(name2))
+        if max_len == 0:
+            return 1.0
+        
+        distance = levenshtein_distance(name1, name2)
+        similarity = 1.0 - (distance / max_len)
+        
+        return max(0.0, similarity)
 
 
 # Singleton instance

@@ -24,38 +24,47 @@
     "F40"
   ],
   "created_at": "2025-08-10 14:40:01.485534",
-  "updated_at": "2025-08-19T05:32:55.390893",
+  "updated_at": "2025-08-19T17:53:12.604491",
   "analytics": {
-    "opportunity_count": 267,
+    "opportunity_count": 271,
     "stages_distribution": {
-      "discovery": 253,
-      "deep_analysis": 1,
+      "discovery": 256,
+      "deep_analysis": 2,
       "pre_scoring": 13
     },
     "scoring_stats": {
-      "avg_score": 0.641,
-      "high_potential_count": 30,
-      "auto_promotion_eligible": 36,
-      "last_scored": "2025-08-19T05:32:55.341484"
+      "avg_score": 0.643,
+      "high_potential_count": 32,
+      "auto_promotion_eligible": 38,
+      "last_scored": "2025-08-19T17:53:12.550784"
     },
     "discovery_stats": {
       "total_sessions": 3,
-      "last_discovery": "2025-08-19T05:32:55.340561",
-      "last_session_results": 1,
-      "avg_results_per_session": 89.0
+      "last_discovery": "2025-08-19T17:53:12.519289",
+      "last_session_results": 5,
+      "avg_results_per_session": 90.33333333333333
     },
     "promotion_stats": {
-      "total_promotions": 2,
-      "auto_promotions": 0,
+      "total_promotions": 3,
+      "auto_promotions": 1,
       "manual_promotions": 2,
       "promotion_rate": 0.01
     }
   },
   "recent_activity": [
     {
+      "type": "auto_promotion",
+      "date": "2025-08-19T17:53:12.549615",
+      "results": null,
+      "source": null,
+      "opportunity": "Norfolk Foundation Test 1755640392",
+      "from_stage": "discovery",
+      "to_stage": "deep_analysis"
+    },
+    {
       "type": "discovery_session",
       "date": "2025-08-19T12:00:00",
-      "results": 1,
+      "results": 5,
       "source": "Multiple Sources",
       "opportunity": null,
       "from_stage": null,
@@ -83,15 +92,6 @@
       "type": "discovery_session",
       "date": "2025-08-18T12:00:00",
       "results": 256,
-      "source": "Multiple Sources",
-      "opportunity": null,
-      "from_stage": null,
-      "to_stage": null
-    },
-    {
-      "type": "discovery_session",
-      "date": "2025-08-17T12:00:00",
-      "results": 10,
       "source": "Multiple Sources",
       "opportunity": null,
       "from_stage": null,

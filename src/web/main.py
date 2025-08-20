@@ -1565,6 +1565,9 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
                         "opportunity_id": opp.opportunity_id,
                         "organization_name": opp.organization_name,
                         "current_stage": opp.current_stage,
+                        "stage": opp.current_stage,  # For frontend compatibility
+                        "pipeline_stage": opp.current_stage,  # For frontend compatibility
+                        "funnel_stage": opp.current_stage,  # For frontend compatibility
                         "compatibility_score": opp.scoring.overall_score if opp.scoring else 0.0,
                         "auto_promotion_eligible": opp.scoring.auto_promotion_eligible if opp.scoring else False,
                         "discovered_at": opp.discovered_at,

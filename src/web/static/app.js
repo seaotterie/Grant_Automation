@@ -12051,7 +12051,7 @@ function catalynxApp() {
                     if (this.applicationStatusFilter) queryParams.set('application_status', this.applicationStatusFilter);
                     
                     const queryString = queryParams.toString();
-                    const url = `/api/funnel/${profileId}/opportunities${queryString ? '?' + queryString : ''}`;
+                    const url = `/api/profiles/${profileId}/opportunities${queryString ? '?' + queryString : ''}`;
                     
                     const response = await fetch(url);
                     if (response.ok) {
