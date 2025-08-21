@@ -5134,23 +5134,9 @@ function catalynxApp() {
             } finally {
                 this.opportunityLoading = false;
                 
-                // Set default tab based on origin
-                switch(origin) {
-                    case 'discover':
-                        this.modalActiveTab = 'discover';
-                        break;
-                    case 'plan':
-                        this.modalActiveTab = 'plan';
-                        break;
-                    case 'analyze':
-                        this.modalActiveTab = 'analyze';
-                        break;
-                    case 'examine':
-                        this.modalActiveTab = 'examine';
-                        break;
-                    default:
-                        this.modalActiveTab = 'overview'; // Default to overview tab
-                }
+                // Intelligent default tab selection
+                this.modalActiveTab = this._getDefaultTab(this.selectedOpportunity, origin);
+                console.log(`Modal opened with intelligent tab: ${this.modalActiveTab} (origin: ${origin}, stage: ${this.selectedOpportunity?.current_stage || this.selectedOpportunity?.stage})`);
                 
                 console.log('Modal opened with default tab:', this.modalActiveTab, 'based on origin:', origin);
             }
@@ -5165,66 +5151,228 @@ function catalynxApp() {
             console.log('Closing opportunity modal');
         },
 
-        // ENHANCED MODAL TAB VISIBILITY FUNCTIONS
-        hasDiscoverResults(opportunity) {
-            // Available if basic scoring exists (government scoring or any dimensional scores)
-            return opportunity && (
-                opportunity.combined_score !== undefined ||
-                opportunity.dimension_scores !== undefined ||
-                opportunity.government_score !== undefined ||
-                opportunity.overall_score !== undefined
+        // ENHANCED MODAL TAB VISIBILITY FUNCTIONS - STAGE-BASED
+        
+        // Tab configuration with data requirements
+        _tabConfigurations: {
+            discover: [
+                'combined_score', 'dimension_scores', 'government_score', 'overall_score'
+            ],
+            plan: [
+                'ai_lite_analyzed', 'compatibility_score', 'ai_analysis'
+            ],
+            analyze: [
+                'network_analyzed', 'success_analyzed', 'board_connections', 
+                'network_score', 'success_patterns'
+            ],
+            examine: [
+                'deep_ai_analyzed', 'ai_heavy_analysis', 'strategic_dossier', 
+                'intelligence_patterns'
+            ],
+            approach: [
+                'approach_strategy', 'competitive_analysis', 'implementation_strategy',
+                'strategic_approach'
+            ]
+        },
+        
+        // Stage-based tab visibility mapping
+        _stageBasedTabVisibility: {
+            'pre_scoring': ['discover'],
+            'scoring': ['discover', 'plan'], 
+            'analysis': ['discover', 'plan', 'analyze'],
+            'recommendations': ['discover', 'plan', 'analyze'],
+            'targets': ['discover', 'plan', 'analyze', 'examine']
+        },
+        
+        // Enhanced function to check if tab should be visible (stage-based + data-based)
+        _hasTabResults(opportunity, tabType) {
+            if (!opportunity) return false;
+            
+            // First, check if tab should be visible based on stage
+            const stage = opportunity.current_stage || opportunity.stage;
+            const stageVisibility = this._stageBasedTabVisibility[stage] || [];
+            
+            // If stage supports this tab, show it regardless of data
+            if (stageVisibility.includes(tabType)) {
+                return true;
+            }
+            
+            // Fallback to data-based visibility for edge cases
+            const requirements = this._tabConfigurations[tabType];
+            if (!requirements) return false;
+            
+            const hasData = requirements.some(field => 
+                opportunity[field] !== undefined && 
+                opportunity[field] !== null &&
+                opportunity[field] !== false
             );
+            
+            return hasData;
+        },
+        
+        // Helper function to check targets stage
+        _isTargetsStage(opportunity) {
+            if (!opportunity) return false;
+            return ['targets', 'target'].includes(opportunity.stage) ||
+                   ['targets', 'target'].includes(opportunity.current_stage);
+        },
+        
+        // Helper function to check opportunities stage
+        _isOpportunitiesStage(opportunity) {
+            if (!opportunity) return false;
+            return ['opportunities', 'opportunity'].includes(opportunity.stage) ||
+                   ['opportunities', 'opportunity'].includes(opportunity.current_stage);
+        },
+        
+        // Helper functions for all 5 stages
+        _isProspectsStage(opportunity) {
+            if (!opportunity) return false;
+            return ['prospects', 'prospect', 'pre_scoring'].includes(opportunity.stage) ||
+                   ['prospects', 'prospect', 'pre_scoring'].includes(opportunity.current_stage);
+        },
+        
+        _isQualifiedStage(opportunity) {
+            if (!opportunity) return false;
+            return ['qualified', 'scoring'].includes(opportunity.stage) ||
+                   ['qualified', 'scoring'].includes(opportunity.current_stage);
+        },
+        
+        _isCandidateStage(opportunity) {
+            if (!opportunity) return false;
+            return ['candidates', 'candidate', 'analysis'].includes(opportunity.stage) ||
+                   ['candidates', 'candidate', 'analysis'].includes(opportunity.current_stage);
+        },
+        
+        // Helper function to check if tab has actual data (for display logic)
+        _hasTabData(opportunity, tabType) {
+            if (!opportunity) return false;
+            
+            const requirements = this._tabConfigurations[tabType];
+            if (!requirements) return false;
+            
+            return requirements.some(field => 
+                opportunity[field] !== undefined && 
+                opportunity[field] !== null &&
+                opportunity[field] !== false
+            );
+        },
+        
+        // Enhanced content state system for 5-stage alignment
+        _getTabContentState(opportunity, tabType) {
+            if (!opportunity) return 'waiting';
+            
+            // Check if tab has completed data
+            const hasData = this._hasTabData(opportunity, tabType);
+            if (hasData) return 'completed';
+            
+            // Determine if tab is ready based on 5-stage progression
+            const stage = opportunity.current_stage || opportunity.stage;
+            const stageProgression = ['prospects', 'qualified', 'candidates', 'targets', 'opportunities'];
+            const tabStageMapping = {
+                'discover': 'prospects',
+                'plan': 'qualified', 
+                'analyze': 'candidates',
+                'examine': 'targets',
+                'approach': 'opportunities'
+            };
+            
+            const requiredStage = tabStageMapping[tabType];
+            if (!requiredStage) return 'waiting';
+            
+            const currentStageIndex = stageProgression.indexOf(stage);
+            const requiredStageIndex = stageProgression.indexOf(requiredStage);
+            
+            // If current stage meets or exceeds required stage, tab is current/ready
+            if (currentStageIndex >= requiredStageIndex) return 'current';
+            
+            // Otherwise, waiting for previous stages
+            return 'waiting';
+        },
+        
+        // Intelligent default tab selection based on stage and data availability
+        _getDefaultTab(opportunity, origin) {
+            if (!opportunity) return 'overview';
+            
+            // Priority 1: Use origin if specified and tab is available
+            if (origin && origin !== 'overview' && this._hasTabResults(opportunity, origin)) {
+                return origin;
+            }
+            
+            // Priority 2: Stage-based intelligent defaults for 5-stage system
+            const stage = opportunity.current_stage || opportunity.stage;
+            const stageMapping = {
+                // DISCOVER - Prospects stage
+                'prospects': 'discover',
+                'prospect': 'discover', 
+                'pre_scoring': 'discover',
+                // PLAN - Qualified stage
+                'qualified': 'plan',
+                'scoring': 'plan',
+                // ANALYZE - Candidates stage  
+                'candidates': 'analyze',
+                'candidate': 'analyze',
+                'analysis': 'analyze',
+                // EXAMINE - Targets stage
+                'targets': 'examine',
+                'target': 'examine',
+                // APPROACH - Opportunities stage
+                'opportunities': 'approach',
+                'opportunity': 'approach'
+            };
+            
+            const suggestedTab = stageMapping[stage];
+            if (suggestedTab && this._hasTabResults(opportunity, suggestedTab)) {
+                return suggestedTab;
+            }
+            
+            // Priority 3: First available tab with data
+            const tabPriority = ['examine', 'analyze', 'plan', 'discover'];
+            for (const tab of tabPriority) {
+                if (this._hasTabResults(opportunity, tab)) {
+                    return tab;
+                }
+            }
+            
+            // Priority 4: First available tab based on stage (even without data)
+            if (suggestedTab && this._hasTabResults(opportunity, suggestedTab)) {
+                return suggestedTab;
+            }
+            
+            // Fallback: Overview
+            return 'overview';
+        },
+        
+        // Get first available tab for edge cases
+        _getFirstAvailableTab(opportunity) {
+            const tabs = ['discover', 'plan', 'analyze', 'examine'];
+            for (const tab of tabs) {
+                if (this._hasTabResults(opportunity, tab)) {
+                    return tab;
+                }
+            }
+            return 'overview';
+        },
+        
+        // Public interface functions
+        hasDiscoverResults(opportunity) {
+            return this._hasTabResults(opportunity, 'discover');
         },
 
         hasPlanResults(opportunity) {
-            // Available if AI Lite analysis completed (compatibility score exists)
-            return opportunity && (
-                opportunity.ai_lite_analyzed === true ||
-                opportunity.compatibility_score !== undefined ||
-                opportunity.ai_analysis !== undefined ||
-                this.getAICompatibilityScore(opportunity) !== null
-            );
+            return this._hasTabResults(opportunity, 'plan') ||
+                   this.getAICompatibilityScore(opportunity) !== null;
         },
 
         hasAnalyzeResults(opportunity) {
-            // Available if network analysis or success scoring completed
-            return opportunity && (
-                opportunity.network_analyzed === true ||
-                opportunity.success_analyzed === true ||
-                opportunity.board_connections !== undefined ||
-                opportunity.network_score !== undefined ||
-                opportunity.success_patterns !== undefined
-            );
+            return this._hasTabResults(opportunity, 'analyze');
         },
 
         hasExamineResults(opportunity) {
-            // Available if AI Heavy analysis completed OR opportunity is at targets stage
-            if (!opportunity) {
-                console.log('hasExamineResults: No opportunity provided');
-                return false;
-            }
-            
-            const hasAI = opportunity.deep_ai_analyzed === true ||
-                         opportunity.ai_heavy_analysis !== undefined ||
-                         opportunity.strategic_dossier !== undefined ||
-                         opportunity.intelligence_patterns !== undefined;
-            
-            // Check for targets stage with multiple possible values
-            const isTargets = opportunity.stage === 'targets' || 
-                             opportunity.stage === 'target' ||
-                             opportunity.current_stage === 'targets' ||
-                             opportunity.current_stage === 'target';
-            
-            console.log('hasExamineResults enhanced check:', {
-                stage: opportunity.stage,
-                current_stage: opportunity.current_stage,
-                isTargets: isTargets,
-                hasAI: hasAI,
-                result: hasAI || isTargets,
-                fullOpportunity: opportunity
-            });
-            
-            return hasAI || isTargets;
+            return this._hasTabResults(opportunity, 'examine');
+        },
+
+        hasApproachResults(opportunity) {
+            return this._hasTabResults(opportunity, 'approach');
         },
 
         // MISSING FUNCTION PLACEHOLDERS (to fix Alpine.js errors)
@@ -5311,15 +5459,13 @@ function catalynxApp() {
 
         getProcessorCount(opportunity) {
             if (!opportunity) return 0;
-            let count = 0;
             
-            // Count completed processors
-            if (this.hasDiscoverResults(opportunity)) count++;
-            if (this.hasPlanResults(opportunity)) count++;
-            if (this.hasAnalyzeResults(opportunity)) count++;
-            if (this.hasExamineResults(opportunity)) count++;
-            
-            return count;
+            // Use tab visibility functions for consistent counting
+            const tabs = ['discover', 'plan', 'analyze', 'examine'];
+            return tabs.reduce((count, tab) => {
+                const methodName = `has${tab.charAt(0).toUpperCase()}${tab.slice(1)}Results`;
+                return count + (this[methodName](opportunity) ? 1 : 0);
+            }, 0);
         },
 
         getNetworkScore(opportunity) {
