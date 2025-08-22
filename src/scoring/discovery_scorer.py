@@ -20,6 +20,11 @@ from enum import Enum
 import logging
 
 from src.profiles.models import OrganizationProfile
+from src.core.unified_scorer_interface import (
+    UnifiedScorerInterface, ScorerType, WorkflowStage, 
+    ScoringDimension, ScoringResult as UnifiedScoringResult,
+    ScoringContext, scorer_factory
+)
 
 logger = logging.getLogger(__name__)
 
@@ -63,10 +68,28 @@ class ScoringResult:
         return self.overall_score >= 0.75  # Lowered from 0.80 to catch more high-scoring opportunities
 
 
-class DiscoveryScorer:
+class DiscoveryScorer(UnifiedScorerInterface):
     """Unified discovery opportunity scoring engine"""
     
     def __init__(self):
+        super().__init__()
+        self.scorer_type = ScorerType.DISCOVERY
+        self.supported_stages = [WorkflowStage.DISCOVER]
+        
+        # Define scoring dimensions with metadata
+        self.scoring_dimensions = [
+            ScoringDimension("base_compatibility", 0.35, "Core match between opportunity and profile", 
+                           "ntee_alignment_analysis", ["ntee_codes", "organization_name", "description"]),
+            ScoringDimension("strategic_alignment", 0.25, "Mission and program area alignment",
+                           "focus_area_matching", ["focus_areas", "mission_statement", "keywords"]),
+            ScoringDimension("geographic_advantage", 0.20, "Location-based competitive advantage",
+                           "geographic_proximity_analysis", ["state", "geographic_scope"]),
+            ScoringDimension("timing_score", 0.12, "Deadline urgency and preparation time",
+                           "deadline_analysis", ["application_deadline", "posting_date"]),
+            ScoringDimension("financial_viability", 0.08, "Award size vs organization capacity",
+                           "financial_capacity_matching", ["funding_amount", "total_revenue"])
+        ]
+        
         # Dimension weights optimized for discovery stage
         self.dimension_weights = {
             ScoringDimensions.BASE_COMPATIBILITY: 0.35,  # Most important at discovery
@@ -405,6 +428,139 @@ class DiscoveryScorer:
             completeness += 0.2
         
         return min(1.0, completeness)
+    
+    # Unified Interface Implementation
+    
+    async def score(self, 
+                   opportunity_data: Dict[str, Any],
+                   profile_data: Dict[str, Any], 
+                   context: ScoringContext) -> UnifiedScoringResult:
+        """
+        Unified interface score method with enhanced caching
+        
+        Args:
+            opportunity_data: Opportunity information to score
+            profile_data: Organization profile to score against
+            context: Scoring context and metadata
+            
+        Returns:
+            UnifiedScoringResult with standardized 0-1 score and metadata
+        """
+        start_time = datetime.now()
+        
+        try:
+            # Try to get cached result first
+            cached_result = await self.get_cached_score(opportunity_data, profile_data, context)
+            if cached_result:
+                processing_time = (datetime.now() - start_time).total_seconds() * 1000
+                self.update_performance_metrics(processing_time, cache_hit=True, error=False)
+                
+                # Convert cached result back to UnifiedScoringResult
+                return UnifiedScoringResult(
+                    overall_score=cached_result['overall_score'],
+                    dimension_scores=cached_result['dimension_scores'],
+                    confidence_level=cached_result['confidence_level'],
+                    metadata=cached_result['metadata'],
+                    scorer_type=self.scorer_type,
+                    workflow_stage=context.workflow_stage,
+                    scoring_timestamp=datetime.fromisoformat(cached_result['scoring_timestamp']),
+                    processing_time_ms=cached_result['processing_time_ms'],
+                    data_quality_score=cached_result['data_quality_score']
+                )
+            # Convert profile_data to OrganizationProfile if needed
+            if isinstance(profile_data, dict):
+                profile = OrganizationProfile(**profile_data)
+            else:
+                profile = profile_data
+            
+            # Use existing scoring method
+            result = await self.score_opportunity(
+                opportunity_data, profile, context.enhanced_data
+            )
+            
+            # Convert to unified result format
+            dimension_scores_dict = {dim.value: score for dim, score in result.dimension_scores.items()}
+            
+            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            
+            unified_result = UnifiedScoringResult(
+                overall_score=result.overall_score,
+                dimension_scores=dimension_scores_dict,
+                confidence_level=result.confidence_level,
+                metadata={
+                    **result.scoring_metadata,
+                    'boost_factors': result.boost_factors,
+                    'opportunity_type': result.scoring_metadata.get('opportunity_type'),
+                    'promotion_recommended': result.promotion_recommended,
+                    'auto_promotion_eligible': result.auto_promotion_threshold
+                },
+                scorer_type=self.scorer_type,
+                workflow_stage=context.workflow_stage,
+                scoring_timestamp=result.scored_at,
+                processing_time_ms=processing_time,
+                data_quality_score=result.scoring_metadata.get('data_completeness', 0.5)
+            )
+            
+            # Cache the result for future use
+            cache_success = await self.cache_score(opportunity_data, profile_data, context, unified_result)
+            
+            # Update performance metrics  
+            self.update_performance_metrics(processing_time, cache_hit=False, error=False)
+            
+            return unified_result
+            
+        except Exception as e:
+            logger.error(f"Error in unified scoring: {e}")
+            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            
+            # Update performance metrics with error
+            self.update_performance_metrics(processing_time, False, True)
+            
+            # Return error result
+            return UnifiedScoringResult(
+                overall_score=0.1,
+                dimension_scores={dim.name: 0.1 for dim in self.scoring_dimensions},
+                confidence_level=0.0,
+                metadata={'error': str(e)},
+                scorer_type=self.scorer_type,
+                workflow_stage=context.workflow_stage,
+                scoring_timestamp=datetime.now(),
+                processing_time_ms=processing_time,
+                data_quality_score=0.0
+            )
+    
+    def get_scoring_dimensions(self) -> List[ScoringDimension]:
+        """Get the scoring dimensions used by this scorer"""
+        return self.scoring_dimensions
+    
+    def validate_input_data(self, 
+                          opportunity_data: Dict[str, Any],
+                          profile_data: Dict[str, Any]) -> Tuple[bool, List[str]]:
+        """
+        Validate that required data is present for scoring
+        
+        Returns:
+            (is_valid, list_of_missing_fields)
+        """
+        missing_fields = []
+        
+        # Check required opportunity fields
+        required_opp_fields = ['organization_name', 'source_type']
+        for field in required_opp_fields:
+            if not opportunity_data.get(field):
+                missing_fields.append(f"opportunity.{field}")
+        
+        # Check required profile fields
+        required_profile_fields = ['profile_id', 'organization_name']
+        for field in required_profile_fields:
+            if isinstance(profile_data, dict):
+                if not profile_data.get(field):
+                    missing_fields.append(f"profile.{field}")
+            else:
+                if not hasattr(profile_data, field) or not getattr(profile_data, field):
+                    missing_fields.append(f"profile.{field}")
+        
+        return len(missing_fields) == 0, missing_fields
 
 
 def get_discovery_scorer() -> DiscoveryScorer:
@@ -412,3 +568,7 @@ def get_discovery_scorer() -> DiscoveryScorer:
     if not hasattr(get_discovery_scorer, '_instance'):
         get_discovery_scorer._instance = DiscoveryScorer()
     return get_discovery_scorer._instance
+
+
+# Register the scorer with the factory
+scorer_factory.register_scorer(ScorerType.DISCOVERY, DiscoveryScorer)

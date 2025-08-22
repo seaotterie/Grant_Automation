@@ -5,10 +5,16 @@ Multi-dimensional success scoring system with real-time updates
 """
 
 import numpy as np
+import asyncio
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from datetime import datetime
 import logging
+from src.core.unified_scorer_interface import (
+    UnifiedScorerInterface, ScorerType, WorkflowStage, 
+    ScoringDimension, ScoringResult as UnifiedScoringResult,
+    ScoringContext, scorer_factory
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +27,28 @@ class SuccessScore:
     score_breakdown: Dict[str, Any]
     last_updated: datetime
 
-class SuccessScorer:
-    """Advanced multi-dimensional success scoring system"""
+class SuccessScorer(UnifiedScorerInterface):
+    """Advanced multi-dimensional success scoring system with async processing"""
     
     def __init__(self):
+        super().__init__()
+        self.scorer_type = ScorerType.SUCCESS
+        self.supported_stages = [WorkflowStage.PLAN]
+        self._cache_ttl_hours = 48  # Success scores change less frequently
+        
+        # Define scoring dimensions with metadata
+        self.scoring_dimensions = [
+            ScoringDimension("financial_health", 0.25, "Financial stability and resource management",
+                           "revenue_analysis_and_trends", ["total_revenue", "net_assets", "expense_ratios"]),
+            ScoringDimension("organizational_capacity", 0.20, "Internal capabilities and infrastructure",
+                           "capacity_assessment", ["staff_size", "board_composition", "governance_structure"]), 
+            ScoringDimension("strategic_alignment", 0.20, "Mission alignment and strategic focus",
+                           "strategic_fit_analysis", ["mission_statement", "focus_areas", "program_areas"]),
+            ScoringDimension("network_influence", 0.20, "Network connections and influence",
+                           "network_analysis", ["board_connections", "partner_organizations", "stakeholder_network"]),
+            ScoringDimension("track_record", 0.15, "Historical performance and achievements", 
+                           "track_record_analysis", ["past_grants", "accomplishments", "recognition"])
+        ]
         # Scoring weights for different dimensions
         self.dimension_weights = {
             'financial_health': 0.25,
@@ -43,20 +67,44 @@ class SuccessScorer:
             'track_record': self._score_track_record
         }
     
-    def calculate_success_score(self, organization_data: Dict[str, Any]) -> SuccessScore:
+    async def calculate_success_score(self, organization_data: Dict[str, Any]) -> SuccessScore:
         """Calculate comprehensive success score"""
         dimension_scores = {}
         score_breakdown = {}
         
-        # Calculate score for each dimension
-        for dimension, weight in self.dimension_weights.items():
-            if dimension in self.scorers:
-                score, breakdown = self.scorers[dimension](organization_data)
-                dimension_scores[dimension] = score
-                score_breakdown[dimension] = breakdown
-            else:
-                dimension_scores[dimension] = 0.5  # Neutral score if no data
-                score_breakdown[dimension] = {"error": "No scoring algorithm available"}
+        # Create async tasks for parallel processing
+        async def score_dimension(dimension: str, weight: float):
+            try:
+                if dimension in self.scorers:
+                    # Convert sync functions to async by running in thread pool
+                    scorer_func = self.scorers[dimension]
+                    score, breakdown = await asyncio.get_event_loop().run_in_executor(
+                        None, scorer_func, organization_data
+                    )
+                    return dimension, score, breakdown
+                else:
+                    return dimension, 0.5, {"error": "No scoring algorithm available"}
+            except Exception as e:
+                logger.error(f"Error calculating {dimension} score: {e}")
+                return dimension, 0.0, {"error": str(e)}
+        
+        # Execute all scoring dimensions in parallel
+        tasks = [
+            score_dimension(dimension, weight) 
+            for dimension, weight in self.dimension_weights.items()
+        ]
+        
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Process results
+        for result in results:
+            if isinstance(result, Exception):
+                logger.error(f"Scoring task failed: {result}")
+                continue
+            
+            dimension, score, breakdown = result
+            dimension_scores[dimension] = score
+            score_breakdown[dimension] = breakdown
         
         # Calculate weighted overall score
         overall_score = sum(score * self.dimension_weights[dim] 
@@ -408,6 +456,156 @@ class SuccessScorer:
                 suggestions.append("Strengthen project management processes for better completion rates")
         
         return suggestions
+    
+    # Unified Interface Implementation
+    
+    async def score(self, 
+                   opportunity_data: Dict[str, Any],
+                   profile_data: Dict[str, Any], 
+                   context: ScoringContext) -> UnifiedScoringResult:
+        """
+        Unified interface score method with enhanced caching
+        
+        Args:
+            opportunity_data: Opportunity information to score
+            profile_data: Organization profile to score against
+            context: Scoring context and metadata
+            
+        Returns:
+            UnifiedScoringResult with standardized 0-1 score and metadata
+        """
+        start_time = datetime.now()
+        
+        try:
+            # Try to get cached result first
+            cached_result = await self.get_cached_score(opportunity_data, profile_data, context)
+            if cached_result:
+                processing_time = (datetime.now() - start_time).total_seconds() * 1000
+                self.update_performance_metrics(processing_time, cache_hit=True, error=False)
+                
+                # Convert cached result back to UnifiedScoringResult
+                return UnifiedScoringResult(
+                    overall_score=cached_result['overall_score'],
+                    dimension_scores=cached_result['dimension_scores'],
+                    confidence_level=cached_result['confidence_level'],
+                    metadata=cached_result['metadata'],
+                    scorer_type=self.scorer_type,
+                    workflow_stage=context.workflow_stage,
+                    scoring_timestamp=datetime.fromisoformat(cached_result['scoring_timestamp']),
+                    processing_time_ms=cached_result['processing_time_ms'],
+                    data_quality_score=cached_result['data_quality_score']
+                )
+            
+            # Calculate success score using organization data
+            organization_data = profile_data if isinstance(profile_data, dict) else profile_data.__dict__
+            success_result = await self.calculate_success_score(organization_data)
+            
+            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            
+            # Convert to unified result format
+            unified_result = UnifiedScoringResult(
+                overall_score=success_result.overall_score,
+                dimension_scores=success_result.dimension_scores,
+                confidence_level=success_result.confidence_level,
+                metadata={
+                    'score_breakdown': success_result.score_breakdown,
+                    'improvement_suggestions': success_result.improvement_suggestions,
+                    'last_updated': success_result.last_updated.isoformat(),
+                    'scorer_version': '2.0_async',
+                    'opportunity_context': opportunity_data.get('organization_name', 'unknown')
+                },
+                scorer_type=self.scorer_type,
+                workflow_stage=context.workflow_stage,
+                scoring_timestamp=datetime.now(),
+                processing_time_ms=processing_time,
+                data_quality_score=self._assess_data_quality(organization_data)
+            )
+            
+            # Cache the result for future use
+            cache_success = await self.cache_score(opportunity_data, profile_data, context, unified_result)
+            
+            # Update performance metrics  
+            self.update_performance_metrics(processing_time, cache_hit=False, error=False)
+            
+            return unified_result
+            
+        except Exception as e:
+            logger.error(f"Error in unified success scoring: {e}")
+            processing_time = (datetime.now() - start_time).total_seconds() * 1000
+            
+            # Update performance metrics with error
+            self.update_performance_metrics(processing_time, False, True)
+            
+            # Return error result
+            return UnifiedScoringResult(
+                overall_score=0.1,
+                dimension_scores={dim.name: 0.1 for dim in self.scoring_dimensions},
+                confidence_level=0.0,
+                metadata={'error': str(e)},
+                scorer_type=self.scorer_type,
+                workflow_stage=context.workflow_stage,
+                scoring_timestamp=datetime.now(),
+                processing_time_ms=processing_time,
+                data_quality_score=0.0
+            )
+    
+    def get_scoring_dimensions(self) -> List[ScoringDimension]:
+        """Get the scoring dimensions used by this scorer"""
+        return self.scoring_dimensions
+    
+    def validate_input_data(self, 
+                          opportunity_data: Dict[str, Any],
+                          profile_data: Dict[str, Any]) -> Tuple[bool, List[str]]:
+        """
+        Validate that required data is present for scoring
+        
+        Returns:
+            (is_valid, list_of_missing_fields)
+        """
+        missing_fields = []
+        
+        # Check required profile fields for success scoring
+        required_profile_fields = ['profile_id', 'organization_name']
+        for field in required_profile_fields:
+            if isinstance(profile_data, dict):
+                if not profile_data.get(field):
+                    missing_fields.append(f"profile.{field}")
+            else:
+                if not hasattr(profile_data, field) or not getattr(profile_data, field):
+                    missing_fields.append(f"profile.{field}")
+        
+        return len(missing_fields) == 0, missing_fields
+    
+    def _assess_data_quality(self, organization_data: Dict[str, Any]) -> float:
+        """Assess quality of organization data for success scoring"""
+        
+        quality_factors = []
+        
+        # Financial data completeness
+        financial_fields = ['total_revenue', 'net_assets', 'total_expenses']
+        financial_completeness = sum(1 for field in financial_fields if field in organization_data) / len(financial_fields)
+        quality_factors.append(financial_completeness * 0.3)
+        
+        # Organizational data completeness
+        org_fields = ['staff_size', 'board_size', 'years_in_operation']
+        org_completeness = sum(1 for field in org_fields if field in organization_data) / len(org_fields)
+        quality_factors.append(org_completeness * 0.3)
+        
+        # Strategic data completeness
+        strategic_fields = ['mission_statement', 'focus_areas', 'ntee_codes']
+        strategic_completeness = sum(1 for field in strategic_fields if field in organization_data) / len(strategic_fields)
+        quality_factors.append(strategic_completeness * 0.2)
+        
+        # Network data availability
+        network_fields = ['board_connections', 'partner_organizations']
+        network_completeness = sum(1 for field in network_fields if field in organization_data) / len(network_fields)
+        quality_factors.append(network_completeness * 0.2)
+        
+        return sum(quality_factors)
+
 
 # Global success scorer instance
 success_scorer = SuccessScorer()
+
+# Register the scorer with the factory
+scorer_factory.register_scorer(ScorerType.SUCCESS, SuccessScorer)
