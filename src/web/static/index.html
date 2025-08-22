@@ -7372,6 +7372,22 @@
                                         </div>
                                     </div>
                                 </div>
+                                
+                                <!-- Decision Synthesis Section -->
+                                <div class="bg-blue-100 dark:bg-blue-900/30 rounded p-3 mt-4">
+                                    <h5 class="font-medium text-blue-800 dark:text-blue-200 text-sm mb-3">AI Decision Synthesis</h5>
+                                    <p class="text-xs text-blue-700 dark:text-blue-300 mb-3">
+                                        Generate comprehensive decision analysis using Phase 6 AI synthesis framework
+                                    </p>
+                                    <button @click="synthesizeDecision(selectedOpportunity)"
+                                            :disabled="!selectedProfile || isProcessing"
+                                            class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                                        </svg>
+                                        Generate Decision Synthesis
+                                    </button>
+                                </div>
                                 </div> <!-- End Data Available State -->
                                 
                                 <!-- Waiting for Previous Stage State -->
@@ -7461,6 +7477,16 @@
                                 </svg>
                                 Re-calculating...
                             </span>
+                        </button>
+                        
+                        <!-- Phase 6 Comprehensive Export Button -->
+                        <button @click="openExportDialog(selectedOpportunity)"
+                                :disabled="isProcessing || !selectedProfile"
+                                class="inline-flex items-center px-6 py-2.5 border border-purple-300 dark:border-purple-600 text-sm font-medium rounded-md text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Export
                         </button>
                     </div>
                     
@@ -8557,6 +8583,94 @@
                             type="button"
                             class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
                         Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Phase 6 Comprehensive Export Modal -->
+    <div x-show="showExportModal" x-cloak 
+         class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" 
+         @click.self="showExportModal = false">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+            <div class="mt-3">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Comprehensive Export</h3>
+                    <button @click="showExportModal = false" 
+                            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- Export Format Selection -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Export Format</label>
+                        <select x-model="exportConfig.format" 
+                                class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm">
+                            <option value="pdf">PDF Report</option>
+                            <option value="excel">Excel Workbook</option>
+                            <option value="powerpoint">PowerPoint Presentation</option>
+                            <option value="html">HTML Report</option>
+                            <option value="json">JSON Data</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Template Selection -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Template</label>
+                        <select x-model="exportConfig.template" 
+                                class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm">
+                            <option value="executive">Executive Summary</option>
+                            <option value="technical">Technical Analysis</option>
+                            <option value="presentation">Presentation</option>
+                            <option value="minimal">Minimal</option>
+                            <option value="comprehensive">Comprehensive</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Content Options -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Include Content</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" x-model="exportConfig.includeAnalytics" 
+                                       class="rounded border-gray-300 dark:border-gray-600 mr-2">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Analytics & Metrics</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" x-model="exportConfig.includeVisualization" 
+                                       class="rounded border-gray-300 dark:border-gray-600 mr-2">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Charts & Visualizations</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" x-model="exportConfig.includeDecisionSynthesis" 
+                                       class="rounded border-gray-300 dark:border-gray-600 mr-2">
+                                <span class="text-sm text-gray-700 dark:text-gray-300">Decision Synthesis</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button @click="showExportModal = false" 
+                            class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+                        Cancel
+                    </button>
+                    <button @click="executeComprehensiveExport()" 
+                            :disabled="exportInProgress"
+                            class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span x-show="!exportInProgress">Export</span>
+                        <span x-show="exportInProgress" class="flex items-center">
+                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Exporting...
+                        </span>
                     </button>
                 </div>
             </div>

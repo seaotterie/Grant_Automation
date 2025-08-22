@@ -22,7 +22,7 @@ import openai
 from pydantic import BaseModel, Field
 from enum import Enum
 
-from src.core.base_processor import BaseProcessor
+from src.core.base_processor import BaseProcessor, ProcessorMetadata
 from .grant_package_generator import GrantPackageGenerator, ApplicationPackage
 
 logger = logging.getLogger(__name__)
@@ -283,10 +283,19 @@ class AIHeavyResearcher(BaseProcessor):
     """AI Heavy research processor for comprehensive target intelligence"""
     
     def __init__(self):
-        super().__init__()
-        self.processor_name = "AI Heavy Researcher"
-        self.description = "Phase 3 Enhanced: Intelligent categorization with ML-based research optimization and predictive insights"
-        self.version = "2.0.0"
+        # Create metadata for base processor
+        metadata = ProcessorMetadata(
+            name="ai_heavy_researcher",
+            description="Phase 3 Enhanced: Intelligent categorization with ML-based research optimization and predictive insights",
+            version="2.0.0",
+            dependencies=[],
+            estimated_duration=120,
+            requires_network=True,
+            requires_api_key=True,
+            can_run_parallel=True,
+            processor_type="analysis"
+        )
+        super().__init__(metadata)
         
         # Strategic analysis settings
         self.model = "gpt-4"  # Premium model for sophisticated analysis

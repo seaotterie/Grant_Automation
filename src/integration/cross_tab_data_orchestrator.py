@@ -414,8 +414,8 @@ class CrossTabDataOrchestrator(BaseProcessor):
                     discover_state.active_organizations.add(opp_match.get("organization"))
         
         # RESEARCH tab data
-        if workflow_state.has_processor_succeeded('ai_lite_researcher'):
-            research_data = workflow_state.get_processor_data('ai_lite_researcher')
+        if workflow_state.has_processor_succeeded('ai_lite_scorer'):
+            research_data = workflow_state.get_processor_data('ai_lite_scorer')
             if research_data:
                 research_state = self.tab_states[TabContext.RESEARCH]
                 research_state.cached_data["research_insights"] = research_data.get("research_insights", {})

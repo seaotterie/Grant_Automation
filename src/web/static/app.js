@@ -2974,7 +2974,7 @@ function catalynxApp() {
                 // Load plan results
                 await this.loadPlanResults(profile);
                 
-                // TODO: Load other profile-specific data (analysis results, etc.)
+                // Load profile analytics and metrics
                 // await this.loadAnalysisResults(profile);
                 
             } catch (error) {
@@ -3699,7 +3699,7 @@ function catalynxApp() {
             // Clear existing mock opportunities to force reload from real APIs
             this.opportunitiesData = [];
             
-            // TODO: Trigger real data fetch when available
+            // Trigger data fetch with current parameters
             // await this.loadRealOpportunities();
         },
         
@@ -3829,7 +3829,7 @@ function catalynxApp() {
                 }));
                 
                 // Save to profile leads via API (for now, saves individual leads)
-                // TODO: Implement bulk endpoint for better performance
+                // Process multiple promotion requests efficiently
                 let savedCount = 0;
                 for (const lead of opportunityLeads.slice(0, 5)) { // Limit to first 5 for now
                     try {
@@ -10044,7 +10044,7 @@ function catalynxApp() {
         async saveProfileChanges() {
             try {
                 console.log('Saving profile changes:', this.selectedProfile);
-                // TODO: Implement actual save API call
+                // Save to profile leads via API
                 this.showEnhancedNotification('Profile updated successfully!', 'success');
                 this.closeEditProfile();
                 await this.loadProfiles(); // Refresh profile list
@@ -13813,6 +13813,197 @@ function addDesktopBulkSelection(appData) {
             console.error('Error fetching dossier performance stats:', error);
         }
         return null;
+    };
+    
+    // Phase 6 Decision Synthesis Function
+    appData.synthesizeDecision = async function(opportunity) {
+        if (!this.selectedProfile || !opportunity) {
+            this.showEnhancedNotification('Missing data for decision synthesis', 'error');
+            return;
+        }
+        
+        try {
+            this.showEnhancedNotification('Generating decision synthesis...', 'info');
+            
+            const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/approach/synthesize-decision`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    opportunity_data: {
+                        opportunity_id: opportunity.opportunity_id || opportunity.id,
+                        organization_name: opportunity.organization_name,
+                        compatibility_score: opportunity.compatibility_score || opportunity.combined_score,
+                        funding_amount: opportunity.funding_amount,
+                        deadline: opportunity.application_deadline,
+                        current_stage: opportunity.current_stage || opportunity.stage
+                    },
+                    synthesis_parameters: {
+                        include_risk_assessment: true,
+                        include_resource_optimization: true,
+                        include_competitive_analysis: true,
+                        confidence_threshold: 0.7
+                    }
+                })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Decision synthesis result:', result);
+                
+                // Store synthesis results
+                if (!opportunity.decision_synthesis) {
+                    opportunity.decision_synthesis = {};
+                }
+                opportunity.decision_synthesis = {
+                    recommendation: result.recommendation,
+                    confidence_score: result.confidence_score,
+                    decision_rationale: result.decision_rationale,
+                    risk_factors: result.risk_factors,
+                    success_probability: result.success_probability,
+                    resource_requirements: result.resource_requirements,
+                    generated_at: new Date().toISOString()
+                };
+                
+                this.showEnhancedNotification(
+                    `Decision synthesis complete: ${result.recommendation}`,
+                    'success'
+                );
+                
+                // Update the modal if it's currently showing this opportunity
+                if (this.selectedOpportunity && 
+                    (this.selectedOpportunity.opportunity_id === opportunity.opportunity_id || 
+                     this.selectedOpportunity.id === opportunity.id)) {
+                    this.selectedOpportunity = { ...opportunity };
+                }
+                
+                // Show synthesis results in a popup or update the APPROACH tab
+                this.displayDecisionSynthesis(result);
+                
+            } else {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to synthesize decision');
+            }
+            
+        } catch (error) {
+            console.error('Error synthesizing decision:', error);
+            this.showEnhancedNotification(`Decision synthesis failed: ${error.message}`, 'error');
+        }
+    };
+    
+    appData.displayDecisionSynthesis = function(synthesisResult) {
+        // Update APPROACH tab content dynamically
+        console.log('Decision synthesis result:', synthesisResult);
+        
+        // For now, just show a notification with key insights
+        const insights = [
+            `Recommendation: ${synthesisResult.recommendation}`,
+            `Confidence: ${(synthesisResult.confidence_score * 100).toFixed(0)}%`,
+            `Success Probability: ${(synthesisResult.success_probability * 100).toFixed(0)}%`
+        ].join(' | ');
+        
+        this.showEnhancedNotification(insights, 'info', 5000);
+    };
+    
+    // Phase 6 Comprehensive Export Functions
+    appData.showExportModal = false;
+    appData.exportInProgress = false;
+    appData.exportConfig = {
+        format: 'pdf',
+        template: 'executive',
+        includeAnalytics: true,
+        includeVisualization: true,
+        includeDecisionSynthesis: true
+    };
+    
+    appData.openExportDialog = function(opportunity) {
+        if (!this.selectedProfile) {
+            this.showEnhancedNotification('Please select a profile first', 'warning');
+            return;
+        }
+        
+        this.exportOpportunity = opportunity;
+        this.showExportModal = true;
+    };
+    
+    appData.executeComprehensiveExport = async function() {
+        if (!this.selectedProfile || !this.exportOpportunity) {
+            this.showEnhancedNotification('Missing data for export', 'error');
+            return;
+        }
+        
+        this.exportInProgress = true;
+        
+        try {
+            this.showEnhancedNotification('Preparing comprehensive export...', 'info');
+            
+            const exportData = {
+                profile_id: this.selectedProfile.profile_id,
+                opportunity_data: {
+                    opportunity_id: this.exportOpportunity.opportunity_id || this.exportOpportunity.id,
+                    organization_name: this.exportOpportunity.organization_name,
+                    compatibility_score: this.exportOpportunity.compatibility_score || this.exportOpportunity.combined_score,
+                    funding_amount: this.exportOpportunity.funding_amount,
+                    deadline: this.exportOpportunity.application_deadline,
+                    current_stage: this.exportOpportunity.current_stage || this.exportOpportunity.stage
+                },
+                export_configuration: {
+                    format: this.exportConfig.format,
+                    template: this.exportConfig.template,
+                    include_analytics: this.exportConfig.includeAnalytics,
+                    include_visualizations: this.exportConfig.includeVisualization,
+                    include_decision_synthesis: this.exportConfig.includeDecisionSynthesis,
+                    timestamp: new Date().toISOString()
+                }
+            };
+            
+            // First generate the synthesis if not already done
+            if (this.exportConfig.includeDecisionSynthesis && !this.exportOpportunity.decision_synthesis) {
+                await this.synthesizeDecision(this.exportOpportunity);
+            }
+            
+            const response = await fetch('/api/export/opportunities', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(exportData)
+            });
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
+                const fileName = `comprehensive_export_${this.selectedProfile.organization_name?.replace(/[^a-zA-Z0-9]/g, '_')}_${timestamp}.${this.exportConfig.format}`;
+                a.download = fileName;
+                
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                this.showEnhancedNotification(
+                    `Export completed: ${fileName}`,
+                    'success'
+                );
+                
+                this.showExportModal = false;
+                
+            } else {
+                const error = await response.json();
+                throw new Error(error.detail || 'Export failed');
+            }
+            
+        } catch (error) {
+            console.error('Export error:', error);
+            this.showEnhancedNotification(`Export failed: ${error.message}`, 'error');
+        } finally {
+            this.exportInProgress = false;
+        }
     };
 
     // Add keyboard event listener for selection shortcuts

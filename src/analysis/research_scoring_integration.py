@@ -23,7 +23,7 @@ from pathlib import Path
 
 from .ai_research_platform import AIResearchPlatform, ResearchReport, ReportFormat
 from .grant_team_templates import GrantTeamTemplates, DecisionCategory, RiskLevel
-from ..processors.ai_lite_scorer import AILiteScorer
+from ..processors.analysis.ai_lite_scorer import AILiteScorer
 
 logger = logging.getLogger(__name__)
 

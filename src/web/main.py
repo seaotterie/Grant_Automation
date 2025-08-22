@@ -31,17 +31,17 @@ from src.web.models.responses import DashboardStats, WorkflowResponse, SystemSta
 from src.profiles.service import ProfileService
 from src.profiles.unified_service import get_unified_profile_service
 from src.discovery.unified_discovery_adapter import get_unified_discovery_adapter
-# from src.profiles.entity_service import get_entity_profile_service  # Commented out due to import issues
+from src.profiles.entity_service import get_entity_profile_service
 from src.profiles.models import OrganizationProfile, FundingType
 from src.profiles.workflow_integration import ProfileWorkflowIntegrator
 from src.profiles.metrics_tracker import get_metrics_tracker
-# from src.discovery.entity_discovery_service import get_entity_discovery_service  # Commented out due to import issues
+from src.discovery.entity_discovery_service import get_entity_discovery_service
 from src.discovery.discovery_engine import discovery_engine
 from src.pipeline.pipeline_engine import ProcessingPriority
 from src.pipeline.resource_allocator import resource_allocator
 from src.processors.registry import get_processor_summary
 from src.processors.lookup.ein_lookup import EINLookupProcessor
-# from src.processors.analysis.ai_service_manager import get_ai_service_manager
+from src.processors.analysis.ai_service_manager import get_ai_service_manager
 from src.web.services.scoring_service import (
     get_scoring_service, ScoreRequest, ScoreResponse, 
     PromotionRequest, PromotionResponse, BulkPromotionRequest, BulkPromotionResponse
@@ -126,8 +126,8 @@ progress_service = ProgressService()
 profile_service = ProfileService()
 unified_service = get_unified_profile_service()
 unified_discovery_adapter = get_unified_discovery_adapter()
-# entity_profile_service = get_entity_profile_service()  # Enhanced entity-based service - Commented out due to import issues
-# entity_discovery_service = get_entity_discovery_service()  # Enhanced discovery service - Commented out due to import issues
+entity_profile_service = get_entity_profile_service()  # Enhanced entity-based service
+entity_discovery_service = get_entity_discovery_service()  # Enhanced discovery service
 profile_integrator = ProfileWorkflowIntegrator()
 metrics_tracker = get_metrics_tracker()
 

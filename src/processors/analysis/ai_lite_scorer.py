@@ -21,7 +21,7 @@ import openai
 from pydantic import BaseModel, Field
 from enum import Enum
 
-from src.core.base_processor import BaseProcessor
+from src.core.base_processor import BaseProcessor, ProcessorMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -117,10 +117,19 @@ class AILiteScorer(BaseProcessor):
     """AI Lite scoring processor for cost-effective candidate analysis"""
     
     def __init__(self):
-        super().__init__()
-        self.processor_name = "AI Lite Scorer"
-        self.description = "Cost-effective AI analysis for candidate prioritization"
-        self.version = "1.0.0"
+        # Create metadata for base processor
+        metadata = ProcessorMetadata(
+            name="ai_lite_scorer",
+            description="Cost-effective AI analysis for candidate prioritization",
+            version="1.0.0",
+            dependencies=[],
+            estimated_duration=30,
+            requires_network=True,
+            requires_api_key=True,
+            can_run_parallel=True,
+            processor_type="analysis"
+        )
+        super().__init__(metadata)
         
         # Cost optimization settings
         self.batch_size = 15  # Optimal batch size for cost/performance

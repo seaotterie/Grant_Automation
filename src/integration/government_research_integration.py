@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from src.core.base_processor import BaseProcessor, ProcessorMetadata
 from src.core.data_models import ProcessorConfig, ProcessorResult, OrganizationProfile
 from src.core.government_models import GovernmentOpportunity, GovernmentOpportunityMatch
-from src.analysis.ai_lite_researcher import AILiteResearcher
+from src.processors.analysis.ai_lite_scorer import AILiteScorer
 from src.analysis.ai_heavy_dossier_builder import AIHeavyDossierBuilder
 
 
@@ -150,7 +150,7 @@ class GovernmentResearchIntegration(BaseProcessor):
             name="government_research_integration",
             description="Government-specific research and compliance intelligence",
             version="1.0.0",
-            dependencies=["ai_lite_researcher", "workflow_aware_government_scorer"],
+            dependencies=["ai_lite_scorer", "workflow_aware_government_scorer"],
             estimated_duration=180,  # 3 minutes for comprehensive government research
             requires_network=True,   # For agency intelligence updates
             requires_api_key=True,   # For enhanced research capabilities
@@ -159,7 +159,7 @@ class GovernmentResearchIntegration(BaseProcessor):
         super().__init__(metadata)
         
         # Initialize research components
-        self.ai_lite_researcher = AILiteResearcher()
+        self.ai_lite_scorer = AILiteScorer()
         self.ai_heavy_dossier = AIHeavyDossierBuilder()
         
         # Government agency database

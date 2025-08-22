@@ -19,7 +19,7 @@ from src.core.base_processor import BaseProcessor, ProcessorMetadata
 from src.core.data_models import ProcessorConfig, ProcessorResult, OrganizationProfile
 from src.core.government_models import GovernmentOpportunity, GovernmentOpportunityMatch
 from src.processors.analysis.government_opportunity_scorer import GovernmentOpportunityScorerProcessor
-from src.analysis.ai_lite_researcher import AILiteResearcher
+from src.processors.analysis.ai_lite_scorer import AILiteScorer
 from src.analysis.ai_heavy_dossier_builder import AIHeavyDossierBuilder
 
 
@@ -123,7 +123,7 @@ class WorkflowAwareGovernmentScorer(BaseProcessor):
         
         # Initialize base scorer and research components
         self.base_scorer = GovernmentOpportunityScorerProcessor()
-        self.ai_lite_researcher = AILiteResearcher()
+        self.ai_lite_scorer = AILiteScorer()
         self.ai_heavy_dossier = AIHeavyDossierBuilder()
         
         # Workflow-aware scoring weights

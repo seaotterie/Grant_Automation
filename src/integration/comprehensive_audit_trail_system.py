@@ -421,7 +421,7 @@ class ComprehensiveAuditTrailSystem(BaseProcessor):
                 "max_memory_usage_mb": 256,
                 "expected_success_rate": 0.95
             },
-            "ai_lite_researcher": {
+            "ai_lite_scorer": {
                 "avg_execution_time_ms": 5000,
                 "max_memory_usage_mb": 512,
                 "expected_success_rate": 0.90
