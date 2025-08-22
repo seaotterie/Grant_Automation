@@ -688,18 +688,7 @@
                         </div>
                         
                         <!-- Discovery Tracks -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-                            <div class="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="font-medium text-teal-900 dark:text-teal-100">BMF Filter</h5>
-                                    <button @click="runDiscoveryTrack('bmf')" :disabled="discoveryProgress.bmf"
-                                            class="text-xs bg-teal-600 hover:bg-teal-700 disabled:bg-gray-400 text-white px-2 py-1 rounded">
-                                        <span x-show="!discoveryProgress.bmf">Run</span>
-                                        <span x-show="discoveryProgress.bmf">Running...</span>
-                                    </button>
-                                </div>
-                                <p class="text-sm text-teal-700 dark:text-teal-300">IRS master database</p>
-                            </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-blue-900 dark:text-blue-100">Nonprofits</h5>
@@ -709,7 +698,7 @@
                                         <span x-show="discoveryProgress.nonprofit">Running...</span>
                                     </button>
                                 </div>
-                                <p class="text-sm text-blue-700 dark:text-blue-300">990 & 990-PF analysis</p>
+                                <p class="text-sm text-blue-700 dark:text-blue-300">NTEE + BMF + 990 data</p>
                             </div>
                             <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
                                 <div class="flex items-center justify-between mb-2">

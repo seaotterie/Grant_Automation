@@ -2898,9 +2898,8 @@ function catalynxApp() {
             this.opportunitiesData = [];
             this.planData = {};
             this.discoveryStats = {
-                activeTracks: 5,
+                activeTracks: 4,
                 totalResults: 0,
-                bmf: 0,
                 nonprofit: 0,
                 federal: 0,
                 state: 0,
@@ -3213,7 +3212,6 @@ function catalynxApp() {
         
         // Discovery progress tracking
         discoveryProgress: {
-            bmf: false,
             nonprofit: false,
             federal: false,
             state: false,
@@ -4050,9 +4048,6 @@ function catalynxApp() {
 
             try {
                 switch(track) {
-                    case 'bmf':
-                        await this.executeBMFFilter();
-                        break;
                     case 'nonprofit':
                         await this.runNonprofitDiscovery();
                         break;
@@ -4093,10 +4088,8 @@ function catalynxApp() {
                 // Auto-run BMF preprocessing if running nonprofit track independently
                 if (!skipBMFPreprocessing && !this.unifiedDiscoveryInProgress) {
                     console.log('Auto-running BMF preprocessing for nonprofit track...');
-                    this.discoveryProgress.bmf = true;
                     const bmfResults = await this.executeBMFFilter();
                     await this.saveBMFResultsToBackend(bmfResults);
-                    this.discoveryProgress.bmf = false;
                     console.log('BMF preprocessing completed for nonprofit track');
                 }
                 
@@ -7210,7 +7203,6 @@ function catalynxApp() {
         
         updateDiscoveryTotalResults() {
             this.discoveryStats.totalResults = 
-                this.discoveryStats.bmf + 
                 this.discoveryStats.nonprofit + 
                 this.discoveryStats.federal + 
                 this.discoveryStats.state + 
@@ -7223,14 +7215,13 @@ function catalynxApp() {
                 const sourceType = opp.source_type?.toLowerCase() || 'unknown';
                 const discoverySource = opp.discovery_source?.toLowerCase() || '';
                 
-                // Check for BMF Filter specifically
-                if (discoverySource.includes('bmf') || opp.source === 'BMF Filter') counts.bmf++;
-                else if (sourceType.includes('nonprofit')) counts.nonprofit++;
+                // Integrate BMF results into nonprofit category
+                if (discoverySource.includes('bmf') || opp.source === 'BMF Filter' || sourceType.includes('nonprofit')) counts.nonprofit++;
                 else if (sourceType.includes('federal') || sourceType.includes('government')) counts.federal++;
                 else if (sourceType.includes('state')) counts.state++;
                 else if (sourceType.includes('commercial') || sourceType.includes('foundation')) counts.commercial++;
                 return counts;
-            }, { bmf: 0, nonprofit: 0, federal: 0, state: 0, commercial: 0 });
+            }, { nonprofit: 0, federal: 0, state: 0, commercial: 0 });
 
             // Update discovery stats
             this.discoveryStats = {
@@ -7526,12 +7517,10 @@ function catalynxApp() {
             try {
                 // Phase 1: Run BMF first (fast, provides foundation data for other tracks)
                 console.log('Phase 1: Running BMF Filter first...');
-                this.showNotification('Enhanced Discovery', 'Running BMF Filter then all other tracks...', 'info');
+                this.showNotification('Enhanced Discovery', 'Running nonprofit track with integrated BMF, then all other tracks...', 'info');
                 
-                this.discoveryProgress.bmf = true;
                 const bmfResults = await this.executeBMFFilter();
                 await this.saveBMFResultsToBackend(bmfResults);
-                this.discoveryProgress.bmf = false;
                 
                 console.log('BMF Filter completed, starting other tracks in parallel...');
                 
@@ -7573,10 +7562,10 @@ function catalynxApp() {
                 const result = await response.json();
                 console.log('[BMF] BMF discovery completed:', result);
                 
-                // Update BMF stats
+                // Update nonprofit stats (BMF integrated)
                 const totalBMFResults = (bmfResults.nonprofits?.length || 0) + (bmfResults.foundations?.length || 0);
-                this.discoveryStats.bmf = totalBMFResults;
-                console.log(`[BMF] Updated BMF stats: ${totalBMFResults} opportunities`);
+                this.discoveryStats.nonprofit += totalBMFResults;
+                console.log(`[BMF] Updated nonprofit stats with BMF integration: ${totalBMFResults} opportunities`);
                 
                 // Note: Do not call loadRealOpportunities() here to prevent data duplication
                 // Backend handles persistence, let unified discovery flow handle data updates
