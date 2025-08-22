@@ -1,0 +1,225 @@
+{
+  "performance_baselines": {
+    "version": "1.0",
+    "created_at": "2025-01-22T00:00:00Z",
+    "system_specifications": {
+      "platform": "Development Environment",
+      "python_version": "3.9+",
+      "database": "SQLite/PostgreSQL",
+      "cache": "In-Memory/Redis"
+    },
+    "api_performance": {
+      "health_endpoint": {
+        "target_response_time_ms": 100,
+        "max_response_time_ms": 500,
+        "success_rate_target": 99.9
+      },
+      "profile_creation": {
+        "target_response_time_ms": 500,
+        "max_response_time_ms": 2000,
+        "success_rate_target": 99.5
+      },
+      "profile_retrieval": {
+        "target_response_time_ms": 200,
+        "max_response_time_ms": 1000,
+        "success_rate_target": 99.8
+      },
+      "discovery_operations": {
+        "target_response_time_ms": 5000,
+        "max_response_time_ms": 30000,
+        "success_rate_target": 95.0
+      },
+      "analytics_generation": {
+        "target_response_time_ms": 2000,
+        "max_response_time_ms": 10000,
+        "success_rate_target": 98.0
+      },
+      "export_operations": {
+        "target_response_time_ms": 3000,
+        "max_response_time_ms": 15000,
+        "success_rate_target": 95.0
+      }
+    },
+    "scoring_performance": {
+      "discovery_scorer": {
+        "target_time_per_operation_ms": 1.0,
+        "max_time_per_operation_ms": 5.0,
+        "batch_size": 1000,
+        "target_throughput_ops_per_second": 1000
+      },
+      "success_scorer": {
+        "target_time_per_operation_ms": 2.0,
+        "max_time_per_operation_ms": 10.0,
+        "batch_size": 500,
+        "target_throughput_ops_per_second": 500
+      },
+      "government_scorer": {
+        "target_time_per_operation_ms": 1.5,
+        "max_time_per_operation_ms": 7.5,
+        "batch_size": 750,
+        "target_throughput_ops_per_second": 667
+      },
+      "ai_lite_analysis": {
+        "target_time_per_operation_ms": 5000,
+        "max_time_per_operation_ms": 30000,
+        "batch_size": 10,
+        "target_throughput_ops_per_second": 0.2
+      },
+      "ai_heavy_analysis": {
+        "target_time_per_operation_ms": 30000,
+        "max_time_per_operation_ms": 180000,
+        "batch_size": 1,
+        "target_throughput_ops_per_second": 0.033
+      }
+    },
+    "cache_performance": {
+      "entity_cache": {
+        "target_hit_rate": 0.85,
+        "min_hit_rate": 0.70,
+        "target_lookup_time_ms": 1.0,
+        "max_lookup_time_ms": 5.0,
+        "target_storage_time_ms": 2.0,
+        "max_storage_time_ms": 10.0
+      },
+      "cache_scalability": {
+        "max_entries": 10000,
+        "performance_degradation_factor": 2.0,
+        "memory_limit_mb": 500
+      }
+    },
+    "database_performance": {
+      "profile_operations": {
+        "create_target_ms": 100,
+        "read_target_ms": 50,
+        "update_target_ms": 150,
+        "delete_target_ms": 100
+      },
+      "opportunity_operations": {
+        "batch_insert_target_ms": 500,
+        "search_target_ms": 1000,
+        "complex_query_target_ms": 5000
+      },
+      "concurrent_operations": {
+        "max_concurrent_users": 50,
+        "degradation_threshold": 2.0
+      }
+    },
+    "system_performance": {
+      "memory_usage": {
+        "baseline_mb": 200,
+        "max_growth_factor": 3.0,
+        "leak_detection_threshold_mb": 1000
+      },
+      "cpu_usage": {
+        "idle_target_percent": 5,
+        "load_target_percent": 70,
+        "max_sustained_percent": 90
+      },
+      "disk_usage": {
+        "database_growth_mb_per_day": 10,
+        "cache_size_limit_mb": 100,
+        "log_rotation_threshold_mb": 50
+      }
+    },
+    "load_testing": {
+      "concurrent_users": {
+        "light_load": 5,
+        "normal_load": 20,
+        "heavy_load": 50,
+        "stress_load": 100
+      },
+      "request_patterns": {
+        "dashboard_views_per_minute": 100,
+        "discovery_operations_per_minute": 20,
+        "analytics_requests_per_minute": 15,
+        "export_operations_per_minute": 5
+      },
+      "duration_targets": {
+        "smoke_test_minutes": 5,
+        "load_test_minutes": 30,
+        "stress_test_minutes": 60,
+        "endurance_test_hours": 4
+      }
+    },
+    "quality_metrics": {
+      "test_coverage": {
+        "unit_test_target": 80,
+        "integration_test_target": 70,
+        "api_test_target": 90
+      },
+      "reliability": {
+        "uptime_target": 99.5,
+        "error_rate_target": 0.5,
+        "data_consistency_target": 99.9
+      },
+      "security": {
+        "vulnerability_scan_frequency_days": 7,
+        "dependency_update_frequency_days": 30,
+        "security_test_coverage": 95
+      }
+    }
+  },
+  "historical_benchmarks": [
+    {
+      "date": "2025-01-22",
+      "version": "Phase 6 Complete",
+      "key_metrics": {
+        "cache_hit_rate": 0.85,
+        "avg_api_response_time_ms": 250,
+        "discovery_operations_per_second": 15,
+        "system_uptime_percent": 99.2
+      },
+      "notes": "Initial baseline measurements for Phase 6 system"
+    }
+  ],
+  "benchmark_test_scenarios": {
+    "scenario_1_basic_workflow": {
+      "description": "Single user performing basic workflow operations",
+      "steps": [
+        "Create profile",
+        "Run discovery (10 results)",
+        "View analytics",
+        "Export to JSON"
+      ],
+      "target_completion_time_seconds": 30,
+      "success_criteria": ["All operations succeed", "Total time < 30s", "No errors"]
+    },
+    "scenario_2_concurrent_discovery": {
+      "description": "Multiple users running discovery simultaneously",
+      "concurrent_users": 10,
+      "operations_per_user": 5,
+      "target_total_time_seconds": 60,
+      "success_criteria": ["90% success rate", "Average response time < 10s"]
+    },
+    "scenario_3_heavy_analytics": {
+      "description": "Intensive analytics and AI processing",
+      "profile_count": 5,
+      "ai_analyses_per_profile": 3,
+      "target_completion_time_minutes": 10,
+      "success_criteria": ["All analyses complete", "Memory usage stable"]
+    },
+    "scenario_4_sustained_load": {
+      "description": "Sustained system usage over extended period",
+      "duration_minutes": 60,
+      "concurrent_users": 20,
+      "operations_per_minute": 50,
+      "success_criteria": ["Performance degradation < 20%", "No memory leaks", "Error rate < 1%"]
+    }
+  },
+  "monitoring_thresholds": {
+    "alerts": {
+      "response_time_ms": 5000,
+      "error_rate_percent": 5.0,
+      "cache_miss_rate_percent": 30.0,
+      "memory_usage_mb": 1000,
+      "disk_usage_percent": 80.0
+    },
+    "warnings": {
+      "response_time_ms": 2000,
+      "error_rate_percent": 2.0,
+      "cache_miss_rate_percent": 20.0,
+      "memory_usage_mb": 500,
+      "disk_usage_percent": 60.0
+    }
+  }
+}

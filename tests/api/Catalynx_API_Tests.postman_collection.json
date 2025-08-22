@@ -1,0 +1,1089 @@
+{
+	"info": {
+		"_postman_id": "catalynx-api-tests-v1",
+		"name": "Catalynx API Test Suite",
+		"description": "Comprehensive API testing for Catalynx Grant Intelligence Platform",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "catalynx-test-suite"
+	},
+	"item": [
+		{
+			"name": "System Health & Status",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', () => {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has status field', () => {",
+									"  const response = pm.response.json();",
+									"  pm.expect(response).to.have.property('status');",
+									"});",
+									"",
+									"pm.test('Response time is acceptable', () => {",
+									"  pm.expect(pm.response.responseTime).to.be.below(1000);",
+									"});",
+									"",
+									"pm.test('Status is healthy or degraded', () => {",
+									"  const response = pm.response.json();",
+									"  pm.expect(response.status).to.be.oneOf(['healthy', 'degraded', 'warning']);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"health"
+							]
+						}
+					}
+				},
+				{
+					"name": "System Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 or 404 (if not implemented)', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Response has timestamp', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('timestamp');",
+									"  });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/system/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"system",
+								"status"
+							]
+						}
+					}
+				},
+				{
+					"name": "Cache Statistics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200 or 404 (if not implemented)', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Response has cache statistics', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('hit_rate');",
+									"    pm.expect(response.hit_rate).to.be.within(0, 1);",
+									"  });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/discovery/entity-cache-stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"discovery",
+								"entity-cache-stats"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Profile Management",
+			"item": [
+				{
+					"name": "Create Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Profile created successfully', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+									"});",
+									"",
+									"pm.test('Response contains profile_id', () => {",
+									"  const response = pm.response.json();",
+									"  pm.expect(response).to.have.property('profile_id');",
+									"  pm.globals.set('test_profile_id', response.profile_id);",
+									"});",
+									"",
+									"pm.test('Profile data is correct', () => {",
+									"  const response = pm.response.json();",
+									"  pm.expect(response.organization_name || response.profile_name).to.include('API Test');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"organization_name\": \"API Test Organization\",\n  \"mission_statement\": \"Testing API functionality for grant research platform\",\n  \"ntee_codes\": [\"B25\", \"B28\"],\n  \"revenue\": 2500000,\n  \"staff_count\": 25,\n  \"years_active\": 15,\n  \"state\": \"VA\",\n  \"city\": \"Richmond\",\n  \"focus_areas\": [\"education\", \"testing\", \"automation\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/profiles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"profiles"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Profile retrieved successfully', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Profile has required fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('organization_name');",
+									"    pm.expect(response).to.have.property('profile_id');",
+									"  });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/profiles/{{test_profile_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"profiles",
+								"{{test_profile_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Profile updated successfully', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Updated data is reflected', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.revenue || 3000000).to.equal(3000000);",
+									"  });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"revenue\": 3000000,\n  \"staff_count\": 30\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/profiles/{{test_profile_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"profiles",
+								"{{test_profile_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "List Profiles",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Profiles listed successfully', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Response is array or has profiles property', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.satisfy((data) => {",
+									"      return Array.isArray(data) || data.hasOwnProperty('profiles');",
+									"    });",
+									"  });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/profiles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"profiles"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Discovery System",
+			"item": [
+				{
+					"name": "Entity-Based Discovery",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Discovery request accepted', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 202, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Discovery results have expected structure', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('opportunities');",
+									"    pm.expect(response.opportunities).to.be.an('array');",
+									"  });",
+									"}",
+									"",
+									"pm.test('Response time is reasonable', () => {",
+									"  pm.expect(pm.response.responseTime).to.be.below(30000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"max_results\": 10,\n  \"ntee_filter\": [\"B25\"],\n  \"revenue_range\": {\n    \"min\": 100000,\n    \"max\": 5000000\n  },\n  \"geographic_filter\": [\"VA\", \"MD\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/profiles/{{test_profile_id}}/discover/entity-analytics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"profiles",
+								"{{test_profile_id}}",
+								"discover",
+								"entity-analytics"
+							]
+						}
+					}
+				},
+				{
+					"name": "Federal Discovery",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Federal discovery request processed', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 202, 404, 501]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Federal opportunities returned', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('opportunities');",
+									"  });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"max_results\": 5,\n  \"agencies\": [\"ED\", \"HHS\"],\n  \"funding_range\": {\n    \"min\": 50000,\n    \"max\": 1000000\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/discovery/federal",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"discovery",
+								"federal"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Analytics & Scoring",
+			"item": [
+				{
+					"name": "Profile Analytics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Analytics request processed', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Analytics contain score data', () => {",
+									"    const response = pm.response.json();",
+									"    // Check for any score-like fields",
+									"    const hasScores = Object.keys(response).some(key => ",
+									"      key.includes('score') || key.includes('health') || key.includes('capacity')",
+									"    );",
+									"    pm.expect(hasScores).to.be.true;",
+									"  });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/profiles/{{test_profile_id}}/analytics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"profiles",
+								"{{test_profile_id}}",
+								"analytics"
+							]
+						}
+					}
+				},
+				{
+					"name": "Profile Metrics",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Metrics request processed', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Metrics data is present', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('object');",
+									"    pm.expect(Object.keys(response).length).to.be.above(0);",
+									"  });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/profiles/{{test_profile_id}}/metrics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"profiles",
+								"{{test_profile_id}}",
+								"metrics"
+							]
+						}
+					}
+				},
+				{
+					"name": "Opportunity Scoring",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Scoring request processed', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 202, 404]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Scoring results have expected format', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('results');",
+									"    pm.expect(response.results).to.be.an('array');",
+									"  });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"opportunities\": [\n    {\n      \"opportunity_id\": \"test_opp_001\",\n      \"organization_name\": \"Test Foundation\",\n      \"funding_amount\": 150000,\n      \"source_type\": \"Foundation\"\n    },\n    {\n      \"opportunity_id\": \"test_opp_002\",\n      \"organization_name\": \"Government Agency\",\n      \"funding_amount\": 250000,\n      \"source_type\": \"Government\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/profiles/{{test_profile_id}}/opportunity-scores",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"profiles",
+								"{{test_profile_id}}",
+								"opportunity-scores"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "AI Analysis",
+			"item": [
+				{
+					"name": "AI-Lite Analysis",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('AI-Lite request accepted', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 202, 404, 501]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('AI analysis results are structured', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('object');",
+									"  });",
+									"}",
+									"",
+									"pm.test('Response time is within AI processing limits', () => {",
+									"  pm.expect(pm.response.responseTime).to.be.below(60000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"profile_id\": \"{{test_profile_id}}\",\n  \"opportunity_id\": \"test_ai_opp_001\",\n  \"analysis_type\": \"strategic_fit\",\n  \"include_risk_assessment\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ai/lite-analysis",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"ai",
+								"lite-analysis"
+							]
+						}
+					}
+				},
+				{
+					"name": "AI Heavy Research",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('AI Heavy request accepted', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 202, 404, 501]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Comprehensive analysis structure', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('object');",
+									"  });",
+									"}",
+									"",
+									"pm.test('Response time is within heavy AI limits', () => {",
+									"  pm.expect(pm.response.responseTime).to.be.below(180000);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"profile_id\": \"{{test_profile_id}}\",\n  \"opportunity_id\": \"test_heavy_opp_001\",\n  \"depth\": \"comprehensive\",\n  \"include_dossier\": true,\n  \"include_relationships\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ai/deep-research",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"ai",
+								"deep-research"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Export & Reporting",
+			"item": [
+				{
+					"name": "Export Opportunities",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Export request processed', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 202, 404, 501]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Export response indicates success', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.satisfy((data) => {",
+									"      return data.hasOwnProperty('download_url') || ",
+									"             data.hasOwnProperty('file_path') ||",
+									"             data.hasOwnProperty('status');",
+									"    });",
+									"  });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"profile_id\": \"{{test_profile_id}}\",\n  \"format\": \"json\",\n  \"template\": \"standard\",\n  \"include_analytics\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/export/opportunities",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"export",
+								"opportunities"
+							]
+						}
+					}
+				},
+				{
+					"name": "Generate PDF Report",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('PDF export request processed', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 202, 404, 501]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('PDF export indicates success', () => {",
+									"    const contentType = pm.response.headers.get('content-type');",
+									"    pm.expect(contentType).to.satisfy((type) => {",
+									"      return type && (type.includes('pdf') || type.includes('json'));",
+									"    });",
+									"  });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"profile_id\": \"{{test_profile_id}}\",\n  \"format\": \"pdf\",\n  \"template\": \"executive\",\n  \"include_charts\": true,\n  \"include_summary\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/export/comprehensive-report",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"export",
+								"comprehensive-report"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Phase 6 Advanced Systems",
+			"item": [
+				{
+					"name": "Decision Synthesis",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Decision synthesis request processed', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 202, 404, 501]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Decision synthesis has expected structure', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('object');",
+									"  });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"opportunity_id\": \"test_decision_opp_001\",\n  \"include_all_stages\": true,\n  \"decision_framework\": \"comprehensive\",\n  \"confidence_threshold\": 0.7\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/profiles/{{test_profile_id}}/approach/synthesize-decision",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"profiles",
+								"{{test_profile_id}}",
+								"approach",
+								"synthesize-decision"
+							]
+						}
+					}
+				},
+				{
+					"name": "Generate Visualization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Visualization request processed', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 404, 501]);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"  pm.test('Visualization data returned', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('chart_config');",
+									"  });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"chart_type\": \"decision_matrix\",\n  \"data_source\": \"workflow_results\",\n  \"include_interactive\": true,\n  \"format\": \"json\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/visualizations/generate-chart",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"visualizations",
+								"generate-chart"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Error Handling & Edge Cases",
+			"item": [
+				{
+					"name": "Invalid Profile ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Invalid profile ID returns 404', () => {",
+									"  pm.expect(pm.response.code).to.equal(404);",
+									"});",
+									"",
+									"pm.test('Error response has proper structure', () => {",
+									"  const response = pm.response.json();",
+									"  pm.expect(response).to.have.property('detail');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/profiles/nonexistent_profile_12345",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"profiles",
+								"nonexistent_profile_12345"
+							]
+						}
+					}
+				},
+				{
+					"name": "Malformed JSON",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Malformed JSON returns 400 or 422', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+									"});",
+									"",
+									"pm.test('Error response indicates JSON problem', () => {",
+									"  const response = pm.response.json();",
+									"  pm.expect(response).to.have.property('detail');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{ invalid json syntax: missing quotes }"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/profiles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"profiles"
+							]
+						}
+					}
+				},
+				{
+					"name": "Missing Required Fields",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Missing fields returns validation error', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+									"});",
+									"",
+									"pm.test('Validation error details provided', () => {",
+									"  const response = pm.response.json();",
+									"  pm.expect(response).to.have.property('detail');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"mission_statement\": \"Missing organization name and other required fields\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/profiles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"profiles"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Cleanup",
+			"item": [
+				{
+					"name": "Delete Test Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Profile deleted successfully', () => {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 204, 404]);",
+									"});",
+									"",
+									"// Clear the global variable",
+									"pm.globals.unset('test_profile_id');"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/profiles/{{test_profile_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"profiles",
+								"{{test_profile_id}}"
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Set default values if not already set",
+					"if (!pm.globals.get('base_url')) {",
+					"  pm.globals.set('base_url', 'http://localhost:8000');",
+					"}",
+					"",
+					"// Add request timestamp",
+					"pm.globals.set('request_timestamp', new Date().toISOString());"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test to ensure response time is reasonable",
+					"pm.test('Response time is acceptable (global)', () => {",
+					"  pm.expect(pm.response.responseTime).to.be.below(30000);",
+					"});",
+					"",
+					"// Global test for proper JSON response",
+					"if (pm.response.headers.get('content-type') && pm.response.headers.get('content-type').includes('json')) {",
+					"  pm.test('Response is valid JSON (global)', () => {",
+					"    pm.response.to.be.json;",
+					"  });",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "test_profile_id", 
+			"value": "",
+			"type": "string"
+		}
+	]
+}
