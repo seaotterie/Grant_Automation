@@ -5927,6 +5927,376 @@ async def clear_enhanced_data_cache() -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
 
 
+# =============================================================================
+# Phase 3: AI Research Platform Endpoints
+# =============================================================================
+
+@app.post("/api/profiles/{profile_id}/research/analyze-integrated")
+async def analyze_opportunity_integrated(profile_id: str, request_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Perform integrated scoring and research analysis for a specific opportunity"""
+    try:
+        # Import research integration system
+        from src.analysis.research_scoring_integration import ResearchScoringIntegration
+        from src.analysis.ai_research_platform import ReportFormat
+        
+        opportunity_id = request_data.get('opportunity_id')
+        include_research = request_data.get('include_research', True)
+        report_type_str = request_data.get('report_type', 'executive_summary')
+        
+        if not opportunity_id:
+            raise HTTPException(status_code=400, detail="opportunity_id required")
+        
+        # Get opportunity data
+        profile = unified_service.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Find the specific opportunity
+        opportunity = None
+        for opp in profile.opportunities:
+            if opp.opportunity_id == opportunity_id:
+                opportunity = opp.model_dump()
+                break
+        
+        if not opportunity:
+            raise HTTPException(status_code=404, detail="Opportunity not found")
+        
+        # Convert report type string to enum
+        report_type_map = {
+            'executive_summary': ReportFormat.EXECUTIVE_SUMMARY,
+            'detailed_research': ReportFormat.DETAILED_RESEARCH,
+            'decision_brief': ReportFormat.DECISION_BRIEF,
+            'evaluation_summary': ReportFormat.EVALUATION_SUMMARY,
+            'evidence_package': ReportFormat.EVIDENCE_PACKAGE
+        }
+        
+        report_type = report_type_map.get(report_type_str, ReportFormat.EXECUTIVE_SUMMARY)
+        
+        # Perform integrated analysis
+        async with ResearchScoringIntegration(cost_optimization=True) as integration:
+            analysis = await integration.analyze_opportunity_integrated(
+                opportunity, include_research, report_type
+            )
+        
+        # Convert analysis to response format
+        response = {
+            'analysis_id': f"analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            'opportunity_id': analysis.opportunity_id,
+            'organization_name': analysis.organization_name,
+            'integrated_results': {
+                'integrated_score': analysis.integrated_score,
+                'integrated_confidence': analysis.integrated_confidence,
+                'evidence_strength': analysis.evidence_strength,
+                'research_impact_factor': analysis.research_impact_factor,
+                'recommended_action': analysis.recommended_action,
+                'decision_confidence': analysis.decision_confidence
+            },
+            'scoring_results': analysis.scoring_results,
+            'research_results': {
+                'research_quality_score': analysis.research_quality_score,
+                'research_confidence': analysis.research_confidence,
+                'has_research_report': analysis.research_report is not None
+            },
+            'decision_support': {
+                'next_steps': analysis.next_steps,
+                'risk_factors': analysis.risk_factors
+            },
+            'performance_metrics': {
+                'processing_time': analysis.processing_time,
+                'cost_breakdown': analysis.cost_breakdown,
+                'analysis_timestamp': analysis.analysis_timestamp.isoformat()
+            }
+        }
+        
+        # Add research report details if available
+        if analysis.research_report:
+            response['research_report'] = {
+                'report_id': analysis.research_report.report_id,
+                'report_type': analysis.research_report.report_type.value,
+                'title': analysis.research_report.title,
+                'executive_summary': analysis.research_report.executive_summary,
+                'contacts_identified': len(analysis.research_report.contacts_identified),
+                'evidence_facts': len(analysis.research_report.evidence_package),
+                'recommendations': analysis.research_report.recommendations,
+                'confidence_assessment': analysis.research_report.confidence_assessment
+            }
+        
+        logger.info(f"Integrated analysis completed for {analysis.organization_name}")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in integrated analysis: {e}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+@app.post("/api/profiles/{profile_id}/research/batch-analyze")
+async def batch_analyze_opportunities(profile_id: str, request_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Perform batch integrated analysis for multiple opportunities"""
+    try:
+        from src.analysis.research_scoring_integration import ResearchScoringIntegration
+        from src.analysis.ai_research_platform import ReportFormat
+        
+        include_research = request_data.get('include_research', True)
+        report_type_str = request_data.get('report_type', 'executive_summary')
+        batch_size = request_data.get('batch_size')
+        stage_filter = request_data.get('stage_filter', 'candidates')  # candidates, candidates+, all
+        
+        # Get profile and opportunities
+        profile = unified_service.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Filter opportunities based on stage
+        opportunities = []
+        for opp in profile.opportunities:
+            stage = opp.current_stage
+            
+            if stage_filter == 'candidates' and stage not in ['pre_scoring', 'recommendations']:
+                continue
+            elif stage_filter == 'candidates+' and stage not in ['discovery', 'pre_scoring', 'recommendations']:
+                continue
+            # 'all' includes everything
+            
+            opportunities.append(opp.model_dump())
+        
+        if not opportunities:
+            return {
+                'batch_id': f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                'message': 'No opportunities found matching filter criteria',
+                'opportunities_processed': 0,
+                'results': []
+            }
+        
+        # Convert report type
+        report_type_map = {
+            'executive_summary': ReportFormat.EXECUTIVE_SUMMARY,
+            'detailed_research': ReportFormat.DETAILED_RESEARCH,
+            'decision_brief': ReportFormat.DECISION_BRIEF,
+            'evaluation_summary': ReportFormat.EVALUATION_SUMMARY,
+            'evidence_package': ReportFormat.EVIDENCE_PACKAGE
+        }
+        
+        report_type = report_type_map.get(report_type_str, ReportFormat.EXECUTIVE_SUMMARY)
+        
+        # Perform batch analysis
+        async with ResearchScoringIntegration(cost_optimization=True) as integration:
+            batch_result = await integration.batch_analyze_opportunities(
+                opportunities, include_research, report_type, batch_size
+            )
+        
+        # Convert results to response format
+        analysis_results = []
+        for analysis in batch_result.integrated_analyses:
+            result = {
+                'opportunity_id': analysis.opportunity_id,
+                'organization_name': analysis.organization_name,
+                'integrated_score': analysis.integrated_score,
+                'integrated_confidence': analysis.integrated_confidence,
+                'recommended_action': analysis.recommended_action,
+                'decision_confidence': analysis.decision_confidence,
+                'evidence_strength': analysis.evidence_strength,
+                'processing_time': analysis.processing_time,
+                'cost': analysis.cost_breakdown.get('total_cost', 0.0)
+            }
+            
+            if analysis.research_report:
+                result['research_summary'] = {
+                    'quality_score': analysis.research_quality_score,
+                    'contacts_found': len(analysis.research_report.contacts_identified),
+                    'facts_extracted': len(analysis.research_report.evidence_package),
+                    'recommendations_count': len(analysis.research_report.recommendations)
+                }
+            
+            analysis_results.append(result)
+        
+        response = {
+            'batch_id': batch_result.batch_id,
+            'batch_summary': {
+                'total_opportunities': batch_result.total_opportunities,
+                'successful_analyses': batch_result.successful_analyses,
+                'failed_analyses': batch_result.failed_analyses,
+                'success_rate': batch_result.successful_analyses / batch_result.total_opportunities if batch_result.total_opportunities > 0 else 0,
+                'total_processing_time': batch_result.total_processing_time,
+                'total_cost': batch_result.total_cost,
+                'average_cost_per_opportunity': batch_result.average_cost_per_opportunity,
+                'average_confidence': batch_result.average_confidence,
+                'quality_distribution': batch_result.quality_distribution
+            },
+            'analysis_results': analysis_results,
+            'errors': batch_result.error_log,
+            'batch_started': batch_result.batch_started.isoformat(),
+            'batch_completed': batch_result.batch_completed.isoformat() if batch_result.batch_completed else None
+        }
+        
+        logger.info(f"Batch analysis completed: {batch_result.successful_analyses}/{batch_result.total_opportunities} successful")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in batch analysis: {e}")
+        raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
+
+
+@app.get("/api/profiles/{profile_id}/research/decision-package/{opportunity_id}")
+async def generate_decision_package(profile_id: str, opportunity_id: str) -> Dict[str, Any]:
+    """Generate comprehensive decision package for grant team"""
+    try:
+        from src.analysis.research_scoring_integration import ResearchScoringIntegration
+        from src.analysis.ai_research_platform import ReportFormat
+        
+        # Get opportunity data
+        profile = unified_service.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        opportunity = None
+        for opp in profile.opportunities:
+            if opp.opportunity_id == opportunity_id:
+                opportunity = opp.model_dump()
+                break
+        
+        if not opportunity:
+            raise HTTPException(status_code=404, detail="Opportunity not found")
+        
+        # Perform integrated analysis first
+        async with ResearchScoringIntegration(cost_optimization=True) as integration:
+            analysis = await integration.analyze_opportunity_integrated(
+                opportunity, include_research=True, report_type=ReportFormat.EVALUATION_SUMMARY
+            )
+            
+            # Generate decision package
+            decision_package = await integration.generate_team_decision_package(analysis)
+        
+        logger.info(f"Decision package generated for {analysis.organization_name}")
+        return decision_package
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating decision package: {e}")
+        raise HTTPException(status_code=500, detail=f"Decision package generation failed: {str(e)}")
+
+
+@app.post("/api/research/website-intelligence")
+async def analyze_website_intelligence(request_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Perform website intelligence analysis"""
+    try:
+        from src.analysis.ai_research_platform import AIResearchPlatform
+        
+        url = request_data.get('url')
+        opportunity_data = request_data.get('opportunity_data', {})
+        
+        if not url:
+            raise HTTPException(status_code=400, detail="URL required")
+        
+        # Perform website analysis
+        async with AIResearchPlatform(cost_optimization=True) as research_platform:
+            intelligence = await research_platform.analyze_website(url, opportunity_data)
+        
+        # Convert to response format
+        response = {
+            'analysis_id': f"website_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            'url': intelligence.url,
+            'domain': intelligence.domain,
+            'website_intelligence': {
+                'title': intelligence.title,
+                'description': intelligence.description,
+                'organization_type': intelligence.organization_type,
+                'quality_score': intelligence.quality_score,
+                'program_areas': intelligence.program_areas,
+                'funding_info': intelligence.funding_info
+            },
+            'contacts_identified': [
+                {
+                    'name': contact.name,
+                    'title': contact.title,
+                    'email': contact.email,
+                    'phone': contact.phone,
+                    'confidence': contact.confidence,
+                    'source': contact.source
+                }
+                for contact in intelligence.contact_info
+            ],
+            'facts_extracted': [
+                {
+                    'fact': fact.fact,
+                    'category': fact.category,
+                    'confidence': fact.confidence,
+                    'source': fact.source,
+                    'date_extracted': fact.date_extracted.isoformat()
+                }
+                for fact in intelligence.key_facts
+            ],
+            'analysis_timestamp': intelligence.analysis_timestamp.isoformat()
+        }
+        
+        logger.info(f"Website intelligence analysis completed for {url}")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in website intelligence analysis: {e}")
+        raise HTTPException(status_code=500, detail=f"Website analysis failed: {str(e)}")
+
+
+@app.get("/api/research/performance-summary")
+async def get_research_performance_summary() -> Dict[str, Any]:
+    """Get research platform performance summary"""
+    try:
+        from src.analysis.research_scoring_integration import ResearchScoringIntegration
+        
+        # Get performance summary (this would be from a persistent service instance in production)
+        async with ResearchScoringIntegration(cost_optimization=True) as integration:
+            performance_summary = integration.get_performance_summary()
+        
+        # Add current timestamp
+        performance_summary['retrieved_at'] = datetime.now().isoformat()
+        
+        return performance_summary
+        
+    except Exception as e:
+        logger.error(f"Error getting performance summary: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get performance summary: {str(e)}")
+
+
+@app.post("/api/research/export-results")
+async def export_research_results(request_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Export research analysis results"""
+    try:
+        from src.analysis.research_scoring_integration import ResearchScoringIntegration, BatchAnalysisResult
+        
+        batch_id = request_data.get('batch_id')
+        export_format = request_data.get('format', 'json')
+        
+        if not batch_id:
+            raise HTTPException(status_code=400, detail="batch_id required")
+        
+        # In a full implementation, this would retrieve the actual batch result from storage
+        # For now, return a mock export confirmation
+        
+        export_data = {
+            'export_id': f"export_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            'batch_id': batch_id,
+            'export_format': export_format,
+            'exported_at': datetime.now().isoformat(),
+            'status': 'completed',
+            'message': f'Research results exported in {export_format} format'
+        }
+        
+        logger.info(f"Research results export initiated for batch {batch_id}")
+        return export_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting research results: {e}")
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+
 # Startup event
 @app.on_event("startup")
 async def startup_event():

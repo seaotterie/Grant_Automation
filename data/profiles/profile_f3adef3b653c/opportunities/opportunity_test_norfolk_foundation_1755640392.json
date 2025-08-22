@@ -3,11 +3,17 @@
   "profile_id": "profile_f3adef3b653c",
   "organization_name": "Norfolk Foundation Test 1755640392",
   "ein": "54-1755640392",
-  "current_stage": "deep_analysis",
+  "current_stage": "recommendations",
   "stage_history": [
     {
       "stage": "deep_analysis",
       "entered_at": "2025-08-19T17:53:12.549615",
+      "exited_at": "2025-08-20T14:28:32.427171",
+      "duration_hours": 20.58885487666667
+    },
+    {
+      "stage": "recommendations",
+      "entered_at": "2025-08-20T14:28:32.427171",
       "exited_at": null,
       "duration_hours": null
     }
@@ -51,12 +57,21 @@
       "reason": "Auto-promotion based on score 0.89",
       "promoted_at": "2025-08-19T17:53:12.549615",
       "promoted_by": "auto_promotion_engine"
+    },
+    {
+      "from_stage": "deep_analysis",
+      "to_stage": "recommendations",
+      "decision_type": "stage_update",
+      "score_at_promotion": 0.89,
+      "reason": "Manual promotion via API - promote",
+      "promoted_at": "2025-08-20T14:28:32.427171",
+      "promoted_by": "user"
     }
   ],
   "source": "test_auto_promotion",
   "opportunity_type": "grants",
   "discovered_at": "2025-08-19T17:53:12.519277",
-  "last_updated": "2025-08-19T17:53:12.549887",
+  "last_updated": "2025-08-20T14:28:32.427719",
   "status": "active",
   "legacy_lead_id": "lead_test_norfolk_foundation_1755640392",
   "legacy_pipeline_stage": "discovery",

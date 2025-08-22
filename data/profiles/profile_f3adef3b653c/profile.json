@@ -24,74 +24,75 @@
     "F40"
   ],
   "created_at": "2025-08-10 14:40:01.485534",
-  "updated_at": "2025-08-19T17:53:12.604491",
+  "updated_at": "2025-08-20T14:37:56.313002",
   "analytics": {
-    "opportunity_count": 271,
+    "opportunity_count": 57,
     "stages_distribution": {
-      "discovery": 256,
-      "deep_analysis": 2,
-      "pre_scoring": 13
+      "pre_scoring": 14,
+      "recommendations": 1,
+      "discovery": 41,
+      "deep_analysis": 1
     },
     "scoring_stats": {
-      "avg_score": 0.643,
-      "high_potential_count": 32,
-      "auto_promotion_eligible": 38,
+      "avg_score": 0.679,
+      "high_potential_count": 15,
+      "auto_promotion_eligible": 15,
       "last_scored": "2025-08-19T17:53:12.550784"
     },
     "discovery_stats": {
       "total_sessions": 3,
       "last_discovery": "2025-08-19T17:53:12.519289",
-      "last_session_results": 5,
-      "avg_results_per_session": 90.33333333333333
+      "last_session_results": 4,
+      "avg_results_per_session": 19.0
     },
     "promotion_stats": {
-      "total_promotions": 3,
+      "total_promotions": 6,
       "auto_promotions": 1,
-      "manual_promotions": 2,
-      "promotion_rate": 0.01
+      "manual_promotions": 5,
+      "promotion_rate": 0.11
     }
   },
   "recent_activity": [
     {
-      "type": "auto_promotion",
-      "date": "2025-08-19T17:53:12.549615",
+      "type": "manual_promotion",
+      "date": "2025-08-20T14:37:56.292477",
+      "results": null,
+      "source": null,
+      "opportunity": "Medium Score Foundation Test 1755640392",
+      "from_stage": "discovery",
+      "to_stage": "pre_scoring"
+    },
+    {
+      "type": "manual_promotion",
+      "date": "2025-08-20T14:37:19.957561",
+      "results": null,
+      "source": null,
+      "opportunity": "Test Foundation for Enhanced Discovery",
+      "from_stage": "discovery",
+      "to_stage": "pre_scoring"
+    },
+    {
+      "type": "manual_promotion",
+      "date": "2025-08-20T14:28:32.427171",
       "results": null,
       "source": null,
       "opportunity": "Norfolk Foundation Test 1755640392",
-      "from_stage": "discovery",
-      "to_stage": "deep_analysis"
+      "from_stage": "deep_analysis",
+      "to_stage": "recommendations"
     },
     {
       "type": "discovery_session",
       "date": "2025-08-19T12:00:00",
-      "results": 5,
+      "results": 4,
       "source": "Multiple Sources",
       "opportunity": null,
       "from_stage": null,
       "to_stage": null
     },
     {
-      "type": "manual_promotion",
-      "date": "2025-08-19T05:17:57.334642",
-      "results": null,
-      "source": null,
-      "opportunity": "Norfolk Foundation",
-      "from_stage": "pre_scoring",
-      "to_stage": "deep_analysis"
-    },
-    {
-      "type": "manual_promotion",
-      "date": "2025-08-19T05:11:56.389213",
-      "results": null,
-      "source": null,
-      "opportunity": "Norfolk Foundation",
-      "from_stage": "discovery",
-      "to_stage": "pre_scoring"
-    },
-    {
       "type": "discovery_session",
       "date": "2025-08-18T12:00:00",
-      "results": 256,
+      "results": 44,
       "source": "Multiple Sources",
       "opportunity": null,
       "from_stage": null,

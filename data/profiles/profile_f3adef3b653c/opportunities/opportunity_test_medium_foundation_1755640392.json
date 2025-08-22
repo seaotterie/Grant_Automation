@@ -3,8 +3,15 @@
   "profile_id": "profile_f3adef3b653c",
   "organization_name": "Medium Score Foundation Test 1755640392",
   "ein": "55-1755640392",
-  "current_stage": "discovery",
-  "stage_history": [],
+  "current_stage": "pre_scoring",
+  "stage_history": [
+    {
+      "stage": "pre_scoring",
+      "entered_at": "2025-08-20T14:37:56.292477",
+      "exited_at": null,
+      "duration_hours": null
+    }
+  ],
   "scoring": {
     "overall_score": 0.7,
     "auto_promotion_eligible": false,
@@ -33,11 +40,21 @@
     }
   },
   "user_assessment": null,
-  "promotion_history": [],
+  "promotion_history": [
+    {
+      "from_stage": "discovery",
+      "to_stage": "pre_scoring",
+      "decision_type": "stage_update",
+      "score_at_promotion": 0.7,
+      "reason": "Manual promotion via API - promote",
+      "promoted_at": "2025-08-20T14:37:56.292477",
+      "promoted_by": "user"
+    }
+  ],
   "source": "test_auto_promotion",
   "opportunity_type": "grants",
   "discovered_at": "2025-08-19T17:53:12.519289",
-  "last_updated": "2025-08-19T17:53:12.578428",
+  "last_updated": "2025-08-20T14:37:56.292779",
   "status": "active",
   "legacy_lead_id": "lead_test_medium_foundation_1755640392",
   "legacy_pipeline_stage": "discovery",

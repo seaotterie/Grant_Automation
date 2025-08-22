@@ -1,0 +1,36 @@
+{
+  "lead_id": "lead_469831411724",
+  "profile_id": "profile_f3adef3b653c",
+  "source": "Nonprofit Discovery - BMF",
+  "opportunity_type": "grants",
+  "organization_name": "LYON PARK COMMUNITY CENTER",
+  "program_name": null,
+  "description": "Nonprofit organization from IRS Business Master File. Revenue: $140,144.0",
+  "funding_amount": null,
+  "pipeline_stage": "pre_scoring",
+  "compatibility_score": 0.6,
+  "success_probability": null,
+  "match_factors": {
+    "source_type": "Nonprofit",
+    "ntee_code": "P81",
+    "state": "VA",
+    "bmf_filtered": true,
+    "deadline": null,
+    "eligibility": []
+  },
+  "risk_factors": {},
+  "recommendations": [],
+  "board_connections": [],
+  "network_insights": {},
+  "approach_strategy": null,
+  "discovered_at": "2025-08-21 13:58:20.011807",
+  "last_analyzed": "2025-08-21 13:58:24.516052",
+  "status": "active",
+  "assigned_to": null,
+  "external_data": {
+    "ein": "651317810",
+    "ntee_code": "P81",
+    "discovery_source": "bmf_filter",
+    "source_url": null
+  }
+}

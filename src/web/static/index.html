@@ -1709,28 +1709,80 @@
                         </div>
                     </div>
 
-                    <!-- AI Lite Analysis Controls -->
-                    <div x-show="selectedAnalyzeProfile" class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white mb-6">
-                        <div class="flex items-center justify-between">
+                    <!-- Phase 3: AI Research Platform Controls -->
+                    <div x-show="selectedAnalyzeProfile" class="bg-gradient-to-r from-blue-600 via-purple-600 to-green-600 rounded-lg p-6 text-white mb-6">
+                        <div class="flex items-center justify-between mb-4">
                             <div>
-                                <h4 class="text-xl font-semibold mb-2">AI Lite Analysis</h4>
-                                <p class="text-blue-100 text-sm">Cost-optimized batch analysis (~$0.0001/candidate) • Enables Deep AI for high scorers</p>
+                                <h4 class="text-xl font-semibold mb-2">AI Research Platform (Phase 3)</h4>
+                                <p class="text-blue-100 text-sm">Dual-function platform: Advanced scoring + comprehensive research analysis</p>
                                 <div class="mt-2 text-xs text-blue-200">
-                                    <span>Total Analyzed: </span><span x-text="aiLiteAnalysis.analysisCount"></span>
+                                    <span>Total Analyzed: </span><span x-text="researchPlatform.analysisCount"></span>
                                     <span class="mx-2">•</span>
-                                    <span>Cost: $</span><span x-text="aiLiteAnalysis.totalCost.toFixed(4)"></span>
+                                    <span>Cost: $</span><span x-text="researchPlatform.totalCost.toFixed(4)"></span>
+                                    <span class="mx-2">•</span>
+                                    <span>Research Reports: </span><span x-text="researchPlatform.reportsGenerated"></span>
                                 </div>
                             </div>
-                            <div class="flex items-center space-x-3">
-                                <button @click="runAILiteAnalysis()" 
-                                        :disabled="aiLiteAnalysis.running || candidatesData.length === 0"
-                                        class="px-6 py-3 bg-white text-blue-600 hover:bg-blue-50 disabled:bg-gray-300 disabled:text-gray-500 font-medium rounded-lg transition-colors">
-                                    <span x-show="!aiLiteAnalysis.running">
-                                        Analyze with AI (<span x-text="candidatesData.length"></span> candidates)
-                                    </span>
-                                    <span x-show="aiLiteAnalysis.running">Analyzing...</span>
-                                </button>
-                            </div>
+                        </div>
+                        
+                        <!-- Analysis Mode Selection -->
+                        <div class="flex items-center space-x-4 mb-4">
+                            <span class="text-sm font-medium">Analysis Mode:</span>
+                            <label class="flex items-center space-x-2">
+                                <input type="radio" x-model="researchPlatform.analysisMode" value="scoring_only" 
+                                       class="text-white bg-white bg-opacity-20 border-white border-opacity-30">
+                                <span class="text-sm">Scoring Only</span>
+                            </label>
+                            <label class="flex items-center space-x-2">
+                                <input type="radio" x-model="researchPlatform.analysisMode" value="research_only" 
+                                       class="text-white bg-white bg-opacity-20 border-white border-opacity-30">
+                                <span class="text-sm">Research Only</span>
+                            </label>
+                            <label class="flex items-center space-x-2">
+                                <input type="radio" x-model="researchPlatform.analysisMode" value="integrated" 
+                                       class="text-white bg-white bg-opacity-20 border-white border-opacity-30">
+                                <span class="text-sm">Integrated Analysis</span>
+                            </label>
+                        </div>
+                        
+                        <!-- Report Type Selection -->
+                        <div class="flex items-center space-x-4 mb-4" x-show="researchPlatform.analysisMode !== 'scoring_only'">
+                            <span class="text-sm font-medium">Report Type:</span>
+                            <select x-model="researchPlatform.reportType" 
+                                    class="text-gray-900 bg-white rounded px-3 py-1 text-sm">
+                                <option value="executive_summary">Executive Summary</option>
+                                <option value="detailed_research">Detailed Research</option>
+                                <option value="decision_brief">Decision Brief</option>
+                                <option value="evaluation_summary">Evaluation Summary</option>
+                                <option value="evidence_package">Evidence Package</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="flex items-center space-x-3">
+                            <button @click="runIntegratedAnalysis()" 
+                                    :disabled="researchPlatform.running || candidatesData.length === 0"
+                                    class="px-6 py-3 bg-white text-blue-600 hover:bg-blue-50 disabled:bg-gray-300 disabled:text-gray-500 font-medium rounded-lg transition-colors">
+                                <span x-show="!researchPlatform.running">
+                                    <span x-show="researchPlatform.analysisMode === 'scoring_only'">Score Candidates</span>
+                                    <span x-show="researchPlatform.analysisMode === 'research_only'">Research Candidates</span>
+                                    <span x-show="researchPlatform.analysisMode === 'integrated'">Analyze & Research</span>
+                                    (<span x-text="candidatesData.length"></span> candidates)
+                                </span>
+                                <span x-show="researchPlatform.running">Processing...</span>
+                            </button>
+                            
+                            <button @click="showResearchModal = true" 
+                                    :disabled="!researchPlatform.lastBatchId"
+                                    class="px-4 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors">
+                                View Results
+                            </button>
+                            
+                            <button @click="exportResearchResults()" 
+                                    :disabled="!researchPlatform.lastBatchId"
+                                    class="px-4 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors">
+                                Export
+                            </button>
                         </div>
                     </div>
 
@@ -8055,6 +8107,183 @@
                         if (typeof addDesktopKeyboardShortcuts === 'function') {
                             addDesktopKeyboardShortcuts(appData);
                             console.log('[DESKTOP UX] Keyboard shortcuts initialized');
+                        }
+                        
+                        // Phase 3: Initialize Research Platform functionality
+                        if (appData && typeof appData === 'object') {
+                            // Initialize research platform data
+                            appData.researchPlatform = {
+                                analysisMode: 'integrated',
+                                reportType: 'executive_summary',
+                                running: false,
+                                analysisCount: 0,
+                                totalCost: 0.0,
+                                reportsGenerated: 0,
+                                lastBatchId: null,
+                                lastResults: null
+                            };
+                            
+                            // Initialize research modal state
+                            appData.showResearchModal = false;
+                            
+                            // Add research platform functions
+                            appData.runIntegratedAnalysis = async function() {
+                                if (!this.selectedProfile || this.candidatesData.length === 0) {
+                                    this.showNotification('Analysis', 'No candidates available for analysis', 'warning');
+                                    return;
+                                }
+                                
+                                this.researchPlatform.running = true;
+                                
+                                try {
+                                    const requestData = {
+                                        include_research: this.researchPlatform.analysisMode !== 'scoring_only',
+                                        report_type: this.researchPlatform.reportType,
+                                        stage_filter: this.stageFilter || 'candidates'
+                                    };
+                                    
+                                    const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/research/batch-analyze`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(requestData)
+                                    });
+                                    
+                                    if (!response.ok) {
+                                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                                    }
+                                    
+                                    const data = await response.json();
+                                    
+                                    // Update research platform stats
+                                    this.researchPlatform.analysisCount += data.batch_summary.successful_analyses;
+                                    this.researchPlatform.totalCost += data.batch_summary.total_cost;
+                                    if (requestData.include_research) {
+                                        this.researchPlatform.reportsGenerated += data.batch_summary.successful_analyses;
+                                    }
+                                    this.researchPlatform.lastBatchId = data.batch_id;
+                                    this.researchPlatform.lastResults = data;
+                                    
+                                    this.showNotification('Research Analysis', 
+                                        `Completed analysis of ${data.batch_summary.successful_analyses} opportunities. Cost: $${data.batch_summary.total_cost.toFixed(4)}`, 
+                                        'success');
+                                    
+                                    console.log('Integrated analysis completed:', data);
+                                    
+                                } catch (error) {
+                                    console.error('Research analysis failed:', error);
+                                    this.showNotification('Analysis Error', 
+                                        `Research analysis failed: ${error.message}`, 
+                                        'error');
+                                } finally {
+                                    this.researchPlatform.running = false;
+                                }
+                            };
+                            
+                            appData.exportResearchResults = async function() {
+                                if (!this.researchPlatform.lastBatchId) {
+                                    this.showNotification('Export', 'No research results to export', 'warning');
+                                    return;
+                                }
+                                
+                                try {
+                                    const requestData = {
+                                        batch_id: this.researchPlatform.lastBatchId,
+                                        format: 'json'
+                                    };
+                                    
+                                    const response = await fetch('/api/research/export-results', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(requestData)
+                                    });
+                                    
+                                    if (!response.ok) {
+                                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                                    }
+                                    
+                                    const data = await response.json();
+                                    
+                                    this.showNotification('Export', 
+                                        `Research results exported: ${data.export_id}`, 
+                                        'success');
+                                    
+                                    console.log('Export completed:', data);
+                                    
+                                } catch (error) {
+                                    console.error('Export failed:', error);
+                                    this.showNotification('Export Error', 
+                                        `Export failed: ${error.message}`, 
+                                        'error');
+                                }
+                            };
+                            
+                            appData.analyzeWebsiteIntelligence = async function(url, opportunityData = {}) {
+                                try {
+                                    const requestData = {
+                                        url: url,
+                                        opportunity_data: opportunityData
+                                    };
+                                    
+                                    const response = await fetch('/api/research/website-intelligence', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(requestData)
+                                    });
+                                    
+                                    if (!response.ok) {
+                                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                                    }
+                                    
+                                    const data = await response.json();
+                                    
+                                    this.showNotification('Website Analysis', 
+                                        `Analyzed ${url}. Quality score: ${(data.website_intelligence.quality_score * 100).toFixed(0)}%`, 
+                                        'success');
+                                    
+                                    return data;
+                                    
+                                } catch (error) {
+                                    console.error('Website intelligence failed:', error);
+                                    this.showNotification('Website Analysis Error', 
+                                        `Analysis failed: ${error.message}`, 
+                                        'error');
+                                    return null;
+                                }
+                            };
+                            
+                            appData.generateDecisionPackage = async function(opportunityId) {
+                                if (!this.selectedProfile) {
+                                    this.showNotification('Decision Package', 'No profile selected', 'warning');
+                                    return;
+                                }
+                                
+                                try {
+                                    const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/research/decision-package/${opportunityId}`);
+                                    
+                                    if (!response.ok) {
+                                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                                    }
+                                    
+                                    const data = await response.json();
+                                    
+                                    this.showNotification('Decision Package', 
+                                        `Generated comprehensive decision package for ${data.organization_name}`, 
+                                        'success');
+                                    
+                                    console.log('Decision package generated:', data);
+                                    return data;
+                                    
+                                } catch (error) {
+                                    console.error('Decision package generation failed:', error);
+                                    this.showNotification('Decision Package Error', 
+                                        `Generation failed: ${error.message}`, 
+                                        'error');
+                                    return null;
+                                }
+                            };
+                            
+                            console.log('[PHASE 3] Research Platform functionality initialized');
+                        }
                         }
                         
                         // Initialize context menus

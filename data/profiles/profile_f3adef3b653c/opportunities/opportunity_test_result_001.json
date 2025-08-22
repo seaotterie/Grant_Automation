@@ -3,8 +3,15 @@
   "profile_id": "profile_f3adef3b653c",
   "organization_name": "Test Foundation for Enhanced Discovery",
   "ein": "99-8888888",
-  "current_stage": "discovery",
-  "stage_history": [],
+  "current_stage": "pre_scoring",
+  "stage_history": [
+    {
+      "stage": "pre_scoring",
+      "entered_at": "2025-08-20T14:37:19.957561",
+      "exited_at": null,
+      "duration_hours": null
+    }
+  ],
   "scoring": {
     "overall_score": 0.85,
     "auto_promotion_eligible": true,
@@ -36,11 +43,21 @@
     }
   },
   "user_assessment": null,
-  "promotion_history": [],
+  "promotion_history": [
+    {
+      "from_stage": "discovery",
+      "to_stage": "pre_scoring",
+      "decision_type": "stage_update",
+      "score_at_promotion": 0.85,
+      "reason": "Manual promotion via API - promote",
+      "promoted_at": "2025-08-20T14:37:19.957561",
+      "promoted_by": "user"
+    }
+  ],
   "source": "test_integration",
   "opportunity_type": "grants",
   "discovered_at": "2025-08-19T05:32:55.340561",
-  "last_updated": "2025-08-19T05:32:55.365054",
+  "last_updated": "2025-08-20T14:37:19.958513",
   "status": "active",
   "legacy_lead_id": "lead_test_result_001",
   "legacy_pipeline_stage": "discovery",
