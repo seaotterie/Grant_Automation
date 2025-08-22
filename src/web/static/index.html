@@ -7193,40 +7193,91 @@
                             </div>
                         </div>
                         
-                        <!-- EXAMINE Results Tab -->
+                        <!-- EXAMINE Results Tab - AI Heavy Dossier Builder -->
                         <div x-show="modalActiveTab === 'examine'" class="space-y-4">
-                            <!-- AI Heavy Research -->
+                            <!-- AI Heavy Dossier Builder Interface -->
                             <div class="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-4">
-                                <h4 class="text-lg font-bold text-blue-900 dark:text-blue-100 mb-3">Intelligence Dossier</h4>
+                                <h4 class="text-lg font-bold text-blue-900 dark:text-blue-100 mb-3">AI Heavy Dossier Builder</h4>
                                 
                                 <!-- Data Available State -->
                                 <div x-show="_hasTabData(selectedOpportunity, 'examine')" class="space-y-4">
                                 
-                                <!-- Strategic Assessment -->
+                                <!-- Executive Decision Brief -->
                                 <div class="bg-white dark:bg-gray-800 rounded p-4 mb-4">
-                                    <h5 class="font-medium text-gray-900 dark:text-white text-sm mb-2">Strategic Assessment</h5>
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                                        High-value funding opportunity with strong alignment and strategic positioning. 
-                                        Recommend pursuing with priority focus on network leverage and timing.
-                                    </p>
+                                    <h5 class="font-medium text-gray-900 dark:text-white text-sm mb-2">Executive Decision Brief</h5>
+                                    <div class="space-y-3">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm text-gray-600 dark:text-gray-400">Confidence Score:</span>
+                                            <span class="text-sm font-bold text-green-600 dark:text-green-400">87%</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm text-gray-600 dark:text-gray-400">Success Probability:</span>
+                                            <span class="text-sm font-bold text-blue-600 dark:text-blue-400">72%</span>
+                                        </div>
+                                        <div class="bg-green-50 dark:bg-green-900/20 rounded p-3">
+                                            <span class="text-sm font-medium text-green-800 dark:text-green-200">Recommendation: PURSUE</span>
+                                            <p class="text-xs text-green-700 dark:text-green-300 mt-1">
+                                                High-value opportunity with strong strategic alignment. Network connections provide competitive advantage.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                                 
-                                <!-- Action Plan -->
-                                <div class="bg-blue-100 dark:bg-blue-900/30 rounded p-3">
-                                    <h5 class="font-medium text-blue-800 dark:text-blue-200 text-sm mb-2">Action Plan</h5>
+                                <!-- Implementation Blueprint -->
+                                <div class="bg-blue-100 dark:bg-blue-900/30 rounded p-3 mb-4">
+                                    <h5 class="font-medium text-blue-800 dark:text-blue-200 text-sm mb-2">Implementation Blueprint</h5>
                                     <div class="space-y-2">
                                         <div class="flex items-center space-x-2 text-xs">
                                             <span class="w-4 h-4 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs">1</span>
-                                            <span class="text-blue-700 dark:text-blue-300">Initial outreach via board connections</span>
+                                            <span class="text-blue-700 dark:text-blue-300">Initial relationship mapping (Week 1)</span>
                                         </div>
                                         <div class="flex items-center space-x-2 text-xs">
                                             <span class="w-4 h-4 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs">2</span>
-                                            <span class="text-blue-700 dark:text-blue-300">Develop comprehensive proposal</span>
+                                            <span class="text-blue-700 dark:text-blue-300">Strategic outreach via board connections (Week 2-3)</span>
                                         </div>
                                         <div class="flex items-center space-x-2 text-xs">
                                             <span class="w-4 h-4 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs">3</span>
-                                            <span class="text-blue-700 dark:text-blue-300">Strategic submission timing</span>
+                                            <span class="text-blue-700 dark:text-blue-300">Proposal development & submission (Week 4-8)</span>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <!-- Relationship Intelligence -->
+                                <div class="bg-purple-100 dark:bg-purple-900/30 rounded p-3 mb-4">
+                                    <h5 class="font-medium text-purple-800 dark:text-purple-200 text-sm mb-2">Relationship Intelligence</h5>
+                                    <div class="space-y-2">
+                                        <div class="text-xs text-purple-700 dark:text-purple-300">
+                                            <span class="font-medium">2 Board Connections:</span> Direct pathway through shared directors
+                                        </div>
+                                        <div class="text-xs text-purple-700 dark:text-purple-300">
+                                            <span class="font-medium">Network Strength:</span> Strong (3rd degree connections)
+                                        </div>
+                                        <div class="text-xs text-purple-700 dark:text-purple-300">
+                                            <span class="font-medium">Engagement Strategy:</span> Warm introduction via mutual connections
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Document Generation Actions -->
+                                <div class="border-t border-blue-200 dark:border-blue-700 pt-4">
+                                    <h5 class="font-medium text-blue-800 dark:text-blue-200 text-sm mb-3">Generate Decision Documents</h5>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button @click="generateDossierDocument('executive_brief')" 
+                                                class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded transition-colors">
+                                            Executive Brief
+                                        </button>
+                                        <button @click="generateDossierDocument('detailed_report')" 
+                                                class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded transition-colors">
+                                            Detailed Report
+                                        </button>
+                                        <button @click="generateDossierDocument('presentation')" 
+                                                class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded transition-colors">
+                                            Presentation
+                                        </button>
+                                        <button @click="generateDossierDocument('compliance_report')" 
+                                                class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded transition-colors">
+                                            Compliance Report
+                                        </button>
                                     </div>
                                 </div>
                                 </div> <!-- End Data Available State -->
@@ -7236,24 +7287,27 @@
                                     <div class="flex flex-col items-center space-y-4">
                                         <div class="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
                                             <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                             </svg>
                                         </div>
                                         <div>
-                                            <h5 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">Ready for Intelligence Analysis</h5>
+                                            <h5 class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">Ready for AI Heavy Dossier</h5>
                                             <p class="text-sm text-blue-700 dark:text-blue-300 max-w-md mx-auto">
-                                                This opportunity is ready for deep intelligence analysis, strategic assessment, and actionable intelligence gathering.
+                                                Generate comprehensive decision-ready dossiers with executive briefs, implementation blueprints, and relationship intelligence.
                                             </p>
                                         </div>
                                         <div x-show="_isTargetsStage(selectedOpportunity)" class="bg-gradient-to-r from-blue-100 to-cyan-100 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-lg p-4 max-w-sm border-2 border-blue-200 dark:border-blue-700">
                                             <div class="flex items-center space-x-3 text-sm text-blue-800 dark:text-blue-200 mb-2">
-                                                <span class="font-bold">TARGET STAGE ACTIVE</span>
+                                                <span class="font-bold">AI HEAVY DOSSIER AVAILABLE</span>
                                             </div>
                                             <p class="text-xs text-blue-700 dark:text-blue-300">
-                                                This opportunity has reached the targets stage. Advanced intelligence analysis, strategic approach planning, and competitive assessment are now available.
+                                                Generate comprehensive dossiers with executive decision briefs, implementation blueprints, relationship intelligence, and decision-ready documents.
                                             </p>
                                         </div>
+                                        <button @click="generateComprehensiveDossier(selectedOpportunity)" 
+                                                class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">
+                                            Generate AI Heavy Dossier
+                                        </button>
                                         <div class="flex items-center space-x-2 text-xs text-blue-600 dark:text-blue-400">
                                             <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
                                             <span>Stage: <span x-text="selectedOpportunity?.current_stage || selectedOpportunity?.stage || 'Unknown'"></span></span>

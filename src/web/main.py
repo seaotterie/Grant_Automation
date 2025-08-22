@@ -4,7 +4,7 @@ Catalynx - Modern Web Interface
 FastAPI backend with real-time progress monitoring
 """
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Body
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -6296,6 +6296,228 @@ async def export_research_results(request_data: Dict[str, Any]) -> Dict[str, Any
         logger.error(f"Error exporting research results: {e}")
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 
+
+# Phase 4: AI Heavy Dossier Builder API Endpoints
+
+@app.post("/api/profiles/{profile_id}/dossier/generate")
+async def generate_comprehensive_dossier(
+    profile_id: str,
+    opportunity_ids: List[str] = Query(..., description="List of opportunity IDs to analyze"),
+    analysis_depth: str = Query("comprehensive", description="Analysis depth: basic, standard, comprehensive"),
+    target_audience: str = Query("executive", description="Target audience: executive, board, implementation, stakeholder"),
+    cost_optimization: bool = Query(False, description="Enable cost optimization for AI processing")
+):
+    """Generate comprehensive AI Heavy dossier for opportunities"""
+    try:
+        from src.analysis.ai_heavy_dossier_builder import AIHeavyDossierBuilder
+        
+        # Initialize dossier builder
+        builder = AIHeavyDossierBuilder(
+            cost_optimization=cost_optimization,
+            quality_threshold=0.8 if analysis_depth == "comprehensive" else 0.6
+        )
+        
+        # Generate comprehensive dossier
+        dossier = await builder.generate_comprehensive_dossier(
+            profile_id=profile_id,
+            opportunity_ids=opportunity_ids,
+            analysis_depth=analysis_depth,
+            target_audience=target_audience
+        )
+        
+        return {
+            "success": True,
+            "dossier_id": dossier.dossier_id,
+            "profile_id": profile_id,
+            "analysis_summary": {
+                "opportunities_analyzed": len(opportunity_ids),
+                "analysis_depth": analysis_depth,
+                "target_audience": target_audience,
+                "confidence_score": dossier.executive_decision.confidence_score,
+                "success_probability": dossier.executive_decision.success_probability,
+                "recommendation": dossier.executive_decision.primary_recommendation
+            },
+            "generation_metadata": {
+                "generated_at": dossier.generated_at,
+                "ai_analysis_cost": dossier.ai_analysis_cost,
+                "processing_time_seconds": dossier.processing_time_seconds
+            },
+            "available_documents": [template.template_id for template in dossier.available_documents],
+            "dossier": dossier.model_dump()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating dossier for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate dossier: {str(e)}")
+
+@app.post("/api/dossier/{dossier_id}/generate-document")
+async def generate_decision_document(
+    dossier_id: str,
+    template_id: str = Query(..., description="Document template ID"),
+    format_type: str = Query("comprehensive", description="Document format: executive_brief, detailed_report, presentation, dashboard, compliance_report"),
+    customizations: Optional[Dict[str, Any]] = None
+):
+    """Generate decision-ready document from dossier"""
+    try:
+        from src.analysis.decision_document_templates import DecisionDocumentTemplates
+        from src.analysis.ai_heavy_dossier_builder import AIHeavyDossierBuilder
+        
+        # Load dossier (in production, this would be from database)
+        builder = AIHeavyDossierBuilder()
+        dossier = await builder.load_dossier(dossier_id)
+        
+        if not dossier:
+            raise HTTPException(status_code=404, detail=f"Dossier {dossier_id} not found")
+        
+        # Generate document
+        template_generator = DecisionDocumentTemplates()
+        document = template_generator.generate_document(
+            dossier=dossier,
+            template_id=template_id,
+            customizations=customizations or {}
+        )
+        
+        return {
+            "success": True,
+            "document_id": document.document_id,
+            "dossier_id": dossier_id,
+            "template_id": template_id,
+            "format_type": format_type,
+            "document_metadata": {
+                "generated_at": document.generated_at,
+                "target_audience": document.target_audience,
+                "document_type": document.document_type,
+                "word_count": document.word_count,
+                "confidence_level": document.confidence_level
+            },
+            "content": document.content,
+            "executive_summary": document.executive_summary,
+            "key_recommendations": document.key_recommendations
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating document for dossier {dossier_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate document: {str(e)}")
+
+@app.get("/api/dossier/templates")
+async def get_available_templates():
+    """Get list of available document templates"""
+    try:
+        from src.analysis.decision_document_templates import DecisionDocumentTemplates
+        
+        template_generator = DecisionDocumentTemplates()
+        templates = template_generator.get_available_templates()
+        
+        return {
+            "success": True,
+            "templates": [
+                {
+                    "template_id": template.template_id,
+                    "name": template.name,
+                    "description": template.description,
+                    "target_audience": template.target_audience,
+                    "document_type": template.document_type,
+                    "estimated_length": template.estimated_length,
+                    "complexity_level": template.complexity_level
+                }
+                for template in templates
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error retrieving templates: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve templates: {str(e)}")
+
+@app.get("/api/dossier/performance-summary")
+async def get_dossier_performance_summary():
+    """Get performance summary for AI Heavy dossier generation"""
+    try:
+        from src.analysis.ai_heavy_dossier_builder import AIHeavyDossierBuilder
+        
+        builder = AIHeavyDossierBuilder()
+        performance_stats = builder.get_performance_stats()
+        
+        return {
+            "success": True,
+            "performance_summary": performance_stats,
+            "system_status": "operational",
+            "last_updated": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error retrieving performance summary: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve performance summary: {str(e)}")
+
+@app.post("/api/profiles/{profile_id}/dossier/batch-generate")
+async def batch_generate_dossiers(
+    profile_id: str,
+    opportunity_batches: List[Dict[str, Any]] = Body(..., description="List of opportunity batches with analysis configurations"),
+    global_settings: Optional[Dict[str, Any]] = Body(None, description="Global settings for all dossiers")
+):
+    """Generate multiple dossiers in batch for different opportunity sets"""
+    try:
+        from src.analysis.ai_heavy_dossier_builder import AIHeavyDossierBuilder
+        
+        # Initialize builder with global settings
+        global_config = global_settings or {}
+        builder = AIHeavyDossierBuilder(
+            cost_optimization=global_config.get("cost_optimization", False),
+            quality_threshold=global_config.get("quality_threshold", 0.8)
+        )
+        
+        # Process batches
+        batch_results = []
+        total_cost = 0.0
+        
+        for i, batch in enumerate(opportunity_batches):
+            try:
+                dossier = await builder.generate_comprehensive_dossier(
+                    profile_id=profile_id,
+                    opportunity_ids=batch.get("opportunity_ids", []),
+                    analysis_depth=batch.get("analysis_depth", "standard"),
+                    target_audience=batch.get("target_audience", "executive")
+                )
+                
+                batch_results.append({
+                    "batch_id": i + 1,
+                    "success": True,
+                    "dossier_id": dossier.dossier_id,
+                    "opportunities_count": len(batch.get("opportunity_ids", [])),
+                    "confidence_score": dossier.executive_decision.confidence_score,
+                    "recommendation": dossier.executive_decision.primary_recommendation,
+                    "cost": dossier.ai_analysis_cost
+                })
+                
+                total_cost += dossier.ai_analysis_cost
+                
+            except Exception as batch_error:
+                logger.error(f"Error processing batch {i + 1}: {batch_error}")
+                batch_results.append({
+                    "batch_id": i + 1,
+                    "success": False,
+                    "error": str(batch_error),
+                    "opportunities_count": len(batch.get("opportunity_ids", [])),
+                    "cost": 0.0
+                })
+        
+        successful_batches = sum(1 for result in batch_results if result["success"])
+        
+        return {
+            "success": True,
+            "profile_id": profile_id,
+            "batch_summary": {
+                "total_batches": len(opportunity_batches),
+                "successful_batches": successful_batches,
+                "failed_batches": len(opportunity_batches) - successful_batches,
+                "total_cost": total_cost,
+                "average_cost_per_batch": total_cost / len(opportunity_batches) if opportunity_batches else 0
+            },
+            "batch_results": batch_results
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in batch dossier generation for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate batch dossiers: {str(e)}")
 
 # Startup event
 @app.on_event("startup")

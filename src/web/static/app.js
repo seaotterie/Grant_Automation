@@ -13680,6 +13680,141 @@ function addDesktopBulkSelection(appData) {
     appData.showSelectionToolbar = false;
     appData.selectionCount = 0;
     
+    // Phase 4: AI Heavy Dossier Builder Functions
+    appData.generateComprehensiveDossier = async function(opportunity) {
+        console.log('Generating comprehensive dossier for opportunity:', opportunity);
+        
+        if (!opportunity || !opportunity.opportunity_id) {
+            this.showNotification('Error', 'Invalid opportunity selected', 'error');
+            return;
+        }
+        
+        if (!this.selectedProfile) {
+            this.showNotification('Error', 'No profile selected', 'error');
+            return;
+        }
+        
+        try {
+            this.showNotification('AI Heavy Dossier', 'Generating comprehensive dossier...', 'info');
+            
+            const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/dossier/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    opportunity_ids: [opportunity.opportunity_id],
+                    analysis_depth: 'comprehensive',
+                    target_audience: 'executive',
+                    cost_optimization: false
+                })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Dossier generation result:', result);
+                
+                // Store dossier data for the opportunity
+                if (!opportunity.ai_heavy_analysis) {
+                    opportunity.ai_heavy_analysis = {};
+                }
+                opportunity.ai_heavy_analysis.dossier = result.dossier;
+                opportunity.ai_heavy_analysis.dossier_id = result.dossier_id;
+                opportunity.ai_heavy_analysis.generated_at = result.generation_metadata.generated_at;
+                
+                this.showNotification(
+                    'AI Heavy Dossier Complete',
+                    `Generated comprehensive dossier with ${result.analysis_summary.confidence_score}% confidence`,
+                    'success'
+                );
+                
+                // Refresh the modal view if it's open
+                if (this.selectedOpportunity && this.selectedOpportunity.opportunity_id === opportunity.opportunity_id) {
+                    this.selectedOpportunity = { ...opportunity };
+                }
+                
+            } else {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to generate dossier');
+            }
+            
+        } catch (error) {
+            console.error('Error generating dossier:', error);
+            this.showNotification('Error', `Failed to generate dossier: ${error.message}`, 'error');
+        }
+    };
+    
+    appData.generateDossierDocument = async function(documentType) {
+        console.log('Generating dossier document:', documentType);
+        
+        if (!this.selectedOpportunity || !this.selectedOpportunity.ai_heavy_analysis?.dossier_id) {
+            this.showNotification('Error', 'No dossier available for document generation', 'error');
+            return;
+        }
+        
+        try {
+            this.showNotification('Document Generation', `Generating ${documentType.replace('_', ' ')} document...`, 'info');
+            
+            const response = await fetch(`/api/dossier/${this.selectedOpportunity.ai_heavy_analysis.dossier_id}/generate-document`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    template_id: documentType,
+                    format_type: documentType,
+                    customizations: {
+                        organization_name: this.selectedProfile?.organization_name || 'Organization',
+                        opportunity_name: this.selectedOpportunity?.organization_name || 'Opportunity'
+                    }
+                })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Document generation result:', result);
+                
+                // Create download link for the document
+                const blob = new Blob([result.content], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${documentType}_${this.selectedOpportunity.organization_name?.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                this.showNotification(
+                    'Document Generated',
+                    `${documentType.replace('_', ' ').toUpperCase()} document downloaded successfully`,
+                    'success'
+                );
+                
+            } else {
+                const error = await response.json();
+                throw new Error(error.detail || 'Failed to generate document');
+            }
+            
+        } catch (error) {
+            console.error('Error generating document:', error);
+            this.showNotification('Error', `Failed to generate document: ${error.message}`, 'error');
+        }
+    };
+    
+    appData.getDossierPerformanceStats = async function() {
+        try {
+            const response = await fetch('/api/dossier/performance-summary');
+            if (response.ok) {
+                const result = await response.json();
+                return result.performance_summary;
+            }
+        } catch (error) {
+            console.error('Error fetching dossier performance stats:', error);
+        }
+        return null;
+    };
+
     // Add keyboard event listener for selection shortcuts
     document.addEventListener('keydown', (event) => appData.handleSelectionKeyboard(event));
     
