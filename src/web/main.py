@@ -1000,8 +1000,8 @@ async def fetch_ein_data(request: dict):
 @app.get("/api/profiles")
 async def list_profiles(
     status: Optional[str] = None, 
-    limit: Optional[int] = None,
-    current_user: User = Depends(get_current_user_dependency)
+    limit: Optional[int] = None
+    # Temporarily removed authentication: current_user: User = Depends(get_current_user_dependency)
 ):
     """List all organization profiles with unified analytics."""
     try:

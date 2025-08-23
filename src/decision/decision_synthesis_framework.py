@@ -15,7 +15,8 @@ import json
 import numpy as np
 from collections import defaultdict
 
-from src.core.base_processor import BaseProcessor
+from src.core.base_processor import BaseProcessor, ProcessorMetadata
+from src.core.data_models import ProcessorConfig, ProcessorResult
 from src.core.entity_cache_manager import get_entity_cache_manager
 from src.integration.workflow_aware_scorer import WorkflowAwareGovernmentScorer
 from src.integration.government_research_integration import GovernmentResearchIntegration
@@ -1084,7 +1085,18 @@ class DecisionSynthesisFramework(BaseProcessor):
     """Main framework for comprehensive decision synthesis"""
     
     def __init__(self):
-        super().__init__()
+        metadata = ProcessorMetadata(
+            name="decision_synthesis_framework",
+            description="Comprehensive decision synthesis framework for grant opportunities",
+            version="1.0.0",
+            dependencies=[],
+            estimated_duration=60,
+            requires_network=False,
+            requires_api_key=False,
+            can_run_parallel=True,
+            processor_type="analysis"
+        )
+        super().__init__(metadata)
         self.integration_system = MultiScoreIntegrationSystem()
         self.recommendation_engine = DecisionRecommendationEngine()
         self.feasibility_engine = FeasibilityAssessmentEngine()
@@ -1155,6 +1167,45 @@ class DecisionSynthesisFramework(BaseProcessor):
                 'error': str(e),
                 'timestamp': datetime.now().isoformat()
             }
+    
+    async def execute(self, config: ProcessorConfig) -> ProcessorResult:
+        """Execute the decision synthesis framework as a processor"""
+        try:
+            # Extract profile ID from config
+            profile_id = self._extract_profile_id_from_config(config)
+            if not profile_id:
+                result = ProcessorResult(
+                    success=False,
+                    processor_name=self.metadata.name,
+                    start_time=datetime.now()
+                )
+                result.add_error("Profile ID not found in configuration")
+                return result
+            
+            # Call the main process method
+            synthesis_result = await self.process(profile_id)
+            
+            # Convert to ProcessorResult format
+            result = ProcessorResult(
+                success=not synthesis_result.get('error'),
+                processor_name=self.metadata.name,
+                start_time=datetime.now(),
+                data=synthesis_result
+            )
+            
+            if synthesis_result.get('error'):
+                result.add_error(synthesis_result['error'])
+            
+            return result
+            
+        except Exception as e:
+            result = ProcessorResult(
+                success=False,
+                processor_name=self.metadata.name,
+                start_time=datetime.now()
+            )
+            result.add_error(f"Decision synthesis execution error: {str(e)}")
+            return result
     
     async def synthesize_decision(self,
                                  opportunity_id: str,

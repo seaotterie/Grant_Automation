@@ -16,7 +16,8 @@ import numpy as np
 from collections import defaultdict
 import uuid
 
-from src.core.base_processor import BaseProcessor
+from src.core.base_processor import BaseProcessor, ProcessorMetadata
+from src.core.data_models import ProcessorConfig, ProcessorResult
 from src.decision.decision_synthesis_framework import (
     DecisionRecommendation, DecisionConfidence, RecommendationType,
     IntegratedScore, FeasibilityAssessment, ResourceAllocation
@@ -572,7 +573,7 @@ class SensitivityAnalysisEngine:
                                           parameter_id: str,
                                           baseline_scenario_id: str,
                                           opportunities: List[Dict[str, Any]],
-                                          organizational_profile: Dict[str, Any]],
+                                          organizational_profile: Dict[str, Any],
                                           num_samples: int = 10) -> SensitivityAnalysis:
         """Analyze sensitivity of decisions to parameter changes"""
         
@@ -758,7 +759,7 @@ class SensitivityAnalysisEngine:
                                                 parameter_ids: List[str],
                                                 baseline_scenario_id: str,
                                                 opportunities: List[Dict[str, Any]],
-                                                organizational_profile: Dict[str, Any]],
+                                                organizational_profile: Dict[str, Any],
                                                 num_samples_per_param: int = 5) -> Dict[str, Any]:
         """Analyze sensitivity across multiple parameters simultaneously"""
         
@@ -828,7 +829,18 @@ class InteractiveDecisionSupportTools(BaseProcessor):
     """Main interactive decision support tools framework"""
     
     def __init__(self):
-        super().__init__()
+        metadata = ProcessorMetadata(
+            name="interactive_decision_support_tools",
+            description="Interactive decision support tools with parameter management and scenario analysis",
+            version="1.0.0",
+            dependencies=[],
+            estimated_duration=30,
+            requires_network=False,
+            requires_api_key=False,
+            can_run_parallel=True,
+            processor_type="analysis"
+        )
+        super().__init__(metadata)
         self.parameter_manager = ParameterManager()
         self.scenario_engine = ScenarioEngine(self.parameter_manager)
         self.sensitivity_engine = SensitivityAnalysisEngine(self.parameter_manager, self.scenario_engine)
@@ -887,6 +899,50 @@ class InteractiveDecisionSupportTools(BaseProcessor):
                 'available_tools': self._get_available_tools(),
                 'timestamp': datetime.now().isoformat()
             }
+    
+    async def execute(self, config: ProcessorConfig) -> ProcessorResult:
+        """Execute the interactive decision support tools as a processor"""
+        try:
+            # Extract profile ID from config
+            profile_id = self._extract_profile_id_from_config(config)
+            if not profile_id:
+                result = ProcessorResult(
+                    success=False,
+                    processor_name=self.metadata.name,
+                    start_time=datetime.now()
+                )
+                result.add_error("Profile ID not found in configuration")
+                return result
+            
+            # Default to exploratory analysis mode
+            support_result = await self.process(
+                profile_id=profile_id,
+                mode=DecisionSupportMode.EXPLORATORY.value,
+                opportunities=[],
+                organizational_profile={}
+            )
+            
+            # Convert to ProcessorResult format
+            result = ProcessorResult(
+                success=not support_result.get('error'),
+                processor_name=self.metadata.name,
+                start_time=datetime.now(),
+                data=support_result
+            )
+            
+            if support_result.get('error'):
+                result.add_error(support_result['error'])
+            
+            return result
+            
+        except Exception as e:
+            result = ProcessorResult(
+                success=False,
+                processor_name=self.metadata.name,
+                start_time=datetime.now()
+            )
+            result.add_error(f"Interactive decision support execution error: {str(e)}")
+            return result
     
     async def _handle_parameter_adjustment(self, profile_id: str, opportunities: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
         """Handle parameter adjustment interactions"""
