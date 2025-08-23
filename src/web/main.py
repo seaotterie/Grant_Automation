@@ -343,6 +343,7 @@ async def disable_trace_method(request: Request, call_next):
 
 # Add security middleware (order matters - add in reverse order of execution)
 app.add_middleware(SecurityHeadersMiddleware)
+# Re-enable XSSProtectionMiddleware with Alpine.js fix
 app.add_middleware(XSSProtectionMiddleware)
 app.add_middleware(InputValidationMiddleware)
 app.add_middleware(RateLimitingMiddleware, requests_per_minute=60)

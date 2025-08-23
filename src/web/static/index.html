@@ -9,7 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Alpine.js for reactivity -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
     
     <!-- Chart.js for data visualization -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -6857,7 +6857,7 @@
                                             <div x-show="selectedOpportunity?.min_revenue_requirement" class="flex items-center space-x-2">
                                                 <span class="w-2 h-2 bg-orange-500 rounded-full"></span>
                                                 <span class="text-sm text-gray-600 dark:text-gray-400">
-                                                    Min Revenue: <span x-text="'$' + selectedOpportunity.min_revenue_requirement.toLocaleString()"></span>
+                                                    Min Revenue: <span x-text="'$' + (selectedOpportunity.min_revenue_requirement?.toLocaleString() || '0')"></span>
                                                 </span>
                                             </div>
                                         </div>
@@ -8142,8 +8142,65 @@
         <!-- Footer content can be added here in the future -->
     </footer>
 
-    <!-- JavaScript -->
-    <script src="/static/app.js?v=PHASE_2_COMPLETE_1.0"></script>
+    <!-- JavaScript with error handling -->
+    <script>
+        // Ensure all external scripts are loaded before initializing
+        let scriptsLoaded = {
+            tailwind: false,
+            alpine: false,
+            chart: false
+        };
+        
+        // Check if Tailwind is loaded
+        function checkTailwind() {
+            if (typeof tailwind !== 'undefined' && tailwind.config) {
+                scriptsLoaded.tailwind = true;
+                console.log('✅ Tailwind CSS loaded');
+            } else {
+                setTimeout(checkTailwind, 100);
+            }
+        }
+        
+        // Check if Alpine.js is loaded
+        function checkAlpine() {
+            if (typeof Alpine !== 'undefined') {
+                scriptsLoaded.alpine = true;
+                console.log('✅ Alpine.js loaded');
+            } else {
+                setTimeout(checkAlpine, 100);
+            }
+        }
+        
+        // Check if Chart.js is loaded
+        function checkChart() {
+            if (typeof Chart !== 'undefined') {
+                scriptsLoaded.chart = true;
+                console.log('✅ Chart.js loaded');
+            } else {
+                setTimeout(checkChart, 100);
+            }
+        }
+        
+        // Start checking for scripts
+        checkTailwind();
+        checkAlpine();
+        checkChart();
+        
+        // CDN fallback and error handling
+        setTimeout(() => {
+            if (!scriptsLoaded.alpine) {
+                console.error('⚠️ Alpine.js failed to load from CDN, check network connection');
+            }
+            if (!scriptsLoaded.tailwind) {
+                console.error('⚠️ Tailwind CSS failed to load from CDN, check network connection');
+            }
+            if (!scriptsLoaded.chart) {
+                console.error('⚠️ Chart.js failed to load from CDN, check network connection');
+            }
+        }, 5000);
+    </script>
+    
+    <script src="/static/app.js?v=PHASE_2_COMPLETE_1.0" onerror="console.error('Failed to load app.js')"></script>
     
     <!-- INLINE FIX: Override getOrganizationTypeColor for PROFILER and DISCOVER cache issue -->
     <script>
@@ -8363,7 +8420,6 @@
                             };
                             
                             console.log('[PHASE 3] Research Platform functionality initialized');
-                        }
                         }
                         
                         // Initialize context menus

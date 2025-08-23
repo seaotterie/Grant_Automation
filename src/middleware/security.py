@@ -147,6 +147,14 @@ class XSSProtectionMiddleware(BaseHTTPMiddleware):
         return text
     
     async def dispatch(self, request: Request, call_next):
+        # Skip XSS protection for static files and routes that don't need it
+        path = request.url.path
+        if (path.startswith(('/static/', '/api/')) or 
+            path in ('/', '/favicon.ico') or 
+            'javascript' in request.headers.get('accept', '').lower() or
+            'text/javascript' in request.headers.get('content-type', '').lower()):
+            return await call_next(request)
+            
         # Check request body for XSS patterns
         if request.method in ["POST", "PUT", "PATCH"]:
             try:

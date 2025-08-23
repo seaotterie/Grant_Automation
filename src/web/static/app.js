@@ -312,6 +312,117 @@ function catalynxApp() {
         
         // Profile-specific data storage
         planData: {}, // Strategic planning results for selected profile
+        selectedProfile: {
+            name: '',
+            ein: '',
+            organization_type: '',
+            status: 'active',
+            mission_statement: '',
+            focus_areas: [],
+            pipeline_stage: 'prospect',
+            min_revenue_requirement: null,
+            application_deadline: null,
+            matching_requirement: null,
+            project_duration: null,
+            organization_name: ''
+        }, // Currently selected profile object with defaults
+        
+        // 990 Tab Management
+        active990Tab: 'overview',
+        
+        // Export Modal State
+        showExportModal: false,
+        exportConfig: {
+            format: 'pdf',
+            template: 'executive',
+            includeCharts: true,
+            includeTables: true
+        },
+        exportInProgress: false,
+        
+        // Analysis State
+        analysisStatus: 'idle',
+        analysisResults: {},
+        candidatesCount: 0,
+        
+        // Research and Filtering
+        researchPlatform: {
+            name: 'comprehensive',
+            totalCost: 0.0,
+            analysisCount: 0,
+            lastUpdated: new Date()
+        },
+        stageFilter: 'all',
+        selectedTarget: null,
+        availableProfiles: [],
+        
+        // Modal States
+        showProspectModal: false,
+        
+        // Alpine.js Functions - Foundation and 990 Analysis
+        getFoundationCount(code = null) {
+            // Return 0 as placeholder - can be enhanced later
+            return 0;
+        },
+        
+        getScheduleICount() {
+            return 0;
+        },
+        
+        getTotal990Revenue() {
+            return 0;
+        },
+        
+        getAcceptsApplicationsCount() {
+            return 0;
+        },
+        
+        getFinancialSummary() {
+            return null;
+        },
+        
+        getScheduleIRecipients() {
+            return [];
+        },
+        
+        getFoundationFinancials() {
+            return null;
+        },
+        
+        getFoundationBoardMembers() {
+            return [];
+        },
+        
+        getFoundationsAcceptingApplications() {
+            return [];
+        },
+        
+        getInvitationOnlyCount() {
+            return 0;
+        },
+        
+        getInvitationOnlyFoundations() {
+            return [];
+        },
+        
+        getResearchNeededCount() {
+            return 0;
+        },
+        
+        getResearchNeededFoundations() {
+            return [];
+        },
+        
+        getRiskLevelColor(riskLevel) {
+            if (!riskLevel) return 'text-gray-500';
+            switch(riskLevel.toLowerCase()) {
+                case 'low': return 'text-green-600';
+                case 'medium': return 'text-yellow-600';
+                case 'high': return 'text-red-600';
+                case 'very high': return 'text-red-800';
+                default: return 'text-gray-500';
+            }
+        },
         
         // Workflow progress tracking
         workflowProgress: {
@@ -1776,7 +1887,14 @@ function catalynxApp() {
         
         // Opportunity Modal System
         showOpportunityModal: false,
-        selectedOpportunity: null,
+        selectedOpportunity: {
+            pipeline_stage: 'prospect',
+            min_revenue_requirement: null,
+            application_deadline: null,
+            matching_requirement: null,
+            project_duration: null,
+            organization_name: 'No Organization Selected'
+        },
         opportunityLoading: false,
         isProcessing: false,
         modalActiveTab: 'overview', // Tab state for opportunity modal
@@ -3220,7 +3338,20 @@ function catalynxApp() {
         
         // Selected profile for discovery
         // CENTRALIZED PROFILE MANAGEMENT - Single profile for all tabs
-        selectedProfile: null,
+        selectedProfile: {
+            name: '',
+            ein: '',
+            organization_type: '',
+            status: 'active',
+            mission_statement: '',
+            focus_areas: [],
+            pipeline_stage: 'prospect',
+            min_revenue_requirement: null,
+            application_deadline: null,
+            matching_requirement: null,
+            project_duration: null,
+            organization_name: ''
+        },
         
         // Legacy compatibility getters (for gradual migration)
         get selectedDiscoveryProfile() { return this.selectedProfile; },
@@ -12758,9 +12889,6 @@ function catalynxApp() {
             // 990 & 990-PF ANALYSIS DASHBOARD FUNCTIONS
             // Functions to support unified analysis interface in PLAN tab
             
-            // State management for 990 analysis tabs
-            active990Tab: 'overview',
-            
             // Check if organization has 990 data available
             has990Data() {
                 const currentOpportunity = this.getCurrentOpportunity();
@@ -12783,12 +12911,18 @@ function catalynxApp() {
             },
             
             // Get foundation count for dashboard
-            getFoundationCount() {
+            getFoundationCount(code = null) {
                 const currentOpportunity = this.getCurrentOpportunity();
                 if (!currentOpportunity || !currentOpportunity.foundation_data) return 0;
                 
-                return currentOpportunity.foundation_data.grants_awarded ? 
-                       currentOpportunity.foundation_data.grants_awarded.length : 0;
+                if (!code) {
+                    return currentOpportunity.foundation_data.grants_awarded ? 
+                           currentOpportunity.foundation_data.grants_awarded.length : 0;
+                }
+                
+                // Filter by foundation code if specified (like '03' for code filtering)
+                if (currentOpportunity.foundation_code === code) return 1;
+                return 0;
             },
             
             // Check if foundation accepts applications
@@ -12882,6 +13016,134 @@ function catalynxApp() {
                 this.active990Tab = tab;
             },
             
+            // Additional missing functions for Alpine.js templates
+            
+            // Alias functions to match HTML template expectations
+            getScheduleIRecipients() {
+                return this.getScheduleIData();
+            },
+            
+            getFoundationBoardMembers() {
+                return this.getBoardMemberData();
+            },
+            
+            getScheduleICount() {
+                const data = this.getScheduleIData();
+                return Array.isArray(data) ? data.length : 0;
+            },
+            
+            getTotal990Revenue() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity) return 0;
+                
+                const analysis = this.get990Analysis();
+                if (analysis && analysis.total_revenue) return analysis.total_revenue;
+                
+                // Try foundation financial data
+                const financials = this.getFoundationFinancials();
+                if (financials && financials.total_giving) return financials.total_giving;
+                
+                return 0;
+            },
+            
+            getFinancialSummary() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity) return null;
+                
+                const analysis = this.get990Analysis();
+                const foundationFinancials = this.getFoundationFinancials();
+                
+                if (analysis) {
+                    return {
+                        total_revenue: analysis.total_revenue || 0,
+                        total_expenses: analysis.total_expenses || 0,
+                        net_assets: analysis.net_assets || 0
+                    };
+                }
+                
+                if (foundationFinancials) {
+                    return foundationFinancials;
+                }
+                
+                return null;
+            },
+            
+            getFoundationsAcceptingApplications() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity) return [];
+                
+                if (this.getAcceptsApplicationsCount() > 0) {
+                    return [currentOpportunity];
+                }
+                return [];
+            },
+            
+            getInvitationOnlyCount() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity || !currentOpportunity.foundation_data) return 0;
+                
+                const appProcess = this.getApplicationProcess();
+                if (appProcess && appProcess.invitation_only) return 1;
+                return 0;
+            },
+            
+            getInvitationOnlyFoundations() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity) return [];
+                
+                if (this.getInvitationOnlyCount() > 0) {
+                    return [currentOpportunity];
+                }
+                return [];
+            },
+            
+            getResearchNeededCount() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity) return 0;
+                
+                // Consider research needed if no foundation data or incomplete data
+                if (!currentOpportunity.foundation_data && !currentOpportunity.pf_data) return 1;
+                
+                const foundationData = currentOpportunity.foundation_data || currentOpportunity.pf_data;
+                if (!foundationData.application_process || !foundationData.grants_awarded) return 1;
+                
+                return 0;
+            },
+            
+            getResearchNeededFoundations() {
+                const currentOpportunity = this.getCurrentOpportunity();
+                if (!currentOpportunity) return [];
+                
+                if (this.getResearchNeededCount() > 0) {
+                    return [currentOpportunity];
+                }
+                return [];
+            },
+            
+            getRiskLevelColor(riskLevel) {
+                if (!riskLevel) return 'text-gray-500';
+                
+                switch(riskLevel.toLowerCase()) {
+                    case 'low': return 'text-green-600';
+                    case 'medium': return 'text-yellow-600';
+                    case 'high': return 'text-red-600';
+                    case 'very high': return 'text-red-800';
+                    default: return 'text-gray-500';
+                }
+            },
+            
+            // Initialize researchPlatform object with proper structure
+            initializeResearchPlatform() {
+                if (!this.researchPlatform || typeof this.researchPlatform === 'string') {
+                    this.researchPlatform = {
+                        name: this.researchPlatform || 'comprehensive',
+                        totalCost: 0.0,
+                        analysisCount: 0,
+                        lastUpdated: new Date()
+                    };
+                }
+            },
+            
             // Utility functions now defined directly in main context above
         }
     }
@@ -12946,6 +13208,108 @@ function addNotificationSystem(appData) {
         setTimeout(() => {
             this.notifications = [];
         }, 300);
+    };
+    
+    // ========================================
+    // MISSING 990 DATA ANALYSIS FUNCTIONS
+    // ========================================
+    
+    // CRITICAL: Add missing getCurrentOpportunity function
+    appData.getCurrentOpportunity = function() {
+        // Return the currently selected profile if available
+        if (this.selectedProfile && this.selectedProfile.name) {
+            return this.selectedProfile;
+        }
+        
+        // Fallback: return the first opportunity from discovery results if available
+        if (this.discoveryResults && this.discoveryResults.opportunities && this.discoveryResults.opportunities.length > 0) {
+            return this.discoveryResults.opportunities[0];
+        }
+        
+        // Fallback: return the first profile from available profiles
+        if (this.availableProfiles && this.availableProfiles.length > 0) {
+            return this.availableProfiles[0];
+        }
+        
+        return null;
+    };
+    
+    // ========================================
+    // 990 DATA ANALYSIS FUNCTIONS (MOVED TO MAIN OBJECT)
+    // ========================================
+    
+    // Schedule I functions
+    appData.getScheduleICount = function() {
+        return this.getScheduleIData().length;
+    };
+    
+    appData.getScheduleIRecipients = function() {
+        return this.getScheduleIData();
+    };
+    
+    // Revenue and financial functions
+    appData.getTotal990Revenue = function() {
+        const currentOpportunity = this.getCurrentOpportunity();
+        if (!currentOpportunity || !currentOpportunity.financial_data) return 0;
+        return currentOpportunity.financial_data.total_revenue || 0;
+    };
+    
+    appData.getFinancialSummary = function() {
+        const financials = this.getFoundationFinancials();
+        if (!financials) return { revenue: 0, expenses: 0, net_assets: 0 };
+        
+        return {
+            revenue: financials.total_giving || 0,
+            expenses: 0, // Not typically in foundation data
+            net_assets: financials.total_assets || 0
+        };
+    };
+    
+    // Board and foundation functions
+    appData.getFoundationBoardMembers = function() {
+        return this.getBoardMemberData();
+    };
+    
+    appData.getFoundationsAcceptingApplications = function() {
+        const currentOpportunity = this.getCurrentOpportunity();
+        if (!currentOpportunity || !currentOpportunity.foundation_data) return [];
+        return currentOpportunity.foundation_data.accepts_applications ? [currentOpportunity] : [];
+    };
+    
+    // Application process functions
+    appData.getInvitationOnlyCount = function() {
+        const currentOpportunity = this.getCurrentOpportunity();
+        if (!currentOpportunity || !currentOpportunity.foundation_data) return 0;
+        return (currentOpportunity.foundation_data.application_process === 'invitation_only') ? 1 : 0;
+    };
+    
+    appData.getInvitationOnlyFoundations = function() {
+        const currentOpportunity = this.getCurrentOpportunity();
+        if (!currentOpportunity || !currentOpportunity.foundation_data) return [];
+        return (currentOpportunity.foundation_data.application_process === 'invitation_only') ? [currentOpportunity] : [];
+    };
+    
+    // Research requirement functions
+    appData.getResearchNeededCount = function() {
+        const currentOpportunity = this.getCurrentOpportunity();
+        if (!currentOpportunity || !currentOpportunity.foundation_data) return 0;
+        return currentOpportunity.foundation_data.research_required ? 1 : 0;
+    };
+    
+    appData.getResearchNeededFoundations = function() {
+        const currentOpportunity = this.getCurrentOpportunity();
+        if (!currentOpportunity || !currentOpportunity.foundation_data) return [];
+        return currentOpportunity.foundation_data.research_required ? [currentOpportunity] : [];
+    };
+    
+    // Utility functions
+    appData.getRiskLevelColor = function(level) {
+        const colors = {
+            'low': 'text-green-600 dark:text-green-400',
+            'medium': 'text-yellow-600 dark:text-yellow-400',
+            'high': 'text-red-600 dark:text-red-400'
+        };
+        return colors[level] || 'text-gray-600 dark:text-gray-400';
     };
     
     return appData;
@@ -14011,5 +14375,78 @@ function addDesktopBulkSelection(appData) {
     
     return appData;
 }
+
+// ========================================
+// ALPINE.JS INITIALIZATION
+// ========================================
+
+// Wait for Alpine.js to be available, then initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if Alpine.js is loaded
+    if (typeof Alpine === 'undefined') {
+        console.error('Alpine.js not loaded. Retrying...');
+        // Retry after a short delay
+        setTimeout(initializeAlpine, 100);
+    } else {
+        initializeAlpine();
+    }
+});
+
+function initializeAlpine() {
+    try {
+        // Register the catalynxApp function with Alpine.js
+        console.log('DEBUG: About to register catalynxApp with Alpine.js');
+        console.log('DEBUG: catalynxApp function type:', typeof catalynxApp);
+        if (typeof Alpine !== 'undefined' && Alpine.data) {
+            Alpine.data('catalynxApp', catalynxApp);
+            console.log('SUCCESS: Catalynx app registered with Alpine.js');
+            
+            // External debug: Test the registered function
+            try {
+                const testApp = catalynxApp();
+                console.log('DEBUG: Testing catalynxApp() function...');
+                console.log('DEBUG: getFoundationCount exists?', typeof testApp.getFoundationCount);
+                console.log('DEBUG: getScheduleICount exists?', typeof testApp.getScheduleICount); 
+                console.log('DEBUG: getTotal990Revenue exists?', typeof testApp.getTotal990Revenue);
+                console.log('DEBUG: getAcceptsApplicationsCount exists?', typeof testApp.getAcceptsApplicationsCount);
+                console.log('DEBUG: getFinancialSummary exists?', typeof testApp.getFinancialSummary);
+                console.log('DEBUG: getRiskLevelColor exists?', typeof testApp.getRiskLevelColor);
+                console.log('DEBUG: active990Tab exists?', typeof testApp.active990Tab);
+            } catch (testError) {
+                console.error('DEBUG: Error testing catalynxApp function:', testError);
+            }
+        } else {
+            throw new Error('Alpine.js data registration not available');
+        }
+    } catch (error) {
+        console.error('ERROR: Failed to initialize Alpine.js:', error);
+        
+        // Fallback: try again after Alpine loads
+        window.addEventListener('alpine:init', () => {
+            try {
+                Alpine.data('catalynxApp', catalynxApp);
+                console.log('SUCCESS: Catalynx app registered with Alpine.js (fallback)');
+            } catch (fallbackError) {
+                console.error('ERROR: Fallback Alpine.js initialization failed:', fallbackError);
+            }
+        });
+    }
+}
+
+// Global error handler for uncaught JavaScript errors
+window.addEventListener('error', function(event) {
+    console.error('CRITICAL: JavaScript Error:', {
+        message: event.message,
+        filename: event.filename,
+        line: event.lineno,
+        column: event.colno,
+        error: event.error
+    });
+});
+
+// Global error handler for unhandled promise rejections
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('CRITICAL: Unhandled Promise Rejection:', event.reason);
+});
 
 // ========================================
