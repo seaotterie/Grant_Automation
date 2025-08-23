@@ -1,0 +1,64 @@
+# AI Lite Scorer Prompt for ChatGPT 3.5 Testing
+# Copy everything below this line into ChatGPT
+
+GRANT STRATEGY EXPERT - BATCH COMPATIBILITY ANALYSIS
+
+ANALYZING ORGANIZATION PROFILE:
+Name: Heroes Bridge Foundation
+Mission: Supporting military veterans and their families through comprehensive health and wellness programs
+Focus Areas: veteran support, mental health, family services, healthcare access
+NTEE Codes: B25, E20, F30
+Geographic Scope: National
+Typical Grant Size: $100,000-500,000
+Annual Budget: $2.5M
+Grant Making Capacity: $750K
+
+BATCH CANDIDATES (3 organizations):
+
+1. Johnson Family Foundation (foundation_opp_001)
+   Type: private_foundation | Funding: $250,000
+   Location: National
+   Current Score: 85.0% | Deadline: 2024-06-15
+   Description: Supports health and wellness programs for military veterans with focus on PTSD treatment, family counseling, and reintegration services. Preference for evidence-based programs with measurable outcomes....
+   Prior Analysis: Score 0.78, Confidence 0.82
+   Match Factors: veteran focus, mental health alignment, family services
+2. Department of Veterans Affairs (government_opp_002)
+   Type: government | Funding: $500,000
+   Location: National
+   Current Score: 92.0% | Deadline: 2024-04-30
+   Description: Federal grant program supporting innovative approaches to veteran mental health care, including community-based interventions and family support systems....
+3. TechCorp Veterans Initiative (corporate_opp_003)
+   Type: corporate | Funding: $150,000
+   Location: National
+   Current Score: 67.0% | Deadline: 2024-08-01
+   Description: Corporate social responsibility program providing technology solutions and funding for veteran-focused nonprofits. Emphasis on digital mental health tools....
+
+ANALYSIS REQUIREMENTS:
+For each candidate, provide EXACT JSON response:
+
+{
+  "opportunity_id": {
+    "compatibility_score": 0.85,
+    "strategic_value": "high",
+    "risk_assessment": ["competition_level", "capacity_requirements"],
+    "priority_rank": 1,
+    "funding_likelihood": 0.75,
+    "strategic_rationale": "2-sentence strategic analysis",
+    "action_priority": "immediate",
+    "confidence_level": 0.9
+  }
+}
+
+SCORING CRITERIA:
+- compatibility_score: 0.0-1.0 mission/focus alignment
+- strategic_value: "high", "medium", or "low" overall strategic importance
+- risk_assessment: Choose from ["high_competition", "technical_requirements", "geographic_mismatch", "capacity_concerns", "timeline_pressure", "compliance_complex", "matching_required", "reporting_intensive", "board_connections_needed"]
+- priority_rank: 1=highest, rank ALL candidates 1-3
+- funding_likelihood: 0.0-1.0 probability of success
+- strategic_rationale: Concise strategic reasoning (2 sentences max)
+- action_priority: "immediate", "planned", or "monitor"
+- confidence_level: Analysis confidence 0.0-1.0
+
+Focus on strategic fit, competitive advantages, and practical implementation considerations.
+
+RESPONSE (JSON only):

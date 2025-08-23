@@ -1,0 +1,46 @@
+{
+  "ai_lite_scenarios": [
+    {
+      "scenario": "High-alignment opportunities",
+      "description": "Test with opportunities that closely match organization mission",
+      "expected_outcome": "High compatibility scores, immediate action priorities"
+    },
+    {
+      "scenario": "Mixed-alignment batch",
+      "description": "Test with mix of high, medium, and low alignment opportunities",
+      "expected_outcome": "Varied scores with clear differentiation"
+    },
+    {
+      "scenario": "High-risk opportunities",
+      "description": "Test with competitive or complex opportunities",
+      "expected_outcome": "Lower confidence scores, detailed risk assessments"
+    },
+    {
+      "scenario": "Small vs large funding amounts",
+      "description": "Test scoring consistency across different funding levels",
+      "expected_outcome": "Funding amount should not bias compatibility scoring"
+    }
+  ],
+  "ai_heavy_scenarios": [
+    {
+      "scenario": "Strategic partner opportunity",
+      "description": "Test with long-term strategic partnership potential",
+      "expected_outcome": "Comprehensive relationship strategy, multi-year planning"
+    },
+    {
+      "scenario": "Competitive funding opportunity",
+      "description": "Test with highly competitive major foundation",
+      "expected_outcome": "Detailed competitive analysis, differentiation strategy"
+    },
+    {
+      "scenario": "Board connection opportunity",
+      "description": "Test with known board member connections",
+      "expected_outcome": "Specific relationship leverage strategies"
+    },
+    {
+      "scenario": "Complex application requirements",
+      "description": "Test with opportunity having extensive application process",
+      "expected_outcome": "Detailed grant application intelligence with LOE estimates"
+    }
+  ]
+}

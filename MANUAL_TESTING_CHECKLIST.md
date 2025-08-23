@@ -365,6 +365,117 @@ This comprehensive manual testing checklist ensures the Catalynx Grant Intellige
 
 ---
 
+## Backend-Frontend Integration Testing
+
+### API-GUI Binding Verification
+- [ ] **Tab Navigation API Calls**: Verify each tab correctly triggers corresponding backend APIs
+  - [ ] **DISCOVER Tab**: `/api/discovery/*` endpoints called on tab activation
+  - [ ] **PLAN Tab**: `/api/profiles/*/analytics` and planning endpoints called
+  - [ ] **ANALYZE Tab**: AI-Lite scoring services triggered (`/api/analysis/ai-lite`)
+  - [ ] **EXAMINE Tab**: AI-Heavy research services triggered (`/api/analysis/ai-heavy`)
+  - [ ] **APPROACH Tab**: Decision synthesis APIs called (`/api/decision/*`)
+- [ ] **Profile Management Integration**: Frontend profile operations trigger correct backend calls
+  - [ ] **Profile Creation**: POST `/api/profiles` with proper validation
+  - [ ] **Profile Updates**: PUT `/api/profiles/{id}` with data persistence
+  - [ ] **Profile Deletion**: DELETE `/api/profiles/{id}` with secure cleanup
+  - [ ] **Profile Loading**: GET `/api/profiles/{id}` with complete data retrieval
+- [ ] **Discovery Engine Integration**: 4-track discovery system properly integrated
+  - [ ] **Nonprofit+BMF Track**: Entity discovery APIs called (`/api/discovery/entity-analytics`)
+  - [ ] **Federal Track**: Government discovery APIs triggered
+  - [ ] **State Track**: State-level grant discovery functional
+  - [ ] **Commercial Track**: Corporate partnership discovery operational
+
+### Real-time WebSocket Integration
+- [ ] **WebSocket Connection**: Establish and maintain stable WebSocket connections
+- [ ] **Progress Monitoring**: Real-time progress updates during discovery operations
+- [ ] **Error Propagation**: Backend errors properly displayed in frontend UI
+- [ ] **Status Updates**: Processing status changes reflected immediately
+- [ ] **Connection Recovery**: Automatic reconnection after network interruptions
+- [ ] **Multi-tab Sync**: WebSocket updates synchronized across multiple browser tabs
+
+### Data Flow Integration Testing
+- [ ] **Entity Cache Integration**: Frontend displays correctly use backend entity cache data
+- [ ] **Score Synchronization**: Scoring results properly propagated to frontend displays
+- [ ] **State Persistence**: Frontend state preserved during backend operations
+- [ ] **Error State Handling**: Frontend gracefully handles backend error states
+- [ ] **Loading States**: Appropriate loading indicators during backend processing
+
+### AI Analysis Integration
+- [ ] **AI Lite Integration**: ANALYZE tab correctly integrates with AI Lite Scorer
+  - [ ] **Request Formation**: Proper AILiteRequest data packet creation
+  - [ ] **Response Parsing**: AILiteAnalysis responses correctly parsed and displayed
+  - [ ] **Error Fallbacks**: Graceful handling of AI service failures
+  - [ ] **Cost Tracking**: Cost estimates and tracking properly displayed
+- [ ] **AI Heavy Integration**: EXAMINE tab correctly integrates with AI Heavy Researcher
+  - [ ] **Request Formation**: Comprehensive AIHeavyRequest data packet creation
+  - [ ] **Response Processing**: StrategicDossier and ActionPlan properly displayed
+  - [ ] **Dossier Generation**: Grant application intelligence correctly integrated
+  - [ ] **Progress Monitoring**: Long-running AI operations show progress updates
+
+### Export System Integration
+- [ ] **PDF Export**: Phase 6 PDF export system properly integrated with frontend
+- [ ] **Excel Export**: Multi-format Excel generation accessible from frontend
+- [ ] **PowerPoint Export**: Presentation generation functional from UI
+- [ ] **HTML Export**: Web-friendly export format operational
+- [ ] **Batch Export**: Multiple opportunity export functionality working
+
+### Mobile Integration Testing
+- [ ] **Mobile API Calls**: Backend APIs properly called from mobile interfaces
+- [ ] **Touch Interface**: Touch-friendly UI properly triggers backend operations
+- [ ] **Responsive Data Display**: Backend data properly formatted for mobile screens
+- [ ] **Offline Handling**: Graceful degradation when backend unavailable on mobile
+- [ ] **Performance on Mobile**: Backend integration maintains performance on mobile devices
+
+---
+
+## AI Analysis Systems Testing
+
+### ChatGPT App Prototyping (Pre-API Integration)
+- [ ] **AI Lite Prompt Extraction**: Copy exact prompts from AILiteScorer to ChatGPT app
+  - [ ] **Batch Analysis Prompt**: Test comprehensive batch prompt with sample data
+  - [ ] **Response Structure**: Validate JSON response format matches AILiteAnalysis model
+  - [ ] **Scoring Logic**: Verify compatibility scoring produces expected results
+  - [ ] **Risk Assessment**: Test risk flag identification and priority ranking
+- [ ] **AI Heavy Prompt Extraction**: Copy prompts from AIHeavyResearcher to ChatGPT app
+  - [ ] **Comprehensive Research Prompt**: Test strategic dossier generation prompt
+  - [ ] **Grant Intelligence**: Validate grant application intelligence analysis
+  - [ ] **Decision Support**: Test recommended approach and action plan generation
+  - [ ] **Response Parsing**: Ensure StrategicDossier structure compatibility
+
+### AI Lite Scorer Testing (ANALYZE Tab)
+- [ ] **Cost Optimization Validation**: Verify GPT-3.5 usage and $0.0001 per candidate cost tracking
+- [ ] **Batch Processing**: Test 15-candidate batches with realistic organization profiles
+- [ ] **Response Model Parsing**: Validate Pydantic model parsing for all response fields:
+  - [ ] **StrategicValue Enum**: high/medium/low values properly parsed
+  - [ ] **ActionPriority Enum**: immediate/planned/monitor classification working
+  - [ ] **Risk Assessment**: Array of risk factors correctly identified
+  - [ ] **Confidence Scoring**: 0-1 confidence levels properly calculated
+- [ ] **Fallback Mechanisms**: Test error handling and simulated response generation
+- [ ] **Integration Flow**: End-to-end testing from ANALYZE tab to results display
+
+### AI Heavy Researcher Testing (EXAMINE Tab)
+- [ ] **Premium Analysis Validation**: Verify GPT-4 integration for comprehensive analysis
+- [ ] **Phase 3 Enhancements**: Test intelligent categorization system:
+  - [ ] **OpportunityCategory Classification**: Strategic partner, funding source, network gateway classification
+  - [ ] **IntelligencePattern Generation**: ML-based pattern recognition functionality
+  - [ ] **Research Optimization**: Adaptive focus area generation based on patterns
+- [ ] **Grant Application Intelligence**: Test detailed application requirement analysis:
+  - [ ] **Eligibility Analysis**: EligibilityRequirement parsing and compliance status
+  - [ ] **Application Requirements**: ApplicationRequirement document analysis
+  - [ ] **Grant Timeline**: GrantTimeline milestone and deadline tracking
+  - [ ] **Effort Estimation**: Detailed LOE estimates with critical path analysis
+- [ ] **Cost Tracking**: Monitor $0.18 per dossier estimate accuracy
+- [ ] **Dossier Generation**: Test complete StrategicDossier creation with all components
+
+### AI Heavy Dossier Builder Integration
+- [ ] **Executive Decision Brief**: Test executive decision generation with confidence scoring
+- [ ] **Implementation Blueprint**: Validate comprehensive implementation planning
+- [ ] **Relationship Intelligence**: Test relationship mapping and engagement strategy
+- [ ] **Success Factor Analysis**: Verify success probability calculation and factor identification
+- [ ] **Multi-component Integration**: Test integration with AI Heavy Researcher results
+
+---
+
 ## Performance & Reliability
 
 ### Response Time Testing
