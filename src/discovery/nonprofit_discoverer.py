@@ -33,10 +33,18 @@ class NonprofitDiscoverer(BaseDiscoverer):
         
         try:
             # Execute the existing workflow
-            workflow_results = await self.workflow_engine.execute_workflow(workflow_config)
+            workflow_state = await self.workflow_engine.run_workflow(workflow_config)
             
-            # Stream results as DiscoveryResult objects
-            raw_results = workflow_results.get("results", [])
+            # Extract results from workflow state
+            raw_results = []
+            if workflow_state.processor_results:
+                for processor_name, processor_result in workflow_state.processor_results.items():
+                    if processor_result.success and processor_result.data:
+                        if isinstance(processor_result.data, dict):
+                            if 'organizations' in processor_result.data:
+                                raw_results.extend(processor_result.data['organizations'])
+                            elif 'results' in processor_result.data:
+                                raw_results.extend(processor_result.data['results'])
             
             for i, result in enumerate(raw_results):
                 if i >= max_results:

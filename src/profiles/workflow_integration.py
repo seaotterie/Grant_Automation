@@ -177,11 +177,11 @@ class ProfileWorkflowIntegrator:
         
         try:
             # Execute existing workflow
-            workflow_results = await self.workflow_engine.execute_workflow(workflow_config)
+            workflow_state = await self.workflow_engine.run_workflow(workflow_config)
             
             # Convert results to profile-centric format
             converted_results = self._convert_workflow_results_to_profile_format(
-                workflow_results, profile, FundingType.GRANTS
+                workflow_state, profile, FundingType.GRANTS
             )
             
             return {
@@ -297,7 +297,7 @@ class ProfileWorkflowIntegrator:
     
     def _convert_workflow_results_to_profile_format(
         self, 
-        workflow_results: Dict[str, Any], 
+        workflow_state, 
         profile: OrganizationProfile,
         funding_type: FundingType
     ) -> Dict[str, Any]:
@@ -305,8 +305,16 @@ class ProfileWorkflowIntegrator:
         
         opportunities = []
         
-        # Process workflow results and convert to opportunity leads
-        raw_results = workflow_results.get("results", [])
+        # Extract results from workflow state
+        raw_results = []
+        if workflow_state.processor_results:
+            for processor_name, processor_result in workflow_state.processor_results.items():
+                if processor_result.success and processor_result.data:
+                    if isinstance(processor_result.data, dict):
+                        if 'organizations' in processor_result.data:
+                            raw_results.extend(processor_result.data['organizations'])
+                        elif 'results' in processor_result.data:
+                            raw_results.extend(processor_result.data['results'])
         
         for result in raw_results:
             opportunity = {

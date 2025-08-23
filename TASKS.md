@@ -29,3 +29,7 @@ Manual Inputs
 - Add a profile's grant package and docs outlining grant writing information, about us, past performance, metrics, non profit details to help with the APPROACH tab and grant writing
 - Comments on View Details provided Promote and Demote reasoning
 - Feedback loop where BOD and Grantor Networks feed back in to the DISCOVERY tab
+
+## PLAN
+3
+
