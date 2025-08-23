@@ -1,0 +1,246 @@
+{
+  "test_suite": "Phase 6 Advanced Systems Integration Testing",
+  "test_profile_id": "profile_f3adef3b653c",
+  "timestamp": "2025-08-23T19:39:23.950374",
+  "test_results": {
+    "decision_synthesis": {
+      "test_name": "decision_synthesis_framework",
+      "profile_id": "profile_f3adef3b653c",
+      "timestamp": "2025-08-23T19:39:19.728348",
+      "endpoint": "/api/profiles/profile_f3adef3b653c/approach/synthesize-decision",
+      "status_code": 500,
+      "request_data": {
+        "synthesis_mode": "comprehensive",
+        "workflow_results": [
+          {
+            "stage": "discover",
+            "primary_score": 0.82,
+            "confidence": 0.85,
+            "scorer_type": "entity_discovery",
+            "key_findings": [
+              "57 opportunities identified",
+              "Strong healthcare sector alignment"
+            ]
+          },
+          {
+            "stage": "analyze",
+            "primary_score": 0.78,
+            "confidence": 0.79,
+            "scorer_type": "ai_lite_analysis",
+            "key_findings": [
+              "High strategic value opportunities",
+              "Moderate competition levels"
+            ]
+          },
+          {
+            "stage": "examine",
+            "primary_score": 0.86,
+            "confidence": 0.82,
+            "scorer_type": "ai_heavy_research",
+            "key_findings": [
+              "Strong board connections",
+              "Optimal timing for applications"
+            ]
+          }
+        ],
+        "decision_parameters": {
+          "resource_constraints": {
+            "budget_limit": 50000,
+            "staff_hours_available": 120,
+            "application_deadline_buffer_days": 30
+          },
+          "strategic_priorities": [
+            "mission_alignment",
+            "funding_probability",
+            "resource_efficiency"
+          ],
+          "risk_tolerance": "moderate",
+          "decision_timeline": "immediate"
+        },
+        "synthesis_options": {
+          "include_feasibility_analysis": true,
+          "include_resource_optimization": true,
+          "include_scenario_analysis": true,
+          "confidence_threshold": 0.75
+        }
+      },
+      "success": false,
+      "error": "Decision synthesis failed: 500",
+      "error_details": {
+        "detail": "Decision synthesis failed: Can't instantiate abstract class AdvancedVisualizationFramework without an implementation for abstract method 'execute'"
+      }
+    },
+    "export_system": {
+      "test_name": "multi_format_export_system",
+      "profile_id": "profile_f3adef3b653c",
+      "timestamp": "2025-08-23T19:39:23.481777",
+      "export_tests": [
+        {
+          "format": "csv",
+          "description": "CSV export for data analysis",
+          "status_code": 500,
+          "success": false,
+          "error": "Export failed: 500"
+        },
+        {
+          "format": "json",
+          "description": "JSON export for system integration",
+          "status_code": 500,
+          "success": false,
+          "error": "Export failed: 500"
+        },
+        {
+          "format": "excel",
+          "description": "Excel export with formatting",
+          "status_code": 500,
+          "success": false,
+          "error": "Export failed: 500"
+        },
+        {
+          "format": "pdf",
+          "description": "PDF export for presentations",
+          "status_code": 500,
+          "success": false,
+          "error": "Export failed: 500"
+        },
+        {
+          "format": "research_results",
+          "description": "Research analysis results export",
+          "status_code": 200,
+          "success": true,
+          "export_id": "export_20250823_193923",
+          "export_status": "completed"
+        }
+      ],
+      "total_export_tests": 5,
+      "successful_exports": 1,
+      "export_success_rate": 0.2
+    },
+    "visualization_engine": {
+      "test_name": "visualization_engine",
+      "profile_id": "profile_f3adef3b653c",
+      "timestamp": "2025-08-23T19:39:23.504770",
+      "visualization_tests": [
+        {
+          "type": "network_visualization",
+          "description": "Test network visualization generation",
+          "status_code": 200,
+          "success": true,
+          "has_board_network": true,
+          "has_influence_network": true,
+          "has_network_metrics": true,
+          "has_influence_scores": true,
+          "board_network_size": 90,
+          "board_network_generated": false
+        },
+        {
+          "type": "analytics_overview",
+          "description": "Test analytics overview visualization",
+          "status_code": 200,
+          "success": true,
+          "has_overview_data": true,
+          "data_fields": [
+            "metrics",
+            "trends",
+            "risk_distribution",
+            "timestamp"
+          ]
+        }
+      ],
+      "total_visualization_tests": 2,
+      "successful_visualizations": 2,
+      "visualization_success_rate": 1.0
+    },
+    "analytics_dashboard": {
+      "test_name": "analytics_dashboard",
+      "profile_id": "profile_f3adef3b653c",
+      "timestamp": "2025-08-23T19:39:23.714873",
+      "dashboard_tests": [
+        {
+          "test": "dashboard_overview",
+          "description": "Test main dashboard overview data",
+          "status_code": 200,
+          "success": true,
+          "has_dashboard_stats": false,
+          "profile_count": 0,
+          "opportunity_count": 0,
+          "discovery_session_count": 0
+        },
+        {
+          "test": "profile_analytics",
+          "description": "Test profile-specific analytics data",
+          "status_code": 200,
+          "success": true,
+          "has_analytics": true,
+          "opportunity_count": 0,
+          "has_stages_distribution": false,
+          "has_scoring_stats": false,
+          "has_discovery_stats": false
+        },
+        {
+          "test": "realtime_analytics",
+          "description": "Test real-time analytics updates",
+          "status_code": 200,
+          "success": true,
+          "has_realtime_data": true,
+          "data_timestamp": null,
+          "is_recent": true
+        },
+        {
+          "test": "search_statistics",
+          "description": "Test search and analytics statistics",
+          "status_code": 200,
+          "success": true,
+          "total_opportunities": 70,
+          "has_score_distribution": true,
+          "searchable_fields": 15,
+          "export_formats": 3
+        }
+      ],
+      "total_dashboard_tests": 4,
+      "successful_dashboard_tests": 4,
+      "dashboard_success_rate": 1.0
+    },
+    "system_health": {
+      "test_name": "system_health_monitoring",
+      "timestamp": "2025-08-23T19:39:23.941379",
+      "health_tests": [
+        {
+          "test": "system_status",
+          "description": "Test main system health status",
+          "status_code": 200,
+          "success": true,
+          "system_status": "healthy",
+          "processors_available": 18,
+          "system_healthy": true,
+          "version": "2.0.0"
+        },
+        {
+          "test": "detailed_health",
+          "description": "Test detailed system health information",
+          "status_code": 200,
+          "success": true,
+          "has_detailed_info": true
+        }
+      ],
+      "total_health_tests": 2,
+      "successful_health_tests": 2,
+      "health_monitoring_success_rate": 1.0
+    }
+  },
+  "overall_statistics": {
+    "total_test_categories": 5,
+    "total_individual_tests": 14,
+    "successful_tests": 9,
+    "failed_tests": 5,
+    "overall_success_rate": 0.6428571428571429
+  },
+  "phase6_metrics": {
+    "decision_synthesis_functional": false,
+    "export_system_success_rate": 0.2,
+    "visualization_system_success_rate": 1.0,
+    "dashboard_system_success_rate": 1.0,
+    "system_health_monitoring": 1.0
+  },
+  "assessment": "GOOD - Phase 6 systems mostly functional with minor issues"
+}
