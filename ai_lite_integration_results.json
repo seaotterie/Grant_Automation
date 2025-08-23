@@ -1,0 +1,146 @@
+{
+  "test_suite": "AI Lite Scorer Integration Testing",
+  "profile_id": "profile_f3adef3b653c",
+  "timestamp": "2025-08-23T19:27:25.096449",
+  "test_results": {
+    "api_endpoint": {
+      "test_name": "ai_lite_api_endpoint",
+      "profile_id": "profile_f3adef3b653c",
+      "timestamp": "2025-08-23T19:27:22.963274",
+      "endpoint": "/api/profiles/profile_f3adef3b653c/analyze/ai-lite",
+      "request_data": {
+        "opportunities": [
+          {
+            "opportunity_id": "opp_test_result_001",
+            "organization_name": "Test Foundation for Enhanced Discovery",
+            "source_type": "test_integration",
+            "description": "Test foundation discovered through enhanced discovery integration with education focus",
+            "funding_amount": 50000,
+            "application_deadline": "2024-06-15",
+            "current_score": 0.85,
+            "geographic_location": "National"
+          },
+          {
+            "opportunity_id": "opp_test_norfolk_foundation_1755640392",
+            "organization_name": "Norfolk Foundation Test 1755640392",
+            "source_type": "foundation",
+            "description": "Norfolk Foundation - Test high-scoring opportunity for auto-promotion with healthcare focus",
+            "funding_amount": 75000,
+            "application_deadline": "2024-04-30",
+            "current_score": 0.89,
+            "geographic_location": "Virginia"
+          },
+          {
+            "opportunity_id": "opp_test_medium_foundation_1755640392",
+            "organization_name": "Medium Score Foundation Test 1755640392",
+            "source_type": "foundation",
+            "description": "Medium Score Foundation - Test medium-scoring opportunity with community health programs",
+            "funding_amount": 25000,
+            "application_deadline": "2024-08-01",
+            "current_score": 0.7,
+            "geographic_location": "Virginia"
+          }
+        ],
+        "analysis_type": "compatibility_scoring",
+        "model_preference": "gpt-3.5-turbo",
+        "cost_limit": 0.05,
+        "priority": "standard"
+      },
+      "status_code": 404,
+      "response_headers": {
+        "date": "Sat, 23 Aug 2025 23:27:24 GMT",
+        "server": "uvicorn",
+        "content-length": "22",
+        "content-type": "application/json",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-xss-protection": "1; mode=block",
+        "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+        "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; connect-src 'self' ws: wss: https://cdn.jsdelivr.net; media-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()",
+        "x-permitted-cross-domain-policies": "none",
+        "x-ratelimit-limit": "60",
+        "x-ratelimit-remaining": "53",
+        "x-ratelimit-reset": "1755991704"
+      },
+      "success": false,
+      "error": "API returned status 404",
+      "error_details": {
+        "detail": "Not Found"
+      }
+    },
+    "analyze_tab_integration": {
+      "test_name": "analyze_tab_integration",
+      "profile_id": "profile_f3adef3b653c",
+      "timestamp": "2025-08-23T19:27:25.000700",
+      "integration_tests": [
+        {
+          "test": "profile_analytics_endpoint",
+          "endpoint": "/api/profiles/profile_f3adef3b653c/analytics",
+          "description": "Test analytics data retrieval for ANALYZE tab",
+          "status_code": 200,
+          "success": true,
+          "has_opportunities": false,
+          "has_scoring_stats": false,
+          "data_validation": "Analytics data structure valid"
+        },
+        {
+          "test": "opportunities_endpoint",
+          "endpoint": "/api/profiles/profile_f3adef3b653c/opportunities",
+          "description": "Test opportunities data for ANALYZE tab display",
+          "status_code": 200,
+          "success": true,
+          "total_opportunities": 57,
+          "has_scoring_data": true,
+          "data_validation": "Found 57 opportunities"
+        },
+        {
+          "test": "ai_service_availability",
+          "endpoint": "/api/analysis/status",
+          "description": "Test AI analysis service availability",
+          "status_code": 404,
+          "success": false,
+          "error": "AI service status failed: 404"
+        }
+      ],
+      "total_tests": 3,
+      "successful_tests": 2,
+      "success_rate": 0.6666666666666666,
+      "overall_success": false
+    },
+    "error_handling": {
+      "test_name": "error_handling",
+      "profile_id": "profile_f3adef3b653c",
+      "timestamp": "2025-08-23T19:27:25.082487",
+      "error_tests": [
+        {
+          "test": "invalid_request_data",
+          "description": "Test handling of malformed request data",
+          "status_code": 404,
+          "success": false,
+          "handles_validation": false,
+          "error": "Unexpected response: 404"
+        },
+        {
+          "test": "empty_opportunities_list",
+          "description": "Test handling of empty opportunities list",
+          "status_code": 404,
+          "success": false,
+          "error": "Unexpected response: 404"
+        }
+      ],
+      "total_error_tests": 2,
+      "successful_error_tests": 0,
+      "error_handling_score": 0.0
+    }
+  },
+  "overall_statistics": {
+    "total_test_categories": 3,
+    "total_individual_tests": 6,
+    "successful_tests": 2,
+    "failed_tests": 4,
+    "overall_success_rate": 0.3333333333333333
+  },
+  "assessment": "POOR - AI Lite integration requires major fixes"
+}
