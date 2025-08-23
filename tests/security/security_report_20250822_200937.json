@@ -1,0 +1,83 @@
+{
+  "security_scan": "Catalynx Security Testing",
+  "execution_time": "2025-08-22T20:09:37.991899",
+  "summary": {
+    "total_tests": 8,
+    "secure": 2,
+    "vulnerable": 5,
+    "warnings": 1,
+    "errors": 0,
+    "security_score": 31.25
+  },
+  "risk_assessment": {
+    "critical_issues": 1,
+    "high_risk_issues": 3,
+    "medium_risk_issues": 1
+  },
+  "detailed_findings": [
+    {
+      "test_name": "Security Headers",
+      "status": "VULNERABLE",
+      "severity": "HIGH",
+      "timestamp": "2025-08-22T20:09:36.907141",
+      "details": "Multiple missing headers: ['X-Content-Type-Options', 'X-Frame-Options', 'X-XSS-Protection', 'Strict-Transport-Security', 'Content-Security-Policy']",
+      "recommendation": "CRITICAL: Implement comprehensive security headers"
+    },
+    {
+      "test_name": "SQL Injection Prevention",
+      "status": "SECURE",
+      "severity": "LOW",
+      "timestamp": "2025-08-22T20:09:37.041248",
+      "details": "No SQL injection vulnerabilities detected in tested endpoints",
+      "recommendation": ""
+    },
+    {
+      "test_name": "XSS Prevention",
+      "status": "VULNERABLE",
+      "severity": "HIGH",
+      "timestamp": "2025-08-22T20:09:37.078075",
+      "details": "XSS vulnerabilities found in: [\"profile fields: <script>alert('XSS')</script>\", 'dashboard search parameter']",
+      "recommendation": "Implement proper output encoding and Content Security Policy"
+    },
+    {
+      "test_name": "Input Validation",
+      "status": "VULNERABLE",
+      "severity": "MEDIUM",
+      "timestamp": "2025-08-22T20:09:37.106613",
+      "details": "Validation issues: ['Accepts dangerous special characters: ../../../etc/passwd']",
+      "recommendation": "Implement strict input validation and type checking"
+    },
+    {
+      "test_name": "Rate Limiting",
+      "status": "WARNING",
+      "severity": "LOW",
+      "timestamp": "2025-08-22T20:09:37.819418",
+      "details": "Rate limiting unclear: 70.1 req/sec, 0 blocked",
+      "recommendation": ""
+    },
+    {
+      "test_name": "Authentication Security",
+      "status": "VULNERABLE",
+      "severity": "CRITICAL",
+      "timestamp": "2025-08-22T20:09:37.921740",
+      "details": "Authentication issues: ['/api/profiles accessible without authentication']",
+      "recommendation": "Implement proper authentication and authorization"
+    },
+    {
+      "test_name": "Data Privacy Protection",
+      "status": "VULNERABLE",
+      "severity": "HIGH",
+      "timestamp": "2025-08-22T20:09:37.939608",
+      "details": "Privacy issues: [\"Potentially sensitive data exposed: ['key', 'confidential']\", 'Deleted profile data still accessible']",
+      "recommendation": "Implement data privacy controls and PII protection"
+    },
+    {
+      "test_name": "Secure Configuration",
+      "status": "SECURE",
+      "severity": "LOW",
+      "timestamp": "2025-08-22T20:09:37.991797",
+      "details": "Server configuration appears secure",
+      "recommendation": ""
+    }
+  ]
+}

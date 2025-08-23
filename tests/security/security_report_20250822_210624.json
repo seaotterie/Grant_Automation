@@ -1,0 +1,83 @@
+{
+  "security_scan": "Catalynx Security Testing",
+  "execution_time": "2025-08-22T21:06:24.473025",
+  "summary": {
+    "total_tests": 8,
+    "secure": 7,
+    "vulnerable": 0,
+    "warnings": 1,
+    "errors": 0,
+    "security_score": 93.75
+  },
+  "risk_assessment": {
+    "critical_issues": 0,
+    "high_risk_issues": 0,
+    "medium_risk_issues": 0
+  },
+  "detailed_findings": [
+    {
+      "test_name": "Security Headers",
+      "status": "SECURE",
+      "severity": "LOW",
+      "timestamp": "2025-08-22T21:05:51.107539",
+      "details": "All security headers present: ['X-Content-Type-Options', 'X-Frame-Options', 'X-XSS-Protection', 'Strict-Transport-Security', 'Content-Security-Policy']",
+      "recommendation": ""
+    },
+    {
+      "test_name": "SQL Injection Prevention",
+      "status": "SECURE",
+      "severity": "LOW",
+      "timestamp": "2025-08-22T21:05:55.262047",
+      "details": "No SQL injection vulnerabilities detected in tested endpoints",
+      "recommendation": ""
+    },
+    {
+      "test_name": "XSS Prevention",
+      "status": "SECURE",
+      "severity": "LOW",
+      "timestamp": "2025-08-22T21:05:57.343299",
+      "details": "No XSS vulnerabilities detected in tested endpoints",
+      "recommendation": ""
+    },
+    {
+      "test_name": "Input Validation",
+      "status": "SECURE",
+      "severity": "LOW",
+      "timestamp": "2025-08-22T21:06:03.504398",
+      "details": "Input validation appears to be working correctly",
+      "recommendation": ""
+    },
+    {
+      "test_name": "Rate Limiting",
+      "status": "WARNING",
+      "severity": "LOW",
+      "timestamp": "2025-08-22T21:06:03.981777",
+      "details": "Rate limiting unclear: 64.9 req/sec, 0 blocked",
+      "recommendation": ""
+    },
+    {
+      "test_name": "Authentication Security",
+      "status": "SECURE",
+      "severity": "LOW",
+      "timestamp": "2025-08-22T21:06:16.282573",
+      "details": "Authentication appears to be properly configured",
+      "recommendation": ""
+    },
+    {
+      "test_name": "Data Privacy Protection",
+      "status": "SECURE",
+      "severity": "LOW",
+      "timestamp": "2025-08-22T21:06:16.286006",
+      "details": "Data privacy appears to be properly protected",
+      "recommendation": ""
+    },
+    {
+      "test_name": "Secure Configuration",
+      "status": "SECURE",
+      "severity": "LOW",
+      "timestamp": "2025-08-22T21:06:24.472917",
+      "details": "Server configuration appears secure",
+      "recommendation": ""
+    }
+  ]
+}

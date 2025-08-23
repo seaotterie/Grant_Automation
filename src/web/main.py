@@ -4,7 +4,7 @@ Catalynx - Modern Web Interface
 FastAPI backend with real-time progress monitoring
 """
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Body
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Body, Depends, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +14,8 @@ import logging
 import sys
 import uuid
 import random
+import shutil
+import re
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional, Any
@@ -46,6 +48,16 @@ from src.web.services.scoring_service import (
     get_scoring_service, ScoreRequest, ScoreResponse, 
     PromotionRequest, PromotionResponse, BulkPromotionRequest, BulkPromotionResponse
 )
+
+# Security and Authentication imports
+from src.middleware.security import (
+    SecurityHeadersMiddleware, 
+    XSSProtectionMiddleware, 
+    InputValidationMiddleware,
+    RateLimitingMiddleware
+)
+from src.auth.jwt_auth import get_current_user_dependency, User
+from src.web.auth_routes import router as auth_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -102,6 +114,208 @@ def similar_organization_names(name1: str, name2: str, threshold: float = 0.85) 
     
     return similarity >= threshold
 
+async def secure_profile_deletion(profile_id: str, deleted_by: str) -> bool:
+    """
+    Securely delete an organization profile with comprehensive data purging.
+    
+    This function performs a complete data purge including:
+    - Profile metadata and configuration
+    - Associated opportunities and leads
+    - Discovery history and cache data
+    - Metrics and analytics data
+    - Associated files and attachments
+    - Entity cache references
+    - AI analysis results
+    
+    Args:
+        profile_id: The profile ID to delete
+        deleted_by: Username of person performing deletion
+        
+    Returns:
+        True if all data successfully purged, False otherwise
+    """
+    try:
+        logger.info(f"Starting secure deletion of profile {profile_id} by {deleted_by}")
+        deletion_success = True
+        deleted_items = []
+        
+        # 1. Delete profile from main service
+        try:
+            success = profile_service.delete_profile(profile_id)
+            if success:
+                deleted_items.append("profile_metadata")
+            else:
+                deletion_success = False
+                logger.warning(f"Failed to delete profile metadata for {profile_id}")
+        except Exception as e:
+            logger.error(f"Error deleting profile metadata for {profile_id}: {e}")
+            deletion_success = False
+        
+        # 2. Delete associated opportunities and leads
+        try:
+            opportunities_dir = Path("data/opportunities")
+            leads_dir = Path("data/leads")
+            
+            # Find and delete all opportunity files associated with this profile
+            for opp_file in opportunities_dir.glob("*.json"):
+                try:
+                    with open(opp_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        if data.get('profile_id') == profile_id:
+                            opp_file.unlink()
+                            deleted_items.append(f"opportunity_{opp_file.name}")
+                except Exception as e:
+                    logger.warning(f"Error processing opportunity file {opp_file}: {e}")
+            
+            # Find and delete all lead files associated with this profile
+            for lead_file in leads_dir.glob("*.json"):
+                try:
+                    with open(lead_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                        if data.get('profile_id') == profile_id:
+                            lead_file.unlink()
+                            deleted_items.append(f"lead_{lead_file.name}")
+                except Exception as e:
+                    logger.warning(f"Error processing lead file {lead_file}: {e}")
+            
+            deleted_items.append("associated_opportunities_leads")
+        except Exception as e:
+            logger.error(f"Error deleting opportunities/leads for {profile_id}: {e}")
+            deletion_success = False
+        
+        # 3. Delete profile-specific directories and files
+        try:
+            profile_dirs = [
+                Path(f"data/profiles/profiles/{profile_id}.json"),
+                Path(f"data/profiles/profiles/{profile_id}/"),
+                Path(f"data/cache/profiles/{profile_id}/"),
+                Path(f"data/processing_results/{profile_id}/"),
+                Path(f"data/exports/{profile_id}/"),
+                Path(f"data/reports/{profile_id}/")
+            ]
+            
+            for path in profile_dirs:
+                if path.exists():
+                    if path.is_file():
+                        path.unlink()
+                        deleted_items.append(f"file_{path.name}")
+                    elif path.is_dir():
+                        shutil.rmtree(path)
+                        deleted_items.append(f"directory_{path.name}")
+        except Exception as e:
+            logger.error(f"Error deleting profile directories for {profile_id}: {e}")
+            deletion_success = False
+        
+        # 4. Clear entity cache references
+        try:
+            from src.core.entity_cache_manager import get_entity_cache_manager
+            cache_manager = get_entity_cache_manager()
+            
+            # Remove profile references from entity cache
+            # This ensures no orphaned references remain
+            # Note: EntityCacheManager may not have clear_profile_references method
+            # This is not critical for data purging
+            if hasattr(cache_manager, 'clear_profile_references'):
+                cache_manager.clear_profile_references(profile_id)
+                deleted_items.append("entity_cache_references")
+            else:
+                logger.info(f"Entity cache manager doesn't support profile reference clearing - skipping")
+                deleted_items.append("entity_cache_skip")
+        except Exception as e:
+            logger.warning(f"Non-critical error clearing entity cache for {profile_id}: {e}")
+            deleted_items.append("entity_cache_error")
+        
+        # 5. Delete metrics and analytics data
+        try:
+            metrics_file = Path(f"data/metrics/{profile_id}_metrics.json")
+            if metrics_file.exists():
+                metrics_file.unlink()
+                deleted_items.append("metrics_data")
+                
+            analytics_file = Path(f"data/analytics/{profile_id}_analytics.json")
+            if analytics_file.exists():
+                analytics_file.unlink()
+                deleted_items.append("analytics_data")
+        except Exception as e:
+            logger.error(f"Error deleting metrics/analytics for {profile_id}: {e}")
+            deletion_success = False
+        
+        # 6. Delete AI analysis results and costs
+        try:
+            ai_results_dir = Path(f"data/ai_analysis/{profile_id}/")
+            if ai_results_dir.exists():
+                shutil.rmtree(ai_results_dir)
+                deleted_items.append("ai_analysis_results")
+                
+            cost_tracking_file = Path(f"data/cost_tracking/{profile_id}_costs.json")
+            if cost_tracking_file.exists():
+                cost_tracking_file.unlink()
+                deleted_items.append("cost_tracking_data")
+        except Exception as e:
+            logger.error(f"Error deleting AI data for {profile_id}: {e}")
+            deletion_success = False
+        
+        # 7. Remove from any scheduling or queue systems
+        try:
+            # Remove from discovery scheduling if exists
+            schedule_file = Path(f"data/schedules/{profile_id}_schedule.json")
+            if schedule_file.exists():
+                schedule_file.unlink()
+                deleted_items.append("schedule_data")
+        except Exception as e:
+            logger.error(f"Error deleting schedule data for {profile_id}: {e}")
+            deletion_success = False
+        
+        # 8. Log comprehensive deletion audit trail
+        audit_entry = {
+            "profile_id": profile_id,
+            "deleted_by": deleted_by,
+            "deletion_timestamp": datetime.utcnow().isoformat(),
+            "deletion_success": deletion_success,
+            "deleted_items": deleted_items,
+            "items_count": len(deleted_items)
+        }
+        
+        # Write audit log
+        audit_dir = Path("data/audit_logs")
+        audit_dir.mkdir(exist_ok=True)
+        audit_file = audit_dir / f"profile_deletion_{profile_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+        
+        with open(audit_file, 'w', encoding='utf-8') as f:
+            json.dump(audit_entry, f, indent=2, ensure_ascii=False)
+        
+        if deletion_success:
+            logger.info(f"Successfully completed secure deletion of profile {profile_id}. Deleted {len(deleted_items)} items: {deleted_items}")
+        else:
+            logger.warning(f"Partial deletion of profile {profile_id}. Some items may remain. Deleted {len(deleted_items)} items: {deleted_items}")
+        
+        return deletion_success
+        
+    except Exception as e:
+        logger.error(f"Critical error during secure deletion of profile {profile_id}: {e}")
+        
+        # Create failure audit entry
+        try:
+            audit_entry = {
+                "profile_id": profile_id,
+                "deleted_by": deleted_by,
+                "deletion_timestamp": datetime.utcnow().isoformat(),
+                "deletion_success": False,
+                "error": str(e),
+                "status": "critical_failure"
+            }
+            
+            audit_dir = Path("data/audit_logs")
+            audit_dir.mkdir(exist_ok=True)
+            audit_file = audit_dir / f"profile_deletion_failed_{profile_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+            
+            with open(audit_file, 'w', encoding='utf-8') as f:
+                json.dump(audit_entry, f, indent=2, ensure_ascii=False)
+        except Exception as audit_error:
+            logger.error(f"Failed to create audit log for failed deletion: {audit_error}")
+        
+        return False
+
 # Create FastAPI application
 app = FastAPI(
     title="Catalynx - Grant Research Automation",
@@ -119,6 +333,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Custom middleware to disable TRACE method
+@app.middleware("http")
+async def disable_trace_method(request: Request, call_next):
+    if request.method == "TRACE":
+        raise HTTPException(status_code=405, detail="Method not allowed")
+    return await call_next(request)
+
+# Add security middleware (order matters - add in reverse order of execution)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(XSSProtectionMiddleware)
+app.add_middleware(InputValidationMiddleware)
+app.add_middleware(RateLimitingMiddleware, requests_per_minute=60)
+
+# Include authentication routes
+app.include_router(auth_router)
 
 # Initialize services
 workflow_service = WorkflowService()
@@ -767,7 +997,11 @@ async def fetch_ein_data(request: dict):
         raise HTTPException(status_code=500, detail=f"Failed to fetch EIN data: {str(e)}")
 
 @app.get("/api/profiles")
-async def list_profiles(status: Optional[str] = None, limit: Optional[int] = None):
+async def list_profiles(
+    status: Optional[str] = None, 
+    limit: Optional[int] = None,
+    current_user: User = Depends(get_current_user_dependency)
+):
     """List all organization profiles with unified analytics."""
     try:
         # Use both services - old for profile metadata, unified for opportunity analytics
@@ -803,7 +1037,10 @@ async def list_profiles(status: Optional[str] = None, limit: Optional[int] = Non
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/profiles")
-async def create_profile(profile_data: Dict[str, Any]):
+async def create_profile(
+    profile_data: Dict[str, Any],
+    current_user: User = Depends(get_current_user_dependency)
+):
     """Create a new organization profile."""
     try:
         # Debug: Log the profile data received
@@ -821,7 +1058,10 @@ async def create_profile(profile_data: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/profiles/{profile_id}")
-async def get_profile(profile_id: str):
+async def get_profile(
+    profile_id: str,
+    current_user: User = Depends(get_current_user_dependency)
+):
     """Get a specific organization profile with unified analytics."""
     try:
         # Try unified service first for enhanced analytics
@@ -865,20 +1105,48 @@ async def update_profile(profile_id: str, update_data: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/profiles/{profile_id}")
-async def delete_profile(profile_id: str):
-    """Delete (archive) an organization profile."""
+async def delete_profile(
+    profile_id: str, 
+    current_user: User = Depends(get_current_user_dependency)
+):
+    """Securely delete an organization profile with comprehensive data purging."""
     try:
-        success = profile_service.delete_profile(profile_id)
-        if not success:
+        # Validate profile_id format to prevent path traversal
+        if not re.match(r'^[a-zA-Z0-9_-]+$', profile_id):
+            raise HTTPException(
+                status_code=400, 
+                detail="Invalid profile ID format"
+            )
+        
+        # Check if profile exists first
+        try:
+            profile = profile_service.get_profile(profile_id)
+            if not profile:
+                raise HTTPException(status_code=404, detail="Profile not found")
+        except Exception:
             raise HTTPException(status_code=404, detail="Profile not found")
         
-        return {"message": "Profile archived successfully"}
+        # Perform secure deletion with comprehensive data purging
+        success = await secure_profile_deletion(profile_id, current_user.username)
+        
+        if not success:
+            raise HTTPException(
+                status_code=500, 
+                detail="Failed to completely purge profile data"
+            )
+        
+        logger.info(f"Profile {profile_id} securely deleted by user: {current_user.username}")
+        return {
+            "message": "Profile and all associated data permanently deleted",
+            "deleted_by": current_user.username,
+            "deletion_timestamp": datetime.utcnow().isoformat()
+        }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to delete profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to securely delete profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/profiles/templates")
 async def create_profile_template(template_request: Dict[str, Any]):
