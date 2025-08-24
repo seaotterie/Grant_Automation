@@ -13769,19 +13769,35 @@ function addDesktopContextMenus(appData) {
     
     // Add context menu event listeners
     appData.addOpportunityContextMenu = function(element, opportunity) {
-        element.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            const menuItems = getOpportunityContextMenu(opportunity);
-            showContextMenu(e.pageX, e.pageY, menuItems);
-        });
+        try {
+            if (!element || !element.addEventListener) {
+                console.warn('addOpportunityContextMenu: Invalid element provided');
+                return;
+            }
+            element.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const menuItems = getOpportunityContextMenu(opportunity);
+                showContextMenu(e.pageX, e.pageY, menuItems);
+            });
+        } catch (error) {
+            console.error('Error adding opportunity context menu:', error);
+        }
     };
     
     appData.addProfileContextMenu = function(element, profile) {
-        element.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            const menuItems = getProfileContextMenu(profile);
-            showContextMenu(e.pageX, e.pageY, menuItems);
-        });
+        try {
+            if (!element || !element.addEventListener) {
+                console.warn('addProfileContextMenu: Invalid element provided');
+                return;
+            }
+            element.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const menuItems = getProfileContextMenu(profile);
+                showContextMenu(e.pageX, e.pageY, menuItems);
+            });
+        } catch (error) {
+            console.error('Error adding profile context menu:', error);
+        }
     };
     
     // Utility functions for missing methods
@@ -14442,6 +14458,13 @@ window.addEventListener('error', function(event) {
         column: event.colno,
         error: event.error
     });
+    
+    // Specific handling for CDN library errors
+    if (event.filename && event.filename.includes('cdn.min.js')) {
+        console.warn('CDN library error detected - may be due to missing dependencies');
+        // Attempt to continue gracefully
+        event.preventDefault();
+    }
 });
 
 // Global error handler for unhandled promise rejections

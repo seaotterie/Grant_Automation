@@ -580,10 +580,10 @@
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                        <template x-for="profile in filteredProfiles" :key="profile.profile_id">
+                                        <template x-for="profile in filteredProfiles" :key="`main-profile-${profile.profile_id}`">
                                             <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                                 :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedProfile?.profile_id === profile.profile_id}"
-                                                x-init="addProfileContextMenu && addProfileContextMenu($el, profile)"
+                                                x-init="$nextTick(() => { if (addProfileContextMenu && typeof addProfileContextMenu === 'function') addProfileContextMenu($el, profile); })"
                                                 @click="selectedProfile = profile">
                                                 <td class="px-6 py-3 whitespace-nowrap">
                                                     <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="profile.name"></div>
@@ -1354,7 +1354,7 @@
                                         <!-- Grant-Making Capacity -->
                                         <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-700">
                                             <h6 class="font-semibold text-purple-900 dark:text-purple-300 mb-4">Grant-Making Capacity (990-PF Part I)</h6>
-                                            <template x-for="foundation in getFoundationFinancials()" :key="foundation.id">
+                                            <template x-for="foundation in getFoundationFinancials()" :key="`foundation-financials-${foundation.id}`">
                                                 <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border mb-4">
                                                     <div class="flex items-center justify-between mb-2">
                                                         <div class="font-medium text-gray-900 dark:text-white" x-text="foundation.name">Foundation</div>
@@ -1404,7 +1404,7 @@
                                                 ✅ Ready for Outreach
                                                 <span class="ml-2 px-2 py-1 text-xs bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 rounded-full" x-text="getAcceptsApplicationsCount()">0</span>
                                             </h6>
-                                            <template x-for="foundation in getFoundationsAcceptingApplications()" :key="foundation.id">
+                                            <template x-for="foundation in getFoundationsAcceptingApplications()" :key="`foundation-accepting-${foundation.id}`">
                                                 <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border mb-3">
                                                     <div class="font-medium text-gray-900 dark:text-white text-sm" x-text="foundation.name">Foundation</div>
                                                     <div class="text-xs text-gray-600 dark:text-gray-400 mt-1" x-text="formatCurrency(foundation.grants_paid) + ' annual grants'">Grant amount</div>
@@ -1419,7 +1419,7 @@
                                                 📨 Network Required
                                                 <span class="ml-2 px-2 py-1 text-xs bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded-full" x-text="getInvitationOnlyCount()">0</span>
                                             </h6>
-                                            <template x-for="foundation in getInvitationOnlyFoundations()" :key="foundation.id">
+                                            <template x-for="foundation in getInvitationOnlyFoundations()" :key="`foundation-invitation-${foundation.id}`">
                                                 <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border mb-3">
                                                     <div class="font-medium text-gray-900 dark:text-white text-sm" x-text="foundation.name">Foundation</div>
                                                     <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Requires board/staff connections</div>
@@ -1439,7 +1439,7 @@
                                             <div class="text-sm text-gray-600 dark:text-gray-400 mb-3">
                                                 Foundations with unknown application processes - investigate Part XV for application acceptance policies.
                                             </div>
-                                            <template x-for="foundation in getResearchNeededFoundations()" :key="foundation.id">
+                                            <template x-for="foundation in getResearchNeededFoundations()" :key="`foundation-research-${foundation.id}`">
                                                 <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border mb-2">
                                                     <div class="font-medium text-gray-900 dark:text-white text-sm" x-text="foundation.name">Foundation</div>
                                                     <div class="text-xs text-gray-500 dark:text-gray-500 mt-1">Application process unknown</div>
@@ -2634,7 +2634,7 @@
                                 <select x-model="selectedMetricsProfile" @change="loadProfileMetrics()" 
                                         class="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm">
                                     <option value="">Select Profile</option>
-                                    <template x-for="profile in availableProfiles" :key="profile.profile_id">
+                                    <template x-for="profile in availableProfiles" :key="`dropdown-profile-${profile.profile_id}`">
                                         <option :value="profile.profile_id" x-text="profile.name"></option>
                                     </template>
                                 </select>
@@ -2920,7 +2920,7 @@
                             
                             <!-- Steps -->
                             <div class="space-y-6">
-                                <template x-for="(step, index) in processFlow.steps.slice(0, 4)" :key="index">
+                                <template x-for="(step, index) in processFlow.steps.slice(0, 4)" :key="`process-flow-limited-${index}`">
                                     <div class="relative flex items-center space-x-4">
                                         <!-- Step Icon -->
                                         <div class="relative flex-shrink-0">
@@ -3145,7 +3145,7 @@
                             
                             <!-- Process Steps -->
                             <div class="process-flow">
-                                <template x-for="(step, index) in processFlow.steps" :key="index">
+                                <template x-for="(step, index) in processFlow.steps" :key="`process-flow-all-${index}`">
                                     <div class="flex items-center">
                                         <div class="process-step">
                                             <div class="process-step-icon" 
@@ -4438,10 +4438,10 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                    <template x-for="profile in filteredProfiles" :key="profile.profile_id">
+                                    <template x-for="profile in filteredProfiles" :key="`discovery-profile-${profile.profile_id}`">
                                         <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                             :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedDiscoveryProfile?.profile_id === profile.profile_id}"
-                                            x-init="addProfileContextMenu && addProfileContextMenu($el, profile)"
+                                            x-init="$nextTick(() => { if (addProfileContextMenu && typeof addProfileContextMenu === 'function') addProfileContextMenu($el, profile); })"
                                             @click="selectedDiscoveryProfile = profile">
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div>
