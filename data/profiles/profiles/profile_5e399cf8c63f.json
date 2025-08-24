@@ -1,0 +1,79 @@
+{
+  "profile_id": "profile_5e399cf8c63f",
+  "name": "Fixed Workflow Test Org",
+  "organization_type": "nonprofit",
+  "ein": null,
+  "mission_statement": "Testing fixed workflow engine",
+  "keywords": null,
+  "focus_areas": [
+    "healthcare",
+    "community"
+  ],
+  "program_areas": [],
+  "target_populations": [],
+  "ntee_codes": [
+    "L80"
+  ],
+  "ntee_description": null,
+  "government_criteria": [],
+  "geographic_scope": {
+    "states": [
+      "VA"
+    ],
+    "regions": [],
+    "nationwide": false,
+    "international": false
+  },
+  "service_areas": [],
+  "funding_preferences": {
+    "min_amount": null,
+    "max_amount": null,
+    "funding_types": [
+      "grants"
+    ],
+    "recurring": false,
+    "multi_year": false,
+    "grants_gov_categories": []
+  },
+  "current_funders": [],
+  "past_grants": [],
+  "schedule_i_grantees": [],
+  "schedule_i_status": null,
+  "form_type": "unknown",
+  "foundation_type": "unknown",
+  "foundation_code": null,
+  "foundation_grants": [],
+  "application_process": null,
+  "accepts_unsolicited_applications": false,
+  "foundation_board_members": [],
+  "foundation_financial_data": null,
+  "foundation_program_areas": null,
+  "annual_revenue": 500000,
+  "staff_size": null,
+  "volunteer_count": null,
+  "board_size": null,
+  "strategic_priorities": [],
+  "growth_goals": [],
+  "partnership_interests": [],
+  "certifications": [],
+  "compliance_requirements": [],
+  "reporting_capabilities": [],
+  "status": "active",
+  "created_at": "2025-08-23 14:54:55.492713",
+  "updated_at": "2025-08-23 14:54:55.492727",
+  "created_by": null,
+  "tags": [],
+  "notes": null,
+  "last_discovery_date": null,
+  "discovery_count": 0,
+  "discovery_status": "never_run",
+  "next_recommended_discovery": null,
+  "opportunities_count": 0,
+  "associated_opportunities": [],
+  "processing_history": {},
+  "ai_analysis_count": 0,
+  "last_ai_analysis_date": null,
+  "cache_usage_stats": {},
+  "cost_tracking": {},
+  "metrics": null
+}

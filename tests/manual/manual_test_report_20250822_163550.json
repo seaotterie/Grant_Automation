@@ -1,0 +1,76 @@
+{
+  "execution_time": "2025-08-22T16:35:50.455251",
+  "summary": {
+    "total": 8,
+    "passed": 4,
+    "failed": 2,
+    "skipped": 2,
+    "success_rate": 50.0
+  },
+  "results": [
+    {
+      "test_name": "API Health Check",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:35:50.429758",
+      "details": "Health endpoint responding correctly: {'status': 'healthy', 'timestamp': '2025-08-22T16:35:50.427834', 'service': 'Catalynx API', 'version': '2.0.0'}",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Dashboard Loading",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:35:50.440261",
+      "details": "All essential dashboard elements present",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Profile Creation",
+      "status": "FAIL",
+      "timestamp": "2025-08-22T16:35:50.443693",
+      "details": "Profile created but no profile_id returned",
+      "expected": "profile_id in response",
+      "actual": "No profile_id"
+    },
+    {
+      "test_name": "Profile Retrieval",
+      "status": "SKIP",
+      "timestamp": "2025-08-22T16:35:50.443717",
+      "details": "No profile_id available (profile creation may have failed)",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Entity Discovery",
+      "status": "SKIP",
+      "timestamp": "2025-08-22T16:35:50.443722",
+      "details": "No profile_id available",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Cache Statistics",
+      "status": "FAIL",
+      "timestamp": "2025-08-22T16:35:50.445750",
+      "details": "Cache stats failed with 500",
+      "expected": "200/404 status",
+      "actual": "500"
+    },
+    {
+      "test_name": "API Performance",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:35:50.447447",
+      "details": "API response time: 1.67ms (target: <100ms)",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Static Resources",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:35:50.455144",
+      "details": "All static resources loading correctly",
+      "expected": "",
+      "actual": ""
+    }
+  ]
+}

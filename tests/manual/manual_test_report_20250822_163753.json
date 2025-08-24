@@ -1,0 +1,84 @@
+{
+  "execution_time": "2025-08-22T16:37:53.542918",
+  "summary": {
+    "total": 9,
+    "passed": 8,
+    "failed": 1,
+    "skipped": 0,
+    "success_rate": 88.88888888888889
+  },
+  "results": [
+    {
+      "test_name": "API Health Check",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:37:53.467482",
+      "details": "Health endpoint responding correctly: {'status': 'healthy', 'timestamp': '2025-08-22T16:37:53.466666', 'service': 'Catalynx API', 'version': '2.0.0'}",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Dashboard Loading",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:37:53.516022",
+      "details": "All essential dashboard elements present",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Profile Creation",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:37:53.520692",
+      "details": "Profile created successfully with ID: profile_83c8286090b3",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Profile Retrieval",
+      "status": "FAIL",
+      "timestamp": "2025-08-22T16:37:53.523199",
+      "details": "Profile data integrity check failed",
+      "expected": "Correct profile data",
+      "actual": "Data mismatch: {'profile': {'profile_id': 'profile_83c8286090b3', 'name': 'Manual Test Organization', 'organization_type': 'nonprofit', 'ein': None, 'mission_statement': 'Testing the Catalynx platform functionality', 'keywords': None, 'focus_areas': ['education', 'technology'], 'program_areas': [], 'target_populations': [], 'ntee_codes': ['B25'], 'ntee_description': None, 'government_criteria': [], 'geographic_scope': {'states': ['VA'], 'regions': [], 'nationwide': False, 'international': False}, 'service_areas': [], 'funding_preferences': {'min_amount': None, 'max_amount': None, 'funding_types': ['grants'], 'recurring': False, 'multi_year': False, 'grants_gov_categories': []}, 'current_funders': [], 'past_grants': [], 'schedule_i_grantees': [], 'schedule_i_status': None, 'form_type': 'unknown', 'foundation_type': 'unknown', 'foundation_code': None, 'foundation_grants': [], 'application_process': None, 'accepts_unsolicited_applications': False, 'foundation_board_members': [], 'foundation_financial_data': None, 'foundation_program_areas': None, 'annual_revenue': 1000000, 'staff_size': 15, 'volunteer_count': None, 'board_size': None, 'strategic_priorities': [], 'growth_goals': [], 'partnership_interests': [], 'certifications': [], 'compliance_requirements': [], 'reporting_capabilities': [], 'status': 'active', 'created_at': '2025-08-22T16:37:53.517894', 'updated_at': '2025-08-22T16:37:53.522588', 'created_by': None, 'tags': [], 'notes': None, 'last_discovery_date': None, 'discovery_count': 0, 'discovery_status': 'never_run', 'next_recommended_discovery': None, 'opportunities_count': 0, 'associated_opportunities': [], 'processing_history': {}, 'ai_analysis_count': 0, 'last_ai_analysis_date': None, 'cache_usage_stats': {}, 'cost_tracking': {}, 'metrics': None}}"
+    },
+    {
+      "test_name": "Entity Discovery",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:37:53.524915",
+      "details": "Discovery completed successfully (no opportunities found)",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Cache Statistics",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:37:53.526638",
+      "details": "Cache stats retrieved: {'success': True, 'cache_stats': {'status': 'operational', 'total_entities': 0, 'cache_hits': 0, 'cache_misses': 0, 'hit_rate_percentage': 0, 'last_updated': '2025-08-22T16:37:35.085418', 'cache_size_mb': 1.9073486328125e-06}, 'entity_counts': {'nonprofit': 3, 'government': 3, 'foundation': 2}, 'discovery_ready': {'nonprofits': True, 'government_opportunities': False, 'foundations': True}}",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "API Performance",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:37:53.528331",
+      "details": "API response time: 1.67ms (target: <100ms)",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Static Resources",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:37:53.540296",
+      "details": "All static resources loading correctly",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Test Cleanup",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:37:53.542867",
+      "details": "Test profile profile_83c8286090b3 cleaned up successfully",
+      "expected": "",
+      "actual": ""
+    }
+  ]
+}

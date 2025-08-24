@@ -1,0 +1,140 @@
+{
+  "performance_validation": "Catalynx Performance Baseline Validation",
+  "execution_time": "2025-08-22T20:11:22.102885",
+  "baseline_targets": {
+    "api_response_time": 100,
+    "scoring_time": 1,
+    "cache_hit_rate": 85,
+    "profile_loading": 0.17,
+    "entity_cache": 1,
+    "efficiency_gain": 70
+  },
+  "summary": {
+    "total_tests": 13,
+    "excellent": 5,
+    "good": 3,
+    "needs_improvement": 5,
+    "critical": 0,
+    "performance_score": 75.0,
+    "overall_rating": "GOOD"
+  },
+  "detailed_results": [
+    {
+      "test_name": "API Performance Baseline",
+      "status": "EXCELLENT",
+      "timestamp": "2025-08-22T20:11:19.842392",
+      "details": "Outstanding performance across 3 endpoints",
+      "actual_value": 7.66,
+      "target_value": 100,
+      "unit": "ms"
+    },
+    {
+      "test_name": "  health endpoint",
+      "status": "EXCELLENT",
+      "timestamp": "2025-08-22T20:11:19.842441",
+      "details": "Good endpoint performance",
+      "actual_value": 4.04,
+      "target_value": 100,
+      "unit": "ms"
+    },
+    {
+      "test_name": "  discoveryrootentity-cache-stats endpoint",
+      "status": "EXCELLENT",
+      "timestamp": "2025-08-22T20:11:19.842450",
+      "details": "Good endpoint performance",
+      "actual_value": 4.1,
+      "target_value": 100,
+      "unit": "ms"
+    },
+    {
+      "test_name": "  root endpoint",
+      "status": "GOOD",
+      "timestamp": "2025-08-22T20:11:19.842457",
+      "details": "Good endpoint performance",
+      "actual_value": 14.85,
+      "target_value": 100,
+      "unit": "ms"
+    },
+    {
+      "test_name": "Cache Performance",
+      "status": "NEEDS_IMPROVEMENT",
+      "timestamp": "2025-08-22T20:11:19.846408",
+      "details": "Low cache utilization with 0 entities",
+      "actual_value": 0,
+      "target_value": 85,
+      "unit": "%"
+    },
+    {
+      "test_name": "Cache Response Time",
+      "status": "GOOD",
+      "timestamp": "2025-08-22T20:11:19.849823",
+      "details": "Cache statistics response acceptable",
+      "actual_value": 3.4,
+      "target_value": 1,
+      "unit": "ms"
+    },
+    {
+      "test_name": "Profile Loading Performance",
+      "status": "NEEDS_IMPROVEMENT",
+      "timestamp": "2025-08-22T20:11:20.028332",
+      "details": "Profile loading needs optimization across 10 profiles",
+      "actual_value": 6.597,
+      "target_value": 0.17,
+      "unit": "ms"
+    },
+    {
+      "test_name": "Batch Loading Performance",
+      "status": "NEEDS_IMPROVEMENT",
+      "timestamp": "2025-08-22T20:11:20.028357",
+      "details": "Batch loading of multiple profiles",
+      "actual_value": 6.16,
+      "target_value": 5,
+      "unit": "ms per profile"
+    },
+    {
+      "test_name": "Discovery Processing Efficiency",
+      "status": "EXCELLENT",
+      "timestamp": "2025-08-22T20:11:20.042485",
+      "details": "Very fast discovery processing",
+      "actual_value": 5.8,
+      "target_value": 5000,
+      "unit": "ms"
+    },
+    {
+      "test_name": "Concurrent Performance",
+      "status": "NEEDS_IMPROVEMENT",
+      "timestamp": "2025-08-22T20:11:22.099385",
+      "details": "Concurrent performance needs optimization: 9.7 req/sec",
+      "actual_value": 923.9,
+      "target_value": 100,
+      "unit": "ms avg response time"
+    },
+    {
+      "test_name": "System Throughput",
+      "status": "NEEDS_IMPROVEMENT",
+      "timestamp": "2025-08-22T20:11:22.099409",
+      "details": "Concurrent request handling capability",
+      "actual_value": 9.7,
+      "target_value": 50,
+      "unit": "req/sec"
+    },
+    {
+      "test_name": "Memory Efficiency",
+      "status": "GOOD",
+      "timestamp": "2025-08-22T20:11:22.102761",
+      "details": "Cache is empty - no memory usage concerns",
+      "actual_value": null,
+      "target_value": null,
+      "unit": ""
+    },
+    {
+      "test_name": "Cache Size",
+      "status": "EXCELLENT",
+      "timestamp": "2025-08-22T20:11:22.102777",
+      "details": "Low memory footprint",
+      "actual_value": 0.0,
+      "target_value": 50,
+      "unit": "MB"
+    }
+  ]
+}

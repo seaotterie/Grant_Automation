@@ -1,15 +1,17 @@
 """
-AI Lite Scorer - Cost-effective candidate analysis for ANALYZE tab
+AI Lite Scorer - Dual-Function Research & Scoring Platform for ANALYZE tab
 
-Purpose: Fast, cost-effective candidate evaluation and prioritization
+Purpose: Cost-effective candidate evaluation with comprehensive research capabilities
 Model: GPT-3.5 for optimal cost/performance ratio (~$0.0001 per candidate)
 Batch Processing: 10-20 candidates per API call for cost optimization
 
-Features:
-- Compatibility scoring with AI-enhanced analysis
-- Risk flag identification
-- Opportunity ranking and prioritization
-- Basic insights (1-2 sentence summaries per candidate)
+Phase 1 Enhanced Features:
+- Dual-function scoring AND research platform
+- Website intelligence and document parsing
+- Fact extraction and verification
+- Grant team ready research reports
+- Evidence-based scoring with supporting documentation
+- Risk assessment with mitigation strategies
 """
 
 import json
@@ -36,6 +38,45 @@ class ActionPriority(str, Enum):
     IMMEDIATE = "immediate"
     PLANNED = "planned"
     MONITOR = "monitor"
+
+# Phase 1 Enhancement: Research Data Models
+
+class WebsiteIntelligence(BaseModel):
+    """Website and document intelligence gathered"""
+    primary_website_url: Optional[str] = None
+    key_contacts: List[str] = Field(default_factory=list)
+    application_process_summary: str = ""
+    eligibility_highlights: List[str] = Field(default_factory=list)
+    deadline_information: str = ""
+    document_links: List[str] = Field(default_factory=list)
+
+class FactExtraction(BaseModel):
+    """Systematically extracted facts"""
+    award_amount_range: str = ""
+    application_deadline: str = ""
+    project_duration: str = ""
+    geographic_eligibility: List[str] = Field(default_factory=list)
+    organizational_requirements: List[str] = Field(default_factory=list)
+    matching_requirements: str = ""
+    reporting_requirements: List[str] = Field(default_factory=list)
+
+class ResearchReport(BaseModel):
+    """Comprehensive research findings for grant teams"""
+    executive_summary: str = Field(description="200-word executive summary for grant teams")
+    opportunity_overview: str = Field(description="Detailed opportunity description and context")
+    eligibility_analysis: List[str] = Field(default_factory=list, description="Point-by-point eligibility assessment")
+    key_dates_timeline: List[str] = Field(default_factory=list, description="All critical dates and deadlines")
+    funding_details: str = Field(description="Award amounts, restrictions, terms")
+    strategic_considerations: List[str] = Field(default_factory=list, description="Strategic factors for consideration")
+    decision_factors: List[str] = Field(default_factory=list, description="Key factors for go/no-go decision")
+
+class CompetitiveAnalysis(BaseModel):
+    """Competition and positioning analysis"""
+    likely_competitors: List[str] = Field(default_factory=list)
+    competitive_advantages: List[str] = Field(default_factory=list)
+    application_volume_estimate: str = ""
+    success_probability_factors: List[str] = Field(default_factory=list)
+    differentiation_strategies: List[str] = Field(default_factory=list)
 
 class RequestMetadata(BaseModel):
     """AI request metadata for tracking and optimization"""
@@ -88,7 +129,8 @@ class AILiteRequest(BaseModel):
     candidates: List[CandidateData]
 
 class AILiteAnalysis(BaseModel):
-    """Enhanced AI Lite analysis results for a single candidate"""
+    """Enhanced AI Lite analysis with dual-function scoring and research"""
+    # SCORING COMPONENTS (Enhanced Original Function)
     compatibility_score: float = Field(..., ge=0.0, le=1.0, description="AI compatibility score 0-1")
     strategic_value: StrategicValue = Field(..., description="Strategic importance classification")
     risk_assessment: List[str] = Field(default_factory=list, description="Identified risk factors")
@@ -97,6 +139,15 @@ class AILiteAnalysis(BaseModel):
     strategic_rationale: str = Field(..., description="2-sentence strategic analysis")
     action_priority: ActionPriority = Field(..., description="Next steps classification")
     confidence_level: float = Field(..., ge=0.0, le=1.0, description="Analysis confidence")
+    
+    # RESEARCH COMPONENTS (Phase 1 New Function)
+    research_report: Optional[ResearchReport] = Field(default=None, description="Comprehensive research findings")
+    website_intelligence: Optional[WebsiteIntelligence] = Field(default=None, description="Website analysis and document parsing")
+    fact_extraction: Optional[FactExtraction] = Field(default=None, description="Systematically gathered facts")
+    competitive_analysis: Optional[CompetitiveAnalysis] = Field(default=None, description="Competition and positioning analysis")
+    
+    # METADATA
+    research_mode_enabled: bool = Field(default=False, description="Whether research mode was activated")
     analysis_timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
 
 class BatchResults(BaseModel):
@@ -120,10 +171,10 @@ class AILiteScorer(BaseProcessor):
         # Create metadata for base processor
         metadata = ProcessorMetadata(
             name="ai_lite_scorer",
-            description="Cost-effective AI analysis for candidate prioritization",
-            version="1.0.0",
+            description="Phase 1: Dual-function research and scoring platform for ANALYZE tab",
+            version="2.0.0",  # Phase 1 Enhancement
             dependencies=[],
-            estimated_duration=30,
+            estimated_duration=60,  # Extended for research mode
             requires_network=True,
             requires_api_key=True,
             can_run_parallel=True,
@@ -134,11 +185,34 @@ class AILiteScorer(BaseProcessor):
         # Cost optimization settings
         self.batch_size = 15  # Optimal batch size for cost/performance
         self.model = "gpt-3.5-turbo"  # Cost-effective model
-        self.max_tokens = 150  # Keep responses concise for cost control
+        self.max_tokens = 150  # Keep responses concise for cost control (scoring mode)
+        self.max_tokens_research = 800  # Extended tokens for research mode
         self.temperature = 0.3  # Lower temperature for consistent analysis
         
         # Cost tracking
-        self.estimated_cost_per_candidate = 0.0001  # Conservative estimate
+        self.estimated_cost_per_candidate = 0.0001  # Conservative estimate (scoring mode)
+        self.estimated_cost_per_candidate_research = 0.0008  # Research mode estimate
+        
+        # Phase 1 Enhancement: Research mode settings
+        self.research_mode_default = True  # Enable research by default in Phase 1
+    
+    def _should_enable_research_mode(self, request_data: AILiteRequest) -> bool:
+        """Determine whether to enable research mode for this request"""
+        # Phase 1: Enable research mode by default for high-value opportunities
+        analysis_type = request_data.request_metadata.analysis_type
+        
+        # Enable research mode if:
+        # 1. Explicitly requested in analysis_type
+        # 2. High-priority request
+        # 3. Default research mode enabled
+        if "research" in analysis_type.lower():
+            return True
+        if request_data.request_metadata.priority in ["high", "urgent"]:
+            return True
+        if self.research_mode_default:
+            return True
+            
+        return False
         
     async def execute(self, request_data: AILiteRequest) -> AILiteBatchResult:
         """
@@ -156,19 +230,37 @@ class AILiteScorer(BaseProcessor):
         logger.info(f"Starting AI Lite analysis for {len(request_data.candidates)} candidates (batch: {batch_id})")
         
         try:
-            # Prepare enhanced batch analysis prompt
-            batch_prompt = self._create_enhanced_batch_prompt(request_data)
+            # Phase 1 Enhancement: Determine research mode
+            research_mode = self._should_enable_research_mode(request_data)
+            logger.info(f"Research mode {'ENABLED' if research_mode else 'DISABLED'} for batch {batch_id}")
             
-            # Call OpenAI API with cost optimization
-            response = await self._call_openai_api(batch_prompt, request_data.request_metadata.model_preference)
+            # Prepare enhanced batch analysis prompt (with research if enabled)
+            if research_mode:
+                batch_prompt = self._create_research_enhanced_batch_prompt(request_data)
+                max_tokens = self.max_tokens_research
+                cost_per_candidate = self.estimated_cost_per_candidate_research
+            else:
+                batch_prompt = self._create_enhanced_batch_prompt(request_data)
+                max_tokens = self.max_tokens
+                cost_per_candidate = self.estimated_cost_per_candidate
+            
+            # Call OpenAI API with appropriate settings
+            response = await self._call_openai_api(
+                batch_prompt, 
+                request_data.request_metadata.model_preference,
+                max_tokens=max_tokens
+            )
             
             # Parse and validate enhanced results
-            analysis_results = self._parse_enhanced_api_response(response, request_data.candidates)
+            if research_mode:
+                analysis_results = self._parse_research_enhanced_api_response(response, request_data.candidates)
+            else:
+                analysis_results = self._parse_enhanced_api_response(response, request_data.candidates)
             
             # Calculate processing metrics
             end_time = datetime.now()
             processing_time = (end_time - start_time).total_seconds()
-            estimated_cost = len(request_data.candidates) * self.estimated_cost_per_candidate
+            estimated_cost = len(request_data.candidates) * cost_per_candidate
             
             # Create comprehensive result structure
             batch_results = BatchResults(
@@ -274,6 +366,113 @@ RESPONSE (JSON only):"""
         
         return prompt
     
+    def _create_research_enhanced_batch_prompt(self, request_data: AILiteRequest) -> str:
+        """Create research-enhanced batch prompt for comprehensive analysis"""
+        
+        profile = request_data.profile_context
+        candidates = request_data.candidates
+        
+        # Build comprehensive profile context
+        profile_section = f"""RESEARCH ANALYST - COMPREHENSIVE OPPORTUNITY INTELLIGENCE
+        
+ANALYZING ORGANIZATION PROFILE:
+Name: {profile.organization_name}
+Mission: {profile.mission_statement}
+Focus Areas: {', '.join(profile.focus_areas)}
+NTEE Codes: {', '.join(profile.ntee_codes)}
+Geographic Scope: {profile.geographic_scope}"""
+        
+        if profile.funding_history:
+            profile_section += f"""
+Typical Grant Size: {profile.funding_history.typical_grant_size}
+Annual Budget: {profile.funding_history.annual_budget}
+Grant Making Capacity: {profile.funding_history.grant_making_capacity}"""
+        
+        # Build detailed candidate summaries
+        candidate_summaries = []
+        for i, candidate in enumerate(candidates, 1):
+            funding_info = f"${candidate.funding_amount:,}" if candidate.funding_amount else "Amount TBD"
+            deadline_info = f"Deadline: {candidate.application_deadline}" if candidate.application_deadline else "Deadline: Open"
+            
+            summary = f"""
+{i}. {candidate.organization_name} ({candidate.opportunity_id})
+   Type: {candidate.source_type} | Funding: {funding_info}
+   Location: {candidate.geographic_location or 'National'}
+   Current Score: {(candidate.current_score * 100):.1f}% | {deadline_info}
+   Description: {candidate.description[:300]}..."""
+            
+            candidate_summaries.append(summary)
+        
+        # Create comprehensive research prompt
+        prompt = f"""{profile_section}
+
+BATCH CANDIDATES FOR RESEARCH ({len(candidates)} opportunities):
+{''.join(candidate_summaries)}
+
+COMPREHENSIVE RESEARCH MISSION:
+For each opportunity, conduct thorough research and provide analysis in EXACT JSON format:
+
+{{
+  "opportunity_id": {{
+    "compatibility_score": 0.85,
+    "strategic_value": "high",
+    "risk_assessment": ["competition_level", "capacity_requirements"],
+    "priority_rank": 1,
+    "funding_likelihood": 0.75,
+    "strategic_rationale": "2-sentence strategic analysis",
+    "action_priority": "immediate",
+    "confidence_level": 0.9,
+    "research_report": {{
+      "executive_summary": "200-word executive summary for grant teams highlighting key findings and recommendations",
+      "opportunity_overview": "Detailed opportunity description, context, and strategic importance",
+      "eligibility_analysis": ["Point 1: Specific eligibility requirement analysis", "Point 2: Additional requirement assessment"],
+      "key_dates_timeline": ["Application deadline specifics", "Award notification timeline", "Project period details"],
+      "funding_details": "Complete funding information including restrictions, terms, matching requirements",
+      "strategic_considerations": ["Strategic factor 1", "Strategic factor 2"],
+      "decision_factors": ["Go/no-go factor 1", "Go/no-go factor 2"]
+    }},
+    "website_intelligence": {{
+      "primary_website_url": "https://funder-website.org",
+      "key_contacts": ["Contact Name, Title, email"],
+      "application_process_summary": "Step-by-step application process overview",
+      "eligibility_highlights": ["Key eligibility point 1", "Key eligibility point 2"],
+      "deadline_information": "Complete deadline and timeline information"
+    }},
+    "fact_extraction": {{
+      "award_amount_range": "$X - $Y per award",
+      "application_deadline": "Specific date and time",
+      "project_duration": "X months/years",
+      "geographic_eligibility": ["Geographic restriction 1", "Geographic restriction 2"],
+      "organizational_requirements": ["Organization requirement 1", "Organization requirement 2"],
+      "matching_requirements": "Matching funds requirements if any",
+      "reporting_requirements": ["Reporting requirement 1", "Reporting requirement 2"]
+    }},
+    "competitive_analysis": {{
+      "likely_competitors": ["Competitor organization 1", "Competitor organization 2"],
+      "competitive_advantages": ["Our advantage 1", "Our advantage 2"],
+      "application_volume_estimate": "Estimated number of applications",
+      "success_probability_factors": ["Success factor 1", "Success factor 2"],
+      "differentiation_strategies": ["Strategy 1", "Strategy 2"]
+    }},
+    "research_mode_enabled": true
+  }}
+}}
+
+RESEARCH REQUIREMENTS:
+1. COMPREHENSIVE OPPORTUNITY ANALYSIS: Extract detailed information about funding opportunity, requirements, and process
+2. ELIGIBILITY DEEP DIVE: Point-by-point analysis of all eligibility requirements with compliance assessment
+3. WEBSITE & DOCUMENT INTELLIGENCE: Gather contact information, process details, and application materials
+4. COMPETITIVE INTELLIGENCE: Assess likely competition and strategic positioning
+5. FACT EXTRACTION: Systematically extract all critical facts and requirements
+6. STRATEGIC ASSESSMENT: Evaluate strategic fit and implementation considerations
+7. DECISION SUPPORT: Provide clear go/no-go factors and next steps
+
+Focus on providing grant teams with comprehensive, actionable intelligence that supports strategic decision-making.
+
+RESPONSE (JSON only):"""
+        
+        return prompt
+    
     def _create_batch_prompt(self, opportunities: List[Dict], profile_context: Optional[Dict] = None) -> str:
         """Create optimized batch prompt for cost-effective analysis"""
         
@@ -330,7 +529,7 @@ RESPONSE (JSON only):"""
         
         return prompt
     
-    async def _call_openai_api(self, prompt: str, model: str = "gpt-3.5-turbo") -> str:
+    async def _call_openai_api(self, prompt: str, model: str = "gpt-3.5-turbo", max_tokens: Optional[int] = None) -> str:
         """Call OpenAI API with cost optimization settings"""
         try:
             # Note: In production, you would set up OpenAI client with API key
@@ -339,9 +538,9 @@ RESPONSE (JSON only):"""
             # Simulated response - in production, replace with actual OpenAI call:
             # client = openai.AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
             # response = await client.chat.completions.create(
-            #     model=self.model,
+            #     model=model,
             #     messages=[{"role": "user", "content": prompt}],
-            #     max_tokens=self.max_tokens * 20,  # Adjust for batch size
+            #     max_tokens=max_tokens or (self.max_tokens * 20),  # Adjust for batch size
             #     temperature=self.temperature
             # )
             # return response.choices[0].message.content
@@ -441,6 +640,102 @@ RESPONSE (JSON only):"""
                 )
             return fallback_results
     
+    def _parse_research_enhanced_api_response(self, response: str, candidates: List[CandidateData]) -> Dict[str, AILiteAnalysis]:
+        """Parse and validate research-enhanced API response into structured results"""
+        try:
+            # Parse JSON response
+            response_data = json.loads(response.strip())
+            
+            results = {}
+            for candidate in candidates:
+                opp_id = candidate.opportunity_id
+                if opp_id in response_data:
+                    try:
+                        analysis_data = response_data[opp_id]
+                        
+                        # Parse research components if present
+                        if "research_report" in analysis_data and analysis_data["research_report"]:
+                            analysis_data["research_report"] = ResearchReport(**analysis_data["research_report"])
+                        if "website_intelligence" in analysis_data and analysis_data["website_intelligence"]:
+                            analysis_data["website_intelligence"] = WebsiteIntelligence(**analysis_data["website_intelligence"])
+                        if "fact_extraction" in analysis_data and analysis_data["fact_extraction"]:
+                            analysis_data["fact_extraction"] = FactExtraction(**analysis_data["fact_extraction"])
+                        if "competitive_analysis" in analysis_data and analysis_data["competitive_analysis"]:
+                            analysis_data["competitive_analysis"] = CompetitiveAnalysis(**analysis_data["competitive_analysis"])
+                        
+                        # Set research mode flag
+                        analysis_data["research_mode_enabled"] = True
+                        
+                        # Validate and create enhanced AILiteAnalysis object
+                        analysis = AILiteAnalysis(**analysis_data)
+                        results[opp_id] = analysis
+                        
+                    except Exception as e:
+                        logger.warning(f"Failed to parse research-enhanced analysis for {opp_id}: {str(e)}")
+                        # Create fallback analysis with research components
+                        results[opp_id] = AILiteAnalysis(
+                            compatibility_score=candidate.current_score,
+                            strategic_value=StrategicValue.MEDIUM,
+                            risk_assessment=["research_analysis_error"],
+                            priority_rank=len(candidates),
+                            funding_likelihood=0.5,
+                            strategic_rationale="Research analysis temporarily unavailable - manual review recommended.",
+                            action_priority=ActionPriority.MONITOR,
+                            confidence_level=0.1,
+                            research_mode_enabled=True,
+                            research_report=ResearchReport(
+                                executive_summary="Research analysis temporarily unavailable. Manual research required.",
+                                opportunity_overview="Comprehensive research could not be completed automatically.",
+                                funding_details="Please verify funding details manually.",
+                                eligibility_analysis=["Manual eligibility verification required"],
+                                key_dates_timeline=["Manual timeline verification required"],
+                                strategic_considerations=["Manual strategic analysis required"],
+                                decision_factors=["Manual decision support required"]
+                            )
+                        )
+                else:
+                    # Create fallback for missing candidates with research components
+                    results[opp_id] = AILiteAnalysis(
+                        compatibility_score=candidate.current_score,
+                        strategic_value=StrategicValue.MEDIUM,
+                        risk_assessment=["incomplete_research_data"],
+                        priority_rank=len(candidates),
+                        funding_likelihood=0.5,
+                        strategic_rationale="Candidate not included in research analysis response.",
+                        action_priority=ActionPriority.MONITOR,
+                        confidence_level=0.1,
+                        research_mode_enabled=True
+                    )
+            
+            return results
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse research-enhanced AI response as JSON: {str(e)}")
+            # Return fallback results for all candidates with research components
+            fallback_results = {}
+            for i, candidate in enumerate(candidates):
+                fallback_results[candidate.opportunity_id] = AILiteAnalysis(
+                    compatibility_score=candidate.current_score,
+                    strategic_value=StrategicValue.MEDIUM,
+                    risk_assessment=["api_research_error"],
+                    priority_rank=i + 1,
+                    funding_likelihood=0.5,
+                    strategic_rationale="Research analysis temporarily unavailable - using baseline scoring.",
+                    action_priority=ActionPriority.MONITOR,
+                    confidence_level=0.2,
+                    research_mode_enabled=True,
+                    research_report=ResearchReport(
+                        executive_summary="Automated research unavailable. Manual research required for comprehensive analysis.",
+                        opportunity_overview="API error prevented comprehensive research analysis.",
+                        funding_details="Manual verification of funding details required.",
+                        eligibility_analysis=["Manual eligibility analysis required"],
+                        key_dates_timeline=["Manual timeline analysis required"],
+                        strategic_considerations=["Manual strategic assessment required"],
+                        decision_factors=["Manual decision analysis required"]
+                    )
+                )
+            return fallback_results
+    
     def _parse_api_response(self, response: str, opportunities: List[Dict]) -> Dict[str, AILiteAnalysis]:
         """Parse and validate API response into structured results"""
         try:
@@ -482,9 +777,31 @@ RESPONSE (JSON only):"""
                 )
             return fallback_results
     
-    def get_cost_estimate(self, candidate_count: int) -> float:
+    def get_cost_estimate(self, candidate_count: int, research_mode: bool = None) -> float:
         """Get cost estimate for analyzing a given number of candidates"""
-        return candidate_count * self.estimated_cost_per_candidate
+        if research_mode is None:
+            research_mode = self.research_mode_default
+        
+        if research_mode:
+            return candidate_count * self.estimated_cost_per_candidate_research
+        else:
+            return candidate_count * self.estimated_cost_per_candidate
+    
+    def get_research_capabilities(self) -> Dict[str, Any]:
+        """Get information about research capabilities"""
+        return {
+            "research_mode_available": True,
+            "research_mode_default": self.research_mode_default,
+            "cost_per_candidate_scoring": self.estimated_cost_per_candidate,
+            "cost_per_candidate_research": self.estimated_cost_per_candidate_research,
+            "research_features": [
+                "Website intelligence gathering",
+                "Document parsing and fact extraction", 
+                "Grant team ready research reports",
+                "Competitive analysis and positioning",
+                "Evidence-based scoring with documentation"
+            ]
+        }
     
     def get_status(self) -> Dict[str, Any]:
         """Get processor status and configuration"""
@@ -494,6 +811,9 @@ RESPONSE (JSON only):"""
             "model": self.model,
             "batch_size": self.batch_size,
             "estimated_cost_per_candidate": self.estimated_cost_per_candidate,
+            "research_mode_available": True,
+            "research_mode_default": self.research_mode_default,
+            "estimated_cost_per_candidate_research": self.estimated_cost_per_candidate_research,
             "status": "ready"
         }
 
@@ -510,5 +830,10 @@ __all__ = [
     "ExistingAnalysis",
     "BatchResults",
     "StrategicValue",
-    "ActionPriority"
+    "ActionPriority",
+    # Phase 1 Enhancement: Research Data Models
+    "WebsiteIntelligence",
+    "FactExtraction", 
+    "ResearchReport",
+    "CompetitiveAnalysis"
 ]

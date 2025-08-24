@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Fixes Test</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+    <div x-data="{ message: 'Alpine.js is working!' }">
+        <h1 x-text="message"></h1>
+        <p>If you can see "Alpine.js is working!" above, then Alpine.js loaded correctly.</p>
+    </div>
+
+    <script>
+        // Test script to verify Alpine.js initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, checking for Alpine.js...');
+            
+            function checkAlpine() {
+                if (typeof Alpine !== 'undefined') {
+                    console.log('✅ Alpine.js is available');
+                    
+                    // Register a test component
+                    Alpine.data('testComponent', () => ({
+                        working: true,
+                        message: 'Test component registered successfully'
+                    }));
+                    
+                    console.log('✅ Test component registered');
+                } else {
+                    console.log('❌ Alpine.js not yet available, retrying...');
+                    setTimeout(checkAlpine, 100);
+                }
+            }
+            
+            checkAlpine();
+        });
+
+        // Global error handler
+        window.addEventListener('error', function(event) {
+            console.error('JavaScript Error:', event.error);
+        });
+    </script>
+</body>
+</html>

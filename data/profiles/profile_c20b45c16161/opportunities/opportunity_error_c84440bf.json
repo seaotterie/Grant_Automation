@@ -1,0 +1,36 @@
+{
+  "opportunity_id": "opp_error_c84440bf",
+  "profile_id": "profile_c20b45c16161",
+  "organization_name": "Discovery Error",
+  "ein": null,
+  "current_stage": "discovery",
+  "stage_history": [],
+  "scoring": null,
+  "analysis": {
+    "discovery": {
+      "match_factors": {},
+      "risk_factors": {},
+      "recommendations": [],
+      "network_insights": {},
+      "analyzed_at": "2025-08-23T14:51:35.191706",
+      "source": "ProPublica Nonprofit Foundation Discovery",
+      "opportunity_type": "grants",
+      "enhanced_data": {
+        "error": "'WorkflowEngine' object has no attribute 'execute_workflow'",
+        "error_type": "AttributeError"
+      }
+    }
+  },
+  "user_assessment": null,
+  "promotion_history": [],
+  "source": "ProPublica Nonprofit Foundation Discovery",
+  "opportunity_type": "grants",
+  "discovered_at": "2025-08-23T14:51:35.191368",
+  "last_updated": "2025-08-23T14:51:35.192574",
+  "status": "active",
+  "legacy_lead_id": "lead_error_c84440bf",
+  "legacy_pipeline_stage": "discovery",
+  "description": "Error during nonprofit discovery: 'WorkflowEngine' object has no attribute 'execute_workflow'",
+  "funding_amount": null,
+  "program_name": null
+}

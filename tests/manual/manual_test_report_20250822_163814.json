@@ -1,0 +1,84 @@
+{
+  "execution_time": "2025-08-22T16:38:14.265615",
+  "summary": {
+    "total": 9,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "success_rate": 100.0
+  },
+  "results": [
+    {
+      "test_name": "API Health Check",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:38:14.228157",
+      "details": "Health endpoint responding correctly: {'status': 'healthy', 'timestamp': '2025-08-22T16:38:14.226528', 'service': 'Catalynx API', 'version': '2.0.0'}",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Dashboard Loading",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:38:14.238566",
+      "details": "All essential dashboard elements present",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Profile Creation",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:38:14.242428",
+      "details": "Profile created successfully with ID: profile_61334ab31ea9",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Profile Retrieval",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:38:14.246526",
+      "details": "Profile data retrieved correctly",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Entity Discovery",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:38:14.248405",
+      "details": "Discovery completed successfully (no opportunities found)",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Cache Statistics",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:38:14.250232",
+      "details": "Cache stats retrieved: {'success': True, 'cache_stats': {'status': 'operational', 'total_entities': 0, 'cache_hits': 0, 'cache_misses': 0, 'hit_rate_percentage': 0, 'last_updated': '2025-08-22T16:37:35.085418', 'cache_size_mb': 1.9073486328125e-06}, 'entity_counts': {'nonprofit': 3, 'government': 3, 'foundation': 2}, 'discovery_ready': {'nonprofits': True, 'government_opportunities': False, 'foundations': True}}",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "API Performance",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:38:14.252036",
+      "details": "API response time: 1.78ms (target: <100ms)",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Static Resources",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:38:14.262727",
+      "details": "All static resources loading correctly",
+      "expected": "",
+      "actual": ""
+    },
+    {
+      "test_name": "Test Cleanup",
+      "status": "PASS",
+      "timestamp": "2025-08-22T16:38:14.265567",
+      "details": "Test profile profile_61334ab31ea9 cleaned up successfully",
+      "expected": "",
+      "actual": ""
+    }
+  ]
+}

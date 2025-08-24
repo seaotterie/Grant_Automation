@@ -86,7 +86,8 @@
       "Bash(del test_entity_discovery_phase_4_2.py)",
       "Bash(del test_*.py cleanup_*.py analyze_*.py fix_*.py)",
       "Bash(del government_data_migration.py)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
