@@ -3357,6 +3357,7 @@ function catalynxApp() {
         get selectedDiscoveryProfile() { return this.selectedProfile; },
         get selectedPlanProfile() { return this.selectedProfile; },
         get selectedAnalyzeProfile() { return this.selectedProfile; },
+        get selectedExamineProfile() { return this.selectedProfile; },
         
         // Track status tracking
         nonprofitTrackStatus: {
