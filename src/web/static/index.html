@@ -503,7 +503,7 @@
                             
                             <!-- Profile Count -->
                             <div class="text-sm text-gray-600 dark:text-gray-400">
-                                <span x-text="filteredProfiles.length"></span> profiles
+                                <span x-text="(filteredProfiles || []).length"></span> profiles
                             </div>
                         </div>
                     </div>
@@ -580,10 +580,10 @@
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                        <template x-for="profile in filteredProfiles" :key="`main-profile-${profile.profile_id}`">
+                                        <template x-for="profile in (filteredProfiles || [])" :key="`main-profile-${profile.profile_id}`">
                                             <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                                 :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedProfile?.profile_id === profile.profile_id}"
-                                                x-init="$nextTick(() => { if (addProfileContextMenu && typeof addProfileContextMenu === 'function') addProfileContextMenu($el, profile); })"
+                                                x-init="$nextTick(() => { if ($data.addProfileContextMenu && typeof $data.addProfileContextMenu === 'function') $data.addProfileContextMenu($el, profile); })"
                                                 @click="selectedProfile = profile">
                                                 <td class="px-6 py-3 whitespace-nowrap">
                                                     <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="profile.name"></div>
@@ -2096,8 +2096,8 @@
                                 <select x-model="selectedExamineProfile" @change="filterTargets()"
                                         class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700">
                                     <option value="">Select Profile...</option>
-                                    <template x-for="profile in profiles" :key="profile.id">
-                                        <option :value="profile.id" x-text="profile.name"></option>
+                                    <template x-for="profile in (profiles || [])" :key="`examine-dropdown-${profile.profile_id}`">
+                                        <option :value="profile.profile_id" x-text="profile.name"></option>
                                     </template>
                                 </select>
                             </div>
@@ -4438,10 +4438,10 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                    <template x-for="profile in filteredProfiles" :key="`discovery-profile-${profile.profile_id}`">
+                                    <template x-for="profile in (filteredProfiles || [])" :key="`discovery-profile-${profile.profile_id}`">
                                         <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                             :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedDiscoveryProfile?.profile_id === profile.profile_id}"
-                                            x-init="$nextTick(() => { if (addProfileContextMenu && typeof addProfileContextMenu === 'function') addProfileContextMenu($el, profile); })"
+                                            x-init="$nextTick(() => { if ($data.addProfileContextMenu && typeof $data.addProfileContextMenu === 'function') $data.addProfileContextMenu($el, profile); })"
                                             @click="selectedDiscoveryProfile = profile">
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div>
