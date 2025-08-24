@@ -23,7 +23,7 @@ from .ai_lite_scorer import (
     ExistingAnalysis, StrategicValue, ActionPriority
 )
 from .ai_heavy_researcher import (
-    AIHeavyResearcher, AIHeavyRequest, AIHeavyResult,
+    AIHeavyDossierBuilder, AIHeavyRequest, AIHeavyResult,
     ResearchMetadata, ContextData, ContextProfileData, AILiteResults,
     TargetPreliminaryData, ResearchFocus, AnalysisDepth, Priority
 )
@@ -48,7 +48,7 @@ class AIServiceManager:
     
     def __init__(self):
         self.ai_lite_processor = AILiteScorer()
-        self.ai_heavy_processor = AIHeavyResearcher()
+        self.ai_heavy_processor = AIHeavyDossierBuilder()
         self.active_requests: Dict[str, ProcessingStatus] = {}
         
         # Cost tracking

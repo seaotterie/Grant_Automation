@@ -1,13 +1,13 @@
 """
 Research Integration Service - Phase 1.5: Three-Way Cross-System Research Integration
 
-Purpose: Orchestrate research flow across AI-Lite → Deep Research → Dossier Builder
-Functionality: Bridge research findings between ANALYZE → EXAMINE → APPROACH tabs
+Purpose: Orchestrate research flow across AI-Lite -> Deep Research -> Dossier Builder
+Functionality: Bridge research findings between ANALYZE -> EXAMINE -> APPROACH tabs
 Enhancement: Enable seamless three-way research flow across the complete grant research workflow
 
 Phase 1.5 Enhanced Features:
-- AI-Lite to Deep Research handoff (ANALYZE → EXAMINE)
-- Deep Research to Dossier Builder handoff (EXAMINE → APPROACH)
+- AI-Lite to Deep Research handoff (ANALYZE -> EXAMINE)
+- Deep Research to Dossier Builder handoff (EXAMINE -> APPROACH)
 - Three-way research quality assessment and validation
 - Cross-system data enrichment with context preservation
 - Evidence-based integration across all workflow stages
@@ -397,13 +397,13 @@ class ResearchIntegrationService:
                 "three_way_integrations": len(self.three_way_integration_cache)
             },
             "workflow_integration": {
-                "analyze_to_examine": "AI-Lite → Deep Research handoff",
-                "examine_to_approach": "Deep Research → Dossier Builder handoff",
+                "analyze_to_examine": "AI-Lite -> Deep Research handoff",
+                "examine_to_approach": "Deep Research -> Dossier Builder handoff",
                 "three_way_orchestration": "Complete workflow context preservation"
             },
             "capabilities": [
-                "AI-Lite to Deep Research handoff (ANALYZE → EXAMINE)",
-                "Deep Research to Dossier Builder handoff (EXAMINE → APPROACH)",
+                "AI-Lite to Deep Research handoff (ANALYZE -> EXAMINE)",
+                "Deep Research to Dossier Builder handoff (EXAMINE -> APPROACH)",
                 "Three-way research quality assessment and validation",
                 "Cross-system data enrichment with context preservation",
                 "Evidence-based integration across all workflow stages",
