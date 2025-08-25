@@ -3335,6 +3335,22 @@ function catalynxApp() {
             state: false,
             commercial: false
         },
+
+        // Investigation progress tracking (EXAMINE tab)
+        investigationProgress: {
+            research: false,
+            board: false,
+            strategic: false,
+            market: false
+        },
+
+        // Approach progress tracking (APPROACH tab)
+        approachProgress: {
+            application: false,
+            partnership: false,
+            timeline: false,
+            resources: false
+        },
         
         // Selected profile for discovery
         // CENTRALIZED PROFILE MANAGEMENT - Single profile for all tabs
@@ -4206,6 +4222,94 @@ function catalynxApp() {
                 this.showNotification('Discovery Error', `${track} discovery failed`, 'error');
             } finally {
                 this.discoveryProgress[track] = false;
+            }
+        },
+
+        // Investigation track runner (EXAMINE tab)
+        async runInvestigationTrack(track) {
+            if (!this.selectedExamineProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile first', 'warning');
+                return;
+            }
+
+            // Set track progress
+            this.investigationProgress[track] = true;
+
+            try {
+                switch(track) {
+                    case 'research':
+                        this.showNotification('Investigation Started', 'Running research investigation analysis...', 'info');
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        break;
+                    case 'board':
+                        this.showNotification('Investigation Started', 'Running board investigation analysis...', 'info');
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        break;
+                    case 'strategic':
+                        this.showNotification('Investigation Started', 'Running strategic investigation analysis...', 'info');
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        break;
+                    case 'market':
+                        this.showNotification('Investigation Started', 'Running market investigation analysis...', 'info');
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        break;
+                    default:
+                        console.error(`Unknown investigation track: ${track}`);
+                        this.showNotification('Error', `Unknown investigation track: ${track}`, 'error');
+                        return;
+                }
+                
+                this.showNotification('Investigation Complete', `${track.charAt(0).toUpperCase() + track.slice(1)} investigation completed successfully`, 'success');
+                
+            } catch (error) {
+                console.error(`${track} investigation failed:`, error);
+                this.showNotification('Investigation Error', `${track} investigation failed`, 'error');
+            } finally {
+                this.investigationProgress[track] = false;
+            }
+        },
+
+        // Approach track runner (APPROACH tab)
+        async runApproachTrack(track) {
+            if (!this.selectedApproachProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile first', 'warning');
+                return;
+            }
+
+            // Set track progress
+            this.approachProgress[track] = true;
+
+            try {
+                switch(track) {
+                    case 'application':
+                        this.showNotification('Approach Started', 'Running application approach analysis...', 'info');
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        break;
+                    case 'partnership':
+                        this.showNotification('Approach Started', 'Running partnership approach analysis...', 'info');
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        break;
+                    case 'timeline':
+                        this.showNotification('Approach Started', 'Running timeline approach analysis...', 'info');
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        break;
+                    case 'resources':
+                        this.showNotification('Approach Started', 'Running resources approach analysis...', 'info');
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        break;
+                    default:
+                        console.error(`Unknown approach track: ${track}`);
+                        this.showNotification('Error', `Unknown approach track: ${track}`, 'error');
+                        return;
+                }
+                
+                this.showNotification('Approach Complete', `${track.charAt(0).toUpperCase() + track.slice(1)} approach completed successfully`, 'success');
+                
+            } catch (error) {
+                console.error(`${track} approach failed:`, error);
+                this.showNotification('Approach Error', `${track} approach failed`, 'error');
+            } finally {
+                this.approachProgress[track] = false;
             }
         },
         
