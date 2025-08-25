@@ -1,0 +1,244 @@
+================================================================================
+CATALYNX AI-LITE COMPREHENSIVE RESEARCH MODE TEST
+================================================================================
+
+Copy the prompt below and paste it into ChatGPT or another AI system to test 
+the full research capabilities.
+
+================================================================================
+PROMPT BEGINS BELOW - COPY FROM HERE
+================================================================================
+
+I need you to perform a comprehensive grant opportunity research and analysis task. You will act as an expert RESEARCH ANALYST specializing in grant strategy and funding intelligence.
+
+TASK: Analyze 5 funding opportunities for compatibility with our organization, conduct detailed research to fill in missing information, and provide both machine-readable scoring data and human-readable research reports.
+
+You must complete the following 8 research tasks for each opportunity:
+1. COMPATIBILITY SCORING - Calculate strategic fit and funding likelihood
+2. COMPREHENSIVE OPPORTUNITY ANALYSIS - Research and extract detailed program information
+3. ELIGIBILITY DEEP DIVE - Analyze requirements and compliance status
+4. WEBSITE & DOCUMENT INTELLIGENCE - Gather contact and process information
+5. COMPETITIVE INTELLIGENCE - Assess competition and positioning
+6. FACT EXTRACTION - Systematically collect all critical details
+7. STRATEGIC ASSESSMENT - Evaluate implementation and capacity requirements  
+8. DECISION SUPPORT - Provide go/no-go factors and recommendations
+
+RESEARCH ANALYST - COMPREHENSIVE OPPORTUNITY INTELLIGENCE
+
+ANALYZING ORGANIZATION PROFILE:
+Name: Community Tech Foundation
+Mission: To bridge the digital divide and empower underserved communities through accessible technology education, resources, and sustainable digital infrastructure programs that create pathways to economic opportunity and social equity.
+Focus Areas: digital_literacy, stem_education, community_development, workforce_development, rural_broadband, senior_technology_access
+NTEE Codes: P20 (Computer Science/Data Processing), P30 (Technology/Engineering), S20 (Community Improvement/Capacity Building)
+Government Criteria: technology_innovation, rural_development, education_training, economic_development, digital_inclusion, workforce_readiness
+Geographic Scope: Mid-Atlantic Region (Virginia, Maryland, DC) with rural focus
+Typical Grant Size: $75,000-$300,000
+Annual Budget: $2.8M
+Grant Making Capacity: $850K annually
+
+BATCH CANDIDATES FOR RESEARCH (5 opportunities):
+Source data available from discovery systems - need comprehensive research to fill in missing details:
+
+1. Knight Foundation (tech_equity_001)
+   EIN: 65-0464177 | Type: Private Foundation | Current Score: 73.0%
+   Name: John S. and James L. Knight Foundation
+   Address: 200 S Biscayne Blvd, Suite 3300, Miami, FL 33131
+   Website: knightfoundation.org
+   NTEE Code: P30 (Technology/Engineering)
+   Annual Revenue: $685M (2023)
+   Basic Program Info: Technology and information initiatives for communities
+   
+2. Google.org (workforce_tech_002)  
+   EIN: 20-0567266 | Type: Corporate Foundation | Current Score: 68.0%
+   Name: Google.org
+   Address: 1600 Amphitheatre Pkwy, Mountain View, CA 94043
+   Website: www.google.org
+   NTEE Code: J32 (Job Training)
+   Annual Revenue: $300M+ (2023)
+   Basic Program Info: Digital skills and workforce development programs
+   
+3. National Science Foundation (rural_broadband_003)
+   Agency ID: NSF | Type: Federal Government | Current Score: 82.0%
+   Name: National Science Foundation  
+   Address: 2415 Eisenhower Avenue, Alexandria, VA 22314
+   Website: www.nsf.gov
+   Program Code: CISE-CNS-Core Programs
+   Annual Budget: $9.5B (FY2024)
+   Basic Program Info: Computer and network systems research funding
+   
+4. Simons Foundation (stem_education_004)
+   EIN: 13-1579954 | Type: Private Foundation | Current Score: 71.0%
+   Name: Simons Foundation
+   Address: 160 Fifth Avenue, 7th Floor, New York, NY 10010
+   Website: www.simonsfoundation.org
+   NTEE Code: B60 (Education - Research)
+   Annual Revenue: $598M (2023)
+   Basic Program Info: Mathematics and science research and education
+   
+5. AARP Foundation (senior_tech_005)
+   EIN: 23-7327010 | Type: Private Foundation | Current Score: 79.0%
+   Name: AARP Foundation
+   Address: 601 E Street NW, Washington, DC 20049  
+   Website: www.aarpfoundation.org
+   NTEE Code: P85 (Aging Services)
+   Annual Revenue: $73M (2023)
+   Basic Program Info: Programs to help older adults with technology access
+
+COMPREHENSIVE RESEARCH MISSION:
+CRITICAL: You MUST conduct actual web research for each organization. This is not a creative writing exercise - you need to investigate the real websites, programs, and funding opportunities.
+
+REQUIRED RESEARCH STEPS for each opportunity:
+1. VISIT THE WEBSITE - Go to the provided website and examine their actual grant programs
+2. FIND SPECIFIC PROGRAMS - Look for technology, digital equity, workforce, broadband, STEM, or senior programs
+3. EXTRACT REAL DATA - Get actual funding amounts, deadlines, requirements from their materials
+4. IDENTIFY CONTACTS - Find real program officer names, emails, phone numbers
+5. ANALYZE ELIGIBILITY - Review their actual eligibility requirements against our profile
+6. ASSESS COMPETITION - Research their typical grantees and funding patterns
+7. GATHER INTELLIGENCE - Collect actionable information that grant teams can use immediately
+
+DO NOT MAKE UP INFORMATION. If you cannot access a website or find specific details, clearly state "Unable to verify" or "Website not accessible" rather than creating fictional content.
+
+For each opportunity, conduct thorough research and provide analysis in EXACT JSON format:
+
+{
+  "opportunity_id": {
+    "compatibility_score": 0.85,
+    "strategic_value": "high",
+    "risk_assessment": ["competition_level", "capacity_requirements"],
+    "priority_rank": 1,
+    "funding_likelihood": 0.75,
+    "strategic_rationale": "2-sentence strategic analysis explaining fit and key advantages",
+    "action_priority": "immediate",
+    "confidence_level": 0.9,
+    "research_report": {
+      "executive_summary": "200-word executive summary for grant teams highlighting key findings, strategic fit assessment, competitive positioning, implementation requirements, and specific recommendations for pursuit decision",
+      "opportunity_overview": "Detailed opportunity description including funder background, program goals, target outcomes, and strategic importance to our organization's mission and capacity",
+      "eligibility_analysis": ["Point 1: Specific eligibility requirement with compliance assessment", "Point 2: Additional requirement analysis with documentation needs", "Point 3: Geographic or organizational restrictions evaluation"],
+      "key_dates_timeline": ["Application deadline with submission requirements", "Award notification timeline and process", "Project period details and milestones", "Reporting deadlines and requirements"],
+      "funding_details": "Complete funding information including award amounts, indirect cost policies, matching fund requirements, allowable expenses, restrictions, and payment schedules",
+      "strategic_considerations": ["Strategic alignment factor with organizational priorities", "Capacity and resource requirement assessment", "Partnership and collaboration opportunities"],
+      "decision_factors": ["Critical go/no-go factor for pursuit decision", "Key success requirements for competitive application", "Risk mitigation strategies needed"]
+    },
+    "website_intelligence": {
+      "primary_website_url": "https://funder-website.org",
+      "key_contacts": ["Program Officer Name, Title, email@foundation.org", "Administrative Contact Name, Title, admin@foundation.org"],
+      "application_process_summary": "Step-by-step application process including pre-application requirements, full proposal components, review timeline, and decision notification procedures",
+      "eligibility_highlights": ["Key eligibility requirement that impacts our organization", "Important restriction or preference to note", "Geographic or demographic priority that affects us"],
+      "deadline_information": "Complete deadline and timeline information including application deadlines, review periods, award notifications, and project start dates"
+    },
+    "fact_extraction": {
+      "award_amount_range": "$X - $Y per award with average of $Z",
+      "application_deadline": "Specific date and time with time zone",
+      "project_duration": "X months/years with specific start/end requirements",
+      "geographic_eligibility": ["Geographic restriction or preference", "Service area requirements", "Location-based priorities"],
+      "organizational_requirements": ["501(c)(3) status requirement", "Organizational capacity requirements", "Experience or track record needed", "Partnership requirements"],
+      "matching_requirements": "Cash or in-kind match requirements with percentages and acceptable sources",
+      "reporting_requirements": ["Interim reporting schedule and requirements", "Final report specifications", "Outcome measurement and evaluation requirements"]
+    },
+    "competitive_analysis": {
+      "likely_competitors": ["Similar organization type 1", "Similar organization type 2", "Regional competitor category"],
+      "competitive_advantages": ["Our specific organizational strength", "Unique program or approach we offer", "Special partnerships or capabilities"],
+      "application_volume_estimate": "Estimated number of applications based on funder size and program scope",
+      "success_probability_factors": ["Factor that increases our chances", "Key differentiator that favors our approach", "Alignment element that strengthens our position"],
+      "differentiation_strategies": ["How to position our unique value proposition", "Approach to stand out from typical applicants", "Strategic messaging for competitive advantage"]
+    },
+    "research_mode_enabled": true
+  }
+}
+
+MANDATORY RESEARCH REQUIREMENTS:
+
+THIS IS A LIVE RESEARCH TASK - NOT CREATIVE WRITING. You must provide real, verifiable information.
+
+1. WEBSITE INVESTIGATION: Visit each organization's website and document what you actually find:
+   - Specific grant program names and descriptions from their site
+   - Real funding amounts and ranges listed on their materials  
+   - Actual application deadlines and submission processes
+   - Contact information for real program staff (names, titles, emails)
+   - Eligibility requirements as stated in their guidelines
+
+2. PROGRAM ANALYSIS: Research their actual funding programs:
+   - Current grant opportunities that match our focus areas
+   - Historical grant awards and recipient organizations  
+   - Program priorities and funding criteria from their materials
+   - Application materials, forms, and submission requirements
+
+3. CONTACT INTELLIGENCE: Find real contact information:
+   - Program officer names and titles from staff directories
+   - Direct email addresses and phone numbers
+   - Administrative contacts for application support
+   - Regional representatives if applicable
+
+4. COMPETITIVE RESEARCH: Investigate their actual grantee base:
+   - Recent grant recipients from annual reports or press releases
+   - Typical organization types and sizes they fund
+   - Geographic distribution of their grants
+   - Success stories and case studies they highlight
+
+5. OPERATIONAL FACTS: Extract concrete, verifiable details:
+   - Exact funding amounts and award ranges
+   - Specific application deadlines and timelines
+   - Required documentation and supporting materials
+   - Matching fund requirements and restrictions
+   - Reporting obligations and evaluation criteria
+
+VERIFICATION STANDARD: Every piece of information should be traceable to a specific source. If you cannot verify something through research, clearly state "Unable to verify through available sources" rather than guessing.
+
+Your response will be evaluated based on the accuracy and verifiability of the research findings.
+
+Expected opportunity IDs for response:
+- tech_equity_001
+- workforce_tech_002  
+- rural_broadband_003
+- stem_education_004
+- senior_tech_005
+
+RESPONSE (JSON only):
+
+================================================================================
+PROMPT ENDS ABOVE - COPY TO HERE
+================================================================================
+
+TESTING INSTRUCTIONS:
+1. Copy the entire prompt above (from "I need you to perform" to "RESPONSE (JSON only):")
+2. Paste it into an AI system with web browsing capabilities:
+   - Claude (Anthropic) with web access - RECOMMENDED for live research
+   - ChatGPT Plus with browsing enabled
+   - Perplexity AI with web search
+   - Other AI systems that can access websites
+3. The AI should conduct actual web research and return a JSON object with findings
+4. Validate the response using the criteria below
+
+IMPORTANT: Standard ChatGPT without browsing will likely provide generic responses. For real research testing, use an AI system that can actually visit websites and gather live information.
+
+EXPECTED RESPONSE STRUCTURE:
+The AI should return a complete JSON object containing all 5 opportunity IDs, each with:
+- 8 scoring components (compatibility_score, strategic_value, etc.)
+- Complete research_report with 7 detailed sub-fields
+- Full website_intelligence with 5 information gathering fields  
+- Complete fact_extraction with 7 systematic data fields
+- Full competitive_analysis with 5 positioning fields
+- research_mode_enabled: true flag
+
+VALIDATION CRITERIA:
+✓ All 5 opportunity IDs present in response
+✓ Compatibility scores between 0.0-1.0
+✓ Priority ranks 1-5 with no duplicates  
+✓ Strategic rationale makes logical sense for each opportunity
+✓ Executive summaries are approximately 200 words each
+✓ Eligibility analysis includes specific, actionable points
+✓ Fact extraction captures key requirements and restrictions
+✓ Competitive analysis provides realistic positioning insights
+✓ Research mode enabled flag set to true for all opportunities
+
+QUALITY INDICATORS:
+- Strategic reasoning demonstrates understanding of grant strategy
+- Risk assessments are appropriate for each opportunity type
+- Competitive advantages leverage organization's actual strengths
+- Decision factors provide clear go/no-go guidance
+- Research components show comprehensive opportunity intelligence
+- Human-readable summaries suitable for grant team review
+
+This test validates the AI-Lite system's dual capability to provide both 
+machine-processable scoring data AND comprehensive human-readable research 
+intelligence in a single response.

@@ -31,195 +31,79 @@ Manual Inputs
 - Feedback loop where BOD and Grantor Networks feed back in to the DISCOVERY tab
 
 ## PLAN
-╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ Ready to code?                                                                                                                                  │
-│                                                                                                                                                 │
-│ Here is Claude's plan:                                                                                                                          │
-│ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │
-│ │ Grant Research Platform: AI Scoring Data Sources & Inputs Analysis                                                                          │ │
-│ │                                                                                                                                             │ │
-│ │ Based on my comprehensive review of the project code, SCORING ALGORITHMS.md, and SCORING OPTIMIZATION_ANALYSIS.md, here's the complete      │ │
-│ │ analysis of source information and scoring sources that feed into AI-Lite and AI-Heavy processors across all discovery tracks:              │ │
-│ │                                                                                                                                             │ │
-│ │ Discovery Track System Overview                                                                                                             │ │
-│ │                                                                                                                                             │ │
-│ │ 4-Track Architecture:                                                                                                                       │ │
-│ │                                                                                                                                             │ │
-│ │ 1. Track 1: Nonprofit + BMF Integration - NTEE-first approach with revenue compatibility ($50K-$50M range)                                  │ │
-│ │ 2. Track 2: Federal Opportunities - Government eligibility focus with capacity analysis ($100K-$10M+ range)                                 │ │
-│ │ 3. Track 3: State Opportunities - Geographic advantage emphasis ($25K-$2M range)                                                            │ │
-│ │ 4. Track 4: Commercial Opportunities - Partnership potential focus ($10K-$500K range)                                                       │ │
-│ │                                                                                                                                             │ │
-│ │ Data Sources by Track                                                                                                                       │ │
-│ │                                                                                                                                             │ │
-│ │ Track 1: Nonprofit + BMF Integration                                                                                                        │ │
-│ │                                                                                                                                             │ │
-│ │ - Primary Data: IRS Business Master File (BMF) with NTEE code filtering                                                                     │ │
-│ │ - Financial Data: ProPublica 990 filings (data/source_data/nonprofits/{EIN}/propublica.json)                                                │ │
-│ │ - Board Data: Board member information from 990 filings and network analysis                                                                │ │
-│ │ - Entity Cache: Shared analytics for 42 nonprofit entities with 85% cache hit rate                                                          │ │
-│ │ - Governance Data: Board compensation, meeting frequency, governance quality indicators                                                     │ │
-│ │                                                                                                                                             │ │
-│ │ Track 2: Federal Opportunities                                                                                                              │ │
-│ │                                                                                                                                             │ │
-│ │ - Primary Source: Grants.gov API (data/source_data/government/opportunities/)                                                               │ │
-│ │ - Historical Awards: USASpending.gov data (data/source_data/government/awards/)                                                             │ │
-│ │ - Agency Intelligence: Federal agency-specific eligibility requirements and priorities                                                      │ │
-│ │ - Track Record Data: Past federal funding success patterns                                                                                  │ │
-│ │ - Regulatory Data: Compliance requirements and evaluation criteria                                                                          │ │
-│ │                                                                                                                                             │ │
-│ │ Track 3: State Opportunities                                                                                                                │ │
-│ │                                                                                                                                             │ │
-│ │ - State Grants: VA State Grants fetch with priority scoring                                                                                 │ │
-│ │ - Geographic Data: State-specific eligibility and location benefits analysis                                                                │ │
-│ │ - Regional Networks: State-level competitive advantage assessment and local connections                                                     │ │
-│ │ - State Programs: State initiative and program alignment data                                                                               │ │
-│ │                                                                                                                                             │ │
-│ │ Track 4: Commercial Opportunities                                                                                                           │ │
-│ │                                                                                                                                             │ │
-│ │ - Foundation Directory: Corporate foundation opportunities with entity extraction                                                           │ │
-│ │ - 990-PF Data: Foundation giving patterns and unsolicited request indicators                                                                │ │
-│ │ - Corporate Intelligence: CSR program alignment and partnership potential                                                                   │ │
-│ │ - Foundation Networks: Foundation board overlap and ecosystem mapping                                                                       │ │
-│ │                                                                                                                                             │ │
-│ │ AI-Lite Scorer Input Sources                                                                                                                │ │
-│ │                                                                                                                                             │ │
-│ │ Core Data Inputs (from ProfileContext):                                                                                                     │ │
-│ │                                                                                                                                             │ │
-│ │ # Organization Profile Data                                                                                                                 │ │
-│ │ - organization_name: str                                                                                                                    │ │
-│ │ - mission_statement: str                                                                                                                    │ │
-│ │ - focus_areas: List[str]                                                                                                                    │ │
-│ │ - ntee_codes: List[str]                                                                                                                     │ │
-│ │ - government_criteria: List[str]                                                                                                            │ │
-│ │ - keywords: List[str]                                                                                                                       │ │
-│ │ - geographic_scope: str                                                                                                                     │ │
-│ │ - funding_history: FundingHistory (typical_grant_size, annual_budget, capacity)                                                             │ │
-│ │                                                                                                                                             │ │
-│ │ # Candidate Opportunity Data                                                                                                                │ │
-│ │ - opportunity_id: str                                                                                                                       │ │
-│ │ - organization_name: str                                                                                                                    │ │
-│ │ - source_type: str (nonprofit/government/foundation/state/commercial)                                                                       │ │
-│ │ - description: str                                                                                                                          │ │
-│ │ - funding_amount: Optional[int]                                                                                                             │ │
-│ │ - application_deadline: Optional[str]                                                                                                       │ │
-│ │ - geographic_location: Optional[str]                                                                                                        │ │
-│ │ - current_score: float (from Discovery Scorer)                                                                                              │ │
-│ │ - existing_analysis: ExistingAnalysis (match_factors, confidence)                                                                           │ │
-│ │                                                                                                                                             │ │
-│ │ Cross-Cutting Scoring Integration:                                                                                                          │ │
-│ │                                                                                                                                             │ │
-│ │ - Government Opportunity Scorer: Enhanced government analysis for federal/state opportunities                                               │ │
-│ │ - Discovery Scorer: Base compatibility, strategic alignment, geographic advantage scores                                                    │ │
-│ │ - Success Scorer: Organizational readiness and capacity assessment                                                                          │ │
-│ │ - Network Analytics: Board connections and relationship strength scoring                                                                    │ │
-│ │                                                                                                                                             │ │
-│ │ AI-Lite Risk Assessment Categories:                                                                                                         │ │
-│ │                                                                                                                                             │ │
-│ │ risk_categories = [                                                                                                                         │ │
-│ │     "high_competition",          # Many qualified applicants expected                                                                       │ │
-│ │     "technical_requirements",    # Complex technical expertise needed                                                                       │ │
-│ │     "geographic_mismatch",       # Location disadvantage                                                                                    │ │
-│ │     "capacity_concerns",         # Organizational capacity questions                                                                        │ │
-│ │     "timeline_pressure",         # Tight deadline constraints                                                                               │ │
-│ │     "compliance_complex",        # Complex regulatory requirements                                                                          │ │
-│ │     "matching_required",         # Matching funds required                                                                                  │ │
-│ │     "reporting_intensive",       # Heavy reporting requirements                                                                             │ │
-│ │     "board_connections_needed"   # Relationship building required                                                                           │ │
-│ │ ]                                                                                                                                           │ │
-│ │                                                                                                                                             │ │
-│ │ AI-Heavy Researcher Input Sources                                                                                                           │ │
-│ │                                                                                                                                             │ │
-│ │ Enhanced Context Data (from ContextData):                                                                                                   │ │
-│ │                                                                                                                                             │ │
-│ │ # Organization Context                                                                                                                      │ │
-│ │ - strategic_priorities: List[str]                                                                                                           │ │
-│ │ - leadership_team: List[str]                                                                                                                │ │
-│ │ - recent_grants: List[str]                                                                                                                  │ │
-│ │ - funding_capacity: str                                                                                                                     │ │
-│ │ - geographic_scope: str                                                                                                                     │ │
-│ │                                                                                                                                             │ │
-│ │ # Target Intelligence                                                                                                                       │ │
-│ │ - known_board_members: List[str]                                                                                                            │ │
-│ │ - recent_grants_given: List[str]                                                                                                            │ │
-│ │ - website_url: Optional[str]                                                                                                                │ │
-│ │ - annual_revenue: Optional[str]                                                                                                             │ │
-│ │ - funding_capacity: str                                                                                                                     │ │
-│ │ - geographic_focus: str                                                                                                                     │ │
-│ │                                                                                                                                             │ │
-│ │ # AI-Lite Results Integration                                                                                                               │ │
-│ │ - compatibility_score: float                                                                                                                │ │
-│ │ - strategic_value: str                                                                                                                      │ │
-│ │ - risk_assessment: List[str]                                                                                                                │ │
-│ │ - funding_likelihood: float                                                                                                                 │ │
-│ │ - strategic_rationale: str                                                                                                                  │ │
-│ │                                                                                                                                             │ │
-│ │ Phase 3 Enhanced Intelligence Features:                                                                                                     │ │
-│ │                                                                                                                                             │ │
-│ │ # Intelligent Categorization                                                                                                                │ │
-│ │ OpportunityCategory:                                                                                                                        │ │
-│ │ - STRATEGIC_PARTNER        # Long-term strategic relationship potential                                                                     │ │
-│ │ - FUNDING_SOURCE          # Primary funding opportunity                                                                                     │ │
-│ │ - NETWORK_GATEWAY         # Access to broader network                                                                                       │ │
-│ │ - CAPACITY_BUILDER        # Skills/infrastructure development                                                                               │ │
-│ │ - INNOVATION_CATALYST     # New program development                                                                                         │ │
-│ │ - SUSTAINABILITY_ANCHOR   # Long-term sustainability                                                                                        │ │
-│ │                                                                                                                                             │ │
-│ │ # ML-Based Pattern Recognition                                                                                                              │ │
-│ │ IntelligencePattern:                                                                                                                        │ │
-│ │ - pattern_type: "success_indicator" | "risk_signal" | "opportunity_marker"                                                                  │ │
-│ │ - confidence_score: float (0-1)                                                                                                             │ │
-│ │ - historical_accuracy: float (0-1)                                                                                                          │ │
-│ │ - actionable_insights: List[str]                                                                                                            │ │
-│ │                                                                                                                                             │ │
-│ │ Comprehensive Research Outputs:                                                                                                             │ │
-│ │                                                                                                                                             │ │
-│ │ - Grant Application Intelligence: Eligibility analysis, application requirements, effort estimation                                         │ │
-│ │ - Partnership Assessment: Mission alignment (0-100), strategic value, mutual benefits                                                       │ │
-│ │ - Relationship Strategy: Board connections, introduction pathways, engagement timeline                                                      │ │
-│ │ - Financial Analysis: Capacity assessment, grant size optimization, sustainability prospects                                                │ │
-│ │ - Competitive Analysis: Market position, differentiation strategy, threat assessment                                                        │ │
-│ │ - Risk Assessment: Primary risks with probability/impact, mitigation strategies                                                             │ │
-│ │                                                                                                                                             │ │
-│ │ Shared Entity-Based Analytics                                                                                                               │ │
-│ │                                                                                                                                             │ │
-│ │ Entity Cache System (85% Hit Rate):                                                                                                         │ │
-│ │                                                                                                                                             │ │
-│ │ cache_layers = {                                                                                                                            │ │
-│ │     "financial_analytics": 24,      # hours - financial data from 990s                                                                      │ │
-│ │     "network_analytics": 48,        # hours - board connections stable                                                                      │ │
-│ │     "geographic_scoring": 168,      # hours - location data rarely changes                                                                  │ │
-│ │     "ntee_alignments": 720,         # hours - program classifications stable                                                                │ │
-│ │     "ai_lite_results": 6            # hours - AI analysis needs updates                                                                     │ │
-│ │ }                                                                                                                                           │ │
-│ │                                                                                                                                             │ │
-│ │ Cross-System Data Flow:                                                                                                                     │ │
-│ │                                                                                                                                             │ │
-│ │ 1. Entity Cache Manager: Shared analytics across all workflow stages                                                                        │ │
-│ │ 2. Shared Financial Analytics: Reusable calculations from PLAN to EXAMINE                                                                   │ │
-│ │ 3. Network Analytics: Board member analysis propagated through pipeline                                                                     │ │
-│ │ 4. Profile-Specific Customization: User preferences applied at each stage                                                                   │ │
-│ │                                                                                                                                             │ │
-│ │ Data Quality & Optimization Notes                                                                                                           │ │
-│ │                                                                                                                                             │ │
-│ │ Performance Achievements:                                                                                                                   │ │
-│ │                                                                                                                                             │ │
-│ │ - Processing Time: Sub-millisecond per organization-opportunity pair                                                                        │ │
-│ │ - Cache Efficiency: 85% hit rate with entity-based organization                                                                             │ │
-│ │ - Computational Efficiency: 70% improvement through shared analytics                                                                        │ │
-│ │ - Storage Optimization: Entity-based data structure with 42 nonprofit entities                                                              │ │
-│ │                                                                                                                                             │ │
-│ │ Data-Driven Algorithm Weights:                                                                                                              │ │
-│ │                                                                                                                                             │ │
-│ │ Based on analysis of 45 organizational profiles and 42 entities:                                                                            │ │
-│ │ - Government Scorer: Eligibility (0.30), Geographic (0.20), Timing (0.20), Financial (0.15), Historical (0.15)                              │ │
-│ │ - Success Scorer: Financial Health (0.25), Org Capacity (0.20), Strategic Alignment (0.20), Track Record (0.20), Network (0.15)             │ │
-│ │ - Discovery Scorer: Base Compatibility (0.35), Strategic Alignment (0.25), Geographic Advantage (0.20), Timing (0.12), Financial Viability  │ │
-│ │ (0.08)                                                                                                                                      │ │
-│ │                                                                                                                                             │ │
-│ │ This comprehensive data architecture enables both AI-Lite cost-effective batch processing ($0.0001/candidate) and AI-Heavy strategic        │ │
-│ │ intelligence generation ($0.18/comprehensive dossier) with sophisticated scoring integration across all discovery tracks.                   │ │
-│ ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │
+
+╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Ready to code?                                                                                                                  │
+│                                                                                                                                 │
+│ Here is Claude's plan:                                                                                                          │
+│ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │
+│ │ Proposed 5-Call Optimized Architecture                                                                                      │ │
+│ │                                                                                                                             │ │
+│ │ AI-Lite Stage: 2 Focused Calls                                                                                              │ │
+│ │                                                                                                                             │ │
+│ │ AI-Lite-1: Validation & Triage (~$0.0001/candidate, 50-100 tokens)                                                          │ │
+│ │ - Primary: Confirm this is a real funding opportunity                                                                       │ │
+│ │ - Secondary: Basic eligibility and geographic validation                                                                    │ │
+│ │ - Output: Go/No-Go + Track assignment + Priority level                                                                      │ │
+│ │ - Purpose: Filter out non-opportunities and mis-classified entries                                                          │ │
+│ │                                                                                                                             │ │
+│ │ AI-Lite-2: Strategic Scoring (~$0.0003/candidate, 150-200 tokens)                                                           │ │
+│ │ - Primary: Mission alignment assessment (requires AI semantic matching)                                                     │ │
+│ │ - Secondary: Strategic value judgment and priority ranking                                                                  │ │
+│ │ - Output: Compatibility score + Strategic rationale + Action priority                                                       │ │
+│ │ - Purpose: Strategic assessment for workflow continuation                                                                   │ │
+│ │                                                                                                                             │ │
+│ │ AI-Heavy Stage: 3 Specialized Calls                                                                                         │ │
+│ │                                                                                                                             │ │
+│ │ AI-Heavy-1: Research Bridge (~$0.05/candidate, 400-600 tokens) [NEW]                                                        │ │
+│ │ - Website intelligence gathering (web scraping)                                                                             │ │
+│ │ - Contact information extraction (web research)                                                                             │ │
+│ │ - Basic fact extraction (document parsing)                                                                                  │ │
+│ │ - Application process mapping (document analysis)                                                                           │ │
+│ │ - Purpose: Data gathering and information extraction                                                                        │ │
+│ │                                                                                                                             │ │
+│ │ AI-Heavy-2: Analysis & Compliance (~$0.08/candidate, 600-800 tokens) [CURRENT HEAVY-A]                                      │ │
+│ │ - 200-word executive summaries (complex writing)                                                                            │ │
+│ │ - Eligibility deep dives (legal/compliance analysis)                                                                        │ │
+│ │ - Detailed fact extraction (document parsing intensive)                                                                     │ │
+│ │ - Requirements analysis (compliance assessment)                                                                             │ │
+│ │ - Purpose: Detailed analysis and compliance evaluation                                                                      │ │
+│ │                                                                                                                             │ │
+│ │ AI-Heavy-3: Strategic Intelligence (~$0.12/candidate, 800+ tokens) [CURRENT HEAVY-B]                                        │ │
+│ │ - Competitive analysis (market research complexity)                                                                         │ │
+│ │ - Strategic dossier building (current functionality)                                                                        │ │
+│ │ - Partnership assessment and positioning                                                                                    │ │
+│ │ - Implementation planning and recommendations                                                                               │ │
+│ │ - Purpose: Strategic intelligence and decision support                                                                      │ │
+│ │                                                                                                                             │ │
+│ │ Architecture Benefits:                                                                                                      │ │
+│ │                                                                                                                             │ │
+│ │ Cost Optimization:                                                                                                          │ │
+│ │ - AI-Lite: Focuses on what AI does uniquely well (semantic reasoning)                                                       │ │
+│ │ - Local Algorithms: Handle mathematical scoring (Government Scorer, Financial Scorer, Risk Assessor)                        │ │
+│ │ - Progressive Investment: Expensive calls only for validated opportunities                                                  │ │
+│ │                                                                                                                             │ │
+│ │ Workflow Efficiency:                                                                                                        │ │
+│ │ - Stage 1: Fast validation eliminates non-opportunities early                                                               │ │
+│ │ - Stage 2: Strategic assessment guides resource allocation                                                                  │ │
+│ │ - Stage 3: Research bridge gathers raw intelligence efficiently                                                             │ │
+│ │ - Stage 4: Deep analysis provides compliance and requirement details                                                        │ │
+│ │ - Stage 5: Strategic intelligence delivers implementation-ready insights                                                    │ │
+│ │                                                                                                                             │ │
+│ │ Specialization Benefits:                                                                                                    │ │
+│ │ - Each call optimized for specific task types                                                                               │ │
+│ │ - Reduces cognitive load on individual AI calls                                                                             │ │
+│ │ - Enables parallel processing where appropriate                                                                             │ │
+│ │ - Better error handling and retry strategies                                                                                │ │
+│ │                                                                                                                             │ │
+│ │ Integration Points:                                                                                                         │ │
+│ │ - ANALYZE Tab: AI-Lite-1 + AI-Lite-2 + Local Scoring                                                                        │ │
+│ │ - EXAMINE Tab: AI-Heavy-1 (Bridge) + AI-Heavy-2 (Analysis)                                                                  │ │
+│ │ - APPROACH Tab: AI-Heavy-3 (Strategic Intelligence)                                                                         │ │
+│ │                                                                                                                             │ │
+│ │ Maximum 5 calls with clear specialization and progressive complexity                                                        │ │
+│ ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │
+│   
 │                   
 ## Phases
 ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
