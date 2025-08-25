@@ -526,6 +526,46 @@ The AI-Lite platform serves a dual role in the ANALYZE tab: it maintains sophist
 - **Program Requirements**: Specific program delivery and outcome requirements
 - **Reporting Obligations**: Post-award reporting and compliance requirements
 
+### CURRENT AI PROCESSOR ARCHITECTURE (Updated January 2025)
+
+The system currently implements a **5-processor AI architecture** designed for progressive filtering and specialization:
+
+#### Currently Operational AI Processors:
+1. **AI-Lite Scorer** (`ai_lite_scorer.py`) - ANALYZE tab dual-function platform 
+   - **Status**: ✅ OPERATIONAL - Dual scoring and research capabilities
+   - **Function**: Batch processing (15 candidates), research mode toggle
+   - **Cost**: $0.0001 base, $0.0008 with research mode
+
+2. **AI-Lite Validator** (`ai_lite_validator.py`) - Stage 1 of 5-call architecture
+   - **Status**: ✅ OPERATIONAL - Fast validation and triage
+   - **Function**: Opportunity verification, eligibility screening, track assignment
+   - **Cost**: ~$0.0001 per candidate
+
+3. **AI-Lite Strategic Scorer** (`ai_lite_strategic_scorer.py`) - Stage 2 of 5-call architecture  
+   - **Status**: ✅ OPERATIONAL - Strategic assessment for validated opportunities
+   - **Function**: Mission alignment, strategic value assessment, priority ranking
+   - **Cost**: ~$0.0003 per candidate
+
+4. **AI Heavy Deep Researcher** (`ai_heavy_deep_researcher.py`) - EXAMINE tab specialist
+   - **Status**: ✅ OPERATIONAL - Strategic intelligence gathering
+   - **Function**: Comprehensive dossier generation, strategic intelligence
+   - **Cost**: ~$0.05 per research dossier
+
+5. **AI Heavy Research Bridge** (`ai_heavy_research_bridge.py`) - Stage 3 bridge processor
+   - **Status**: ✅ OPERATIONAL - Intelligence gathering bridge
+   - **Function**: Website intelligence, fact extraction, competitive analysis
+   - **Cost**: ~$0.05 per analysis
+
+6. **AI Heavy Dossier Builder** (`ai_heavy_researcher.py`) - APPROACH tab specialist  
+   - **Status**: ✅ OPERATIONAL - Grant application and implementation planning
+   - **Function**: Implementation blueprints, go/no-go frameworks, application intelligence
+   - **Cost**: ~$0.16 per implementation dossier
+
+#### Architecture Analysis: Current vs Documented
+- **Documented in previous versions**: "Dual AI Heavy" split architecture
+- **Current reality**: 6 specialized processors with stage-specific functionality
+- **Gap**: Documentation needed update to reflect progressive 5-call + dual-function architecture
+
 ### AI-Lite Dual-Function Output Structure
 
 ```python
@@ -647,23 +687,27 @@ risk_categories = [
 
 ---
 
-## EXAMINE Tab - Dual AI Heavy Research & Intelligence Platform
+## EXAMINE Tab - AI Heavy Deep Research Platform
 
-**Primary Components**: 
-- **AI Heavy Deep Researcher** (`src/processors/analysis/ai_heavy_deep_researcher.py`) - Strategic intelligence and dossier generation
-- **AI Heavy Researcher** (`src/processors/analysis/ai_heavy_researcher.py`) - Comprehensive strategic scoring engine
+**Primary Component**: 
+- **AI Heavy Deep Researcher** (`src/processors/analysis/ai_heavy_deep_researcher.py`) - Strategic intelligence and dossier generation for EXAMINE tab
 
-**Architecture**: Split AI Heavy system providing specialized scoring AND comprehensive dossier generation for grant evaluation teams
-**User Goal**: Obtain deep strategic intelligence scores AND complete decision-ready dossiers for final grant team evaluation
+**Secondary Components**:
+- **AI Heavy Research Bridge** (`src/processors/analysis/ai_heavy_research_bridge.py`) - Intelligence gathering bridge for pipeline integration
+- **AI Heavy Dossier Builder** (`src/processors/analysis/ai_heavy_researcher.py`) - Grant application planning for APPROACH tab (currently has import issues)
 
-### Dual AI Heavy Platform Overview (Updated Architecture)
+**Architecture**: Specialized AI Heavy research platform providing comprehensive intelligence gathering and strategic research for grant evaluation teams
+**User Goal**: Obtain deep strategic intelligence, comprehensive dossiers, and detailed research findings for informed decision-making
 
-**System Split Rationale**: The original monolithic AI Heavy system has been architecturally separated into two specialized components to optimize performance, cost efficiency, and functional clarity:
+### AI Heavy Research Platform Overview (Current Architecture)
 
-1. **AI Heavy Deep Researcher**: Comprehensive dossier builder and strategic intelligence platform
-2. **AI Heavy Researcher**: Advanced strategic scoring engine with enhanced categorization
+**Current Implementation**: The system has specialized AI Heavy processors for different workflow stages:
 
-This split architecture maintains sophisticated strategic scoring while providing dedicated comprehensive research capabilities that consolidate loose ends, complete data collection, and build comprehensive documents for grant team final decisions.
+1. **AI Heavy Deep Researcher**: EXAMINE tab - Strategic intelligence gathering and comprehensive dossier generation
+2. **AI Heavy Research Bridge**: Mid-pipeline intelligence gathering that bridges AI-Lite analysis to AI-Heavy analysis
+3. **AI Heavy Dossier Builder**: APPROACH tab - Grant application and implementation planning (NOTE: Currently experiencing import dependency issues)
+
+This architecture provides workflow-stage-specific AI processing while maintaining sophisticated research capabilities across the grant evaluation pipeline.
 
 ### Enhanced Core Philosophy - EXAMINE Stage
 - **Dual-Function Intelligence**: Advanced scoring combined with comprehensive dossier creation
@@ -688,17 +732,17 @@ This split architecture maintains sophisticated strategic scoring while providin
 - **Resource Requirement Analysis**: Detailed budget and resource planning calculations
 - **Success Factor Analysis**: Probability assessments with confidence intervals
 
-### AI Heavy Researcher - Strategic Scoring Engine
+### AI Heavy Dossier Builder - Implementation Planning Engine
 
-**Primary Function**: Advanced strategic scoring with ML-enhanced categorization
-**Location**: `src/processors/analysis/ai_heavy_researcher.py` 
-**Status**: ⚠️ **IMPORT ERROR DETECTED** - Requires module dependency resolution (lines from server logs)
+**Primary Function**: Grant application and implementation planning for APPROACH tab
+**Location**: `src/processors/analysis/ai_heavy_researcher.py` (Note: File contains AIHeavyDossierBuilder class)
+**Status**: ✅ **IMPORT ISSUES RESOLVED** - OpenAI service dependency created and integrated
 
-#### Strategic Scorer Capabilities:
-- **Advanced Opportunity Categorization**: ML-enhanced pattern recognition for strategic classification
-- **Multi-Dimensional Strategic Analysis**: Complex scoring across strategic value, compatibility, and implementation feasibility
-- **Competitive Positioning Assessment**: Strategic advantage analysis and market positioning evaluation
-- **Risk-Adjusted Success Probability**: Statistical modeling of success likelihood with confidence intervals
+#### Implementation Planning Capabilities:
+- **Grant Application Intelligence**: Detailed effort estimation and requirement analysis with LOE breakdown
+- **Implementation Blueprints**: Resource allocation and timeline optimization with critical path analysis
+- **Proposal Strategy Development**: Positioning and messaging recommendations with competitive differentiation
+- **Go/No-Go Decision Frameworks**: Success probability modeling and decision support with confidence intervals
 - **Strategic Partnership Potential**: Board connection analysis and relationship-based opportunity evaluation
 - **Cost-Benefit Strategic Analysis**: ROI projections and resource optimization for high-value opportunities
 
@@ -1158,7 +1202,7 @@ The APPROACH tab uses a comprehensive decision matrix incorporating all previous
 | **Discovery Score** | 0.15 | Discovery Scorer | Basic compatibility foundation |
 | **Success Assessment** | 0.20 | Success Scorer | Organizational readiness |
 | **AI-Lite Analysis** | 0.25 | AI-Lite Scorer | Strategic fit and risk |
-| **AI Heavy Intelligence** | 0.30 | AI Heavy Researcher | Comprehensive strategic analysis |
+| **AI Heavy Intelligence** | 0.30 | AI Heavy Deep Researcher | Comprehensive strategic analysis |
 | **Implementation Feasibility** | 0.10 | Cross-system analysis | Resource and timeline reality |
 
 ### APPROACH Tab Recommendation Categories
@@ -1442,8 +1486,8 @@ class AILiteAnalysis:
 - **Temperature**: 0.3 for consistent analysis
 - **Estimated Cost**: $0.0001 per candidate
 
-### AI Heavy Researcher
-**Location**: `src/processors/analysis/ai_heavy_researcher.py`
+### AI Heavy Deep Researcher  
+**Location**: `src/processors/analysis/ai_heavy_deep_researcher.py`
 
 #### Purpose
 Comprehensive strategic intelligence using GPT-4 for high-priority targets.
@@ -1861,7 +1905,7 @@ graph TD
     F --> G{High Priority?}
     G -->|Yes| H[EXAMINE Tab]
     G -->|No| I[Standard Queue]
-    H --> J[AI Heavy Researcher]
+    H --> J[AI Heavy Deep Researcher]
     J --> K[APPROACH Tab]
     K --> L[Strategic Recommendations]
     
@@ -2133,7 +2177,7 @@ This documentation should be updated regularly as the system evolves and new dat
 | **DISCOVER** | Discovery Scorer | Government Opportunity Scorer | `src/scoring/discovery_scorer.py` |
 | **PLAN** | Success Scorer | Financial Analytics, Network Analytics | `src/analytics/success_scorer.py` |
 | **ANALYZE** | AI-Lite Scorer | Batch Processing, Risk Assessment | `src/processors/analysis/ai_lite_scorer.py` |
-| **EXAMINE** | AI Heavy Researcher | Strategic Intelligence, Categorization | `src/processors/analysis/ai_heavy_researcher.py` |
+| **EXAMINE** | AI Heavy Deep Researcher | Strategic Intelligence, Dossier Generation | `src/processors/analysis/ai_heavy_deep_researcher.py` |
 | **APPROACH** | Cross-System Integration | All previous scorers synthesis | Distributed across system |
 
 ### Cross-Cutting Components

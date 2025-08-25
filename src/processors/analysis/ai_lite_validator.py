@@ -61,8 +61,8 @@ class ValidationAnalysis(BaseModel):
     
     # Triage Results
     discovery_track: DiscoveryTrack
-    priority_level: str = Field(..., regex="^(low|medium|high|urgent)$")
-    go_no_go: str = Field(..., regex="^(go|no_go|investigate)$")
+    priority_level: str = Field(..., pattern="^(low|medium|high|urgent)$")
+    go_no_go: str = Field(..., pattern="^(go|no_go|investigate)$")
     
     # Brief Analysis
     validation_reasoning: str = Field(..., max_length=200, description="Brief explanation of validation decision")
