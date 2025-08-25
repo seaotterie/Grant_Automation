@@ -625,12 +625,12 @@
                         <h3 class="text-2xl font-bold">Prospects Discovery <span class="text-lg font-normal">- Initial broad discovery and filtering across all funding sources</span></h3>
                     </div>
 
-                    <!-- Profile Discovery Section -->
+                    <!-- Profile Intelligence Center -->
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
                         
-                        <!-- Profile Discovery Header -->
+                        <!-- Profile Intelligence Center Header -->
                         <div class="flex items-center justify-between mb-6">
-                            <h4 class="text-xl font-semibold text-gray-900 dark:text-white">Profile Discovery</h4>
+                            <h4 class="text-xl font-semibold text-gray-900 dark:text-white">Profile Intelligence Center</h4>
                             <div x-show="selectedDiscoveryProfile" class="text-sm text-gray-600 dark:text-gray-400">
                                 Selected: <span x-text="selectedDiscoveryProfile?.name" class="font-medium text-gray-900 dark:text-white"></span>
                             </div>
@@ -1012,51 +1012,61 @@
                         <h3 class="text-2xl font-bold">Strategic Planning <span class="text-lg font-normal">- In-depth analysis of qualified prospects for decision-ready intelligence</span></h3>
                     </div>
 
-                    <!-- Current Profile Information -->
-                    <div x-show="selectedPlanProfile" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 border-orange-500">
-                        <div class="mb-3">
-                            <h5 class="font-semibold text-gray-900 dark:text-white">Current Profile</h5>
-                        </div>
-                        <div class="grid grid-cols-4 gap-3">
-                            <div class="bg-white dark:bg-gray-800 p-2 rounded">
-                                <div class="text-xs text-gray-600 dark:text-gray-400">Organization</div>
-                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedPlanProfile?.name">-</div>
-                            </div>
-                            <div class="bg-white dark:bg-gray-800 p-2 rounded">
-                                <div class="text-xs text-gray-600 dark:text-gray-400">EIN</div>
-                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedPlanProfile?.ein || 'Not Available'">-</div>
-                            </div>
-                            <div class="bg-white dark:bg-gray-800 p-2 rounded">
-                                <div class="text-xs text-gray-600 dark:text-gray-400">Analysis Status</div>
-                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedPlanProfile?.last_analysis_date ? formatDate(selectedPlanProfile.last_analysis_date) : 'Not Run'">Not Run</div>
-                            </div>
-                            <div class="bg-white dark:bg-gray-800 p-2 rounded">
-                                <div class="text-xs text-gray-600 dark:text-gray-400">Qualified Opportunities</div>
-                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedPlanProfile?.qualified_opportunities_count || 0">0</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- No Profile Selected State -->
-                    <div x-show="!selectedPlanProfile" class="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <h5 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">No Profile Selected</h5>
-                                <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">Select an organization profile and run DISCOVER first to find qualified prospects for strategic planning.</p>
-                                <button @click="switchStage('discover')" class="mt-2 text-xs bg-yellow-100 dark:bg-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-700 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded">
-                                    Go to Discovery
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Analysis Action Cards -->
+                    <!-- Profile Intelligence Center -->
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                        
+                        <!-- Profile Intelligence Center Header -->
+                        <div class="flex items-center justify-between mb-6">
+                            <h4 class="text-xl font-semibold text-gray-900 dark:text-white">Profile Intelligence Center</h4>
+                            <div x-show="selectedPlanProfile" class="text-sm text-gray-600 dark:text-gray-400">
+                                Selected: <span x-text="selectedPlanProfile?.name" class="font-medium text-gray-900 dark:text-white"></span>
+                            </div>
+                        </div>
+
+                        <!-- Current Profile Information -->
+                        <div x-show="selectedPlanProfile" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 border-orange-500">
+                            <div class="mb-3">
+                                <h5 class="font-semibold text-gray-900 dark:text-white">Current Profile</h5>
+                            </div>
+                            <div class="grid grid-cols-4 gap-3">
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Organization</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedPlanProfile?.name">-</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">EIN</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedPlanProfile?.ein || 'Not Available'">-</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Analysis Status</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedPlanProfile?.last_analysis_date ? formatDate(selectedPlanProfile.last_analysis_date) : 'Not Run'">Not Run</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Qualified Opportunities</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedPlanProfile?.qualified_opportunities_count || 0">0</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No Profile Selected State -->
+                        <div x-show="!selectedPlanProfile" class="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h5 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">No Profile Selected</h5>
+                                    <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">Select an organization profile and run DISCOVER first to find qualified prospects for strategic planning.</p>
+                                    <button @click="switchStage('discover')" class="mt-2 text-xs bg-yellow-100 dark:bg-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-700 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded">
+                                        Go to Discovery
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Analysis Action Cards -->
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                                 <div class="flex items-center justify-between mb-2">
@@ -1597,52 +1607,61 @@
                         <h3 class="text-2xl font-bold">Comprehensive Analysis <span class="text-lg font-normal">- Financial analysis, network mapping, and intelligence assessment</span></h3>
                     </div>
 
-                    <!-- Current Profile Information -->
-                    <div x-show="selectedAnalyzeProfile" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 border-red-500">
-                        <div class="mb-3">
-                            <h5 class="font-semibold text-gray-900 dark:text-white">Current Profile</h5>
-                        </div>
-                        <div class="grid grid-cols-4 gap-3">
-                            <div class="bg-white dark:bg-gray-800 p-2 rounded">
-                                <div class="text-xs text-gray-600 dark:text-gray-400">Organization</div>
-                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedAnalyzeProfile?.name">-</div>
-                            </div>
-                            <div class="bg-white dark:bg-gray-800 p-2 rounded">
-                                <div class="text-xs text-gray-600 dark:text-gray-400">EIN</div>
-                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedAnalyzeProfile?.ein || 'Not Available'">-</div>
-                            </div>
-                            <div class="bg-white dark:bg-gray-800 p-2 rounded">
-                                <div class="text-xs text-gray-600 dark:text-gray-400">Network Status</div>
-                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="showNetworkCharts ? 'Loaded' : 'Ready'">Ready</div>
-                            </div>
-                            <div class="bg-white dark:bg-gray-800 p-2 rounded">
-                                <div class="text-xs text-gray-600 dark:text-gray-400">Candidates Count</div>
-                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="candidatesCount">0</div>
+                    <!-- Profile Intelligence Center -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                        
+                        <!-- Profile Intelligence Center Header -->
+                        <div class="flex items-center justify-between mb-6">
+                            <h4 class="text-xl font-semibold text-gray-900 dark:text-white">Profile Intelligence Center</h4>
+                            <div x-show="selectedAnalyzeProfile" class="text-sm text-gray-600 dark:text-gray-400">
+                                Selected: <span x-text="selectedAnalyzeProfile?.name" class="font-medium text-gray-900 dark:text-white"></span>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- No Profile Selected State -->
-                    <div x-show="!selectedAnalyzeProfile" class="mb-6 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                </svg>
+                        <!-- Current Profile Information -->
+                        <div x-show="selectedAnalyzeProfile" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 border-red-500">
+                            <div class="mb-3">
+                                <h5 class="font-semibold text-gray-900 dark:text-white">Current Profile</h5>
                             </div>
-                            <div class="ml-3">
-                                <h5 class="text-sm font-medium text-orange-800 dark:text-orange-200">No Profile Selected</h5>
-                                <p class="text-xs text-orange-700 dark:text-orange-300 mt-1">Select an organization profile and progress through DISCOVER and PLAN stages to analyze candidates.</p>
-                                <button @click="switchStage('discover')" class="mt-2 text-xs bg-orange-100 dark:bg-orange-800 hover:bg-orange-200 dark:hover:bg-orange-700 text-orange-800 dark:text-orange-200 px-2 py-1 rounded">
-                                    Go to Discovery
-                                </button>
+                            <div class="grid grid-cols-4 gap-3">
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Organization</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedAnalyzeProfile?.name">-</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">EIN</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedAnalyzeProfile?.ein || 'Not Available'">-</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Network Status</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="showNetworkCharts ? 'Loaded' : 'Ready'">Ready</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Candidates Count</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="candidatesCount">0</div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Analysis Tracks -->
-                    <div x-show="selectedAnalyzeProfile" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Analysis Tracks</h4>
+                        <!-- No Profile Selected State -->
+                        <div x-show="!selectedAnalyzeProfile" class="mb-6 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h5 class="text-sm font-medium text-orange-800 dark:text-orange-200">No Profile Selected</h5>
+                                    <p class="text-xs text-orange-700 dark:text-orange-300 mt-1">Select an organization profile and progress through DISCOVER and PLAN stages to analyze candidates.</p>
+                                    <button @click="switchStage('discover')" class="mt-2 text-xs bg-orange-100 dark:bg-orange-800 hover:bg-orange-200 dark:hover:bg-orange-700 text-orange-800 dark:text-orange-200 px-2 py-1 rounded">
+                                        Go to Discovery
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Analysis Tracks -->
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                                 <div class="flex items-center justify-between mb-2">
@@ -1689,6 +1708,7 @@
                                 <p class="text-sm text-orange-700 dark:text-orange-300">Strategic insights, compatibility</p>
                             </div>
                         </div>
+
                     </div>
 
 
@@ -1990,16 +2010,15 @@
                 <!-- STAGE 5: EXAMINE (TARGETS) -->
                 <div x-show="activeStage === 'examine'" class="space-y-6">
                     <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-6 text-white">
-                        <h3 class="text-2xl font-bold">Target Examination - Deep dive dossier building and comprehensive intelligence reports</h3>
-                        <p class="mt-2 opacity-90">Advanced AI analysis and strategic intelligence for priority targets</p>
+                        <h3 class="text-2xl font-bold">Target Examination <span class="text-lg font-normal">- Deep dive dossier building, comprehensive intelligence reports, and advanced AI analysis</span></h3>
                     </div>
 
-                    <!-- Profile Examination Section -->
+                    <!-- Profile Intelligence Center -->
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
                         
-                        <!-- Profile Examination Header -->
+                        <!-- Profile Intelligence Center Header -->
                         <div class="flex items-center justify-between mb-6">
-                            <h4 class="text-xl font-semibold text-gray-900 dark:text-white">Profile Examination</h4>
+                            <h4 class="text-xl font-semibold text-gray-900 dark:text-white">Profile Intelligence Center</h4>
                             <div x-show="selectedExamineProfile" class="text-sm text-gray-600 dark:text-gray-400">
                                 Selected: <span x-text="selectedExamineProfile?.name" class="font-medium text-gray-900 dark:text-white"></span>
                             </div>
@@ -2037,29 +2056,26 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- No Profile Selected State -->
-                    <div x-show="!selectedExamineProfile" class="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <h5 class="text-sm font-medium text-blue-800 dark:text-blue-200">No Profile Selected</h5>
-                                <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">Select an organization profile and progress through DISCOVER → PLAN → ANALYZE stages to generate targets for deep examination.</p>
-                                <button @click="switchStage('analyze')" class="mt-2 text-xs bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
-                                    Go to Analysis
-                                </button>
+
+                        <!-- No Profile Selected State -->
+                        <div x-show="!selectedExamineProfile" class="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h5 class="text-sm font-medium text-blue-800 dark:text-blue-200">No Profile Selected</h5>
+                                    <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">Select an organization profile and progress through DISCOVER → PLAN → ANALYZE stages to generate targets for deep examination.</p>
+                                    <button @click="switchStage('analyze')" class="mt-2 text-xs bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                                        Go to Analysis
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Investigation Tracks -->
-                    <div x-show="selectedExamineProfile" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Investigation Tracks</h4>
+                        <!-- Investigation Tracks -->
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                                 <div class="flex items-center justify-between mb-2">
@@ -2106,27 +2122,7 @@
                                 <p class="text-sm text-orange-700 dark:text-orange-300">Competitive landscape analysis</p>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Deep AI Heavy Analysis Controls -->
-                    <div x-show="selectedExamineProfile" class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg p-6 text-white mb-6">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h4 class="text-xl font-semibold mb-2">AI Heavy Intelligence</h4>
-                                <p class="text-purple-100 text-sm">Strategic dossiers with comprehensive analysis (~$0.10-0.25/target) • Premium AI research</p>
-                                <div class="mt-2 text-xs text-purple-200">
-                                    <span>Deep Analysis Available: </span>
-                                    <span x-text="targetsData.filter(t => hasAIAnalysis(t) && getAICompatibilityScore(t) >= 0.75).length"></span>
-                                    <span> targets</span>
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <div class="text-right text-purple-100 text-sm">
-                                    <div>Select individual targets</div>
-                                    <div>for deep AI analysis</div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Targets Analysis Table -->
@@ -2306,31 +2302,64 @@
                 <!-- STAGE 6: APPROACH (OPPORTUNITIES) -->
                 <div x-show="activeStage === 'approach'" class="space-y-6">
                     <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg p-6 text-white">
-                        <h3 class="text-2xl font-bold">Opportunity Approach - Grant Application Intelligence & Team Readiness</h3>
-                        <p class="text-green-100 mt-2">Comprehensive grant application packages and strategic pursuit recommendations to get your team 60-80% ready to apply</p>
+                        <h3 class="text-2xl font-bold">Opportunity Approach <span class="text-lg font-normal">- Comprehensive Grant Application Intelligence & Team Readiness</span></h3>
                     </div>
 
-                    <!-- Profile Selection Notice -->
-                    <div x-show="!selectedProfile" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <h5 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">No Profile Selected</h5>
-                                <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">Select an organization profile and progress through DISCOVER → PLAN → ANALYZE → EXAMINE stages to generate strategic pursuit recommendations.</p>
-                                <button @click="switchStage('profiler')" class="mt-2 text-xs bg-yellow-100 dark:bg-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-700 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded">
-                                    Go to Profiler
-                                </button>
+                    <!-- Profile Intelligence Center -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+                        
+                        <!-- Profile Intelligence Center Header -->
+                        <div class="flex items-center justify-between mb-6">
+                            <h4 class="text-xl font-semibold text-gray-900 dark:text-white">Profile Intelligence Center</h4>
+                            <div x-show="selectedProfile" class="text-sm text-gray-600 dark:text-gray-400">
+                                Selected: <span x-text="selectedProfile?.name" class="font-medium text-gray-900 dark:text-white"></span>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Strategic Approach Tracks -->
-                    <div x-show="selectedProfile" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Strategic Approach Tracks</h4>
+                        <!-- Current Profile Information -->
+                        <div x-show="selectedProfile" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 border-green-500">
+                            <div class="mb-3">
+                                <h5 class="font-semibold text-gray-900 dark:text-white">Current Profile</h5>
+                            </div>
+                            <div class="grid grid-cols-4 gap-3">
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Organization</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedProfile?.name">-</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">EIN</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedProfile?.ein || 'Not Available'">-</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Approach Status</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedProfile?.last_approach_date ? formatDate(selectedProfile.last_approach_date) : 'Not Run'">Not Run</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Opportunity Count</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="opportunitiesData.filter(o => o.funnel_stage === 'opportunities').length || 0">0</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- No Profile Selected State -->
+                        <div x-show="!selectedProfile" class="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h5 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">No Profile Selected</h5>
+                                    <p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">Select an organization profile and progress through DISCOVER → PLAN → ANALYZE → EXAMINE stages to generate strategic pursuit recommendations.</p>
+                                    <button @click="switchStage('profiler')" class="mt-2 text-xs bg-yellow-100 dark:bg-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-700 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded">
+                                        Go to Profiler
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Strategic Approach Tracks -->
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
                                 <div class="flex items-center justify-between mb-2">
@@ -2377,6 +2406,7 @@
                                 <p class="text-sm text-orange-700 dark:text-orange-300">Team and budget planning</p>
                             </div>
                         </div>
+
                     </div>
 
                     <!-- Approach Content -->
