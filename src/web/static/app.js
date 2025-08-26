@@ -465,6 +465,15 @@ function catalynxApp() {
             analysisCount: 0
         },
         
+        // AI-Heavy promotion workflow state (ANALYZE tab)
+        aiHeavyPromotionQueue: {
+            candidates: [],
+            selectedCandidates: [],
+            showPromotionModal: false,
+            promotionInProgress: false,
+            totalEstimatedCost: 0
+        },
+        
         // EXAMINE tab state
         selectedExamineProfile: '',
         showTargetDossier: false,
@@ -7713,6 +7722,517 @@ function catalynxApp() {
             // is handled by the computed property targetsData
             console.log('Filtering targets based on selected profile and search query');
         },
+        
+        // ========================================
+        // AI-HEAVY PROMOTION WORKFLOW FUNCTIONS (ANALYZE TAB)
+        // ========================================
+        
+        // Show modal for promoting candidates from AI-Lite to AI-Heavy processing
+        showAIHeavyPromotionModal() {
+            console.log('Opening AI-Heavy promotion modal');
+            
+            // Filter AI-Lite analyzed candidates with high scores
+            const eligibleCandidates = this.candidatesData.filter(candidate => 
+                candidate.ai_analysis && 
+                candidate.ai_analysis.compatibility_score >= 0.75 && 
+                candidate.ai_analysis.recommendation_level !== 'reject'
+            );
+            
+            if (eligibleCandidates.length === 0) {
+                this.showNotification('No Eligible Candidates', 
+                    'No candidates with high AI-Lite scores (≥75%) available for AI-Heavy promotion', 
+                    'warning');
+                return;
+            }
+            
+            // Populate promotion queue with eligible candidates
+            this.aiHeavyPromotionQueue.candidates = eligibleCandidates.map(candidate => ({
+                ...candidate,
+                estimated_cost: this.calculateAIHeavyCost(candidate),
+                promotion_selected: false
+            }));
+            
+            this.aiHeavyPromotionQueue.selectedCandidates = [];
+            this.aiHeavyPromotionQueue.totalEstimatedCost = 0;
+            this.aiHeavyPromotionQueue.showPromotionModal = true;
+            
+            console.log(`Found ${eligibleCandidates.length} candidates eligible for AI-Heavy promotion`);
+        },
+        
+        // Toggle candidate selection for AI-Heavy promotion
+        selectCandidateForPromotion(candidate, event) {
+            if (!candidate) return;
+            
+            const isSelected = event.target.checked;
+            candidate.promotion_selected = isSelected;
+            
+            if (isSelected) {
+                if (!this.aiHeavyPromotionQueue.selectedCandidates.includes(candidate)) {
+                    this.aiHeavyPromotionQueue.selectedCandidates.push(candidate);
+                }
+            } else {
+                const index = this.aiHeavyPromotionQueue.selectedCandidates.indexOf(candidate);
+                if (index > -1) {
+                    this.aiHeavyPromotionQueue.selectedCandidates.splice(index, 1);
+                }
+            }
+            
+            // Update total estimated cost
+            this.aiHeavyPromotionQueue.totalEstimatedCost = this.aiHeavyPromotionQueue.selectedCandidates
+                .reduce((total, selected) => total + selected.estimated_cost, 0);
+                
+            console.log(`Candidate ${candidate.organization_name} ${isSelected ? 'selected' : 'deselected'} for AI-Heavy promotion`);
+        },
+        
+        // Calculate estimated cost for AI-Heavy research on a candidate
+        calculateAIHeavyCost(candidate) {
+            // Base cost estimates for AI-Heavy research
+            const baseResearchCost = 0.08; // Basic research mode
+            const comprehensiveResearchCost = 0.25; // Full comprehensive mode
+            
+            // Determine cost based on candidate complexity and data availability
+            const hasWebsite = candidate.website && candidate.website !== 'N/A';
+            const hasComplexData = candidate.ai_analysis?.data_richness === 'high';
+            const isLargeOrganization = candidate.revenue_amount > 1000000;
+            
+            if (hasWebsite && hasComplexData && isLargeOrganization) {
+                return comprehensiveResearchCost;
+            } else {
+                return baseResearchCost;
+            }
+        },
+        
+        // Promote selected candidates to AI-Heavy Deep Research
+        async promoteToDeepResearch() {
+            if (this.aiHeavyPromotionQueue.selectedCandidates.length === 0) {
+                this.showNotification('No Selection', 'Please select candidates for AI-Heavy promotion', 'warning');
+                return;
+            }
+            
+            if (this.aiHeavyPromotionQueue.promotionInProgress) {
+                this.showNotification('Processing', 'AI-Heavy promotion is already in progress', 'info');
+                return;
+            }
+            
+            console.log(`Promoting ${this.aiHeavyPromotionQueue.selectedCandidates.length} candidates to AI-Heavy Deep Research`);
+            
+            this.aiHeavyPromotionQueue.promotionInProgress = true;
+            
+            try {
+                // Prepare candidates for AI-Heavy processing
+                const candidatesForResearch = this.aiHeavyPromotionQueue.selectedCandidates.map(candidate => ({
+                    opportunity_id: candidate.opportunity_id,
+                    organization_name: candidate.organization_name,
+                    ein: candidate.ein,
+                    website: candidate.website,
+                    ai_lite_score: candidate.ai_analysis.compatibility_score,
+                    ai_lite_insights: candidate.ai_analysis.reasoning,
+                    funding_amount: candidate.funding_amount,
+                    source_type: candidate.source_type,
+                    research_depth: candidate.estimated_cost > 0.15 ? 'comprehensive' : 'standard'
+                }));
+                
+                // Call AI-Heavy Deep Research endpoint
+                const response = await fetch('/api/ai/deep-research', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        candidates: candidatesForResearch,
+                        selected_profile: this.selectedProfile,
+                        research_mode: 'batch_promotion',
+                        cost_limit: this.aiHeavyPromotionQueue.totalEstimatedCost * 1.2, // 20% buffer
+                        priority: 'high'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`AI-Heavy promotion failed: ${response.statusText}`);
+                }
+                
+                const researchResult = await response.json();
+                console.log('AI-Heavy Deep Research Results:', researchResult);
+                
+                // Apply research results and mark candidates as promoted
+                this.applyAIHeavyResults(researchResult);
+                
+                // Update EXAMINE tab data with new AI-Heavy research
+                this.updateExamineTabWithPromotedCandidates(researchResult);
+                
+                // Close promotion modal
+                this.closeAIHeavyPromotionModal();
+                
+                // Show success notification with option to view results
+                this.showNotification('AI-Heavy Promotion Complete', 
+                    `${candidatesForResearch.length} candidates promoted to Deep Research. Cost: $${researchResult.total_cost?.toFixed(4) || 'N/A'}`, 
+                    'success');
+                
+                // Suggest switching to EXAMINE tab
+                setTimeout(() => {
+                    if (confirm('View detailed research results in the EXAMINE tab?')) {
+                        this.switchStage('examine');
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                console.error('AI-Heavy promotion failed:', error);
+                this.showNotification('Promotion Error', 
+                    `AI-Heavy promotion failed: ${error.message}`, 
+                    'error');
+            } finally {
+                this.aiHeavyPromotionQueue.promotionInProgress = false;
+            }
+        },
+        
+        // Apply AI-Heavy research results to candidates
+        applyAIHeavyResults(researchResult) {
+            if (!researchResult.results || !researchResult.results.research_analyses) {
+                console.warn('Invalid AI-Heavy research result format');
+                return;
+            }
+            
+            const researchAnalyses = researchResult.results.research_analyses;
+            
+            // Apply results to candidates and promote them to EXAMINE tab
+            this.candidatesData.forEach(candidate => {
+                const research = researchAnalyses.find(r => r.opportunity_id === candidate.opportunity_id);
+                
+                if (research) {
+                    // Add AI-Heavy research data to candidate
+                    candidate.ai_heavy_research = {
+                        research_score: research.research_score,
+                        comprehensive_analysis: research.comprehensive_analysis,
+                        strategic_insights: research.strategic_insights,
+                        risk_assessment: research.risk_assessment,
+                        funding_strategy: research.funding_strategy,
+                        competitive_analysis: research.competitive_analysis,
+                        research_timestamp: new Date().toISOString(),
+                        research_mode: research.research_mode,
+                        cost_breakdown: research.cost_breakdown
+                    };
+                    
+                    // Mark as promoted to AI-Heavy
+                    candidate.ai_heavy_promoted = true;
+                    candidate.funnel_stage = 'targets'; // Move to EXAMINE stage
+                    
+                    console.log(`✅ AI-Heavy research completed for ${candidate.organization_name}: ${(research.research_score * 100).toFixed(1)}%`);
+                }
+            });
+        },
+        
+        // Update EXAMINE tab with newly promoted candidates
+        updateExamineTabWithPromotedCandidates(researchResult) {
+            // Add promoted candidates to targets data for EXAMINE tab
+            const promotedTargets = this.candidatesData
+                .filter(candidate => candidate.ai_heavy_promoted)
+                .map(candidate => ({
+                    ...candidate,
+                    target_type: 'ai_heavy_research',
+                    promotion_source: 'ai_lite_analysis',
+                    research_depth: candidate.ai_heavy_research?.research_mode || 'standard'
+                }));
+                
+            // Ensure targets data exists
+            if (!this.targetsData) {
+                this.targetsData = [];
+            }
+            
+            // Add promoted targets (avoid duplicates)
+            promotedTargets.forEach(target => {
+                const exists = this.targetsData.find(t => t.opportunity_id === target.opportunity_id);
+                if (!exists) {
+                    this.targetsData.push(target);
+                }
+            });
+            
+            console.log(`Updated EXAMINE tab with ${promotedTargets.length} AI-Heavy promoted targets`);
+        },
+        
+        // Close AI-Heavy promotion modal
+        closeAIHeavyPromotionModal() {
+            this.aiHeavyPromotionQueue.showPromotionModal = false;
+            this.aiHeavyPromotionQueue.candidates = [];
+            this.aiHeavyPromotionQueue.selectedCandidates = [];
+            this.aiHeavyPromotionQueue.totalEstimatedCost = 0;
+            this.aiHeavyPromotionQueue.promotionInProgress = false;
+        },
+        
+        // Get promotion queue statistics
+        getPromotionQueueStats() {
+            return {
+                totalEligible: this.aiHeavyPromotionQueue.candidates.length,
+                totalSelected: this.aiHeavyPromotionQueue.selectedCandidates.length,
+                estimatedCost: this.aiHeavyPromotionQueue.totalEstimatedCost,
+                costPerCandidate: this.aiHeavyPromotionQueue.selectedCandidates.length > 0 
+                    ? this.aiHeavyPromotionQueue.totalEstimatedCost / this.aiHeavyPromotionQueue.selectedCandidates.length 
+                    : 0
+            };
+        },
+        
+        // Utility functions for AI-Heavy promotion interface
+        getEligibleCandidatesCount() {
+            return this.candidatesData.filter(candidate => 
+                candidate.ai_analysis && 
+                candidate.ai_analysis.compatibility_score >= 0.75 && 
+                candidate.ai_analysis.recommendation_level !== 'reject'
+            ).length;
+        },
+        
+        getAILiteAnalyzedCount() {
+            return this.candidatesData.filter(candidate => 
+                candidate.ai_analysis && candidate.ai_analysis.compatibility_score > 0
+            ).length;
+        },
+        
+        getHighScoreCandidatesCount() {
+            return this.candidatesData.filter(candidate => 
+                candidate.ai_analysis && candidate.ai_analysis.compatibility_score >= 0.75
+            ).length;
+        },
+        
+        // Select all eligible candidates for promotion
+        selectAllCandidatesForPromotion() {
+            this.aiHeavyPromotionQueue.candidates.forEach(candidate => {
+                if (!candidate.promotion_selected) {
+                    candidate.promotion_selected = true;
+                    if (!this.aiHeavyPromotionQueue.selectedCandidates.includes(candidate)) {
+                        this.aiHeavyPromotionQueue.selectedCandidates.push(candidate);
+                    }
+                }
+            });
+            
+            // Update total estimated cost
+            this.aiHeavyPromotionQueue.totalEstimatedCost = this.aiHeavyPromotionQueue.selectedCandidates
+                .reduce((total, selected) => total + selected.estimated_cost, 0);
+        },
+        
+        // Deselect all candidates for promotion
+        deselectAllCandidatesForPromotion() {
+            this.aiHeavyPromotionQueue.candidates.forEach(candidate => {
+                candidate.promotion_selected = false;
+            });
+            this.aiHeavyPromotionQueue.selectedCandidates = [];
+            this.aiHeavyPromotionQueue.totalEstimatedCost = 0;
+        },
+        
+        // Toggle all candidates selection (for header checkbox)
+        toggleAllCandidatesSelection(event) {
+            const isChecked = event.target.checked;
+            
+            if (isChecked) {
+                this.selectAllCandidatesForPromotion();
+            } else {
+                this.deselectAllCandidatesForPromotion();
+            }
+        },
+        
+        // Promote all eligible candidates at once
+        async promoteAllEligible() {
+            // Open modal and auto-select all eligible candidates
+            this.showAIHeavyPromotionModal();
+            
+            // Wait for modal to populate, then select all
+            await this.$nextTick();
+            this.selectAllCandidatesForPromotion();
+            
+            // Automatically proceed with promotion if user confirms
+            if (confirm(`Promote all ${this.aiHeavyPromotionQueue.selectedCandidates.length} eligible candidates to AI-Heavy Deep Research?`)) {
+                this.promoteToDeepResearch();
+            }
+        },
+
+        // ========================================
+        // EXAMINE TAB AI-HEAVY INTEGRATION FUNCTIONS
+        // ========================================
+        
+        // Get count of AI-Heavy promoted targets
+        getAIHeavyPromotedTargetsCount() {
+            if (!this.targetsData) return 0;
+            return this.targetsData.filter(target => 
+                target.ai_heavy_promoted && target.ai_heavy_research
+            ).length;
+        },
+        
+        // Get AI-Heavy promoted targets
+        getAIHeavyPromotedTargets() {
+            if (!this.targetsData) return [];
+            return this.targetsData.filter(target => 
+                target.ai_heavy_promoted && target.ai_heavy_research
+            );
+        },
+        
+        // Get count of completed AI-Heavy research
+        getCompletedResearchCount() {
+            return this.getAIHeavyPromotedTargets().filter(target => 
+                target.ai_heavy_research && target.ai_heavy_research.research_score > 0
+            ).length;
+        },
+        
+        // Get count of high priority targets (research score >= 0.8)
+        getHighPriorityTargetsCount() {
+            return this.getAIHeavyPromotedTargets().filter(target => 
+                target.ai_heavy_research && target.ai_heavy_research.research_score >= 0.8
+            ).length;
+        },
+        
+        // Get count of targets ready for dossier generation
+        getDossiersReadyCount() {
+            return this.getAIHeavyPromotedTargets().filter(target => 
+                target.ai_heavy_research && 
+                target.ai_heavy_research.comprehensive_analysis &&
+                target.ai_heavy_research.strategic_insights
+            ).length;
+        },
+        
+        // Refresh AI-Heavy research results
+        async refreshAIHeavyResults() {
+            console.log('Refreshing AI-Heavy research results');
+            
+            try {
+                // Get latest research data from backend
+                const response = await fetch(`/api/profiles/${this.selectedExamineProfile.profile_id}/ai-heavy-results`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to refresh AI-Heavy results: ${response.statusText}`);
+                }
+                
+                const results = await response.json();
+                
+                // Update targets data with refreshed research results
+                if (results.ai_heavy_targets) {
+                    results.ai_heavy_targets.forEach(updatedTarget => {
+                        const existingTarget = this.targetsData.find(t => t.opportunity_id === updatedTarget.opportunity_id);
+                        if (existingTarget) {
+                            // Update research data
+                            existingTarget.ai_heavy_research = updatedTarget.ai_heavy_research;
+                            existingTarget.research_updated_at = new Date().toISOString();
+                        }
+                    });
+                }
+                
+                this.showNotification('Results Refreshed', 
+                    `Updated ${results.ai_heavy_targets?.length || 0} AI-Heavy research results`, 
+                    'success');
+                    
+            } catch (error) {
+                console.error('Failed to refresh AI-Heavy results:', error);
+                this.showNotification('Refresh Error', 
+                    `Failed to refresh AI-Heavy results: ${error.message}`, 
+                    'error');
+            }
+        },
+        
+        // Open target dossier (connects to existing dossier functionality)
+        openTargetDossier(target) {
+            if (!target || !target.ai_heavy_research) {
+                this.showNotification('No Research Data', 'AI-Heavy research data not available for this target', 'warning');
+                return;
+            }
+            
+            console.log('Opening target dossier for:', target.organization_name);
+            
+            // Set the target for dossier display (connects to existing dossier modal)
+            this.selectedTargetDossier = {
+                target: target,
+                dossier: {
+                    research_intelligence: target.ai_heavy_research.comprehensive_analysis,
+                    strategic_insights: target.ai_heavy_research.strategic_insights,
+                    competitive_analysis: target.ai_heavy_research.competitive_analysis,
+                    risk_assessment: target.ai_heavy_research.risk_assessment,
+                    funding_strategy: target.ai_heavy_research.funding_strategy,
+                    research_score: target.ai_heavy_research.research_score,
+                    research_mode: target.ai_heavy_research.research_mode,
+                    research_timestamp: target.ai_heavy_research.research_timestamp
+                }
+            };
+            this.showTargetDossier = true;
+        },
+        
+        // Export target research report
+        async exportTargetResearch(target) {
+            if (!target || !target.ai_heavy_research) {
+                this.showNotification('No Research Data', 'AI-Heavy research data not available for this target', 'warning');
+                return;
+            }
+            
+            console.log('Exporting research report for:', target.organization_name);
+            
+            try {
+                // Prepare export data
+                const exportData = {
+                    target_info: {
+                        organization_name: target.organization_name,
+                        source_type: target.source_type,
+                        funding_amount: target.funding_amount,
+                        opportunity_id: target.opportunity_id
+                    },
+                    ai_heavy_research: target.ai_heavy_research,
+                    export_timestamp: new Date().toISOString(),
+                    export_type: 'ai_heavy_research_report'
+                };
+                
+                // Call export API
+                const response = await fetch('/api/export/ai-heavy-report', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(exportData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Export failed: ${response.statusText}`);
+                }
+                
+                // Get the file blob and download
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `AI_Heavy_Research_${target.organization_name.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+                this.showNotification('Export Complete', 
+                    `AI-Heavy research report exported for ${target.organization_name}`, 
+                    'success');
+                    
+            } catch (error) {
+                console.error('Failed to export research report:', error);
+                this.showNotification('Export Error', 
+                    `Failed to export research report: ${error.message}`, 
+                    'error');
+            }
+        },
+        
+        // Format date utility for research timestamps
+        formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        },
+
+        // ========================================
+        // END EXAMINE TAB AI-HEAVY INTEGRATION FUNCTIONS
+        // ========================================
+        
+        // ========================================
+        // END AI-HEAVY PROMOTION WORKFLOW FUNCTIONS
+        // ========================================
         
         // Mock data function moved here for scope access from startDiscovery
         async addMockProspectsData(track) {
