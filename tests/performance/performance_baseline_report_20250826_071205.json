@@ -1,0 +1,104 @@
+{
+  "performance_validation": "Catalynx Performance Baseline Validation",
+  "execution_time": "2025-08-26T07:12:05.012990",
+  "baseline_targets": {
+    "api_response_time": 100,
+    "scoring_time": 1,
+    "cache_hit_rate": 85,
+    "profile_loading": 0.17,
+    "entity_cache": 1,
+    "efficiency_gain": 70
+  },
+  "summary": {
+    "total_tests": 9,
+    "excellent": 2,
+    "good": 1,
+    "needs_improvement": 1,
+    "critical": 5,
+    "performance_score": 36.11111111111111,
+    "overall_rating": "NEEDS_IMPROVEMENT"
+  },
+  "detailed_results": [
+    {
+      "test_name": "API Performance Baseline",
+      "status": "GOOD",
+      "timestamp": "2025-08-26T07:11:40.417368",
+      "details": "Meeting performance targets across 3 endpoints",
+      "actual_value": 72.73,
+      "target_value": 100,
+      "unit": "ms"
+    },
+    {
+      "test_name": "  health endpoint",
+      "status": "EXCELLENT",
+      "timestamp": "2025-08-26T07:11:40.417424",
+      "details": "Good endpoint performance",
+      "actual_value": 5.12,
+      "target_value": 100,
+      "unit": "ms"
+    },
+    {
+      "test_name": "  discoveryrootentity-cache-stats endpoint",
+      "status": "EXCELLENT",
+      "timestamp": "2025-08-26T07:11:40.417432",
+      "details": "Good endpoint performance",
+      "actual_value": 5.83,
+      "target_value": 100,
+      "unit": "ms"
+    },
+    {
+      "test_name": "  root endpoint",
+      "status": "NEEDS_IMPROVEMENT",
+      "timestamp": "2025-08-26T07:11:40.417439",
+      "details": "Slow endpoint performance",
+      "actual_value": 207.23,
+      "target_value": 100,
+      "unit": "ms"
+    },
+    {
+      "test_name": "Cache Performance",
+      "status": "CRITICAL",
+      "timestamp": "2025-08-26T07:11:42.462118",
+      "details": "Unable to access cache statistics",
+      "actual_value": null,
+      "target_value": null,
+      "unit": ""
+    },
+    {
+      "test_name": "Profile Loading Performance",
+      "status": "CRITICAL",
+      "timestamp": "2025-08-26T07:11:56.796207",
+      "details": "Unable to create test profiles for performance testing",
+      "actual_value": null,
+      "target_value": null,
+      "unit": ""
+    },
+    {
+      "test_name": "Discovery Processing Efficiency",
+      "status": "CRITICAL",
+      "timestamp": "2025-08-26T07:11:58.850614",
+      "details": "Unable to create test profile for discovery efficiency testing",
+      "actual_value": null,
+      "target_value": null,
+      "unit": ""
+    },
+    {
+      "test_name": "Concurrent Performance",
+      "status": "CRITICAL",
+      "timestamp": "2025-08-26T07:12:02.958556",
+      "details": "Exception during concurrent performance testing: ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))",
+      "actual_value": null,
+      "target_value": null,
+      "unit": ""
+    },
+    {
+      "test_name": "Memory and Resource Usage",
+      "status": "CRITICAL",
+      "timestamp": "2025-08-26T07:12:05.012891",
+      "details": "Unable to assess memory usage - cache stats unavailable",
+      "actual_value": null,
+      "target_value": null,
+      "unit": ""
+    }
+  ]
+}

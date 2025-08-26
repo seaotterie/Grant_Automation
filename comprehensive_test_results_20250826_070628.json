@@ -1,0 +1,70 @@
+{
+  "test_start": "2025-08-26T07:06:28.512069",
+  "scenarios": {
+    "scenario_1": {
+      "name": "New User Complete Journey",
+      "start_time": "2025-08-26T07:06:28.512221",
+      "steps_completed": 9,
+      "total_steps": 9,
+      "success": true,
+      "issues": [],
+      "profile_id": "test_profile",
+      "demo_opportunities": 4,
+      "success_rate": 100.0,
+      "end_time": "2025-08-26T07:06:28.562158"
+    },
+    "scenario_2": {
+      "name": "Power User Workflow",
+      "start_time": "2025-08-26T07:06:28.562197",
+      "profiles_created": 0,
+      "bulk_operations": 2,
+      "success": false,
+      "issues": [
+        "Failed to create Healthcare Nonprofit: 403",
+        "Failed to create Education Foundation: 403",
+        "Failed to create Tech Corporate CSR: 403",
+        "Failed to create University Research: 403",
+        "Failed to create Government Agency: 403"
+      ],
+      "end_time": "2025-08-26T07:06:28.695234"
+    },
+    "scenario_3": {
+      "name": "Mobile Experience",
+      "start_time": "2025-08-26T07:06:28.695288",
+      "mobile_tests": 3,
+      "responsive_features": 4,
+      "success": true,
+      "issues": [],
+      "end_time": "2025-08-26T07:06:28.748728"
+    },
+    "scenario_4": {
+      "name": "Export Format Validation",
+      "start_time": "2025-08-26T07:06:28.748751",
+      "formats_tested": 3,
+      "data_integrity_checks": 2,
+      "success": true,
+      "issues": [],
+      "end_time": "2025-08-26T07:06:28.788855"
+    },
+    "scenario_5": {
+      "name": "Analytics Validation",
+      "start_time": "2025-08-26T07:06:28.788881",
+      "analytics_endpoints": 4,
+      "data_accuracy": 4,
+      "success": true,
+      "issues": [],
+      "end_time": "2025-08-26T07:06:28.814608"
+    }
+  },
+  "analytics_validation": {},
+  "export_validation": {},
+  "performance_metrics": {
+    "total_duration_seconds": 0.302563,
+    "avg_scenario_duration": 0.06051260000000001
+  },
+  "overall_success": true,
+  "success_rate": 80.0,
+  "scenarios_passed": 4,
+  "total_scenarios": 5,
+  "test_end": "2025-08-26T07:06:28.814632"
+}
