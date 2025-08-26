@@ -58,6 +58,7 @@ from src.middleware.security import (
 )
 from src.auth.jwt_auth import get_current_user_dependency, User
 from src.web.auth_routes import router as auth_router
+from src.web.routers.ai_processing import router as ai_processing_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -350,6 +351,9 @@ app.add_middleware(RateLimitingMiddleware, requests_per_minute=60)
 
 # Include authentication routes
 app.include_router(auth_router)
+
+# Include AI processing routes
+app.include_router(ai_processing_router)
 
 # Initialize services
 workflow_service = WorkflowService()
@@ -6808,6 +6812,313 @@ async def batch_analyze_opportunities(profile_id: str, request_data: Dict[str, A
     except Exception as e:
         logger.error(f"Error in batch analysis: {e}")
         raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
+
+
+@app.post("/api/profiles/{profile_id}/analyze/ai-lite")
+async def ai_lite_profile_analysis(profile_id: str, request_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    AI-Lite analysis endpoint for ANALYZE tab integration
+    
+    Performs cost-effective candidate evaluation with dual-mode operation:
+    - Scoring mode: Quick compatibility analysis (~$0.0001/candidate)
+    - Research mode: Comprehensive research reports (~$0.0008/candidate)
+    """
+    try:
+        logger.info(f"Starting AI-Lite analysis for profile {profile_id}")
+        logger.info(f"Request data type: {type(request_data)}")
+        
+        # Handle case where request_data might not be a dict
+        try:
+            if hasattr(request_data, 'dict'):
+                request_dict = request_data.dict()
+            elif hasattr(request_data, '__dict__'):
+                request_dict = vars(request_data)
+            elif isinstance(request_data, dict):
+                request_dict = request_data
+            else:
+                logger.error(f"Unexpected request_data type: {type(request_data)}")
+                raise HTTPException(status_code=400, detail=f"Invalid request format: {type(request_data)}")
+            
+            logger.info(f"Request dict type: {type(request_dict)}, keys: {list(request_dict.keys())}")
+            
+            # Validate request data
+            candidates = request_dict.get("candidates", [])
+            candidate_ids = request_dict.get("candidate_ids", [])
+            analysis_type = request_dict.get("analysis_type", "compatibility_scoring")
+            model_preference = request_dict.get("model_preference", "gpt-3.5-turbo")
+            cost_limit = request_dict.get("cost_limit", 0.01)
+            research_mode = request_dict.get("research_mode", False)
+            
+            logger.info(f"Parsed request: candidates={len(candidates)}, candidate_ids={candidate_ids}")
+            
+        except Exception as parse_error:
+            logger.error(f"Failed to parse request data: {parse_error}")
+            raise HTTPException(status_code=400, detail=f"Request parsing failed: {str(parse_error)}")
+        
+        # Handle both direct candidates and candidate IDs
+        if not candidates and candidate_ids:
+            logger.info(f"Looking for candidates with IDs: {candidate_ids}")
+            # Fetch candidates by ID from the profile's opportunities
+            profile_opportunities = unified_service.get_profile_opportunities(profile_id)
+            logger.info(f"Profile has {len(profile_opportunities) if profile_opportunities else 0} opportunities")
+            if profile_opportunities:
+                candidates = []
+                for i, opp in enumerate(profile_opportunities[:5]):  # Debug first 5 opportunities
+                    # Handle both dictionary and object formats
+                    opp_id = getattr(opp, 'id', None) or getattr(opp, 'opportunity_id', None) or (opp.get('id') if hasattr(opp, 'get') else None) or (opp.get('opportunity_id') if hasattr(opp, 'get') else None)
+                    logger.info(f"Opportunity {i}: type={type(opp)}, id={opp_id}")
+                    if opp_id in candidate_ids:
+                        logger.info(f"Found matching candidate: {opp_id}")
+                        # Convert object to dictionary format if needed
+                        if hasattr(opp, 'dict'):
+                            candidates.append(opp.dict())
+                            logger.info(f"Converted with .dict() method")
+                        elif hasattr(opp, '__dict__'):
+                            candidates.append(vars(opp))
+                            logger.info(f"Converted with vars()")
+                        else:
+                            candidates.append(opp)
+                            logger.info(f"Used as-is")
+                logger.info(f"Fetched {len(candidates)} candidates from {len(candidate_ids)} provided IDs")
+        
+        if not candidates:
+            raise HTTPException(status_code=400, detail="No candidates provided for analysis")
+        
+        # Ensure all candidates are dictionaries
+        processed_candidates = []
+        for candidate in candidates:
+            if hasattr(candidate, 'dict'):
+                processed_candidates.append(candidate.dict())
+            elif hasattr(candidate, '__dict__'):
+                processed_candidates.append(vars(candidate))
+            elif isinstance(candidate, dict):
+                processed_candidates.append(candidate)
+            else:
+                logger.warning(f"Candidate type not supported: {type(candidate)}")
+                continue
+        
+        logger.info(f"Processed {len(processed_candidates)} candidates for AI-Lite analysis")
+        
+        # Debug: Log candidate types and sample data
+        for i, candidate in enumerate(processed_candidates[:2]):  # Log first 2 for debugging
+            logger.info(f"Candidate {i}: type={type(candidate)}, keys={list(candidate.keys()) if isinstance(candidate, dict) else 'not a dict'}")
+        
+        if not processed_candidates:
+            raise HTTPException(status_code=400, detail="No valid candidates after processing")
+        
+        # Get profile for context
+        profile = unified_service.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        # Import AI-Lite services
+        from src.processors.analysis.ai_service_manager import get_ai_service_manager
+        from src.analytics.cost_tracker import get_cost_tracker
+        
+        ai_service = get_ai_service_manager()
+        cost_tracker = get_cost_tracker()
+        
+        # Transform profile data for AI service compatibility
+        profile_data = profile.model_dump()
+        logger.info(f"Original profile geographic_scope: {profile_data.get('geographic_scope', 'NOT_FOUND')}")
+        
+        # Transform geographic_scope from dict to string
+        if "geographic_scope" in profile_data:
+            logger.info(f"Geographic scope type: {type(profile_data['geographic_scope'])}")
+            if isinstance(profile_data["geographic_scope"], dict):
+                logger.info("Transforming geographic_scope from dict to string")
+                geo_scope = profile_data["geographic_scope"]
+                scope_parts = []
+                
+                if geo_scope.get("nationwide", False):
+                    scope_parts.append("Nationwide")
+                elif geo_scope.get("international", False):
+                    scope_parts.append("International")
+                else:
+                    # Build from states and regions
+                    states = geo_scope.get("states", [])
+                    regions = geo_scope.get("regions", [])
+                    
+                    if states:
+                        if len(states) == 1:
+                            scope_parts.append(f"{states[0]} state")
+                        else:
+                            scope_parts.append(f"{', '.join(states)} states")
+                    
+                    if regions:
+                        scope_parts.append(f"{', '.join(regions)} region")
+                
+                # Default to "Local/Regional" if no specific scope defined
+                profile_data["geographic_scope"] = " and ".join(scope_parts) if scope_parts else "Local/Regional"
+                logger.info(f"Transformed geographic_scope to: '{profile_data['geographic_scope']}'")
+            else:
+                logger.info(f"Geographic scope is already a string: {profile_data['geographic_scope']}")
+        else:
+            logger.warning("No geographic_scope found in profile data")
+        
+        # Prepare AI-Lite request
+        frontend_data = {
+            "selected_profile": profile_data,
+            "candidates": processed_candidates,
+            "model_preference": model_preference,
+            "cost_limit": cost_limit,
+            "research_mode": research_mode,
+            "analysis_type": analysis_type
+        }
+        
+        # Check budget before processing
+        from src.analytics.cost_tracker import AIService, CostCategory
+        
+        # Map model preference to AI service
+        service_mapping = {
+            "gpt-3.5-turbo": AIService.OPENAI_GPT3_5_TURBO,
+            "gpt-4o-mini": AIService.OPENAI_GPT4O_MINI,
+            "gpt-4o": AIService.OPENAI_GPT4O,
+            "gpt-4": AIService.OPENAI_GPT4
+        }
+        
+        service = service_mapping.get(model_preference, AIService.OPENAI_GPT3_5_TURBO)
+        
+        # Estimate cost for all candidates
+        avg_tokens = 1500 if not research_mode else 3000  # Research mode uses more tokens
+        output_tokens = 300 if not research_mode else 800
+        
+        total_estimate = cost_tracker.estimate_cost(
+            service=service,
+            operation_type=CostCategory.AI_ANALYSIS,
+            input_tokens=avg_tokens * len(processed_candidates),
+            output_tokens=output_tokens * len(processed_candidates)
+        )
+        
+        # Check if we can afford this operation
+        can_run = True
+        budget_message = "Budget validated"
+        
+        async with cost_tracker.lock:
+            for budget in cost_tracker.budgets.values():
+                if not budget.can_spend(total_estimate.estimated_cost_usd):
+                    can_run = False
+                    budget_message = f"Would exceed budget {budget.name} (${budget.remaining_budget()} remaining, ${total_estimate.estimated_cost_usd} needed)"
+                    break
+        
+        if not can_run:
+            return {
+                "profile_id": profile_id,
+                "analysis_type": "ai_lite",
+                "status": "budget_exceeded",
+                "message": budget_message,
+                "cost_estimate": str(total_estimate.estimated_cost_usd),
+                "candidates_count": len(candidates),
+                "results": [],
+                "budget_info": {
+                    "estimated_cost": str(total_estimate.estimated_cost_usd),
+                    "service": service.value,
+                    "model": model_preference
+                }
+            }
+        
+        # Execute AI-Lite analysis
+        logger.info(f"Frontend data geographic_scope: {frontend_data['selected_profile'].get('geographic_scope', 'NOT_FOUND')}")
+        try:
+            ai_lite_result = await ai_service.execute_ai_lite_analysis(frontend_data)
+            
+            # Format results for frontend
+            analysis_results = []
+            
+            # Handle both dict and object response formats
+            candidate_analyses = ai_lite_result.get("candidate_analyses", {}) if isinstance(ai_lite_result, dict) else getattr(ai_lite_result, "candidate_analyses", {})
+            
+            for candidate_id, analysis in candidate_analyses.items():
+                # Handle both dict and object formats for analysis data
+                if isinstance(analysis, dict):
+                    result = {
+                        "candidate_id": candidate_id,
+                        "organization_name": analysis.get("organization_name", "Unknown"),
+                        "compatibility_score": analysis.get("compatibility_score", 0.0),
+                        "confidence_level": analysis.get("confidence_level", 0.0),
+                        "recommendation": analysis.get("recommendation_summary", "No recommendation"),
+                        "key_insights": analysis.get("key_insights", []),
+                        "cost": str(analysis.get("processing_cost", 0.0)),
+                        "processing_time": analysis.get("processing_time_seconds", 0.0)
+                    }
+                    
+                    if research_mode and "research_summary" in analysis:
+                        result["research_summary"] = analysis["research_summary"]
+                else:
+                    result = {
+                        "candidate_id": candidate_id,
+                        "organization_name": getattr(analysis, "organization_name", "Unknown"),
+                        "compatibility_score": getattr(analysis, "compatibility_score", 0.0),
+                        "confidence_level": getattr(analysis, "confidence_level", 0.0),
+                        "recommendation": getattr(analysis, "recommendation_summary", "No recommendation"),
+                        "key_insights": getattr(analysis, "key_insights", []),
+                        "cost": str(getattr(analysis, "processing_cost", 0.0)),
+                        "processing_time": getattr(analysis, "processing_time_seconds", 0.0)
+                    }
+                    
+                    if research_mode and hasattr(analysis, 'research_summary'):
+                        result["research_summary"] = analysis.research_summary
+                
+                analysis_results.append(result)
+            
+            # Handle both dict and object formats for ai_lite_result metadata
+            if isinstance(ai_lite_result, dict):
+                batch_id = ai_lite_result.get("batch_id", "unknown")
+                successful_analyses = ai_lite_result.get("successful_analyses", len(analysis_results))
+                failed_analyses = ai_lite_result.get("failed_analyses", 0)
+                total_cost = ai_lite_result.get("total_cost", 0.0)
+                average_cost = ai_lite_result.get("average_cost_per_candidate", 0.0)
+                total_processing_time = ai_lite_result.get("total_processing_time", 0.0)
+            else:
+                batch_id = getattr(ai_lite_result, "batch_id", "unknown")
+                successful_analyses = getattr(ai_lite_result, "successful_analyses", len(analysis_results))
+                failed_analyses = getattr(ai_lite_result, "failed_analyses", 0)
+                total_cost = getattr(ai_lite_result, "total_cost", 0.0)
+                average_cost = getattr(ai_lite_result, "average_cost_per_candidate", 0.0)
+                total_processing_time = getattr(ai_lite_result, "total_processing_time", 0.0)
+            
+            return {
+                "profile_id": profile_id,
+                "analysis_type": "ai_lite",
+                "status": "completed",
+                "batch_id": batch_id,
+                "processing_summary": {
+                    "total_candidates": len(processed_candidates),
+                    "successful_analyses": successful_analyses,
+                    "failed_analyses": failed_analyses,
+                    "total_cost": str(total_cost),
+                    "average_cost_per_candidate": str(average_cost),
+                    "total_processing_time": total_processing_time,
+                    "model_used": model_preference,
+                    "research_mode": research_mode
+                },
+                "results": analysis_results,
+                "cost_breakdown": {
+                    "estimated_cost": str(total_estimate.estimated_cost_usd),
+                    "actual_cost": str(total_cost),
+                    "service": service.value,
+                    "candidates_processed": len(analysis_results)
+                },
+                "budget_status": budget_message
+            }
+            
+        except Exception as ai_error:
+            logger.error(f"AI-Lite processing failed: {ai_error}")
+            return {
+                "profile_id": profile_id,
+                "analysis_type": "ai_lite",
+                "status": "processing_error",
+                "message": f"AI analysis failed: {str(ai_error)}",
+                "cost_estimate": str(total_estimate.estimated_cost_usd),
+                "candidates_count": len(candidates),
+                "results": []
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in AI-Lite profile analysis: {e}")
+        raise HTTPException(status_code=500, detail=f"AI-Lite analysis failed: {str(e)}")
 
 
 @app.get("/api/profiles/{profile_id}/research/decision-package/{opportunity_id}")

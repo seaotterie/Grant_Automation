@@ -1,0 +1,30 @@
+{
+  "ai_lite_integration_budget": {
+    "budget_id": "ai_lite_integration_budget",
+    "name": "AI-Lite Integration Testing Budget",
+    "total_budget_usd": "5.00",
+    "spent_usd": "0.00",
+    "period_start": "2025-08-26T07:42:06.749308",
+    "period_end": "2025-09-25T07:42:06.749308",
+    "category_budgets": {
+      "ai_analysis": "3.00",
+      "ai_scoring": "1.50",
+      "ai_classification": "0.50"
+    },
+    "category_spent": {},
+    "warning_threshold": 0.75,
+    "critical_threshold": 0.9
+  },
+  "daily_ai_lite_testing": {
+    "budget_id": "daily_ai_lite_testing",
+    "name": "Daily AI-Lite Testing Budget",
+    "total_budget_usd": "1.00",
+    "spent_usd": "0.00",
+    "period_start": "2025-08-26T07:42:06.752885",
+    "period_end": "2025-08-27T07:42:06.752885",
+    "category_budgets": {},
+    "category_spent": {},
+    "warning_threshold": 0.8,
+    "critical_threshold": 0.95
+  }
+}

@@ -12,10 +12,10 @@ from typing import List, Dict, Optional, Any
 
 # Import AI services and processors
 from src.processors.analysis.ai_service_manager import get_ai_service_manager
-from src.processors.ai.ai_lite_validator import AILiteValidator
-from src.processors.ai.ai_lite_strategic_scorer import AILiteStrategicScorer
-from src.processors.ai.ai_heavy_researcher import AIHeavyResearcher
-from src.processors.ai.ai_heavy_research_bridge import AIHeavyResearchBridge
+from src.processors.analysis.ai_lite_validator import AILiteValidator
+from src.processors.analysis.ai_lite_strategic_scorer import AILiteStrategicScorer
+from src.processors.analysis.ai_heavy_researcher import AIHeavyDossierBuilder
+from src.processors.analysis.ai_heavy_research_bridge import AIHeavyResearchBridge
 from src.profiles.unified_service import get_unified_profile_service
 from src.auth.jwt_auth import get_current_user_dependency, User
 

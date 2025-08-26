@@ -21,11 +21,33 @@ logger = logging.getLogger(__name__)
 
 
 class AIService(str, Enum):
-    """AI service providers"""
+    """Enhanced AI service providers with model granularity"""
+    # OpenAI Services - Granular Model Support
     OPENAI_GPT4 = "openai_gpt4"
-    OPENAI_GPT3_5 = "openai_gpt3_5" 
-    ANTHROPIC_CLAUDE = "anthropic_claude"
-    GOOGLE_GEMINI = "google_gemini"
+    OPENAI_GPT4_TURBO = "openai_gpt4_turbo"
+    OPENAI_GPT4O = "openai_gpt4o"
+    OPENAI_GPT4O_MINI = "openai_gpt4o_mini"
+    OPENAI_GPT3_5_TURBO = "openai_gpt3_5_turbo"
+    OPENAI_GPT3_5 = "openai_gpt3_5"  # Legacy compatibility
+    
+    # Anthropic Services - Claude Models
+    ANTHROPIC_CLAUDE_3_OPUS = "anthropic_claude_3_opus"
+    ANTHROPIC_CLAUDE_3_SONNET = "anthropic_claude_3_sonnet"
+    ANTHROPIC_CLAUDE_3_HAIKU = "anthropic_claude_3_haiku"
+    ANTHROPIC_CLAUDE = "anthropic_claude"  # Legacy compatibility
+    
+    # Google Services - Gemini Models
+    GOOGLE_GEMINI_PRO = "google_gemini_pro"
+    GOOGLE_GEMINI_PRO_VISION = "google_gemini_pro_vision"
+    GOOGLE_GEMINI_ULTRA = "google_gemini_ultra"
+    GOOGLE_GEMINI = "google_gemini"  # Legacy compatibility
+    
+    # Groq Services - High Speed Inference
+    GROQ_LLAMA2_70B = "groq_llama2_70b_4096"
+    GROQ_MIXTRAL_8X7B = "groq_mixtral_8x7b_32768"
+    GROQ_GEMMA_7B = "groq_gemma_7b_it"
+    
+    # Local and Free Services
     LOCAL_LLM = "local_llm"
 
 
@@ -218,27 +240,142 @@ class CostBudget:
 class CostTracker:
     """Main cost tracking and optimization system"""
     
-    # Cost per token for different services (in USD)
+    # Enhanced Cost per token for different services with model granularity (in USD)
     TOKEN_COSTS = {
+        # OpenAI Services - Updated with latest pricing (2024)
+        AIService.OPENAI_GPT4O: {
+            'input': Decimal('0.000005'),   # $0.005 per 1K tokens (latest GPT-4o)
+            'output': Decimal('0.000015'),  # $0.015 per 1K tokens
+            'tier': 'premium',
+            'speed': 'fast',
+            'quality': 'highest'
+        },
+        AIService.OPENAI_GPT4O_MINI: {
+            'input': Decimal('0.00000015'), # $0.00015 per 1K tokens (cost-optimized)
+            'output': Decimal('0.0000006'), # $0.0006 per 1K tokens  
+            'tier': 'economy',
+            'speed': 'very_fast',
+            'quality': 'high'
+        },
+        AIService.OPENAI_GPT4_TURBO: {
+            'input': Decimal('0.00001'),    # $0.01 per 1K tokens
+            'output': Decimal('0.00003'),   # $0.03 per 1K tokens
+            'tier': 'standard',
+            'speed': 'fast', 
+            'quality': 'highest'
+        },
         AIService.OPENAI_GPT4: {
-            'input': Decimal('0.00003'),   # $0.03 per 1K tokens
-            'output': Decimal('0.00006')   # $0.06 per 1K tokens
+            'input': Decimal('0.00003'),    # $0.03 per 1K tokens (legacy)
+            'output': Decimal('0.00006'),   # $0.06 per 1K tokens
+            'tier': 'premium',
+            'speed': 'medium',
+            'quality': 'highest'
         },
-        AIService.OPENAI_GPT3_5: {
-            'input': Decimal('0.0000015'), # $0.0015 per 1K tokens
-            'output': Decimal('0.000002')  # $0.002 per 1K tokens
+        AIService.OPENAI_GPT3_5_TURBO: {
+            'input': Decimal('0.0000015'),  # $0.0015 per 1K tokens
+            'output': Decimal('0.000002'),  # $0.002 per 1K tokens
+            'tier': 'economy',
+            'speed': 'very_fast',
+            'quality': 'good'
         },
-        AIService.ANTHROPIC_CLAUDE: {
-            'input': Decimal('0.000008'),  # $0.008 per 1K tokens
-            'output': Decimal('0.000024') # $0.024 per 1K tokens
+        AIService.OPENAI_GPT3_5: {  # Legacy compatibility
+            'input': Decimal('0.0000015'),
+            'output': Decimal('0.000002'),
+            'tier': 'economy',
+            'speed': 'very_fast',
+            'quality': 'good'
         },
-        AIService.GOOGLE_GEMINI: {
-            'input': Decimal('0.00000125'), # $0.00125 per 1K tokens
-            'output': Decimal('0.00000375') # $0.00375 per 1K tokens
+        
+        # Anthropic Services - Claude 3 Family
+        AIService.ANTHROPIC_CLAUDE_3_OPUS: {
+            'input': Decimal('0.000015'),   # $0.015 per 1K tokens (most capable)
+            'output': Decimal('0.000075'),  # $0.075 per 1K tokens
+            'tier': 'premium',
+            'speed': 'medium',
+            'quality': 'highest'
         },
+        AIService.ANTHROPIC_CLAUDE_3_SONNET: {
+            'input': Decimal('0.000003'),   # $0.003 per 1K tokens (balanced)
+            'output': Decimal('0.000015'),  # $0.015 per 1K tokens
+            'tier': 'standard',
+            'speed': 'fast',
+            'quality': 'high'
+        },
+        AIService.ANTHROPIC_CLAUDE_3_HAIKU: {
+            'input': Decimal('0.00000025'), # $0.00025 per 1K tokens (fastest)
+            'output': Decimal('0.00000125'), # $0.00125 per 1K tokens
+            'tier': 'economy',
+            'speed': 'very_fast',
+            'quality': 'good'
+        },
+        AIService.ANTHROPIC_CLAUDE: {  # Legacy compatibility
+            'input': Decimal('0.000008'),
+            'output': Decimal('0.000024'),
+            'tier': 'standard',
+            'speed': 'medium',
+            'quality': 'high'
+        },
+        
+        # Google Services - Gemini Family
+        AIService.GOOGLE_GEMINI_ULTRA: {
+            'input': Decimal('0.0000125'),  # $0.0125 per 1K tokens (most capable)
+            'output': Decimal('0.0000375'), # $0.0375 per 1K tokens
+            'tier': 'premium',
+            'speed': 'medium',
+            'quality': 'highest'
+        },
+        AIService.GOOGLE_GEMINI_PRO: {
+            'input': Decimal('0.00000125'), # $0.00125 per 1K tokens (balanced)
+            'output': Decimal('0.00000375'), # $0.00375 per 1K tokens
+            'tier': 'standard',
+            'speed': 'fast',
+            'quality': 'high'
+        },
+        AIService.GOOGLE_GEMINI_PRO_VISION: {
+            'input': Decimal('0.00000125'), # $0.00125 per 1K tokens + image costs
+            'output': Decimal('0.00000375'), # $0.00375 per 1K tokens
+            'tier': 'standard',
+            'speed': 'fast',
+            'quality': 'high'
+        },
+        AIService.GOOGLE_GEMINI: {  # Legacy compatibility
+            'input': Decimal('0.00000125'),
+            'output': Decimal('0.00000375'),
+            'tier': 'standard',
+            'speed': 'fast',
+            'quality': 'high'
+        },
+        
+        # Groq Services - High-Speed Inference
+        AIService.GROQ_LLAMA2_70B: {
+            'input': Decimal('0.0000007'),  # $0.0007 per 1K tokens (very fast)
+            'output': Decimal('0.0000008'), # $0.0008 per 1K tokens
+            'tier': 'economy',
+            'speed': 'ultra_fast',
+            'quality': 'good'
+        },
+        AIService.GROQ_MIXTRAL_8X7B: {
+            'input': Decimal('0.0000002'),  # $0.0002 per 1K tokens (ultra fast)
+            'output': Decimal('0.0000002'), # $0.0002 per 1K tokens
+            'tier': 'economy',
+            'speed': 'ultra_fast',
+            'quality': 'good'
+        },
+        AIService.GROQ_GEMMA_7B: {
+            'input': Decimal('0.0000001'),  # $0.0001 per 1K tokens (cheapest)
+            'output': Decimal('0.0000001'), # $0.0001 per 1K tokens
+            'tier': 'economy',
+            'speed': 'ultra_fast',
+            'quality': 'fair'
+        },
+        
+        # Local and Free Services
         AIService.LOCAL_LLM: {
-            'input': Decimal('0.0'),      # Free for local
-            'output': Decimal('0.0')      # Free for local
+            'input': Decimal('0.0'),
+            'output': Decimal('0.0'),
+            'tier': 'free',
+            'speed': 'variable',
+            'quality': 'variable'
         }
     }
     
@@ -510,6 +647,217 @@ class CostTracker:
                 'cost_by_category': {k: str(v) for k, v in cost_by_category.items()},
                 'budget_status': budget_status
             }
+    
+    def compare_service_costs(self, 
+                            services: List[AIService], 
+                            input_tokens: int, 
+                            output_tokens: int) -> Dict[str, Any]:
+        """Compare costs across multiple AI services for scenario planning"""
+        comparisons = {}
+        
+        for service in services:
+            estimate = self.estimate_cost(service, CostCategory.AI_ANALYSIS, input_tokens, output_tokens)
+            cost_data = self.TOKEN_COSTS.get(service, {})
+            
+            comparisons[service.value] = {
+                'service_name': service.value.replace('_', ' ').title(),
+                'estimated_cost': str(estimate.estimated_cost_usd),
+                'cost_per_1k_input': str(cost_data.get('input', Decimal('0.0'))),
+                'cost_per_1k_output': str(cost_data.get('output', Decimal('0.0'))),
+                'tier': cost_data.get('tier', 'unknown'),
+                'speed': cost_data.get('speed', 'unknown'),
+                'quality': cost_data.get('quality', 'unknown'),
+                'input_tokens': input_tokens,
+                'output_tokens': output_tokens,
+                'total_tokens': input_tokens + output_tokens
+            }
+        
+        # Sort by cost
+        sorted_services = sorted(comparisons.items(), key=lambda x: Decimal(x[1]['estimated_cost']))
+        
+        return {
+            'comparisons': dict(sorted_services),
+            'cheapest': sorted_services[0][0] if sorted_services else None,
+            'most_expensive': sorted_services[-1][0] if sorted_services else None,
+            'cost_range': {
+                'min': sorted_services[0][1]['estimated_cost'] if sorted_services else '0.00',
+                'max': sorted_services[-1][1]['estimated_cost'] if sorted_services else '0.00'
+            }
+        }
+    
+    def scenario_planner(self, 
+                        candidate_count: int, 
+                        avg_input_tokens: int = 1500,
+                        avg_output_tokens: int = 300) -> Dict[str, Any]:
+        """Generate cost scenarios for different service options"""
+        
+        # Define service tiers for analysis
+        economy_services = [AIService.OPENAI_GPT4O_MINI, AIService.ANTHROPIC_CLAUDE_3_HAIKU, 
+                           AIService.GROQ_GEMMA_7B, AIService.GOOGLE_GEMINI_PRO]
+        standard_services = [AIService.OPENAI_GPT3_5_TURBO, AIService.ANTHROPIC_CLAUDE_3_SONNET, 
+                            AIService.GOOGLE_GEMINI_PRO, AIService.GROQ_MIXTRAL_8X7B]
+        premium_services = [AIService.OPENAI_GPT4O, AIService.OPENAI_GPT4_TURBO, 
+                           AIService.ANTHROPIC_CLAUDE_3_OPUS, AIService.GOOGLE_GEMINI_ULTRA]
+        
+        scenarios = {}
+        
+        for tier, services in [('economy', economy_services), ('standard', standard_services), ('premium', premium_services)]:
+            tier_costs = []
+            best_service = None
+            best_cost = None
+            
+            for service in services:
+                try:
+                    cost_per_candidate = self.estimate_cost(service, CostCategory.AI_ANALYSIS, 
+                                                         avg_input_tokens, avg_output_tokens)
+                    total_cost = cost_per_candidate.estimated_cost_usd * candidate_count
+                    
+                    service_info = self.TOKEN_COSTS.get(service, {})
+                    tier_costs.append({
+                        'service': service.value,
+                        'service_name': service.value.replace('_', ' ').title(),
+                        'cost_per_candidate': str(cost_per_candidate.estimated_cost_usd),
+                        'total_cost': str(total_cost),
+                        'speed': service_info.get('speed', 'unknown'),
+                        'quality': service_info.get('quality', 'unknown')
+                    })
+                    
+                    if best_cost is None or total_cost < best_cost:
+                        best_cost = total_cost
+                        best_service = service.value
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to calculate cost for {service}: {e}")
+                    continue
+            
+            scenarios[tier] = {
+                'services': tier_costs,
+                'recommended_service': best_service,
+                'best_total_cost': str(best_cost) if best_cost else '0.00',
+                'candidate_count': candidate_count
+            }
+        
+        # Calculate cross-tier comparisons
+        all_costs = []
+        for tier_data in scenarios.values():
+            all_costs.extend([(s['service'], Decimal(s['total_cost'])) for s in tier_data['services']])
+        
+        if all_costs:
+            all_costs.sort(key=lambda x: x[1])
+            cheapest_overall = all_costs[0]
+            most_expensive = all_costs[-1]
+            
+            cost_summary = {
+                'total_candidates': candidate_count,
+                'cheapest_option': {
+                    'service': cheapest_overall[0],
+                    'total_cost': str(cheapest_overall[1])
+                },
+                'most_expensive_option': {
+                    'service': most_expensive[0], 
+                    'total_cost': str(most_expensive[1])
+                },
+                'cost_savings': str(most_expensive[1] - cheapest_overall[1]),
+                'savings_percentage': round((1 - (cheapest_overall[1] / most_expensive[1])) * 100, 1) if most_expensive[1] > 0 else 0
+            }
+        else:
+            cost_summary = {
+                'total_candidates': candidate_count,
+                'error': 'No cost data available'
+            }
+        
+        return {
+            'scenarios': scenarios,
+            'summary': cost_summary,
+            'parameters': {
+                'candidate_count': candidate_count,
+                'avg_input_tokens': avg_input_tokens,
+                'avg_output_tokens': avg_output_tokens
+            }
+        }
+    
+    def get_billing_export_data(self, 
+                               start_date: Optional[datetime] = None,
+                               end_date: Optional[datetime] = None,
+                               format_type: str = 'json') -> Dict[str, Any]:
+        """Export billing data in various formats for ChatGPT's billing export suggestion"""
+        
+        # Filter records by date range
+        filtered_records = self.cost_records
+        if start_date:
+            filtered_records = [r for r in filtered_records if r.timestamp >= start_date]
+        if end_date:
+            filtered_records = [r for r in filtered_records if r.timestamp <= end_date]
+        
+        # Group by different dimensions
+        by_model = {}
+        by_task_type = {}
+        by_batch_id = {}
+        by_date = {}
+        
+        for record in filtered_records:
+            # By model/service
+            model = record.service.value
+            if model not in by_model:
+                by_model[model] = {'count': 0, 'total_cost': Decimal('0.0'), 'total_tokens': 0}
+            by_model[model]['count'] += 1
+            by_model[model]['total_cost'] += record.actual_cost_usd
+            by_model[model]['total_tokens'] += record.input_tokens + record.output_tokens
+            
+            # By task type
+            task = record.operation_type.value
+            if task not in by_task_type:
+                by_task_type[task] = {'count': 0, 'total_cost': Decimal('0.0')}
+            by_task_type[task]['count'] += 1
+            by_task_type[task]['total_cost'] += record.actual_cost_usd
+            
+            # By batch ID (from metadata)
+            batch_id = record.metadata.get('batch_id', 'unknown')
+            if batch_id not in by_batch_id:
+                by_batch_id[batch_id] = {'count': 0, 'total_cost': Decimal('0.0')}
+            by_batch_id[batch_id]['count'] += 1
+            by_batch_id[batch_id]['total_cost'] += record.actual_cost_usd
+            
+            # By date
+            date_key = record.timestamp.date().isoformat()
+            if date_key not in by_date:
+                by_date[date_key] = {'count': 0, 'total_cost': Decimal('0.0')}
+            by_date[date_key]['count'] += 1
+            by_date[date_key]['total_cost'] += record.actual_cost_usd
+        
+        # Convert Decimals to strings for JSON serialization
+        def convert_decimals(data):
+            if isinstance(data, dict):
+                return {k: convert_decimals(v) for k, v in data.items()}
+            elif isinstance(data, Decimal):
+                return str(data)
+            return data
+        
+        export_data = {
+            'export_info': {
+                'generated_at': datetime.now().isoformat(),
+                'date_range': {
+                    'start': start_date.isoformat() if start_date else None,
+                    'end': end_date.isoformat() if end_date else None
+                },
+                'total_records': len(filtered_records),
+                'format': format_type
+            },
+            'summary': {
+                'total_cost': str(sum(r.actual_cost_usd for r in filtered_records)),
+                'total_operations': len(filtered_records),
+                'avg_cost_per_operation': str(sum(r.actual_cost_usd for r in filtered_records) / len(filtered_records)) if filtered_records else '0.00'
+            },
+            'breakdowns': {
+                'by_model': convert_decimals(by_model),
+                'by_task_type': convert_decimals(by_task_type), 
+                'by_batch_id': convert_decimals(by_batch_id),
+                'by_date': convert_decimals(by_date)
+            },
+            'detailed_records': [record.to_dict() for record in filtered_records] if format_type == 'detailed' else []
+        }
+        
+        return export_data
     
     async def cleanup_old_records(self, max_age: timedelta = timedelta(days=90)) -> int:
         """Clean up old cost records"""

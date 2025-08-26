@@ -5,8 +5,10 @@ Handles encrypted storage and retrieval of API keys for external services.
 import os
 import json
 import base64
-from typing import Dict, Optional, Any
+import hashlib
+from typing import Dict, Optional, Any, List
 from pathlib import Path
+from datetime import datetime, timedelta
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -29,9 +31,12 @@ class APIKeyManager:
     
     def __init__(self, storage_path: Optional[Path] = None):
         self.storage_path = storage_path or Path.home() / ".grant_research" / "api_keys.enc"
+        self.audit_path = self.storage_path.parent / "api_audit.log"
+        self.metadata_path = self.storage_path.parent / "api_metadata.enc"
         self.storage_path.parent.mkdir(exist_ok=True, mode=0o700)
         self._fernet: Optional[Fernet] = None
         self._keys_cache: Dict[str, str] = {}
+        self._metadata_cache: Dict[str, Dict[str, Any]] = {}
     
     def _get_encryption_key(self, password: str, salt: bytes) -> bytes:
         """Derive encryption key from password using PBKDF2."""
@@ -72,6 +77,106 @@ class APIKeyManager:
         
         key = self._get_encryption_key(password, salt)
         self._fernet = Fernet(key)
+        
+        # Load metadata cache
+        self._load_metadata()
+    
+    def _create_audit_hash(self, operation: str, service: str, success: bool) -> str:
+        """Create encrypted audit hash for logging"""
+        audit_data = f"{datetime.now().isoformat()}:{operation}:{service}:{success}"
+        return hashlib.sha256(audit_data.encode()).hexdigest()[:16]
+    
+    def _log_audit_event(self, operation: str, service: str, success: bool = True, details: str = ""):
+        """Log audit event with encrypted hash"""
+        try:
+            audit_hash = self._create_audit_hash(operation, service, success)
+            timestamp = datetime.now().isoformat()
+            
+            audit_entry = {
+                "timestamp": timestamp,
+                "operation": operation,
+                "service": service,
+                "success": success,
+                "audit_hash": audit_hash,
+                "details": details
+            }
+            
+            # Append to audit log
+            with open(self.audit_path, 'a') as f:
+                f.write(json.dumps(audit_entry) + '\n')
+            
+            os.chmod(self.audit_path, 0o600)
+            
+        except Exception as e:
+            logger.error(f"Failed to log audit event: {e}")
+    
+    def _load_metadata(self) -> None:
+        """Load key metadata (creation dates, rotation info)"""
+        if not self.metadata_path.exists() or not self._fernet:
+            self._metadata_cache = {}
+            return
+        
+        try:
+            with open(self.metadata_path, 'r') as f:
+                data = json.load(f)
+            
+            encrypted_data = data['data'].encode()
+            decrypted_data = self._fernet.decrypt(encrypted_data)
+            metadata = json.loads(decrypted_data.decode())
+            
+            # Convert ISO dates back to datetime objects
+            for service, info in metadata.items():
+                if 'created_date' in info:
+                    info['created_date'] = datetime.fromisoformat(info['created_date'])
+                if 'last_rotated' in info:
+                    info['last_rotated'] = datetime.fromisoformat(info['last_rotated'])
+            
+            self._metadata_cache = metadata
+            
+        except Exception as e:
+            logger.warning(f"Failed to load key metadata: {e}")
+            self._metadata_cache = {}
+    
+    def _save_metadata(self) -> None:
+        """Save key metadata with encryption"""
+        if not self._fernet:
+            return
+        
+        try:
+            # Convert datetime objects to ISO format
+            metadata_for_storage = {}
+            for service, info in self._metadata_cache.items():
+                storage_info = info.copy()
+                if 'created_date' in storage_info:
+                    storage_info['created_date'] = storage_info['created_date'].isoformat()
+                if 'last_rotated' in storage_info:
+                    storage_info['last_rotated'] = storage_info['last_rotated'].isoformat()
+                metadata_for_storage[service] = storage_info
+            
+            # Read existing salt or create new one
+            if self.metadata_path.exists():
+                with open(self.metadata_path, 'r') as f:
+                    existing_data = json.load(f)
+                    salt = existing_data['salt']
+            else:
+                salt = base64.b64encode(os.urandom(16)).decode()
+            
+            # Encrypt metadata
+            encrypted_data = self._fernet.encrypt(json.dumps(metadata_for_storage).encode())
+            
+            # Save to file
+            data = {
+                'salt': salt,
+                'data': encrypted_data.decode()
+            }
+            
+            with open(self.metadata_path, 'w') as f:
+                json.dump(data, f)
+            
+            os.chmod(self.metadata_path, 0o600)
+            
+        except Exception as e:
+            logger.error(f"Failed to save metadata: {e}")
     
     def authenticate(self, password: Optional[str] = None) -> bool:
         """
@@ -159,7 +264,7 @@ class APIKeyManager:
     
     def set_api_key(self, service: str, api_key: str) -> None:
         """
-        Store an API key for a service.
+        Store an API key for a service with audit logging and metadata tracking.
         
         Args:
             service: Service name (e.g., 'propublica', 'openai')
@@ -168,11 +273,49 @@ class APIKeyManager:
         if not self._fernet:
             raise RuntimeError("Not authenticated - call authenticate() first")
         
-        keys = self._load_keys()
-        keys[service] = api_key
-        self._save_keys(keys)
-        
-        logger.info(f"API key stored for service: {service}")
+        try:
+            # Load existing keys and metadata
+            keys = self._load_keys()
+            is_new_key = service not in keys
+            is_rotation = not is_new_key and keys[service] != api_key
+            
+            # Update key
+            keys[service] = api_key
+            self._save_keys(keys)
+            
+            # Update metadata
+            current_time = datetime.now()
+            if service not in self._metadata_cache:
+                self._metadata_cache[service] = {}
+            
+            metadata = self._metadata_cache[service]
+            
+            if is_new_key:
+                metadata['created_date'] = current_time
+                metadata['rotation_count'] = 0
+                operation = "key_created"
+            elif is_rotation:
+                metadata['last_rotated'] = current_time
+                metadata['rotation_count'] = metadata.get('rotation_count', 0) + 1
+                operation = "key_rotated"
+            else:
+                operation = "key_updated"
+            
+            # Save metadata
+            self._save_metadata()
+            
+            # Log audit event
+            details = f"Service: {service}"
+            if is_rotation:
+                details += f", Rotation #{metadata['rotation_count']}"
+            
+            self._log_audit_event(operation, service, True, details)
+            
+            logger.info(f"API key {'created' if is_new_key else 'rotated' if is_rotation else 'updated'} for service: {service}")
+            
+        except Exception as e:
+            self._log_audit_event("key_storage_failed", service, False, str(e))
+            raise
     
     def get_api_key(self, service: str) -> Optional[str]:
         """
@@ -247,6 +390,95 @@ class APIKeyManager:
         """
         key = self.get_api_key(service)
         return key is not None and len(key.strip()) > 0
+    
+    def check_rotation_alerts(self) -> List[Dict[str, Any]]:
+        """Check for API keys that need rotation"""
+        alerts = []
+        
+        for service, metadata in self._metadata_cache.items():
+            config = SERVICE_CONFIGS.get(service, {})
+            rotation_days = config.get('rotation_days', 30)
+            
+            created_date = metadata.get('created_date')
+            last_rotated = metadata.get('last_rotated', created_date)
+            
+            if last_rotated:
+                days_since_rotation = (datetime.now() - last_rotated).days
+                
+                if days_since_rotation >= rotation_days:
+                    alerts.append({
+                        'service': service,
+                        'service_name': config.get('name', service),
+                        'days_overdue': days_since_rotation - rotation_days,
+                        'last_rotated': last_rotated.isoformat(),
+                        'rotation_count': metadata.get('rotation_count', 0),
+                        'severity': 'critical' if days_since_rotation > rotation_days + 7 else 'warning'
+                    })
+                elif days_since_rotation >= rotation_days - 5:
+                    alerts.append({
+                        'service': service,
+                        'service_name': config.get('name', service),
+                        'days_until_rotation': rotation_days - days_since_rotation,
+                        'last_rotated': last_rotated.isoformat(),
+                        'rotation_count': metadata.get('rotation_count', 0),
+                        'severity': 'info'
+                    })
+        
+        return alerts
+    
+    def get_key_metadata(self, service: str) -> Optional[Dict[str, Any]]:
+        """Get metadata for a specific service key"""
+        if service not in self._metadata_cache:
+            return None
+        
+        metadata = self._metadata_cache[service].copy()
+        
+        # Convert datetime objects to ISO strings for JSON serialization
+        if 'created_date' in metadata:
+            metadata['created_date'] = metadata['created_date'].isoformat()
+        if 'last_rotated' in metadata:
+            metadata['last_rotated'] = metadata['last_rotated'].isoformat()
+        
+        # Add rotation status
+        config = SERVICE_CONFIGS.get(service, {})
+        rotation_days = config.get('rotation_days', 30)
+        
+        last_rotated = self._metadata_cache[service].get('last_rotated', 
+                        self._metadata_cache[service].get('created_date'))
+        
+        if last_rotated:
+            days_since_rotation = (datetime.now() - last_rotated).days
+            metadata['days_since_rotation'] = days_since_rotation
+            metadata['rotation_recommended'] = days_since_rotation >= rotation_days
+            metadata['rotation_overdue'] = days_since_rotation > rotation_days + 7
+        
+        return metadata
+    
+    def get_audit_log(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Get recent audit log entries"""
+        if not self.audit_path.exists():
+            return []
+        
+        entries = []
+        try:
+            with open(self.audit_path, 'r') as f:
+                lines = f.readlines()
+            
+            # Get the most recent entries
+            recent_lines = lines[-limit:] if len(lines) > limit else lines
+            
+            for line in recent_lines:
+                try:
+                    entry = json.loads(line.strip())
+                    entries.append(entry)
+                except json.JSONDecodeError:
+                    continue
+            
+            return entries
+            
+        except Exception as e:
+            logger.error(f"Failed to read audit log: {e}")
+            return []
 
 
 # Global instance
@@ -277,7 +509,7 @@ def authenticate_api_keys(password: Optional[str] = None) -> bool:
     return get_api_key_manager().authenticate(password)
 
 
-# Service-specific configurations and validation
+# Enhanced Service Configurations with ChatGPT Suggestions
 SERVICE_CONFIGS = {
     "openai": {
         "name": "OpenAI API",
@@ -286,7 +518,46 @@ SERVICE_CONFIGS = {
         "cost_info": "Pay-per-use: ~$0.0001/candidate (AI Lite), ~$0.10-0.25/target (Deep AI)",
         "setup_url": "https://platform.openai.com/api-keys",
         "env_var": "OPENAI_API_KEY",
-        "validation": lambda key: key.startswith("sk-") and len(key) >= 48
+        "validation": lambda key: key.startswith("sk-") and len(key) >= 48,
+        "aliases": ["gpt", "gpt-3.5", "gpt-4", "chatgpt"],
+        "models": ["gpt-3.5-turbo", "gpt-4o-mini", "gpt-4o", "gpt-4"],
+        "rotation_days": 30
+    },
+    "anthropic": {
+        "name": "Anthropic Claude API",
+        "required": False,
+        "description": "Alternative AI provider with Claude models for analysis",
+        "cost_info": "Pay-per-use: competitive pricing with OpenAI",
+        "setup_url": "https://console.anthropic.com/",
+        "env_var": "ANTHROPIC_API_KEY",
+        "validation": lambda key: key.startswith("sk-ant-") and len(key) >= 50,
+        "aliases": ["claude", "anthropic-claude", "claude-3"],
+        "models": ["claude-3-haiku", "claude-3-sonnet", "claude-3-opus"],
+        "rotation_days": 30
+    },
+    "google": {
+        "name": "Google Gemini API",
+        "required": False,
+        "description": "Google's Gemini models for AI analysis",
+        "cost_info": "Competitive pricing with free tier available",
+        "setup_url": "https://aistudio.google.com/app/apikey",
+        "env_var": "GOOGLE_API_KEY",
+        "validation": lambda key: len(key.strip()) > 20,
+        "aliases": ["gemini", "google-ai", "bard"],
+        "models": ["gemini-pro", "gemini-pro-vision", "gemini-ultra"],
+        "rotation_days": 30
+    },
+    "groq": {
+        "name": "Groq API",
+        "required": False,
+        "description": "High-speed inference with Groq LPUs",
+        "cost_info": "Fast inference with competitive pricing",
+        "setup_url": "https://console.groq.com/keys",
+        "env_var": "GROQ_API_KEY",
+        "validation": lambda key: key.startswith("gsk_") and len(key) >= 40,
+        "aliases": ["groq-llama", "llama-groq"],
+        "models": ["llama2-70b-4096", "mixtral-8x7b-32768", "gemma-7b-it"],
+        "rotation_days": 30
     },
     "foundation_directory": {
         "name": "Foundation Directory API", 
@@ -295,7 +566,10 @@ SERVICE_CONFIGS = {
         "cost_info": "May be free for basic access, premium features may require subscription",
         "setup_url": "https://foundationdirectory.org/",
         "env_var": "FOUNDATION_DIRECTORY_API_KEY",
-        "validation": lambda key: len(key.strip()) > 0
+        "validation": lambda key: len(key.strip()) > 0,
+        "aliases": ["foundation-dir", "candid"],
+        "models": [],
+        "rotation_days": 60
     }
 }
 
