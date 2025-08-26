@@ -1661,8 +1661,21 @@
                             </div>
                         </div>
 
-                        <!-- Analysis Tracks -->
+                        <!-- Analysis Tracks - REORDERED: AI Intelligence → Financial → Network → Risk -->
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <!-- 1. AI Intelligence (AI-Heavy-1 Research Bridge) -->
+                            <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-medium text-orange-900 dark:text-orange-100">AI Intelligence</h5>
+                                    <button @click="runAnalysisTrack('ai')" :disabled="analysisProgress.ai"
+                                            class="text-xs bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-2 py-1 rounded">
+                                        <span x-show="!analysisProgress.ai">Run</span>
+                                        <span x-show="analysisProgress.ai">Running...</span>
+                                    </button>
+                                </div>
+                                <p class="text-sm text-orange-700 dark:text-orange-300">Intelligence gathering & fact extraction (~$0.05/candidate)</p>
+                            </div>
+                            <!-- 2. Financial Analysis -->
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-blue-900 dark:text-blue-100">Financial Analysis</h5>
@@ -1674,6 +1687,7 @@
                                 </div>
                                 <p class="text-sm text-blue-700 dark:text-blue-300">Revenue trends, financial health</p>
                             </div>
+                            <!-- 3. Network Analysis -->
                             <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-purple-900 dark:text-purple-100">Network Analysis</h5>
@@ -1685,6 +1699,7 @@
                                 </div>
                                 <p class="text-sm text-purple-700 dark:text-purple-300">Board connections, relationships</p>
                             </div>
+                            <!-- 4. Risk Assessment -->
                             <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-green-900 dark:text-green-100">Risk Assessment</h5>
@@ -1695,17 +1710,6 @@
                                     </button>
                                 </div>
                                 <p class="text-sm text-green-700 dark:text-green-300">Compliance, stability scoring</p>
-                            </div>
-                            <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="font-medium text-orange-900 dark:text-orange-100">AI Intelligence</h5>
-                                    <button @click="runAnalysisTrack('ai')" :disabled="analysisProgress.ai"
-                                            class="text-xs bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-2 py-1 rounded">
-                                        <span x-show="!analysisProgress.ai">Run</span>
-                                        <span x-show="analysisProgress.ai">Running...</span>
-                                    </button>
-                                </div>
-                                <p class="text-sm text-orange-700 dark:text-orange-300">Strategic insights, compatibility</p>
                             </div>
                         </div>
 
@@ -2086,7 +2090,7 @@
                                         <span x-show="investigationProgress.research">Running...</span>
                                     </button>
                                 </div>
-                                <p class="text-sm text-blue-700 dark:text-blue-300">Comprehensive intelligence gathering</p>
+                                <p class="text-sm text-blue-700 dark:text-blue-300">Comprehensive deep research & strategic intelligence (~$0.08/candidate)</p>
                             </div>
                             <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
                                 <div class="flex items-center justify-between mb-2">

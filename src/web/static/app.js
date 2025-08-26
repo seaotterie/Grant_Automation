@@ -439,7 +439,8 @@ function catalynxApp() {
             xml_990_running: false,
             network_running: false,
             enhanced_scoring_running: false,
-            strategic_running: false
+            strategic_running: false,
+            ai: false  // AI-Heavy-1 Research Bridge
         },
         
         // Network visualization state (ANALYZE tab)
@@ -4238,8 +4239,7 @@ function catalynxApp() {
             try {
                 switch(track) {
                     case 'research':
-                        this.showNotification('Investigation Started', 'Running research investigation analysis...', 'info');
-                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        await this.runDeepResearchInvestigation();
                         break;
                     case 'board':
                         this.showNotification('Investigation Started', 'Running board investigation analysis...', 'info');
@@ -4266,6 +4266,110 @@ function catalynxApp() {
                 this.showNotification('Investigation Error', `${track} investigation failed`, 'error');
             } finally {
                 this.investigationProgress[track] = false;
+            }
+        },
+        
+        // EXAMINE TAB - DEEP RESEARCH INVESTIGATION FUNCTION (AI-Heavy-2)
+        async runDeepResearchInvestigation() {
+            if (!this.selectedProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile before running Deep Research', 'warning');
+                return;
+            }
+            
+            // Get target opportunities from the current stage that have intelligence gathered
+            const targetOpportunities = this.targets.filter(target => 
+                target.intelligence_gathered === true || target.research_intelligence
+            );
+            
+            if (targetOpportunities.length === 0) {
+                this.showNotification('No Target Opportunities', 'Progress through ANALYZE stage first to generate targets for Deep Research', 'warning');
+                return;
+            }
+            
+            try {
+                this.showNotification('AI-Heavy-2 Deep Analysis', 'Starting comprehensive deep research & strategic intelligence (~$0.08/candidate)...', 'info');
+                
+                // Use the first target opportunity as the primary research subject
+                const primaryTarget = targetOpportunities[0];
+                
+                // Prepare data for AI-Heavy-2 Deep Research
+                const researchRequest = {
+                    target_opportunity: {
+                        opportunity_id: primaryTarget.opportunity_id || primaryTarget.id,
+                        organization_name: primaryTarget.organization_name,
+                        ein: primaryTarget.ein,
+                        website: primaryTarget.website,
+                        research_intelligence: primaryTarget.research_intelligence,
+                        contact_intelligence: primaryTarget.contact_intelligence,
+                        funding_intelligence: primaryTarget.funding_intelligence,
+                        strategic_partnerships: primaryTarget.strategic_partnerships
+                    },
+                    selected_profile: this.selectedProfile,
+                    ai_lite_results: {
+                        validation_score: primaryTarget.validation_score,
+                        strategic_score: primaryTarget.strategic_score,
+                        priority_rank: primaryTarget.priority_rank,
+                        mission_alignment: primaryTarget.mission_alignment
+                    },
+                    model_preference: 'gpt-4',
+                    cost_budget: 0.15,
+                    research_priority_areas: ['funding_history', 'decision_making_process', 'application_requirements', 'success_factors'],
+                    research_risk_areas: ['compliance_issues', 'funding_restrictions', 'application_deadlines'],
+                    research_intelligence_gaps: ['contact_information', 'internal_processes', 'evaluation_criteria']
+                };
+                
+                console.log(`Sending primary target "${primaryTarget.organization_name}" to AI-Heavy-2 Deep Research`);
+                
+                // Call existing AI-Heavy-2 Deep Research endpoint
+                const response = await fetch('/api/ai/deep-research', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(researchRequest)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`AI-Heavy-2 Deep Research failed: ${response.statusText}`);
+                }
+                
+                const deepResearchResults = await response.json();
+                console.log('AI-Heavy-2 Deep Research Results:', deepResearchResults);
+                
+                // Process deep research results
+                if (deepResearchResults.status === 'success' && deepResearchResults.result) {
+                    const researchData = deepResearchResults.result;
+                    
+                    // Update the primary target with deep research results
+                    const targetToUpdate = this.targets.find(target => 
+                        (target.opportunity_id || target.id) === primaryTarget.opportunity_id || target.id
+                    );
+                    
+                    if (targetToUpdate) {
+                        targetToUpdate.deep_research_completed = true;
+                        targetToUpdate.strategic_dossier = researchData.strategic_dossier;
+                        targetToUpdate.intelligence_patterns = researchData.intelligence_patterns;
+                        targetToUpdate.decision_framework = researchData.decision_framework;
+                        targetToUpdate.risk_assessment = researchData.risk_assessment;
+                        targetToUpdate.application_strategy = researchData.application_strategy;
+                        targetToUpdate.competitive_analysis = researchData.competitive_analysis;
+                        
+                        console.log(`✅ AI-Heavy-2 completed deep research for ${primaryTarget.organization_name}`);
+                    }
+                    
+                    const totalCost = researchData.cost_analysis?.total_cost || 0;
+                    const intelligenceScore = researchData.intelligence_score || 0;
+                    
+                    this.showNotification('AI-Heavy-2 Complete', 
+                        `Deep research completed for "${primaryTarget.organization_name}". Intelligence Score: ${(intelligenceScore * 100).toFixed(1)}% (Cost: $${totalCost.toFixed(2)})`, 
+                        'success');
+                } else {
+                    throw new Error('Invalid deep research response format');
+                }
+                
+            } catch (error) {
+                console.error('AI-Heavy-2 Deep Research failed:', error);
+                this.showNotification('Deep Research Error', `AI-Heavy-2 Deep Research failed: ${error.message}`, 'error');
             }
         },
 
@@ -6596,32 +6700,79 @@ function catalynxApp() {
             this.analysisProgress.enhanced_scoring_running = true;
             
             try {
-                this.showNotification('Enhanced Scoring', 'Starting sequential compatibility scoring...', 'info');
+                this.showNotification('AI-Lite-1 Validator', 'Starting fast opportunity screening (~$0.0001/candidate)...', 'info');
                 
-                // Process opportunities one by one
-                for (let i = 0; i < this.qualifiedProspects.length; i++) {
-                    const prospect = this.qualifiedProspects[i];
-                    console.log(`Processing enhanced scoring for ${prospect.organization_name} (${i+1}/${this.qualifiedProspects.length})`);
-                    
-                    // Set processing flag for current prospect
-                    prospect.enhanced_processing = true;
-                    
-                    // Simulate analysis time for this prospect (2-4 seconds)
-                    await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
-                    
-                    // Complete analysis for this prospect
-                    prospect.enhanced_processing = false;
-                    prospect.enhanced_score = Math.random() * 0.7 + 0.3; // Random score between 0.3-1.0
-                    this.calculateCombinedScore(prospect);
-                    
-                    console.log(`✅ Completed enhanced scoring for ${prospect.organization_name}: ${(prospect.enhanced_score * 100).toFixed(1)}%`);
+                // Prepare candidates data for AI-Lite-1 Validator
+                const candidatesData = this.qualifiedProspects.map(prospect => ({
+                    opportunity_id: prospect.opportunity_id || prospect.id,
+                    organization_name: prospect.organization_name,
+                    ein: prospect.ein,
+                    revenue_amount: prospect.revenue_amount,
+                    asset_amount: prospect.asset_amount,
+                    ntee_code: prospect.ntee_code,
+                    state: prospect.state,
+                    funding_areas: prospect.funding_areas || []
+                }));
+                
+                console.log(`Sending ${candidatesData.length} candidates to AI-Lite-1 Validator`);
+                
+                // Call AI-Lite-1 Validator endpoint
+                const response = await fetch('/api/ai/lite-1/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        candidates: candidatesData,
+                        selected_profile: this.selectedProfile,
+                        cost_optimization: true,
+                        batch_size: 20
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`AI-Lite-1 Validator failed: ${response.statusText}`);
                 }
                 
-                this.showNotification('Enhanced Scoring Complete', 'Compatibility scoring completed for all prospects', 'success');
-                this.workflowProgress.plan = true;
+                const validatorResults = await response.json();
+                console.log('AI-Lite-1 Validator Results:', validatorResults);
+                
+                // Process validation results
+                if (validatorResults.status === 'success' && validatorResults.results) {
+                    const processedCandidates = validatorResults.results.processed_candidates || [];
+                    
+                    // Update prospects with validation results
+                    this.qualifiedProspects.forEach(prospect => {
+                        const validationResult = processedCandidates.find(
+                            result => result.opportunity_id === (prospect.opportunity_id || prospect.id)
+                        );
+                        
+                        if (validationResult) {
+                            prospect.validation_passed = validationResult.validation_passed;
+                            prospect.validation_score = validationResult.validation_score;
+                            prospect.eligibility_factors = validationResult.eligibility_factors;
+                            prospect.go_no_go_decision = validationResult.go_no_go_decision;
+                            prospect.enhanced_score = validationResult.validation_score; // For compatibility
+                            this.calculateCombinedScore(prospect);
+                            
+                            console.log(`✅ AI-Lite-1 validated ${prospect.organization_name}: ${validationResult.go_no_go_decision} (${(validationResult.validation_score * 100).toFixed(1)}%)`);
+                        }
+                    });
+                    
+                    const passedCount = processedCandidates.filter(c => c.validation_passed).length;
+                    const totalCost = validatorResults.results.total_cost || 0;
+                    
+                    this.showNotification('AI-Lite-1 Complete', 
+                        `Validated ${processedCandidates.length} candidates, ${passedCount} passed (Cost: $${totalCost.toFixed(4)})`, 
+                        'success');
+                    this.workflowProgress.plan = true;
+                } else {
+                    throw new Error('Invalid validator response format');
+                }
+                
             } catch (error) {
-                console.error('Enhanced scoring failed:', error);
-                this.showNotification('Analysis Error', 'Failed to complete enhanced scoring', 'error');
+                console.error('AI-Lite-1 Validator failed:', error);
+                this.showNotification('Validation Error', `AI-Lite-1 Validator failed: ${error.message}`, 'error');
                 
                 // Clear all processing flags on error
                 this.qualifiedProspects.forEach(prospect => {
@@ -6645,16 +6796,93 @@ function catalynxApp() {
             this.analysisProgress.strategic_running = true;
             
             try {
-                this.showNotification('Strategic Planning', 'Generating AI-powered recommendations...', 'info');
+                this.showNotification('AI-Lite-2 Strategic Scorer', 'Generating semantic reasoning & priority ranking (~$0.0003/candidate)...', 'info');
                 
-                // Simulate API call with delay
-                await new Promise(resolve => setTimeout(resolve, 4000));
+                // Filter qualified candidates (those that passed AI-Lite-1 validation)
+                const qualifiedCandidates = this.qualifiedProspects.filter(prospect => 
+                    prospect.validation_passed === true || prospect.enhanced_score > 0.5
+                );
                 
-                this.showNotification('Strategic Plan Complete', 'AI recommendations generated successfully', 'success');
-                this.workflowProgress.plan = true;
+                if (qualifiedCandidates.length === 0) {
+                    this.showNotification('No Qualified Candidates', 'Run Enhanced Scoring first to qualify candidates for strategic analysis', 'warning');
+                    return;
+                }
+                
+                // Prepare data for AI-Lite-2 Strategic Scorer
+                const candidatesData = qualifiedCandidates.map(prospect => ({
+                    opportunity_id: prospect.opportunity_id || prospect.id,
+                    organization_name: prospect.organization_name,
+                    ein: prospect.ein,
+                    validation_score: prospect.validation_score,
+                    eligibility_factors: prospect.eligibility_factors || {},
+                    mission_areas: prospect.funding_areas || [],
+                    strategic_context: {
+                        revenue: prospect.revenue_amount,
+                        assets: prospect.asset_amount,
+                        location: prospect.state,
+                        ntee_code: prospect.ntee_code
+                    }
+                }));
+                
+                console.log(`Sending ${candidatesData.length} qualified candidates to AI-Lite-2 Strategic Scorer`);
+                
+                // Call AI-Lite-2 Strategic Scorer endpoint
+                const response = await fetch('/api/ai/lite-2/strategic-score', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        qualified_candidates: candidatesData,
+                        selected_profile: this.selectedProfile,
+                        analysis_depth: 'comprehensive',
+                        focus_areas: this.selectedProfile.focus_areas || []
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`AI-Lite-2 Strategic Scorer failed: ${response.statusText}`);
+                }
+                
+                const strategicResults = await response.json();
+                console.log('AI-Lite-2 Strategic Scorer Results:', strategicResults);
+                
+                // Process strategic scoring results
+                if (strategicResults.status === 'success' && strategicResults.results) {
+                    const strategicAnalyses = strategicResults.results.strategic_analyses || [];
+                    
+                    // Update prospects with strategic scoring results
+                    this.qualifiedProspects.forEach(prospect => {
+                        const strategicResult = strategicAnalyses.find(
+                            result => result.opportunity_id === (prospect.opportunity_id || prospect.id)
+                        );
+                        
+                        if (strategicResult) {
+                            prospect.strategic_score = strategicResult.strategic_score;
+                            prospect.priority_rank = strategicResult.priority_rank;
+                            prospect.mission_alignment = strategicResult.mission_alignment;
+                            prospect.strategic_value = strategicResult.strategic_value;
+                            prospect.recommendation = strategicResult.recommendation;
+                            prospect.strategic_insights = strategicResult.strategic_insights;
+                            
+                            console.log(`✅ AI-Lite-2 scored ${prospect.organization_name}: Priority ${strategicResult.priority_rank} (${(strategicResult.strategic_score * 100).toFixed(1)}%)`);
+                        }
+                    });
+                    
+                    const totalCost = strategicResults.results.total_cost || 0;
+                    const avgScore = strategicAnalyses.reduce((sum, r) => sum + r.strategic_score, 0) / strategicAnalyses.length;
+                    
+                    this.showNotification('AI-Lite-2 Complete', 
+                        `Strategic scoring completed for ${strategicAnalyses.length} candidates. Avg Score: ${(avgScore * 100).toFixed(1)}% (Cost: $${totalCost.toFixed(4)})`, 
+                        'success');
+                    this.workflowProgress.plan = true;
+                } else {
+                    throw new Error('Invalid strategic scorer response format');
+                }
+                
             } catch (error) {
-                console.error('Strategic planning failed:', error);
-                this.showNotification('Analysis Error', 'Failed to generate strategic plan', 'error');
+                console.error('AI-Lite-2 Strategic Scorer failed:', error);
+                this.showNotification('Strategic Analysis Error', `AI-Lite-2 Strategic Scorer failed: ${error.message}`, 'error');
             } finally {
                 this.analysisProgress.strategic_running = false;
             }
@@ -6672,6 +6900,126 @@ function catalynxApp() {
             prospect.combined_score = combinedScore;
             
             console.log(`Updated combined score for ${prospect.organization_name}: ${(combinedScore * 100).toFixed(1)}%`);
+        },
+        
+        // ANALYZE TAB - AI INTELLIGENCE FUNCTION
+        async runAnalysisTrack(trackType) {
+            if (trackType === 'ai') {
+                await this.runAIIntelligenceAnalysis();
+            } else {
+                this.showNotification('Unknown Track', `Analysis track "${trackType}" not implemented`, 'warning');
+            }
+        },
+        
+        async runAIIntelligenceAnalysis() {
+            if (!this.selectedProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile before running AI Intelligence analysis', 'warning');
+                return;
+            }
+            
+            if (this.analysisProgress.ai) {
+                return;
+            }
+            
+            // Get target candidates from the current stage
+            const targetCandidates = this.candidates.filter(candidate => 
+                candidate.strategic_score > 0.6 || candidate.validation_passed === true
+            );
+            
+            if (targetCandidates.length === 0) {
+                this.showNotification('No Target Candidates', 'Progress through PLAN stage first to generate candidates for AI Intelligence analysis', 'warning');
+                return;
+            }
+            
+            this.analysisProgress.ai = true;
+            
+            try {
+                this.showNotification('AI-Heavy-1 Research Bridge', 'Starting intelligence gathering & fact extraction (~$0.05/candidate)...', 'info');
+                
+                // Prepare data for AI-Heavy-1 Research Bridge
+                const candidatesData = targetCandidates.map(candidate => ({
+                    opportunity_id: candidate.opportunity_id || candidate.id,
+                    organization_name: candidate.organization_name,
+                    ein: candidate.ein,
+                    website: candidate.website,
+                    strategic_score: candidate.strategic_score,
+                    validation_results: {
+                        passed: candidate.validation_passed,
+                        score: candidate.validation_score,
+                        factors: candidate.eligibility_factors
+                    },
+                    strategic_context: {
+                        mission_alignment: candidate.mission_alignment,
+                        priority_rank: candidate.priority_rank,
+                        strategic_insights: candidate.strategic_insights
+                    }
+                }));
+                
+                console.log(`Sending ${candidatesData.length} target candidates to AI-Heavy-1 Research Bridge`);
+                
+                // Call AI-Heavy-1 Research Bridge endpoint
+                const response = await fetch('/api/ai/heavy-1/research-bridge', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        target_candidates: candidatesData,
+                        selected_profile: this.selectedProfile,
+                        ai_lite_results: {
+                            validation_context: 'completed',
+                            strategic_context: 'completed'
+                        },
+                        research_depth: 'comprehensive',
+                        intelligence_priorities: ['funding_patterns', 'decision_makers', 'application_processes', 'strategic_partnerships']
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`AI-Heavy-1 Research Bridge failed: ${response.statusText}`);
+                }
+                
+                const researchResults = await response.json();
+                console.log('AI-Heavy-1 Research Bridge Results:', researchResults);
+                
+                // Process research bridge results
+                if (researchResults.status === 'success' && researchResults.results) {
+                    const researchAnalyses = researchResults.results.research_analyses || [];
+                    
+                    // Update candidates with research intelligence
+                    this.candidates.forEach(candidate => {
+                        const researchResult = researchAnalyses.find(
+                            result => result.opportunity_id === (candidate.opportunity_id || candidate.id)
+                        );
+                        
+                        if (researchResult) {
+                            candidate.intelligence_gathered = true;
+                            candidate.research_intelligence = researchResult.intelligence_data;
+                            candidate.contact_intelligence = researchResult.contact_information;
+                            candidate.funding_intelligence = researchResult.funding_patterns;
+                            candidate.application_intelligence = researchResult.application_process;
+                            candidate.strategic_partnerships = researchResult.strategic_partnerships;
+                            
+                            console.log(`✅ AI-Heavy-1 researched ${candidate.organization_name}: Intelligence gathered`);
+                        }
+                    });
+                    
+                    const totalCost = researchResults.results.total_cost || 0;
+                    const successfulResearch = researchAnalyses.filter(r => r.intelligence_data).length;
+                    
+                    this.showNotification('AI-Heavy-1 Complete', 
+                        `Research bridge completed for ${researchAnalyses.length} candidates. Intelligence gathered: ${successfulResearch} (Cost: $${totalCost.toFixed(2)})`, 
+                        'success');
+                } else {
+                    throw new Error('Invalid research bridge response format');
+                }
+                
+            } catch (error) {
+                console.error('AI-Heavy-1 Research Bridge failed:', error);
+                this.showNotification('Research Intelligence Error', `AI-Heavy-1 Research Bridge failed: ${error.message}`, 'error');
+            } finally {
+                this.analysisProgress.ai = false;
+            }
         },
         
         // NETWORK VISUALIZATION FUNCTIONS (ANALYZE TAB)

@@ -31,80 +31,78 @@ Manual Inputs
 - Feedback loop where BOD and Grantor Networks feed back in to the DISCOVERY tab
 
 ## PLAN
+🎯 Strategic Brilliance of This Approach:
 
-╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ Ready to code?                                                                                                                  │
-│                                                                                                                                 │
-│ Here is Claude's plan:                                                                                                          │
-│ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │
-│ │ Proposed 5-Call Optimized Architecture                                                                                      │ │
-│ │                                                                                                                             │ │
-│ │ AI-Lite Stage: 2 Focused Calls                                                                                              │ │
-│ │                                                                                                                             │ │
-│ │ AI-Lite-1: Validation & Triage (~$0.0001/candidate, 50-100 tokens)                                                          │ │
-│ │ - Primary: Confirm this is a real funding opportunity                                                                       │ │
-│ │ - Secondary: Basic eligibility and geographic validation                                                                    │ │
-│ │ - Output: Go/No-Go + Track assignment + Priority level                                                                      │ │
-│ │ - Purpose: Filter out non-opportunities and mis-classified entries                                                          │ │
-│ │                                                                                                                             │ │
-│ │ AI-Lite-2: Strategic Scoring (~$0.0003/candidate, 150-200 tokens)                                                           │ │
-│ │ - Primary: Mission alignment assessment (requires AI semantic matching)                                                     │ │
-│ │ - Secondary: Strategic value judgment and priority ranking                                                                  │ │
-│ │ - Output: Compatibility score + Strategic rationale + Action priority                                                       │ │
-│ │ - Purpose: Strategic assessment for workflow continuation                                                                   │ │
-│ │                                                                                                                             │ │
-│ │ AI-Heavy Stage: 3 Specialized Calls                                                                                         │ │
-│ │                                                                                                                             │ │
-│ │ AI-Heavy-1: Research Bridge (~$0.05/candidate, 400-600 tokens) [NEW]                                                        │ │
-│ │ - Website intelligence gathering (web scraping)                                                                             │ │
-│ │ - Contact information extraction (web research)                                                                             │ │
-│ │ - Basic fact extraction (document parsing)                                                                                  │ │
-│ │ - Application process mapping (document analysis)                                                                           │ │
-│ │ - Purpose: Data gathering and information extraction                                                                        │ │
-│ │                                                                                                                             │ │
-│ │ AI-Heavy-2: Analysis & Compliance (~$0.08/candidate, 600-800 tokens) [CURRENT HEAVY-A]                                      │ │
-│ │ - 200-word executive summaries (complex writing)                                                                            │ │
-│ │ - Eligibility deep dives (legal/compliance analysis)                                                                        │ │
-│ │ - Detailed fact extraction (document parsing intensive)                                                                     │ │
-│ │ - Requirements analysis (compliance assessment)                                                                             │ │
-│ │ - Purpose: Detailed analysis and compliance evaluation                                                                      │ │
-│ │                                                                                                                             │ │
-│ │ AI-Heavy-3: Strategic Intelligence (~$0.12/candidate, 800+ tokens) [CURRENT HEAVY-B]                                        │ │
-│ │ - Competitive analysis (market research complexity)                                                                         │ │
-│ │ - Strategic dossier building (current functionality)                                                                        │ │
-│ │ - Partnership assessment and positioning                                                                                    │ │
-│ │ - Implementation planning and recommendations                                                                               │ │
-│ │ - Purpose: Strategic intelligence and decision support                                                                      │ │
-│ │                                                                                                                             │ │
-│ │ Architecture Benefits:                                                                                                      │ │
-│ │                                                                                                                             │ │
-│ │ Cost Optimization:                                                                                                          │ │
-│ │ - AI-Lite: Focuses on what AI does uniquely well (semantic reasoning)                                                       │ │
-│ │ - Local Algorithms: Handle mathematical scoring (Government Scorer, Financial Scorer, Risk Assessor)                        │ │
-│ │ - Progressive Investment: Expensive calls only for validated opportunities                                                  │ │
-│ │                                                                                                                             │ │
-│ │ Workflow Efficiency:                                                                                                        │ │
-│ │ - Stage 1: Fast validation eliminates non-opportunities early                                                               │ │
-│ │ - Stage 2: Strategic assessment guides resource allocation                                                                  │ │
-│ │ - Stage 3: Research bridge gathers raw intelligence efficiently                                                             │ │
-│ │ - Stage 4: Deep analysis provides compliance and requirement details                                                        │ │
-│ │ - Stage 5: Strategic intelligence delivers implementation-ready insights                                                    │ │
-│ │                                                                                                                             │ │
-│ │ Specialization Benefits:                                                                                                    │ │
-│ │ - Each call optimized for specific task types                                                                               │ │
-│ │ - Reduces cognitive load on individual AI calls                                                                             │ │
-│ │ - Enables parallel processing where appropriate                                                                             │ │
-│ │ - Better error handling and retry strategies                                                                                │ │
-│ │                                                                                                                             │ │
-│ │ Integration Points:                                                                                                         │ │
-│ │ - ANALYZE Tab: AI-Lite-1 + AI-Lite-2 + Local Scoring                                                                        │ │
-│ │ - EXAMINE Tab: AI-Heavy-1 (Bridge) + AI-Heavy-2 (Analysis)                                                                  │ │
-│ │ - APPROACH Tab: AI-Heavy-3 (Strategic Intelligence)                                                                         │ │
-│ │                                                                                                                             │ │
-│ │ Maximum 5 calls with clear specialization and progressive complexity                                                        │ │
-│ ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │
-│   
-│                   
+  Progressive AI Filtering Architecture
+
+  - PLAN Tab: Two-tier AI filter (Validator → Strategic Scorer) = ~$0.0004/candidate total
+  - ANALYZE Tab: Heavy Research Bridge feeds local analysis = $0.05 for comprehensive intelligence
+  - EXAMINE Tab: Deep Analysis leverages Research Bridge data = $0.08 for implementation-ready intelligence
+
+  AI-First Button Positioning Benefits
+
+  ANALYZE Tab Reordering (AI Intelligence → Financial → Network → Risk):
+  - AI Intelligence becomes the intelligence hub that feeds the other 3 buttons
+  - Financial Analysis uses AI-gathered funding data (amounts, restrictions, terms)
+  - Network Analysis uses AI-extracted contact info (program officers, board members)
+  - Risk Assessment uses AI-identified compliance factors (requirements, restrictions, competition)
+
+  EXAMINE Tab Enhancement:
+  - Deep Research provides comprehensive intelligence foundation
+  - Other 3 buttons (Strategic Analysis, Compliance Deep Dive, Market Intelligence) leverage this intelligence
+
+  🔄 Workflow Optimization Insights:
+
+  Data Flow Excellence
+
+  1. PLAN Enhanced Scoring → Validates opportunities are real funding sources
+  2. PLAN Strategic Insight → Provides strategic reasoning and priority ranking
+  3. ANALYZE AI Intelligence → Gathers comprehensive research data
+  4. ANALYZE Local Functions → Use AI-gathered intelligence for specialized analysis
+  5. EXAMINE Deep Research → Builds implementation-ready packages
+
+  Cost Efficiency Gains
+
+  - Eliminates Redundant Research: Each subsequent button uses previous AI intelligence
+  - Progressive Investment: Only qualified opportunities get expensive AI processing
+  - Specialization Benefits: Each AI call optimized for its specific function
+
+  🚀 Strategic Advantages:
+
+  User Experience Enhancement
+
+  - Clear Progression: Users see opportunities getting progressively refined
+  - Immediate Value: AI Intelligence button provides comprehensive research upfront
+  - Cost Transparency: Users understand the progressive investment model
+
+  Technical Benefits
+
+  - Solves AI-Lite Overloading: Research tasks moved to appropriate Heavy tier
+  - Maintains Sophistication: All existing capabilities preserved
+  - Improves Performance: Specialized calls optimized for specific tasks
+
+  🤔 Considerations for APPROACH Tab
+
+  You're right to consider a final AI for APPROACH. Potential candidates:
+  - AI-Heavy-4: Implementation Intelligence (~$0.10/candidate)
+  - Decision Support AI: Go/no-go analysis with implementation planning
+  - Strategic Dossier Completion: Final strategic package assembly
+
+  🎯 Implementation Recommendation
+
+  This structure is strategically sound and operationally elegant:
+
+  1. PLAN: Two-tier filtering and strategic assessment
+  2. ANALYZE: AI-first intelligence gathering feeding specialized local analysis
+  3. EXAMINE: Deep research foundation supporting comprehensive evaluation
+  4. APPROACH: (Future) Final implementation intelligence
+
+  The button reordering creates logical left-to-right workflow where AI intelligence feeds subsequent analysis functions. This     
+   is architecturally superior to the current structure.
+
+  Verdict: This approach optimally balances cost efficiency, user experience, and analytical sophistication. It's ready for        
+  implementation.
+  
 ## Phases
 ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ Ready to code?                                                                                                                                  │

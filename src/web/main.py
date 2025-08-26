@@ -5899,6 +5899,181 @@ async def execute_batch_ai_analysis(request: Dict[str, Any]):
         logger.error(f"Batch AI analysis pipeline failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
 
+# SPECIALIZED AI PROCESSOR ENDPOINTS - 5-Call Architecture Integration
+
+@app.post("/api/ai/lite-1/validate")
+async def execute_ai_lite_validator(request: Dict[str, Any]):
+    """Execute AI-Lite-1 Validator processor for fast opportunity screening."""
+    try:
+        logger.info("Starting AI-Lite-1 Validator analysis")
+        
+        # Import the specific processor
+        from src.processors.analysis.ai_lite_validator import AILiteValidator
+        
+        # Validate request data
+        candidates = request.get("candidates", [])
+        profile = request.get("selected_profile", {})
+        
+        if not candidates:
+            raise HTTPException(status_code=400, detail="No candidates provided for validation")
+        if not profile:
+            raise HTTPException(status_code=400, detail="Profile context required for validation")
+        
+        # Initialize processor
+        validator = AILiteValidator()
+        
+        # Execute validation
+        results = await validator.execute({
+            "candidates": candidates,
+            "profile_context": profile,
+            "batch_size": request.get("batch_size", 20),
+            "cost_optimization": request.get("cost_optimization", True)
+        })
+        
+        return {
+            "status": "success",
+            "processor": "ai_lite_validator",
+            "results": results,
+            "cost_estimate": "$0.0001 per candidate",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"AI-Lite-1 Validator failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
+
+@app.post("/api/ai/lite-2/strategic-score")
+async def execute_ai_lite_strategic_scorer(request: Dict[str, Any]):
+    """Execute AI-Lite-2 Strategic Scorer for semantic reasoning and priority ranking."""
+    try:
+        logger.info("Starting AI-Lite-2 Strategic Scorer analysis")
+        
+        # Import the specific processor
+        from src.processors.analysis.ai_lite_strategic_scorer import AILiteStrategicScorer
+        
+        # Validate request data
+        qualified_candidates = request.get("qualified_candidates", [])
+        profile = request.get("selected_profile", {})
+        
+        if not qualified_candidates:
+            raise HTTPException(status_code=400, detail="No qualified candidates provided for strategic scoring")
+        if not profile:
+            raise HTTPException(status_code=400, detail="Profile context required for strategic analysis")
+        
+        # Initialize processor
+        strategic_scorer = AILiteStrategicScorer()
+        
+        # Execute strategic scoring
+        results = await strategic_scorer.execute({
+            "qualified_candidates": qualified_candidates,
+            "profile_context": profile,
+            "analysis_depth": request.get("analysis_depth", "standard"),
+            "focus_areas": request.get("focus_areas", [])
+        })
+        
+        return {
+            "status": "success",
+            "processor": "ai_lite_strategic_scorer", 
+            "results": results,
+            "cost_estimate": "$0.0003 per candidate",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"AI-Lite-2 Strategic Scorer failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Strategic scoring failed: {str(e)}")
+
+@app.post("/api/ai/heavy-1/research-bridge")
+async def execute_ai_heavy_research_bridge(request: Dict[str, Any]):
+    """Execute AI-Heavy-1 Research Bridge for intelligence gathering and fact extraction."""
+    try:
+        logger.info("Starting AI-Heavy-1 Research Bridge analysis")
+        
+        # Import the specific processor
+        from src.processors.analysis.ai_heavy_research_bridge import AIHeavyResearchBridge
+        
+        # Validate request data
+        target_candidates = request.get("target_candidates", [])
+        profile = request.get("selected_profile", {})
+        lite_results = request.get("ai_lite_results", {})
+        
+        if not target_candidates:
+            raise HTTPException(status_code=400, detail="No target candidates provided for research bridge")
+        if not profile:
+            raise HTTPException(status_code=400, detail="Profile context required for research analysis")
+        
+        # Initialize processor
+        research_bridge = AIHeavyResearchBridge()
+        
+        # Execute research bridge analysis
+        results = await research_bridge.execute({
+            "target_candidates": target_candidates,
+            "profile_context": profile,
+            "ai_lite_context": lite_results,
+            "research_depth": request.get("research_depth", "comprehensive"),
+            "intelligence_priorities": request.get("intelligence_priorities", [])
+        })
+        
+        return {
+            "status": "success",
+            "processor": "ai_heavy_research_bridge",
+            "results": results,
+            "cost_estimate": "$0.05 per candidate",
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"AI-Heavy-1 Research Bridge failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Research bridge failed: {str(e)}")
+
+@app.post("/api/ai/orchestrated-pipeline")
+async def execute_orchestrated_analysis_pipeline(request: Dict[str, Any]):
+    """Execute the complete 5-call orchestrated AI analysis pipeline."""
+    try:
+        logger.info("Starting orchestrated AI analysis pipeline")
+        
+        # Import the orchestrator
+        from src.processors.analysis.optimized_analysis_orchestrator import OptimizedAnalysisOrchestrator
+        
+        # Validate request data
+        prospects = request.get("prospects", [])
+        profile = request.get("selected_profile", {})
+        
+        if not prospects:
+            raise HTTPException(status_code=400, detail="No prospects provided for orchestrated analysis")
+        if not profile:
+            raise HTTPException(status_code=400, detail="Profile context required for orchestrated analysis")
+        
+        # Initialize orchestrator
+        orchestrator = OptimizedAnalysisOrchestrator()
+        
+        # Execute complete pipeline
+        results = await orchestrator.execute_complete_pipeline({
+            "prospects": prospects,
+            "profile_context": profile,
+            "cost_budget": request.get("cost_budget", 1.0),
+            "quality_threshold": request.get("quality_threshold", 0.7),
+            "parallel_processing": request.get("parallel_processing", True)
+        })
+        
+        return {
+            "status": "success",
+            "processor": "orchestrated_pipeline",
+            "results": results,
+            "pipeline_summary": {
+                "total_prospects_input": len(prospects),
+                "candidates_after_validation": results.get("validation_stats", {}).get("passed", 0),
+                "qualified_after_scoring": results.get("scoring_stats", {}).get("qualified", 0),
+                "targets_after_research": results.get("research_stats", {}).get("completed", 0),
+                "total_cost": results.get("cost_summary", {}).get("total_cost", 0)
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Orchestrated pipeline failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {str(e)}")
+
 # Simple test endpoint for debugging
 @app.get("/api/test")
 async def api_test():
