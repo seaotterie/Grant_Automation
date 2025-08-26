@@ -60,6 +60,15 @@ from src.auth.jwt_auth import get_current_user_dependency, User
 from src.web.auth_routes import router as auth_router
 from src.web.routers.ai_processing import router as ai_processing_router
 
+# Error Handling imports
+from src.web.middleware.error_handling import (
+    ErrorHandlingMiddleware,
+    RequestContextMiddleware,
+    validation_exception_handler,
+    http_exception_handler
+)
+from src.core.error_recovery import error_recovery_manager
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -342,7 +351,13 @@ async def disable_trace_method(request: Request, call_next):
         raise HTTPException(status_code=405, detail="Method not allowed")
     return await call_next(request)
 
-# Add security middleware (order matters - add in reverse order of execution)
+# Add error handling middleware (order matters - add in reverse order of execution)
+# Request context middleware should be added first (executed last)
+app.add_middleware(RequestContextMiddleware)
+# Error handling middleware should wrap all other middleware
+app.add_middleware(ErrorHandlingMiddleware, include_debug_info=False)
+
+# Add security middleware
 app.add_middleware(SecurityHeadersMiddleware)
 # Re-enable XSSProtectionMiddleware with Alpine.js fix
 app.add_middleware(XSSProtectionMiddleware)
@@ -354,6 +369,244 @@ app.include_router(auth_router)
 
 # Include AI processing routes
 app.include_router(ai_processing_router)
+
+# Add global exception handlers
+app.add_exception_handler(HTTPException, http_exception_handler)
+try:
+    from pydantic import ValidationError
+    app.add_exception_handler(ValidationError, validation_exception_handler)
+except ImportError:
+    logger.warning("Pydantic ValidationError handler not available")
+
+# Documentation serving endpoints
+import markdown
+from pathlib import Path
+
+@app.get("/api/docs/user-guide")
+async def get_user_guide():
+    """Get user guide documentation in HTML format."""
+    try:
+        docs_path = Path(__file__).parent.parent.parent / "docs" / "user-guide.md"
+        
+        if not docs_path.exists():
+            raise HTTPException(status_code=404, detail="User guide not found")
+        
+        with open(docs_path, 'r', encoding='utf-8') as f:
+            markdown_content = f.read()
+        
+        # Convert markdown to HTML
+        html_content = markdown.markdown(
+            markdown_content,
+            extensions=['toc', 'tables', 'fenced_code']
+        )
+        
+        return {
+            "title": "Catalynx User Guide",
+            "content": html_content,
+            "format": "html",
+            "last_updated": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to serve user guide: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load user guide")
+
+@app.get("/api/docs/api-documentation")
+async def get_api_documentation():
+    """Get API documentation in HTML format."""
+    try:
+        docs_path = Path(__file__).parent.parent.parent / "docs" / "api-documentation.md"
+        
+        if not docs_path.exists():
+            raise HTTPException(status_code=404, detail="API documentation not found")
+        
+        with open(docs_path, 'r', encoding='utf-8') as f:
+            markdown_content = f.read()
+        
+        # Convert markdown to HTML
+        html_content = markdown.markdown(
+            markdown_content,
+            extensions=['toc', 'tables', 'fenced_code', 'codehilite']
+        )
+        
+        return {
+            "title": "Catalynx API Documentation",
+            "content": html_content,
+            "format": "html",
+            "last_updated": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to serve API documentation: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load API documentation")
+
+@app.get("/api/docs/processor-guide")
+async def get_processor_guide():
+    """Get processor guide documentation in HTML format."""
+    try:
+        docs_path = Path(__file__).parent.parent.parent / "docs" / "processor-guide.md"
+        
+        if not docs_path.exists():
+            raise HTTPException(status_code=404, detail="Processor guide not found")
+        
+        with open(docs_path, 'r', encoding='utf-8') as f:
+            markdown_content = f.read()
+        
+        # Convert markdown to HTML
+        html_content = markdown.markdown(
+            markdown_content,
+            extensions=['toc', 'tables', 'fenced_code']
+        )
+        
+        return {
+            "title": "Catalynx Processor Guide",
+            "content": html_content,
+            "format": "html",
+            "last_updated": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to serve processor guide: {e}")
+        raise HTTPException(status_code=500, detail="Failed to load processor guide")
+
+@app.get("/api/docs/help-search")
+async def search_help_documentation(q: str = Query(..., min_length=2)):
+    """Search across all help documentation."""
+    try:
+        docs_dir = Path(__file__).parent.parent.parent / "docs"
+        search_results = []
+        
+        # Files to search
+        help_files = [
+            ("user-guide.md", "User Guide"),
+            ("api-documentation.md", "API Documentation"), 
+            ("processor-guide.md", "Processor Guide")
+        ]
+        
+        search_term = q.lower()
+        
+        for filename, title in help_files:
+            file_path = docs_dir / filename
+            if file_path.exists():
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    
+                    # Simple search implementation
+                    lines = content.split('\n')
+                    matches = []
+                    
+                    for i, line in enumerate(lines):
+                        if search_term in line.lower():
+                            # Get context around the match
+                            start = max(0, i-2)
+                            end = min(len(lines), i+3)
+                            context = '\n'.join(lines[start:end])
+                            
+                            matches.append({
+                                "line_number": i+1,
+                                "line": line.strip(),
+                                "context": context,
+                                "relevance": line.lower().count(search_term)
+                            })
+                    
+                    if matches:
+                        # Sort by relevance (number of matches in line)
+                        matches.sort(key=lambda x: x['relevance'], reverse=True)
+                        
+                        search_results.append({
+                            "document": title,
+                            "file": filename,
+                            "matches": matches[:5],  # Top 5 matches per document
+                            "total_matches": len(matches)
+                        })
+                        
+                except Exception as e:
+                    logger.warning(f"Error searching {filename}: {e}")
+        
+        return {
+            "query": q,
+            "results": search_results,
+            "total_documents": len(search_results),
+            "total_matches": sum(r["total_matches"] for r in search_results)
+        }
+        
+    except Exception as e:
+        logger.error(f"Help search failed: {e}")
+        raise HTTPException(status_code=500, detail="Help search failed")
+
+@app.get("/api/docs/help-index")
+async def get_help_index():
+    """Get index of all available help documentation."""
+    try:
+        docs_dir = Path(__file__).parent.parent.parent / "docs"
+        help_index = []
+        
+        # Main documentation files
+        main_docs = [
+            {
+                "id": "user-guide",
+                "title": "User Guide",
+                "description": "Comprehensive guide to using Catalynx platform features",
+                "file": "user-guide.md",
+                "endpoint": "/api/docs/user-guide",
+                "category": "User Documentation"
+            },
+            {
+                "id": "api-documentation", 
+                "title": "API Documentation",
+                "description": "Complete API reference with endpoints and examples",
+                "file": "api-documentation.md",
+                "endpoint": "/api/docs/api-documentation",
+                "category": "Technical Documentation"
+            },
+            {
+                "id": "processor-guide",
+                "title": "Processor Guide", 
+                "description": "Detailed guide to all 18 processors and their capabilities",
+                "file": "processor-guide.md",
+                "endpoint": "/api/docs/processor-guide",
+                "category": "Technical Documentation"
+            }
+        ]
+        
+        # Check which files actually exist and get metadata
+        for doc in main_docs:
+            file_path = docs_dir / doc["file"]
+            if file_path.exists():
+                stat = file_path.stat()
+                doc.update({
+                    "exists": True,
+                    "size_bytes": stat.st_size,
+                    "last_modified": datetime.fromtimestamp(stat.st_mtime).isoformat()
+                })
+                
+                # Get first few lines for preview
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        lines = f.readlines()[:10]
+                        doc["preview"] = ''.join(lines).strip()[:200] + "..."
+                except:
+                    doc["preview"] = "Preview not available"
+                    
+                help_index.append(doc)
+            else:
+                doc.update({
+                    "exists": False,
+                    "preview": "File not found"
+                })
+                help_index.append(doc)
+        
+        return {
+            "available_docs": help_index,
+            "categories": list(set(doc["category"] for doc in help_index)),
+            "search_endpoint": "/api/docs/help-search",
+            "last_updated": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to generate help index: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate help index")
 
 # Initialize services
 workflow_service = WorkflowService()
@@ -5713,8 +5966,9 @@ async def execute_ai_lite_analysis(request: Dict[str, Any]):
 async def execute_ai_heavy_research(request: Dict[str, Any]):
     """
     Execute AI Heavy deep research using comprehensive data packets.
+    Supports both single target and batch promotion modes.
     
-    Request format:
+    Single Target Request format:
     {
         "target_opportunity": {...},
         "selected_profile": {...},
@@ -5725,6 +5979,15 @@ async def execute_ai_heavy_research(request: Dict[str, Any]):
         "research_risk_areas": [...],
         "research_intelligence_gaps": [...]
     }
+    
+    Batch Promotion Request format:
+    {
+        "candidates": [{...}, {...}],
+        "selected_profile": {...},
+        "research_mode": "batch_promotion",
+        "cost_limit": 1.50,
+        "priority": "high"
+    }
     """
     try:
         logger.info("Starting AI Heavy deep research")
@@ -5733,13 +5996,18 @@ async def execute_ai_heavy_research(request: Dict[str, Any]):
         ai_service = get_ai_service_manager()
         
         # Validate request data
-        if not request.get("target_opportunity"):
-            raise HTTPException(status_code=400, detail="Target opportunity required for deep research")
-            
         if not request.get("selected_profile"):
             raise HTTPException(status_code=400, detail="Profile context required for AI research")
         
-        # Execute AI Heavy research
+        # Check for batch promotion mode
+        if request.get("research_mode") == "batch_promotion":
+            return await handle_batch_promotion(request, ai_service)
+        
+        # Original single target handling
+        if not request.get("target_opportunity"):
+            raise HTTPException(status_code=400, detail="Target opportunity required for deep research")
+        
+        # Execute single target AI Heavy research
         result = await ai_service.execute_ai_heavy_research(request)
         
         return {
@@ -5752,6 +6020,126 @@ async def execute_ai_heavy_research(request: Dict[str, Any]):
     except Exception as e:
         logger.error(f"AI Heavy research failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"AI Heavy research failed: {str(e)}")
+
+
+async def handle_batch_promotion(request: Dict[str, Any], ai_service):
+    """
+    Handle batch promotion of multiple candidates for AI-Heavy research.
+    Transforms candidate data to individual target_opportunity format.
+    """
+    logger.info("Processing batch promotion for AI-Heavy research")
+    
+    candidates = request.get("candidates", [])
+    if not candidates:
+        raise HTTPException(status_code=400, detail="No candidates provided for batch promotion")
+    
+    selected_profile = request.get("selected_profile")
+    cost_limit = request.get("cost_limit", 5.0)  # Default budget limit
+    
+    batch_results = []
+    total_cost = 0.0
+    successful_analyses = 0
+    failed_analyses = []
+    
+    logger.info(f"Processing {len(candidates)} candidates for AI-Heavy promotion")
+    
+    for i, candidate in enumerate(candidates):
+        try:
+            # Transform candidate to target_opportunity format
+            target_opportunity = transform_candidate_to_target(candidate)
+            
+            # Create individual research request
+            single_request = {
+                "target_opportunity": target_opportunity,
+                "selected_profile": selected_profile,
+                "ai_lite_results": candidate.get("ai_lite_insights", {}),
+                "model_preference": "gpt-4o-mini" if candidate.get("research_depth") == "standard" else "gpt-4o",
+                "cost_budget": candidate.get("estimated_cost", 0.08),
+                "research_priority_areas": ["funding_strategy", "competitive_analysis"],
+                "research_risk_areas": ["capacity_assessment", "timeline_feasibility"],
+                "research_intelligence_gaps": ["board_connections", "success_metrics"]
+            }
+            
+            # Check cost budget
+            if total_cost + single_request["cost_budget"] > cost_limit:
+                logger.warning(f"Cost limit reached. Stopping batch processing at candidate {i+1}")
+                break
+            
+            # Execute AI Heavy research for this candidate
+            result = await ai_service.execute_ai_heavy_research(single_request)
+            
+            # Process successful result
+            analysis_result = {
+                "opportunity_id": candidate.get("opportunity_id"),
+                "organization_name": candidate.get("organization_name"),
+                "research_score": result.get("research_score", 0.0),
+                "comprehensive_analysis": result.get("comprehensive_analysis", ""),
+                "strategic_insights": result.get("strategic_insights", {}),
+                "competitive_analysis": result.get("competitive_analysis", {}),
+                "risk_assessment": result.get("risk_assessment", {}),
+                "funding_strategy": result.get("funding_strategy", {}),
+                "research_mode": candidate.get("research_depth", "standard"),
+                "cost_breakdown": {
+                    "total_cost": result.get("cost_breakdown", {}).get("total_cost", single_request["cost_budget"]),
+                    "model_used": single_request["model_preference"]
+                }
+            }
+            
+            batch_results.append(analysis_result)
+            total_cost += analysis_result["cost_breakdown"]["total_cost"]
+            successful_analyses += 1
+            
+            logger.info(f"✅ Completed AI-Heavy research for {candidate.get('organization_name')} (${analysis_result['cost_breakdown']['total_cost']:.4f})")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed AI-Heavy research for {candidate.get('organization_name', 'Unknown')}: {str(e)}")
+            failed_analyses.append({
+                "candidate": candidate.get("organization_name", "Unknown"),
+                "error": str(e)
+            })
+            continue
+    
+    logger.info(f"Batch promotion completed: {successful_analyses} successful, {len(failed_analyses)} failed, Total cost: ${total_cost:.4f}")
+    
+    return {
+        "status": "success",
+        "analysis_type": "ai_heavy_batch",
+        "results": {
+            "research_analyses": batch_results,
+            "batch_summary": {
+                "total_processed": len(candidates),
+                "successful_analyses": successful_analyses,
+                "failed_analyses": len(failed_analyses),
+                "total_cost": total_cost,
+                "cost_limit": cost_limit,
+                "processing_time": "batch_mode"
+            }
+        },
+        "failed_analyses": failed_analyses if failed_analyses else None,
+        "total_cost": total_cost
+    }
+
+
+def transform_candidate_to_target(candidate: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Transform candidate data from ANALYZE tab to target_opportunity format
+    expected by AI Heavy researcher.
+    """
+    return {
+        "opportunity_id": candidate.get("opportunity_id"),
+        "organization_name": candidate.get("organization_name"),
+        "source_type": candidate.get("source_type"),
+        "funding_amount": candidate.get("funding_amount"),
+        "website": candidate.get("website"),
+        "ein": candidate.get("ein"),
+        "ai_compatibility_score": candidate.get("ai_lite_score", 0.0),
+        "ai_analysis_insights": candidate.get("ai_lite_insights", ""),
+        "discovery_context": {
+            "promoted_from": "ai_lite_analysis",
+            "original_source": candidate.get("source_type", "unknown"),
+            "promotion_timestamp": candidate.get("promotion_timestamp")
+        }
+    }
 
 @app.get("/api/ai/analysis-status/{request_id}")
 async def get_ai_analysis_status(request_id: str):

@@ -2,6 +2,291 @@
 // Alpine.js application with real-time WebSocket updates
 // Version: TYPE_COLOR_FIX_v1.2 - Updated organization type colors
 
+// Enhanced Error Handling System
+const ErrorHandler = {
+    // Error display state
+    currentError: null,
+    retryAttempts: new Map(),
+    maxRetryAttempts: 3,
+    
+    // Show user-friendly error notification
+    showError(error, context = {}) {
+        console.error('Error:', error, context);
+        
+        // Parse error response if available
+        const errorInfo = this.parseErrorResponse(error);
+        
+        // Show toast notification
+        this.showToast({
+            type: 'error',
+            title: errorInfo.title,
+            message: errorInfo.message,
+            actions: errorInfo.actions,
+            context: context
+        });
+        
+        // Store current error for retry functionality
+        this.currentError = { error, context, errorInfo };
+        
+        return errorInfo;
+    },
+    
+    // Parse standardized error responses
+    parseErrorResponse(error) {
+        // Default error info
+        let errorInfo = {
+            title: 'Error Occurred',
+            message: 'An unexpected error occurred. Please try again.',
+            actions: ['retry'],
+            canRetry: true,
+            severity: 'medium'
+        };
+        
+        try {
+            // Handle fetch response errors
+            if (error.response) {
+                const data = error.response.data || error.response;
+                
+                if (data.error_type) {
+                    // Standardized error response
+                    errorInfo.title = data.message || errorInfo.title;
+                    errorInfo.message = data.recovery_guidance?.suggested_actions?.[0] || errorInfo.message;
+                    errorInfo.canRetry = data.recovery_guidance?.retry_allowed || false;
+                    errorInfo.actions = this.getActionsFromRecovery(data.recovery_guidance);
+                } else if (data.detail) {
+                    // FastAPI HTTPException
+                    errorInfo.title = 'Request Failed';
+                    errorInfo.message = data.detail;
+                }
+                
+                // Set severity based on status code
+                if (error.response.status >= 500) {
+                    errorInfo.severity = 'high';
+                } else if (error.response.status >= 400) {
+                    errorInfo.severity = 'medium';
+                }
+                
+            } else if (error.message) {
+                // JavaScript error
+                if (error.message.includes('network') || error.message.includes('fetch')) {
+                    errorInfo.title = 'Network Error';
+                    errorInfo.message = 'Check your internet connection and try again.';
+                } else if (error.message.includes('timeout')) {
+                    errorInfo.title = 'Request Timeout';
+                    errorInfo.message = 'The request took too long. Please try again.';
+                } else {
+                    errorInfo.message = error.message;
+                }
+            }
+            
+        } catch (parseError) {
+            console.warn('Error parsing error response:', parseError);
+        }
+        
+        return errorInfo;
+    },
+    
+    // Get user actions from recovery guidance
+    getActionsFromRecovery(guidance) {
+        const actions = ['dismiss'];
+        
+        if (guidance?.retry_allowed) {
+            actions.unshift('retry');
+        }
+        
+        if (guidance?.documentation_link) {
+            actions.push('help');
+        }
+        
+        return actions;
+    },
+    
+    // Show toast notification
+    showToast({ type = 'info', title, message, actions = ['dismiss'], duration = 5000, context = {} }) {
+        const toast = {
+            id: Date.now(),
+            type,
+            title,
+            message,
+            actions,
+            context,
+            timestamp: new Date(),
+            visible: true
+        };
+        
+        // Add to Alpine.js toast system
+        if (window.alpine && window.alpine.store && window.alpine.store('toasts')) {
+            window.alpine.store('toasts').add(toast);
+        } else {
+            // Fallback to console and browser notification
+            console.log(`${type.toUpperCase()}: ${title} - ${message}`);
+            this.showFallbackNotification(toast);
+        }
+        
+        // Auto-dismiss after duration
+        if (duration > 0) {
+            setTimeout(() => {
+                this.dismissToast(toast.id);
+            }, duration);
+        }
+        
+        return toast;
+    },
+    
+    // Fallback notification for when Alpine.js isn't available
+    showFallbackNotification(toast) {
+        // Create a simple popup
+        const notification = document.createElement('div');
+        notification.className = `fixed top-4 right-4 max-w-sm p-4 rounded-lg shadow-lg z-50 ${
+            toast.type === 'error' ? 'bg-red-100 border-red-400 text-red-700' :
+            toast.type === 'warning' ? 'bg-yellow-100 border-yellow-400 text-yellow-700' :
+            toast.type === 'success' ? 'bg-green-100 border-green-400 text-green-700' :
+            'bg-blue-100 border-blue-400 text-blue-700'
+        }`;
+        
+        notification.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div>
+                    <h4 class="font-semibold">${toast.title}</h4>
+                    <p class="text-sm">${toast.message}</p>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-lg">&times;</button>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+    },
+    
+    // Dismiss toast notification
+    dismissToast(toastId) {
+        if (window.alpine && window.alpine.store && window.alpine.store('toasts')) {
+            window.alpine.store('toasts').dismiss(toastId);
+        }
+    },
+    
+    // Retry last failed operation
+    async retry(operation = null, context = {}) {
+        const error = this.currentError;
+        if (!error || !error.errorInfo.canRetry) {
+            this.showError(new Error('No retryable operation available'));
+            return false;
+        }
+        
+        const operationKey = operation || `${error.context.operation || 'unknown'}_${error.context.url || 'unknown'}`;
+        const attempts = this.retryAttempts.get(operationKey) || 0;
+        
+        if (attempts >= this.maxRetryAttempts) {
+            this.showError(new Error('Maximum retry attempts exceeded. Please refresh the page or contact support.'));
+            return false;
+        }
+        
+        // Increment retry counter
+        this.retryAttempts.set(operationKey, attempts + 1);
+        
+        // Show retry notification
+        this.showToast({
+            type: 'info',
+            title: 'Retrying Operation',
+            message: `Attempt ${attempts + 1} of ${this.maxRetryAttempts}...`,
+            duration: 2000
+        });
+        
+        try {
+            // If a specific retry function is provided, use it
+            if (context.retryFunction && typeof context.retryFunction === 'function') {
+                await context.retryFunction();
+            } else {
+                // Generic retry - re-execute the failed operation
+                console.log('Generic retry not implemented yet - please refresh the page');
+                return false;
+            }
+            
+            // Success - clear retry counter
+            this.retryAttempts.delete(operationKey);
+            this.showToast({
+                type: 'success',
+                title: 'Operation Succeeded',
+                message: 'The operation completed successfully.',
+                duration: 3000
+            });
+            
+            return true;
+            
+        } catch (retryError) {
+            console.error('Retry failed:', retryError);
+            this.showError(retryError, { ...context, isRetry: true });
+            return false;
+        }
+    },
+    
+    // Wrap fetch requests with error handling
+    async safeFetch(url, options = {}) {
+        const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        try {
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            });
+            
+            // Check if response is ok
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ 
+                    detail: `HTTP ${response.status}: ${response.statusText}` 
+                }));
+                
+                const error = new Error(`Request failed: ${response.status}`);
+                error.response = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: errorData
+                };
+                throw error;
+            }
+            
+            return response;
+            
+        } catch (error) {
+            // Add context to error
+            error.context = {
+                url,
+                method: options.method || 'GET',
+                requestId,
+                timestamp: new Date().toISOString()
+            };
+            
+            throw error;
+        }
+    },
+    
+    // Handle API responses with error checking
+    async handleApiResponse(responsePromise, context = {}) {
+        try {
+            const response = await responsePromise;
+            return response;
+        } catch (error) {
+            const errorInfo = this.showError(error, context);
+            
+            // Determine if we should throw or return null
+            if (errorInfo.severity === 'high' || context.throwOnError) {
+                throw error;
+            }
+            
+            return null;
+        }
+    }
+};
+
 // Shared utility functions used across all tabs
 const CatalynxUtils = {
     formatStageWithNumber(stage) {
@@ -472,6 +757,260 @@ function catalynxApp() {
             showPromotionModal: false,
             promotionInProgress: false,
             totalEstimatedCost: 0
+        },
+
+        // ========================================
+        // UNIFIED AI DATA MANAGER
+        // ========================================
+        aiDataManager: {
+            // Core data stores
+            candidates: new Map(),          // Key: opportunity_id, Value: candidate data
+            research_cache: new Map(),      // Key: opportunity_id, Value: AI-Heavy research results
+            promotion_queue: new Set(),     // Set of opportunity_ids selected for promotion
+            processing_status: new Map(),   // Key: opportunity_id, Value: processing status
+            cost_tracking: new Map(),       // Key: opportunity_id, Value: cost breakdown
+            
+            // State management
+            last_updated: null,
+            cache_version: 1,
+            
+            // Data access methods
+            getCandidate(opportunityId) {
+                return this.candidates.get(opportunityId);
+            },
+            
+            getAllCandidates() {
+                return Array.from(this.candidates.values());
+            },
+            
+            getCandidatesWithAI() {
+                return this.getAllCandidates().filter(candidate => 
+                    candidate.ai_analysis && candidate.ai_analysis.compatibility_score > 0
+                );
+            },
+            
+            getEligibleForPromotion() {
+                return this.getAllCandidates().filter(candidate => 
+                    candidate.ai_analysis && 
+                    candidate.ai_analysis.compatibility_score >= 0.75 && 
+                    candidate.ai_analysis.recommendation_level !== 'reject' &&
+                    !candidate.ai_heavy_promoted
+                );
+            },
+            
+            getPromotedCandidates() {
+                return this.getAllCandidates().filter(candidate => candidate.ai_heavy_promoted);
+            },
+            
+            // Data modification methods
+            addCandidate(candidate) {
+                if (!candidate.opportunity_id) {
+                    console.error('Cannot add candidate without opportunity_id');
+                    return false;
+                }
+                
+                this.candidates.set(candidate.opportunity_id, {
+                    ...candidate,
+                    added_timestamp: new Date().toISOString(),
+                    cache_version: this.cache_version
+                });
+                this.updateLastModified();
+                return true;
+            },
+            
+            updateCandidate(opportunityId, updates) {
+                const candidate = this.candidates.get(opportunityId);
+                if (!candidate) {
+                    console.warn(`Candidate ${opportunityId} not found for update`);
+                    return false;
+                }
+                
+                const updatedCandidate = {
+                    ...candidate,
+                    ...updates,
+                    updated_timestamp: new Date().toISOString(),
+                    cache_version: this.cache_version
+                };
+                
+                this.candidates.set(opportunityId, updatedCandidate);
+                this.updateLastModified();
+                return true;
+            },
+            
+            updateCandidateAIAnalysis(opportunityId, aiAnalysis) {
+                return this.updateCandidate(opportunityId, {
+                    ai_analysis: aiAnalysis,
+                    ai_analyzed: true,
+                    ai_analysis_timestamp: new Date().toISOString()
+                });
+            },
+            
+            updateCandidateResearch(opportunityId, researchData) {
+                const success = this.updateCandidate(opportunityId, {
+                    ai_heavy_research: researchData,
+                    ai_heavy_promoted: true,
+                    funnel_stage: 'targets',
+                    research_completed_timestamp: new Date().toISOString()
+                });
+                
+                if (success) {
+                    this.research_cache.set(opportunityId, researchData);
+                    if (researchData.cost_breakdown) {
+                        this.cost_tracking.set(opportunityId, researchData.cost_breakdown);
+                    }
+                }
+                return success;
+            },
+            
+            // Promotion queue management
+            addToPromotionQueue(opportunityId) {
+                const candidate = this.getCandidate(opportunityId);
+                if (!candidate) return false;
+                
+                // Check eligibility
+                if (!candidate.ai_analysis || candidate.ai_analysis.compatibility_score < 0.75) {
+                    console.warn(`Candidate ${opportunityId} not eligible for promotion`);
+                    return false;
+                }
+                
+                this.promotion_queue.add(opportunityId);
+                return true;
+            },
+            
+            removeFromPromotionQueue(opportunityId) {
+                return this.promotion_queue.delete(opportunityId);
+            },
+            
+            clearPromotionQueue() {
+                this.promotion_queue.clear();
+            },
+            
+            getPromotionQueueCandidates() {
+                return Array.from(this.promotion_queue).map(id => this.getCandidate(id)).filter(Boolean);
+            },
+            
+            // Processing status tracking
+            setProcessingStatus(opportunityId, status, details = {}) {
+                this.processing_status.set(opportunityId, {
+                    status: status, // 'pending', 'processing', 'completed', 'failed'
+                    details: details,
+                    timestamp: new Date().toISOString()
+                });
+            },
+            
+            getProcessingStatus(opportunityId) {
+                return this.processing_status.get(opportunityId);
+            },
+            
+            // Cost tracking and analytics
+            getTotalCosts() {
+                let aiLiteCosts = 0;
+                let aiHeavyCosts = 0;
+                
+                this.getAllCandidates().forEach(candidate => {
+                    if (candidate.ai_analysis?.cost) {
+                        aiLiteCosts += candidate.ai_analysis.cost;
+                    }
+                });
+                
+                this.cost_tracking.forEach(cost => {
+                    aiHeavyCosts += cost.total_cost || 0;
+                });
+                
+                return {
+                    ai_lite_total: aiLiteCosts,
+                    ai_heavy_total: aiHeavyCosts,
+                    grand_total: aiLiteCosts + aiHeavyCosts
+                };
+            },
+            
+            getEstimatedPromotionCost() {
+                const queuedCandidates = this.getPromotionQueueCandidates();
+                return queuedCandidates.reduce((total, candidate) => {
+                    const estimatedCost = candidate.estimated_cost || 0.08;
+                    return total + estimatedCost;
+                }, 0);
+            },
+            
+            // Data synchronization and maintenance
+            syncWithLegacyData(candidatesData, targetsData) {
+                console.log('Syncing unified data manager with legacy data structures');
+                
+                // Import candidates data
+                if (candidatesData && Array.isArray(candidatesData)) {
+                    candidatesData.forEach(candidate => {
+                        this.addCandidate(candidate);
+                    });
+                }
+                
+                // Import targets data (promoted candidates)
+                if (targetsData && Array.isArray(targetsData)) {
+                    targetsData.forEach(target => {
+                        if (target.ai_heavy_promoted && target.ai_heavy_research) {
+                            this.updateCandidateResearch(target.opportunity_id, target.ai_heavy_research);
+                        } else {
+                            this.addCandidate(target);
+                        }
+                    });
+                }
+                
+                console.log(`Unified data manager synced: ${this.candidates.size} candidates, ${this.research_cache.size} research results`);
+            },
+            
+            exportToLegacyFormat() {
+                const allCandidates = this.getAllCandidates();
+                
+                return {
+                    candidatesData: allCandidates.filter(c => !c.ai_heavy_promoted),
+                    targetsData: allCandidates.filter(c => c.ai_heavy_promoted || c.funnel_stage === 'targets')
+                };
+            },
+            
+            // Utility methods
+            updateLastModified() {
+                this.last_updated = new Date().toISOString();
+            },
+            
+            getStats() {
+                return {
+                    total_candidates: this.candidates.size,
+                    ai_analyzed: this.getCandidatesWithAI().length,
+                    eligible_for_promotion: this.getEligibleForPromotion().length,
+                    promoted_candidates: this.getPromotedCandidates().length,
+                    in_promotion_queue: this.promotion_queue.size,
+                    research_results: this.research_cache.size,
+                    cost_summary: this.getTotalCosts(),
+                    last_updated: this.last_updated,
+                    cache_version: this.cache_version
+                };
+            },
+            
+            // Cache management
+            clearCache() {
+                this.candidates.clear();
+                this.research_cache.clear();
+                this.promotion_queue.clear();
+                this.processing_status.clear();
+                this.cost_tracking.clear();
+                this.cache_version++;
+                this.updateLastModified();
+                console.log('Unified data manager cache cleared');
+            },
+            
+            validateData() {
+                const issues = [];
+                
+                this.candidates.forEach((candidate, id) => {
+                    if (!candidate.opportunity_id) {
+                        issues.push(`Candidate ${id} missing opportunity_id`);
+                    }
+                    if (!candidate.organization_name) {
+                        issues.push(`Candidate ${id} missing organization_name`);
+                    }
+                });
+                
+                return issues;
+            }
         },
         
         // EXAMINE tab state
@@ -1952,6 +2491,9 @@ function catalynxApp() {
         // Initialization
         async init() {
             console.log('Initializing Catalynx Web Interface...');
+            
+            // Initialize unified AI data manager FIRST
+            this.initializeDataManager();
             
             // Initialize welcome stage if active
             if (this.activeStage === 'welcome') {
@@ -7727,16 +8269,12 @@ function catalynxApp() {
         // AI-HEAVY PROMOTION WORKFLOW FUNCTIONS (ANALYZE TAB)
         // ========================================
         
-        // Show modal for promoting candidates from AI-Lite to AI-Heavy processing
+        // Show modal for promoting candidates from AI-Lite to AI-Heavy processing (UNIFIED)
         showAIHeavyPromotionModal() {
             console.log('Opening AI-Heavy promotion modal');
             
-            // Filter AI-Lite analyzed candidates with high scores
-            const eligibleCandidates = this.candidatesData.filter(candidate => 
-                candidate.ai_analysis && 
-                candidate.ai_analysis.compatibility_score >= 0.75 && 
-                candidate.ai_analysis.recommendation_level !== 'reject'
-            );
+            // Get eligible candidates from unified data manager
+            const eligibleCandidates = this.aiDataManager.getEligibleForPromotion();
             
             if (eligibleCandidates.length === 0) {
                 this.showNotification('No Eligible Candidates', 
@@ -7819,17 +8357,19 @@ function catalynxApp() {
             this.aiHeavyPromotionQueue.promotionInProgress = true;
             
             try {
-                // Prepare candidates for AI-Heavy processing
+                // Prepare candidates for AI-Heavy processing with proper data structure
                 const candidatesForResearch = this.aiHeavyPromotionQueue.selectedCandidates.map(candidate => ({
                     opportunity_id: candidate.opportunity_id,
                     organization_name: candidate.organization_name,
                     ein: candidate.ein,
                     website: candidate.website,
-                    ai_lite_score: candidate.ai_analysis.compatibility_score,
-                    ai_lite_insights: candidate.ai_analysis.reasoning,
+                    ai_lite_score: candidate.ai_analysis?.compatibility_score || 0,
+                    ai_lite_insights: candidate.ai_analysis?.reasoning || "",
                     funding_amount: candidate.funding_amount,
                     source_type: candidate.source_type,
-                    research_depth: candidate.estimated_cost > 0.15 ? 'comprehensive' : 'standard'
+                    research_depth: candidate.estimated_cost > 0.15 ? 'comprehensive' : 'standard',
+                    estimated_cost: candidate.estimated_cost,
+                    promotion_timestamp: new Date().toISOString()
                 }));
                 
                 // Call AI-Heavy Deep Research endpoint
@@ -7863,9 +8403,13 @@ function catalynxApp() {
                 // Close promotion modal
                 this.closeAIHeavyPromotionModal();
                 
-                // Show success notification with option to view results
+                // Show success notification with batch summary
+                const batchSummary = researchResult.results?.batch_summary;
+                const successCount = batchSummary?.successful_analyses || candidatesForResearch.length;
+                const totalCost = researchResult.total_cost || batchSummary?.total_cost;
+                
                 this.showNotification('AI-Heavy Promotion Complete', 
-                    `${candidatesForResearch.length} candidates promoted to Deep Research. Cost: $${researchResult.total_cost?.toFixed(4) || 'N/A'}`, 
+                    `${successCount} candidates promoted to Deep Research. Cost: $${totalCost?.toFixed(4) || 'N/A'}`, 
                     'success');
                 
                 // Suggest switching to EXAMINE tab
@@ -7885,7 +8429,7 @@ function catalynxApp() {
             }
         },
         
-        // Apply AI-Heavy research results to candidates
+        // Apply AI-Heavy research results to candidates (UNIFIED DATA MANAGER)
         applyAIHeavyResults(researchResult) {
             if (!researchResult.results || !researchResult.results.research_analyses) {
                 console.warn('Invalid AI-Heavy research result format');
@@ -7893,32 +8437,49 @@ function catalynxApp() {
             }
             
             const researchAnalyses = researchResult.results.research_analyses;
+            let successCount = 0;
             
-            // Apply results to candidates and promote them to EXAMINE tab
-            this.candidatesData.forEach(candidate => {
-                const research = researchAnalyses.find(r => r.opportunity_id === candidate.opportunity_id);
+            // Apply results using unified data manager
+            researchAnalyses.forEach(research => {
+                const researchData = {
+                    research_score: research.research_score || 0,
+                    comprehensive_analysis: research.comprehensive_analysis || "",
+                    strategic_insights: research.strategic_insights || {},
+                    risk_assessment: research.risk_assessment || {},
+                    funding_strategy: research.funding_strategy || {},
+                    competitive_analysis: research.competitive_analysis || {},
+                    research_timestamp: new Date().toISOString(),
+                    research_mode: research.research_mode || 'standard',
+                    cost_breakdown: research.cost_breakdown || { total_cost: 0, model_used: 'unknown' }
+                };
                 
-                if (research) {
-                    // Add AI-Heavy research data to candidate
-                    candidate.ai_heavy_research = {
+                // Update candidate with AI-Heavy research using unified data manager
+                const success = this.aiDataManager.updateCandidateResearch(research.opportunity_id, researchData);
+                
+                if (success) {
+                    successCount++;
+                    console.log(`✅ AI-Heavy research completed for ${research.organization_name}: ${(research.research_score * 100).toFixed(1)}%`);
+                    
+                    // Update processing status
+                    this.aiDataManager.setProcessingStatus(research.opportunity_id, 'completed', {
                         research_score: research.research_score,
-                        comprehensive_analysis: research.comprehensive_analysis,
-                        strategic_insights: research.strategic_insights,
-                        risk_assessment: research.risk_assessment,
-                        funding_strategy: research.funding_strategy,
-                        competitive_analysis: research.competitive_analysis,
-                        research_timestamp: new Date().toISOString(),
-                        research_mode: research.research_mode,
-                        cost_breakdown: research.cost_breakdown
-                    };
-                    
-                    // Mark as promoted to AI-Heavy
-                    candidate.ai_heavy_promoted = true;
-                    candidate.funnel_stage = 'targets'; // Move to EXAMINE stage
-                    
-                    console.log(`✅ AI-Heavy research completed for ${candidate.organization_name}: ${(research.research_score * 100).toFixed(1)}%`);
+                        cost: researchData.cost_breakdown.total_cost
+                    });
+                } else {
+                    console.warn(`⚠️ Failed to apply AI-Heavy research for opportunity ${research.opportunity_id}`);
                 }
             });
+            
+            // Sync changes back to legacy data structures for UI compatibility
+            this.syncDataManagerToLegacy();
+            
+            // Log batch summary
+            if (researchResult.results.batch_summary) {
+                const summary = researchResult.results.batch_summary;
+                console.log(`📊 Batch Summary: ${summary.successful_analyses}/${summary.total_processed} successful, Total cost: $${summary.total_cost?.toFixed(4) || 'N/A'}`);
+            }
+            
+            console.log(`🔄 Applied ${successCount} AI-Heavy research results via unified data manager`);
         },
         
         // Update EXAMINE tab with newly promoted candidates
@@ -7970,23 +8531,17 @@ function catalynxApp() {
             };
         },
         
-        // Utility functions for AI-Heavy promotion interface
+        // Utility functions for AI-Heavy promotion interface (UNIFIED DATA MANAGER)
         getEligibleCandidatesCount() {
-            return this.candidatesData.filter(candidate => 
-                candidate.ai_analysis && 
-                candidate.ai_analysis.compatibility_score >= 0.75 && 
-                candidate.ai_analysis.recommendation_level !== 'reject'
-            ).length;
+            return this.aiDataManager.getEligibleForPromotion().length;
         },
         
         getAILiteAnalyzedCount() {
-            return this.candidatesData.filter(candidate => 
-                candidate.ai_analysis && candidate.ai_analysis.compatibility_score > 0
-            ).length;
+            return this.aiDataManager.getCandidatesWithAI().length;
         },
         
         getHighScoreCandidatesCount() {
-            return this.candidatesData.filter(candidate => 
+            return this.aiDataManager.getAllCandidates().filter(candidate => 
                 candidate.ai_analysis && candidate.ai_analysis.compatibility_score >= 0.75
             ).length;
         },
@@ -8046,19 +8601,17 @@ function catalynxApp() {
         // EXAMINE TAB AI-HEAVY INTEGRATION FUNCTIONS
         // ========================================
         
-        // Get count of AI-Heavy promoted targets
+        // Get count of AI-Heavy promoted targets (UNIFIED DATA MANAGER)
         getAIHeavyPromotedTargetsCount() {
-            if (!this.targetsData) return 0;
-            return this.targetsData.filter(target => 
-                target.ai_heavy_promoted && target.ai_heavy_research
+            return this.aiDataManager.getPromotedCandidates().filter(candidate => 
+                candidate.ai_heavy_research
             ).length;
         },
         
-        // Get AI-Heavy promoted targets
+        // Get AI-Heavy promoted targets (UNIFIED DATA MANAGER)
         getAIHeavyPromotedTargets() {
-            if (!this.targetsData) return [];
-            return this.targetsData.filter(target => 
-                target.ai_heavy_promoted && target.ai_heavy_research
+            return this.aiDataManager.getPromotedCandidates().filter(candidate => 
+                candidate.ai_heavy_research
             );
         },
         
@@ -8228,6 +8781,48 @@ function catalynxApp() {
 
         // ========================================
         // END EXAMINE TAB AI-HEAVY INTEGRATION FUNCTIONS
+        // ========================================
+        
+        // ========================================
+        // DATA SYNCHRONIZATION FUNCTIONS
+        // ========================================
+        
+        // Sync unified data manager changes back to legacy data structures
+        syncDataManagerToLegacy() {
+            const legacyData = this.aiDataManager.exportToLegacyFormat();
+            
+            // Update legacy arrays while preserving reactivity
+            this.candidatesData.splice(0, this.candidatesData.length, ...legacyData.candidatesData);
+            
+            // Update targets data
+            if (!this.targetsData) this.targetsData = [];
+            this.targetsData.splice(0, this.targetsData.length, ...legacyData.targetsData);
+            
+            console.log(`🔄 Synced unified data manager to legacy: ${legacyData.candidatesData.length} candidates, ${legacyData.targetsData.length} targets`);
+        },
+        
+        // Sync legacy data structures to unified data manager (for initialization)
+        syncLegacyToDataManager() {
+            this.aiDataManager.syncWithLegacyData(this.candidatesData, this.targetsData);
+            console.log('🔄 Synced legacy data to unified data manager');
+        },
+        
+        // Initialize unified data manager on app startup
+        initializeDataManager() {
+            console.log('🚀 Initializing unified AI data manager');
+            
+            // Sync existing data if any
+            if (this.candidatesData?.length > 0 || this.targetsData?.length > 0) {
+                this.syncLegacyToDataManager();
+            }
+            
+            // Log initial stats
+            const stats = this.aiDataManager.getStats();
+            console.log('📊 Data Manager Stats:', stats);
+        },
+
+        // ========================================
+        // END DATA SYNCHRONIZATION FUNCTIONS
         // ========================================
         
         // ========================================
