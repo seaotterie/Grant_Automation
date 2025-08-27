@@ -24,6 +24,10 @@ from pydantic import BaseModel, Field
 from enum import Enum
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata
+from src.core.error_recovery import (
+    with_error_recovery, create_ai_retry_policy, error_recovery_manager,
+    ErrorCategory, ErrorSeverity, RecoveryAction
+)
 from .grant_package_generator import GrantPackageGenerator, ApplicationPackage
 
 logger = logging.getLogger(__name__)
@@ -338,6 +342,16 @@ class AIHeavyDossierBuilder(BaseProcessor):
         logger.info(f"APPROACH tab specialization: {'ENABLED' if self.approach_tab_specialization else 'DISABLED'}")
         logger.info(f"Implementation planning mode: {'ENABLED' if self.implementation_planning_mode else 'DISABLED'}")
         
+        # Register fallback handler for this operation
+        def create_fallback_analysis():
+            return {
+                "strategic_dossier": self._create_fallback_strategic_dossier(target_org),
+                "action_plan": self._create_fallback_action_plan(),
+                "confidence_level": 0.6
+            }
+        
+        error_recovery_manager.register_fallback_handler("ai_heavy_research", create_fallback_analysis)
+        
         try:
             # Phase 1.5 Enhancement: Deep Research Integration Check
             if self.deep_research_integration_enabled:
@@ -352,11 +366,25 @@ class AIHeavyDossierBuilder(BaseProcessor):
             else:
                 research_prompt = self._create_comprehensive_research_prompt(enhanced_request)
             
-            # Call OpenAI API with premium settings
-            response = await self._call_openai_api(research_prompt, enhanced_request.request_metadata.model_preference)
+            # Call OpenAI API with comprehensive error recovery
+            response = await error_recovery_manager.execute_with_recovery(
+                operation="openai_api",
+                func=self._call_openai_api,
+                retry_policy=create_ai_retry_policy(),
+                context={"target_organization": target_org, "model": enhanced_request.request_metadata.model_preference},
+                prompt=research_prompt,
+                model=enhanced_request.request_metadata.model_preference
+            )
             
-            # Parse and validate comprehensive results
-            analysis_results = self._parse_comprehensive_api_response(response, request_data)
+            # Parse and validate comprehensive results with error recovery
+            analysis_results = await error_recovery_manager.execute_with_recovery(
+                operation="ai_response_parsing",
+                func=self._parse_comprehensive_api_response,
+                fallback_func=create_fallback_analysis,
+                context={"target_organization": target_org, "response_type": "comprehensive_analysis"},
+                response=response,
+                request_data=request_data
+            )
             
             # Generate comprehensive grant application package
             grant_package = None
@@ -422,7 +450,39 @@ class AIHeavyDossierBuilder(BaseProcessor):
             
         except Exception as e:
             logger.error(f"AI Heavy research failed for {target_org}: {str(e)}")
-            raise
+            
+            # Use comprehensive error recovery with fallback
+            try:
+                fallback_results = create_fallback_analysis()
+                fallback_grant_package = ApplicationPackage(
+                    target_organization=target_org,
+                    application_documents=[],
+                    submission_requirements=[],
+                    timeline_recommendations=[],
+                    success_probability=0.5
+                )
+                
+                result = AIHeavyResult(
+                    research_results=ResearchResults(
+                        research_id=research_id,
+                        target_organization=target_org,
+                        analysis_depth="fallback",
+                        processing_time=0.1,
+                        total_cost=0.0,
+                        model_used="fallback",
+                        confidence_level=0.3
+                    ),
+                    strategic_dossier=fallback_results["strategic_dossier"],
+                    action_plan=fallback_results["action_plan"],
+                    grant_application_package=fallback_grant_package
+                )
+                
+                logger.warning(f"Using fallback analysis for {target_org} due to error: {str(e)}")
+                return result
+                
+            except Exception as fallback_error:
+                logger.error(f"Fallback analysis also failed for {target_org}: {str(fallback_error)}")
+                raise e
     
     def _create_comprehensive_research_prompt(self, request_data: AIHeavyRequest) -> str:
         """Create sophisticated research prompt for comprehensive analysis"""
@@ -1491,6 +1551,132 @@ RESPONSE (JSON only):"""
                 "Cross-system data enrichment and context preservation"
             ]
         }
+    
+    def _create_fallback_strategic_dossier(self, target_organization: str) -> 'StrategicDossier':
+        """Create fallback strategic dossier when AI processing fails"""
+        from datetime import datetime
+        
+        return StrategicDossier(
+            partnership_assessment=PartnershipAssessment(
+                mission_alignment_score=60,
+                strategic_value="medium",
+                mutual_benefits=[f"Potential partnership with {target_organization}"],
+                partnership_potential="requires_further_research"
+            ),
+            funding_strategy=FundingStrategy(
+                optimal_request_amount="$50,000 - $150,000",
+                best_timing="Q3_2024",
+                target_programs=["General funding programs"],
+                success_factors=["Strong application", "Clear project alignment"]
+            ),
+            competitive_analysis=CompetitiveAnalysis(
+                primary_competitors=["Various nonprofit organizations"],
+                competitive_advantages=["Unique organizational mission"],
+                market_position="competitive",
+                differentiation_strategy="Focus on core organizational strengths"
+            ),
+            relationship_strategy=RelationshipStrategy(
+                board_connections=[],
+                staff_approach=["Direct professional outreach"],
+                network_leverage=["Existing professional networks"],
+                engagement_timeline="3-6 month engagement cycle"
+            ),
+            financial_analysis=FinancialAnalysis(
+                funding_capacity_assessment="Requires detailed financial analysis",
+                grant_size_optimization="Standard range based on organization size",
+                cost_benefit_analysis="Positive ROI expected with proper execution",
+                budget_considerations=["Administrative costs", "Program delivery costs"]
+            ),
+            risk_assessment=RiskAssessment(
+                funding_risks=["Competitive application process", "Timing constraints"],
+                partnership_risks=["Mission alignment verification needed"],
+                mitigation_strategies=["Thorough due diligence", "Clear communication"],
+                success_probability=0.6
+            ),
+            grant_application_intelligence=GrantApplicationIntelligence(
+                application_requirements=[
+                    ApplicationRequirement(
+                        category="documentation",
+                        requirement="Standard nonprofit documentation",
+                        priority="high",
+                        estimated_effort="2-4 hours",
+                        completion_notes="Gather standard organizational documents"
+                    )
+                ],
+                grant_timeline=GrantTimeline(
+                    research_phase="2 weeks",
+                    preparation_phase="3 weeks", 
+                    application_phase="2 weeks",
+                    total_timeline="7 weeks",
+                    critical_milestones=["Initial research", "Application submission"]
+                ),
+                effort_estimation=EffortEstimation(
+                    research_hours=8,
+                    writing_hours=12,
+                    coordination_hours=4,
+                    total_hours=24,
+                    complexity_rating="medium"
+                ),
+                competitive_advantages=["Standard organizational strengths"],
+                success_factors=["Clear project alignment", "Professional application"]
+            ),
+            recommended_approach=RecommendedApproach(
+                primary_strategy="Direct professional outreach",
+                timing_recommendation="Begin outreach in Q2 for Q3 submission",
+                resource_allocation="Standard resource commitment",
+                success_metrics=["Response rate", "Meeting conversion"],
+                implementation_notes="Follow standard grant application process"
+            )
+        )
+    
+    def _create_fallback_action_plan(self) -> 'ActionPlan':
+        """Create fallback action plan when AI processing fails"""
+        return ActionPlan(
+            immediate_actions=[
+                ActionItem(
+                    action="Conduct basic research on target organization",
+                    priority="high",
+                    timeline="1 week",
+                    responsible_party="Research team",
+                    resources_needed=["Internet research", "Public records"],
+                    success_criteria="Basic organizational profile completed",
+                    estimated_cost="$0"
+                ),
+                ActionItem(
+                    action="Prepare standard application materials",
+                    priority="medium",
+                    timeline="2 weeks",
+                    responsible_party="Program team",
+                    resources_needed=["Organizational documents", "Writing support"],
+                    success_criteria="Application materials ready for customization",
+                    estimated_cost="$500-1000"
+                )
+            ],
+            short_term_goals=[
+                ActionItem(
+                    action="Submit initial inquiry or application",
+                    priority="high",
+                    timeline="1 month",
+                    responsible_party="Leadership team",
+                    resources_needed=["Completed application", "Supporting documents"],
+                    success_criteria="Application successfully submitted",
+                    estimated_cost="$100-300"
+                )
+            ],
+            long_term_strategy=[
+                ActionItem(
+                    action="Build ongoing relationship with funder",
+                    priority="medium", 
+                    timeline="6 months",
+                    responsible_party="Development team",
+                    resources_needed=["Relationship management", "Regular updates"],
+                    success_criteria="Established ongoing communication",
+                    estimated_cost="$200-500"
+                )
+            ],
+            success_metrics=["Application submission rate", "Response rate", "Funding success rate"],
+            risk_mitigation=["Diversify funding sources", "Maintain backup plans"]
+        )
     
     def get_status(self) -> Dict[str, Any]:
         """Get processor status and configuration"""

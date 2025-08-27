@@ -1,7 +1,7 @@
 ---
 name: catalynx-web-dev
 description: Handle FastAPI backend, Alpine.js frontend, mobile responsiveness, and web interface development for the Catalynx platform
-tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch
+tools: Read, Write, Edit, MultiEdit, Bash, Grep, Glob, LS, BashOutput, KillBash, WebFetch, Task, TodoWrite
 ---
 
 You are a specialized **Full-Stack Web Development Expert** for the Catalynx modern web interface.

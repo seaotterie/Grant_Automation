@@ -24,6 +24,10 @@ from pydantic import BaseModel, Field
 from enum import Enum
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata
+from src.core.error_recovery import (
+    with_error_recovery, create_ai_retry_policy, error_recovery_manager,
+    ErrorCategory, ErrorSeverity, RecoveryAction
+)
 
 logger = logging.getLogger(__name__)
 
@@ -229,6 +233,12 @@ class AILiteScorer(BaseProcessor):
         
         logger.info(f"Starting AI Lite analysis for {len(request_data.candidates)} candidates (batch: {batch_id})")
         
+        # Register fallback handler for AI Lite processing
+        def create_fallback_results():
+            return [self._create_fallback_analysis(candidate) for candidate in request_data.candidates]
+        
+        error_recovery_manager.register_fallback_handler("ai_lite_analysis", create_fallback_results)
+        
         try:
             # Phase 1 Enhancement: Determine research mode
             research_mode = self._should_enable_research_mode(request_data)
@@ -244,18 +254,36 @@ class AILiteScorer(BaseProcessor):
                 max_tokens = self.max_tokens
                 cost_per_candidate = self.estimated_cost_per_candidate
             
-            # Call OpenAI API with appropriate settings
-            response = await self._call_openai_api(
-                batch_prompt, 
-                request_data.request_metadata.model_preference,
+            # Call OpenAI API with comprehensive error recovery
+            response = await error_recovery_manager.execute_with_recovery(
+                operation="openai_api",
+                func=self._call_openai_api,
+                retry_policy=create_ai_retry_policy(),
+                context={"batch_id": batch_id, "candidate_count": len(request_data.candidates)},
+                prompt=batch_prompt,
+                model=request_data.request_metadata.model_preference,
                 max_tokens=max_tokens
             )
             
-            # Parse and validate enhanced results
+            # Parse and validate enhanced results with error recovery
             if research_mode:
-                analysis_results = self._parse_research_enhanced_api_response(response, request_data.candidates)
+                analysis_results = await error_recovery_manager.execute_with_recovery(
+                    operation="ai_response_parsing",
+                    func=self._parse_research_enhanced_api_response,
+                    fallback_func=create_fallback_results,
+                    context={"research_mode": True, "batch_id": batch_id},
+                    response=response,
+                    candidates=request_data.candidates
+                )
             else:
-                analysis_results = self._parse_enhanced_api_response(response, request_data.candidates)
+                analysis_results = await error_recovery_manager.execute_with_recovery(
+                    operation="ai_response_parsing", 
+                    func=self._parse_enhanced_api_response,
+                    fallback_func=create_fallback_results,
+                    context={"research_mode": False, "batch_id": batch_id},
+                    response=response,
+                    candidates=request_data.candidates
+                )
             
             # Calculate processing metrics
             end_time = datetime.now()
@@ -284,7 +312,29 @@ class AILiteScorer(BaseProcessor):
             
         except Exception as e:
             logger.error(f"AI Lite analysis failed: {str(e)}")
-            raise
+            
+            # Use comprehensive error recovery with fallback
+            try:
+                fallback_results = create_fallback_results()
+                
+                result = AILiteBatchResult(
+                    batch_results=BatchResults(
+                        batch_id=batch_id,
+                        processed_count=len(fallback_results),
+                        processing_time=0.1,
+                        total_cost=0.0,
+                        model_used="fallback",
+                        research_mode_enabled=False
+                    ),
+                    candidate_analysis=fallback_results
+                )
+                
+                logger.warning(f"Using fallback analysis for batch {batch_id} due to error: {str(e)}")
+                return result
+                
+            except Exception as fallback_error:
+                logger.error(f"Fallback analysis also failed for batch {batch_id}: {str(fallback_error)}")
+                raise e
     
     def _create_enhanced_batch_prompt(self, request_data: AILiteRequest) -> str:
         """Create sophisticated batch prompt using comprehensive data packet"""
@@ -802,6 +852,52 @@ RESPONSE (JSON only):"""
                 "Evidence-based scoring with documentation"
             ]
         }
+    
+    def _create_fallback_analysis(self, candidate: 'CandidateData') -> 'AILiteAnalysis':
+        """Create fallback analysis when AI processing fails"""
+        return AILiteAnalysis(
+            organization_name=candidate.organization_name,
+            compatibility_score=0.6,
+            strategic_value=StrategicValue.MEDIUM,
+            funding_likelihood=0.5,
+            strategic_rationale=f"Fallback analysis for {candidate.organization_name}. AI processing unavailable - manual review recommended.",
+            risk_assessment=["AI processing unavailable", "Manual review required"],
+            recommended_actions=[
+                "Conduct manual research and analysis",
+                "Review organization website and public documents",
+                "Verify mission alignment manually"
+            ],
+            confidence_level=0.3,
+            research_notes="AI processing failed - fallback analysis provided. Complete manual review recommended for accurate assessment.",
+            
+            # Research mode fields (if applicable)
+            website_intelligence=None,
+            fact_extraction=None,
+            research_report=ResearchReport(
+                key_findings=["AI processing unavailable"],
+                strategic_insights=[f"Manual research required for {candidate.organization_name}"],
+                competitive_analysis=CompetitiveAnalysis(
+                    market_position="Unknown - requires manual analysis",
+                    competitive_advantages=["Manual analysis needed"],
+                    strategic_differentiation="Assessment pending manual review"
+                ),
+                evidence_base=["Fallback analysis - no AI processing completed"],
+                research_confidence=0.3,
+                recommended_next_steps=[
+                    "Conduct comprehensive manual research",
+                    "Review organizational documents and website",
+                    "Assess mission alignment through direct analysis"
+                ]
+            ) if hasattr(candidate, 'research_mode') and candidate.research_mode else None,
+            
+            # Ensure all required analysis components are present
+            next_steps=[
+                "Manual research and verification required",
+                "Review organizational mission and programs",
+                "Assess funding alignment manually"
+            ],
+            supporting_evidence=["Fallback analysis - AI processing unavailable"]
+        )
     
     def get_status(self) -> Dict[str, Any]:
         """Get processor status and configuration"""
