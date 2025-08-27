@@ -581,8 +581,9 @@
                                     </thead>
                                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                         <template x-for="profile in (filteredProfiles || [])" :key="`main-profile-${profile.profile_id}`">
-                                            <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                                                :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedProfile?.profile_id === profile.profile_id}"
+                                            <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l-4"
+                                                :class="selectedProfile?.profile_id === profile.profile_id ? 'border-l-transparent' : 'border-l-transparent'"
+                                                :style="selectedProfile?.profile_id === profile.profile_id ? 'background-color: #1e3a8a !important; border-left: 4px solid #1e3a8a !important;' : ''"
                                                 x-init="$nextTick(() => { if ($data.addProfileContextMenu && typeof $data.addProfileContextMenu === 'function') $data.addProfileContextMenu($el, profile); })"
                                                 @click="selectedProfile = profile">
                                                 <td class="px-6 py-3 whitespace-nowrap">
@@ -805,7 +806,7 @@
                                 
                                 <!-- Foundation Type Filter -->
                                 <select class="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" x-model="foundationTypeFilter">
-                                    <option value="">All Organizations</option>
+                                    <option value="">Show all</option>
                                     <option value="private_non_operating">Private Foundations (990-PF)</option>
                                     <option value="private_operating">Private Operating Foundations</option>
                                     <option value="public_charity">Public Charities (990)</option>
@@ -815,14 +816,14 @@
                                 
                                 <!-- Foundation Application Filter -->
                                 <select class="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" x-model="applicationStatusFilter">
-                                    <option value="">All Applications</option>
+                                    <option value="">Show all</option>
                                     <option value="accepts_applications">✅ Accepts Applications</option>
                                     <option value="invitation_only">📨 Invitation Only</option>
                                     <option value="no_applications">❌ No Applications</option>
                                     <option value="unknown">❓ Unknown Status</option>
                                 </select>
                                 <!-- Refresh Button -->
-                                <button @click="loadProspectsData()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm">
+                                <button @click="location.reload()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm">
                                     Refresh
                                 </button>
                             </div>
@@ -853,8 +854,8 @@
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    <!-- Error Boundary: Show message if prospectsData fails -->
-                                    <template x-if="!prospectsData || prospectsData.length === 0">
+                                    <!-- Error Boundary: Show message if filteredProspectsData fails -->
+                                    <template x-if="!filteredProspectsData || filteredProspectsData.length === 0">
                                         <tr>
                                             <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                                 <div class="flex flex-col items-center space-y-2">
@@ -866,13 +867,17 @@
                                                         <span>No opportunities found for this profile</span>
                                                         <div class="text-sm mt-1">Run discovery to find new opportunities</div>
                                                     </div>
+                                                    <div x-show="prospectsData && prospectsData.length > 0 && filteredProspectsData && filteredProspectsData.length === 0">
+                                                        <span>No opportunities match the current filters</span>
+                                                        <div class="text-sm mt-1">Try adjusting the filter criteria above</div>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
                                     </template>
                                     
                                     <!-- Robust Data Rendering: Use index-based keys and null guards -->
-                                    <template x-for="(prospect, index) in (prospectsData || [])" :key="`prospect_row_${index}`">
+                                    <template x-for="(prospect, index) in (filteredProspectsData || [])" :key="`prospect_row_${index}`">
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700" x-show="prospect">
                                             <td class="px-6 py-3 whitespace-nowrap">
                                                 <div class="flex items-center space-x-2">
@@ -1009,7 +1014,7 @@
                 <div x-show="activeStage === 'plan'" class="space-y-6">
                     <!-- Strategic Planning Header -->
                     <div class="bg-gradient-to-r from-yellow-600 to-orange-600 rounded-lg p-6 text-white">
-                        <h3 class="text-2xl font-bold">Strategic Planning <span class="text-lg font-normal">- In-depth analysis of qualified prospects for decision-ready intelligence</span></h3>
+                        <h3 class="text-2xl font-bold">Strategic Planning <span class="text-lg font-normal">- AI-powered analysis and strategic insights for optimal decision-making</span></h3>
                     </div>
 
                     <!-- Profile Intelligence Center -->
@@ -1078,7 +1083,7 @@
                                         <span x-show="analysisProgress.xml_990_running">Running...</span>
                                     </button>
                                 </div>
-                                <p class="text-sm text-blue-700 dark:text-blue-300">990: Schedule I & financials | 990-PF: Parts I,VIII,XV,XVI</p>
+                                <p class="text-sm text-blue-700 dark:text-blue-300">Detailed Document Reviews</p>
                             </div>
                             <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
                                 <div class="flex items-center justify-between mb-2">
@@ -1098,11 +1103,11 @@
                                     <button @click="startEnhancedScoring()" 
                                             :disabled="analysisProgress.enhanced_scoring_running" 
                                             class="text-xs bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
-                                        <span x-show="!analysisProgress.enhanced_scoring_running">Score Compatibility</span>
+                                        <span x-show="!analysisProgress.enhanced_scoring_running">Run AI Scoring</span>
                                         <span x-show="analysisProgress.enhanced_scoring_running">Running...</span>
                                     </button>
                                 </div>
-                                <p class="text-sm text-green-700 dark:text-green-300">Multi-factor eligibility & fit</p>
+                                <p class="text-sm text-green-700 dark:text-green-300">AI-enhanced compatibility scoring</p>
                             </div>
                             <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
                                 <div class="flex items-center justify-between mb-2">
@@ -1110,11 +1115,11 @@
                                     <button @click="generateStrategicPlan()" 
                                             :disabled="analysisProgress.strategic_running" 
                                             class="text-xs bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
-                                        <span x-show="!analysisProgress.strategic_running">Generate Plan</span>
+                                        <span x-show="!analysisProgress.strategic_running">Generate AI Insights</span>
                                         <span x-show="analysisProgress.strategic_running">Running...</span>
                                     </button>
                                 </div>
-                                <p class="text-sm text-orange-700 dark:text-orange-300">AI-powered recommendations</p>
+                                <p class="text-sm text-orange-700 dark:text-orange-300">AI-generated strategic insights</p>
                             </div>
                         </div>
 
@@ -1667,13 +1672,13 @@
                             <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-orange-900 dark:text-orange-100">AI Intelligence</h5>
-                                    <button @click="runAnalysisTrack('ai')" :disabled="analysisProgress.ai"
+                                    <button @click="showAIIntelligenceConfirmation = true" :disabled="analysisProgress.ai"
                                             class="text-xs bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-2 py-1 rounded">
                                         <span x-show="!analysisProgress.ai">Run</span>
                                         <span x-show="analysisProgress.ai">Running...</span>
                                     </button>
                                 </div>
-                                <p class="text-sm text-orange-700 dark:text-orange-300">Intelligence gathering & fact extraction (~$0.05/candidate)</p>
+                                <p class="text-sm text-orange-700 dark:text-orange-300">Intelligence gathering & fact extraction</p>
                             </div>
                             <!-- 2. Financial Analysis -->
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
@@ -2207,7 +2212,7 @@
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-blue-900 dark:text-blue-100">Deep Research</h5>
-                                    <button @click="runInvestigationTrack('research')" :disabled="investigationProgress.research"
+                                    <button @click="showDeepResearchConfirmation = true" :disabled="investigationProgress.research"
                                             class="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-2 py-1 rounded">
                                         <span x-show="!investigationProgress.research">Run</span>
                                         <span x-show="investigationProgress.research">Running...</span>
@@ -4810,8 +4815,9 @@
                                 </thead>
                                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                     <template x-for="profile in (filteredProfiles || [])" :key="`discovery-profile-${profile.profile_id}`">
-                                        <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                                            :class="{'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500': selectedDiscoveryProfile?.profile_id === profile.profile_id}"
+                                        <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l-4"
+                                            :class="selectedDiscoveryProfile?.profile_id === profile.profile_id ? 'border-l-transparent' : 'border-l-transparent'"
+                                            :style="selectedDiscoveryProfile?.profile_id === profile.profile_id ? 'background-color: #1e3a8a !important; border-left: 4px solid #1e3a8a !important;' : ''"
                                             x-init="$nextTick(() => { if ($data.addProfileContextMenu && typeof $data.addProfileContextMenu === 'function') $data.addProfileContextMenu($el, profile); })"
                                             @click="selectedDiscoveryProfile = profile">
                                             <td class="px-6 py-4 whitespace-nowrap">
@@ -4954,14 +4960,14 @@
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             Organization Name *
                                         </label>
-                                        <input type="text" x-model="selectedProfile.name" required
+                                        <input type="text" x-model="selectedProfile?.name || ''" required
                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             EIN (Tax ID)
                                         </label>
-                                        <input type="text" x-model="selectedProfile.ein"
+                                        <input type="text" x-model="selectedProfile?.ein || ''"
                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white font-mono"
                                                placeholder="XX-XXXXXXX">
                                     </div>
@@ -4972,7 +4978,7 @@
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             Organization Type *
                                         </label>
-                                        <select x-model="selectedProfile.organization_type" required
+                                        <select x-model="selectedProfile?.organization_type || ''" required
                                                 class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
                                             <option value="nonprofit">Nonprofit</option>
                                             <option value="government">Government</option>
@@ -4985,7 +4991,7 @@
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             Status
                                         </label>
-                                        <select x-model="selectedProfile.status"
+                                        <select x-model="selectedProfile?.status || ''"
                                                 class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
                                             <option value="active">Active</option>
                                             <option value="archived">Archived</option>
@@ -4999,12 +5005,12 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         Mission Statement
                                     </label>
-                                    <textarea x-model="selectedProfile.mission_statement" rows="3"
+                                    <textarea x-model="selectedProfile?.mission_statement || ''" rows="3"
                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
                                               placeholder="Describe the organization's mission and purpose"></textarea>
                                     <div class="mt-1 flex justify-end">
                                         <span class="text-xs text-gray-500">
-                                            <span x-text="(selectedProfile.mission_statement || '').length"></span>/1000 characters
+                                            <span x-text="(selectedProfile?.mission_statement || '').length"></span>/1000 characters
                                         </span>
                                     </div>
                                 </div>
@@ -5013,7 +5019,7 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         Focus Areas * (comma-separated)
                                     </label>
-                                    <input type="text" x-model="selectedProfile.focus_areas" required
+                                    <input type="text" x-model="selectedProfile?.focus_areas || ''" required
                                            class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
                                            placeholder="health, education, community development">
                                 </div>
@@ -5022,8 +5028,10 @@
                             <!-- Modal Footer -->
                             <div class="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
                                 <div class="space-x-3">
-                                    <button @click="deleteProfile()" 
-                                            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors">
+                                    <button @click="currentEditingProfile && deleteProfile(currentEditingProfile.profile_id)" 
+                                            :disabled="!currentEditingProfile"
+                                            :class="!currentEditingProfile ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-700'"
+                                            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md transition-colors">
                                         Delete Profile
                                     </button>
                                     <button @click="archiveProfile()" 
@@ -5037,7 +5045,7 @@
                                         Cancel
                                     </button>
                                     <button @click="saveProfileChanges()" 
-                                            :disabled="!selectedProfile.name"
+                                            :disabled="!selectedProfile?.name"
                                             class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-400 transition-colors">
                                         Save Changes
                                     </button>
@@ -8196,6 +8204,128 @@
         </div>
     </div>
 
+    <!-- AI Intelligence Confirmation Modal -->
+    <div x-show="showAIIntelligenceConfirmation" 
+         x-cloak
+         x-transition:enter="ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto">
+        
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity"
+             @click="cancelAIIntelligence()"></div>
+        
+        <!-- Modal content -->
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+            <div x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-orange-100 dark:bg-orange-900/50 sm:mx-0 sm:h-10 sm:w-10">
+                        <svg class="h-6 w-6 text-orange-600 dark:text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                            Start AI Intelligence Analysis
+                        </h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500 dark:text-gray-300">
+                                This will run advanced AI analysis on your candidates to extract strategic intelligence and facts. 
+                                The process will analyze each candidate for compatibility, strategic insights, and actionable intelligence.
+                                <br><br>
+                                Are you ready to proceed with AI Intelligence analysis?
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action buttons -->
+                <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                    <button @click="confirmAIIntelligence()"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-orange-600 text-base font-medium text-white hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 dark:focus:ring-offset-gray-800 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
+                        Start Analysis
+                    </button>
+                    <button @click="cancelAIIntelligence()"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 sm:mt-0 sm:w-auto sm:text-sm transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deep Research Confirmation Modal -->
+    <div x-show="showDeepResearchConfirmation" 
+         x-cloak
+         x-transition:enter="ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto">
+        
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity"
+             @click="cancelDeepResearch()"></div>
+        
+        <!-- Modal content -->
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+            <div x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/50 sm:mx-0 sm:h-10 sm:w-10">
+                        <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                            Start Deep Research Investigation
+                        </h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500 dark:text-gray-300">
+                                This will conduct comprehensive deep research and strategic intelligence gathering on your target opportunities. 
+                                The analysis will provide detailed insights, strategic recommendations, and actionable intelligence for decision-making.
+                                <br><br>
+                                Are you ready to proceed with Deep Research Investigation?
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action buttons -->
+                <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                    <button @click="confirmDeepResearch()"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
+                        Start Research
+                    </button>
+                    <button @click="cancelDeepResearch()"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 sm:mt-0 sm:w-auto sm:text-sm transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- NTEE Code Selection Modal -->
     <div x-show="nteeModal.isOpen" 
          x-transition:enter="ease-out duration-300"
@@ -8284,7 +8414,7 @@
                                 <template x-for="subcat in fullNteeCodeList[nteeModal.selectedMainCategory]?.subcategories || []" :key="subcat.code">
                                     <div @click="toggleSubcategorySelection(subcat.code)"
                                          :class="isSubcategorySelected(subcat.code) ? 
-                                            'bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-600 text-blue-900 dark:text-blue-100' :
+                                            'bg-blue-600 text-white border-blue-600' :
                                             'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600'"
                                          class="flex items-center p-2 border rounded-md cursor-pointer transition-colors">
                                         <div class="flex items-center space-x-2 flex-1">
@@ -8904,19 +9034,28 @@
 
     <!-- Discovery Configuration Modal -->
     <div x-show="showDiscoveryConfigModal" 
-         x-transition:enter="transition ease-out duration-300"
+         x-cloak
+         x-transition:enter="ease-out duration-300"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
-         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave="ease-in duration-200"
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
-         class="fixed inset-0 z-50 overflow-y-auto"
-         @click.away="showDiscoveryConfigModal = false">
+         class="fixed inset-0 z-50 overflow-y-auto">
         
-        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
-            
-            <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity"
+             @click="showDiscoveryConfigModal = false"></div>
+        
+        <!-- Modal content -->
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+            <div x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
                 <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-medium text-gray-900 dark:text-white">Discovery Configuration</h3>
@@ -9000,7 +9139,7 @@
                     </div>
                 </div>
                 
-                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <div class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 dark:border-gray-600">
                     <button @click="saveDiscoveryConfiguration()" 
                             type="button"
                             class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
@@ -9011,6 +9150,7 @@
                             class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
                         Cancel
                     </button>
+                </div>
                 </div>
             </div>
         </div>

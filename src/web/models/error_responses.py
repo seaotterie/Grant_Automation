@@ -62,7 +62,7 @@ class StandardErrorResponse(BaseModel):
 
 class ValidationErrorResponse(StandardErrorResponse):
     """Validation error response with field-specific details."""
-    error_type: ErrorResponseType = Field(ErrorResponseType.VALIDATION_ERROR, const=True)
+    error_type: ErrorResponseType = Field(default=ErrorResponseType.VALIDATION_ERROR)
     
     @classmethod
     def from_validation_error(cls, validation_error: Exception, request_id: Optional[str] = None) -> "ValidationErrorResponse":
@@ -103,7 +103,7 @@ class ValidationErrorResponse(StandardErrorResponse):
 
 class ProcessingErrorResponse(StandardErrorResponse):
     """Processing error response."""
-    error_type: ErrorResponseType = Field(ErrorResponseType.PROCESSING_ERROR, const=True)
+    error_type: ErrorResponseType = Field(default=ErrorResponseType.PROCESSING_ERROR)
     
     @classmethod
     def from_error_info(cls, error_info: ErrorInfo, request_id: Optional[str] = None) -> "ProcessingErrorResponse":
@@ -169,7 +169,7 @@ class ProcessingErrorResponse(StandardErrorResponse):
 
 class AuthenticationErrorResponse(StandardErrorResponse):
     """Authentication error response."""
-    error_type: ErrorResponseType = Field(ErrorResponseType.AUTHENTICATION_ERROR, const=True)
+    error_type: ErrorResponseType = Field(default=ErrorResponseType.AUTHENTICATION_ERROR)
     
     def __init__(self, **kwargs):
         super().__init__(
@@ -189,7 +189,7 @@ class AuthenticationErrorResponse(StandardErrorResponse):
 
 class NotFoundErrorResponse(StandardErrorResponse):
     """Resource not found error response."""
-    error_type: ErrorResponseType = Field(ErrorResponseType.NOT_FOUND_ERROR, const=True)
+    error_type: ErrorResponseType = Field(default=ErrorResponseType.NOT_FOUND_ERROR)
     
     @classmethod
     def for_resource(cls, resource_type: str, resource_id: str, request_id: Optional[str] = None) -> "NotFoundErrorResponse":
@@ -216,7 +216,7 @@ class NotFoundErrorResponse(StandardErrorResponse):
 
 class RateLimitErrorResponse(StandardErrorResponse):
     """Rate limit exceeded error response."""
-    error_type: ErrorResponseType = Field(ErrorResponseType.RATE_LIMIT_ERROR, const=True)
+    error_type: ErrorResponseType = Field(default=ErrorResponseType.RATE_LIMIT_ERROR)
     
     def __init__(self, reset_time: Optional[datetime] = None, **kwargs):
         recovery_guidance = RecoveryGuidance(
@@ -244,7 +244,7 @@ class RateLimitErrorResponse(StandardErrorResponse):
 
 class SystemErrorResponse(StandardErrorResponse):
     """System error response."""
-    error_type: ErrorResponseType = Field(ErrorResponseType.SYSTEM_ERROR, const=True)
+    error_type: ErrorResponseType = Field(default=ErrorResponseType.SYSTEM_ERROR)
     
     def __init__(self, **kwargs):
         super().__init__(
