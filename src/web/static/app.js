@@ -1024,7 +1024,18 @@ function catalynxApp() {
         
         // Discovery Results modal system
         showDiscoveryResultsModal: false,
-        discoveryResultsView: null,
+        discoveryResultsView: {
+            totalResults: 0,
+            filteredResults: [],
+            sortBy: 'compatibility_score',
+            sortOrder: 'desc',
+            filters: {
+                stage: 'all',
+                sourceType: 'all',
+                scoreRange: 'all',
+                applicationStatus: 'all'
+            }
+        },
         
         // Discovery Configuration modal system
         showDiscoveryConfigModal: false,
@@ -3303,6 +3314,59 @@ function catalynxApp() {
         async refreshMetrics() {
             if (this.selectedMetricsProfile) {
                 await this.loadProfileMetrics();
+            }
+        },
+
+        async refreshDiscoveryResults() {
+            console.log('Refreshing discovery results - resetting filters and reloading data');
+            
+            // Ensure discoveryResultsView is properly initialized
+            if (!this.discoveryResultsView) {
+                this.discoveryResultsView = {
+                    totalResults: 0,
+                    filteredResults: [],
+                    sortBy: 'compatibility_score',
+                    sortOrder: 'desc',
+                    filters: {
+                        stage: 'all',
+                        sourceType: 'all',
+                        scoreRange: 'all',
+                        applicationStatus: 'all'
+                    }
+                };
+            }
+            
+            // Reset all filters to their default values
+            this.discoveryResultsView.filters = {
+                stage: 'all',
+                sourceType: 'all',
+                scoreRange: 'all',
+                applicationStatus: 'all'
+            };
+            
+            // Reset sort settings
+            this.discoveryResultsView.sortBy = 'compatibility_score';
+            this.discoveryResultsView.sortOrder = 'desc';
+            
+            // Clear any search terms or other filters used in the Discovery Results table
+            this.scoreSortOrder = '';
+            this.prospectsStageFilter = '';
+            this.foundationTypeFilter = '';
+            this.applicationStatusFilter = '';
+            this.searchQuery = '';
+            
+            // Reload the opportunities data if we have a selected profile
+            if (this.selectedProfile) {
+                try {
+                    console.log(`Reloading opportunities for profile: ${this.selectedProfile.name}`);
+                    await this.loadRealOpportunities();
+                    this.showNotification('Data Refreshed', 'Discovery results have been refreshed', 'success');
+                } catch (error) {
+                    console.error('Error refreshing discovery results:', error);
+                    this.showNotification('Refresh Error', 'Failed to refresh discovery results', 'error');
+                }
+            } else {
+                this.showNotification('No Profile Selected', 'Please select a profile to refresh results', 'info');
             }
         },
 

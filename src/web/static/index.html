@@ -823,7 +823,7 @@
                                     <option value="unknown">❓ Unknown Status</option>
                                 </select>
                                 <!-- Refresh Button -->
-                                <button @click="location.reload()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm">
+                                <button @click="refreshDiscoveryResults()" class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-sm">
                                     Refresh
                                 </button>
                             </div>
@@ -4960,16 +4960,18 @@
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             Organization Name *
                                         </label>
-                                        <input type="text" x-model="selectedProfile?.name || ''" required
-                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                        <input type="text" x-model="selectedProfile.name" required
+                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                               x-init="if (!selectedProfile.name) selectedProfile.name = ''">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             EIN (Tax ID)
                                         </label>
-                                        <input type="text" x-model="selectedProfile?.ein || ''"
+                                        <input type="text" x-model="selectedProfile.ein"
                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white font-mono"
-                                               placeholder="XX-XXXXXXX">
+                                               placeholder="XX-XXXXXXX"
+                                               x-init="if (!selectedProfile.ein) selectedProfile.ein = ''">
                                     </div>
                                 </div>
                                 
@@ -4978,8 +4980,9 @@
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             Organization Type *
                                         </label>
-                                        <select x-model="selectedProfile?.organization_type || ''" required
-                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                        <select x-model="selectedProfile.organization_type" required
+                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                                x-init="if (!selectedProfile.organization_type) selectedProfile.organization_type = ''">
                                             <option value="nonprofit">Nonprofit</option>
                                             <option value="government">Government</option>
                                             <option value="educational">Educational Institution</option>
@@ -4991,8 +4994,9 @@
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                             Status
                                         </label>
-                                        <select x-model="selectedProfile?.status || ''"
-                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
+                                        <select x-model="selectedProfile.status"
+                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
+                                                x-init="if (!selectedProfile.status) selectedProfile.status = 'active'">
                                             <option value="active">Active</option>
                                             <option value="archived">Archived</option>
                                             <option value="draft">Draft</option>
@@ -5005,9 +5009,10 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         Mission Statement
                                     </label>
-                                    <textarea x-model="selectedProfile?.mission_statement || ''" rows="3"
+                                    <textarea x-model="selectedProfile.mission_statement" rows="3"
                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
-                                              placeholder="Describe the organization's mission and purpose"></textarea>
+                                              placeholder="Describe the organization's mission and purpose"
+                                              x-init="if (!selectedProfile.mission_statement) selectedProfile.mission_statement = ''"></textarea>
                                     <div class="mt-1 flex justify-end">
                                         <span class="text-xs text-gray-500">
                                             <span x-text="(selectedProfile?.mission_statement || '').length"></span>/1000 characters
@@ -5019,9 +5024,10 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         Focus Areas * (comma-separated)
                                     </label>
-                                    <input type="text" x-model="selectedProfile?.focus_areas || ''" required
+                                    <input type="text" x-model="selectedProfile.focus_areas" required
                                            class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
-                                           placeholder="health, education, community development">
+                                           placeholder="health, education, community development"
+                                           x-init="if (!selectedProfile.focus_areas) selectedProfile.focus_areas = ''">
                                 </div>
                             </div>
                             
