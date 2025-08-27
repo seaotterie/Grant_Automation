@@ -2461,6 +2461,12 @@ function catalynxApp() {
         isProcessing: false,
         modalActiveTab: 'overview', // Tab state for opportunity modal
         
+        // Delete Confirmation Modal System
+        showDeleteConfirmModal: false,
+        deleteVerificationStep: false,
+        deletingOpportunity: false,
+        opportunityToDelete: null,
+        
         // EIN fetch functionality
         einFetchLoading: false,
         pendingDeleteProfileId: null,
@@ -6207,7 +6213,102 @@ function catalynxApp() {
             this.opportunityLoading = false;
             this.isProcessing = false;
             this.modalActiveTab = 'overview'; // Reset to default tab (Overview)
+            // Also clear delete confirmation state
+            this.showDeleteConfirmation = false;
+            this.deleteConfirmationStep = 1;
+            this.deletingOpportunity = false;
             console.log('Closing opportunity modal');
+        },
+        
+        // Delete Opportunity Functions
+        confirmDeleteOpportunity(opportunity) {
+            console.log('Confirming delete for opportunity:', opportunity);
+            this.opportunityToDelete = opportunity;
+            this.deleteVerificationStep = false;
+            this.deletingOpportunity = false;
+            this.showDeleteConfirmModal = true;
+        },
+        
+        proceedToVerification() {
+            console.log('Proceeding to verification step');
+            this.deleteVerificationStep = true;
+        },
+        
+        cancelDeleteOpportunity() {
+            console.log('Cancelling opportunity deletion');
+            this.showDeleteConfirmModal = false;
+            this.deleteVerificationStep = false;
+            this.deletingOpportunity = false;
+            this.opportunityToDelete = null;
+        },
+        
+        async executeDeleteOpportunity() {
+            if (!this.opportunityToDelete) {
+                console.error('No opportunity selected for deletion');
+                return;
+            }
+            
+            const opportunity = this.opportunityToDelete;
+            const profileId = this.selectedProfile?.profile_id;
+            
+            if (!profileId) {
+                this.showNotification('Error', 'No profile selected', 'error');
+                return;
+            }
+            
+            console.log(`Deleting opportunity: ${opportunity.organization_name} (${opportunity.opportunity_id})`);
+            
+            this.deletingOpportunity = true;
+            
+            try {
+                const response = await fetch(`/api/profiles/${profileId}/opportunities/${opportunity.opportunity_id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // Show success notification
+                    this.showNotification(
+                        'Success', 
+                        `Successfully deleted ${opportunity.organization_name}`, 
+                        'success'
+                    );
+                    
+                    // Close the delete confirmation modal
+                    this.cancelDeleteOpportunity();
+                    
+                    // Close the opportunity modal first
+                    this.closeOpportunityModal();
+                    
+                    // Refresh the opportunities list and profile data
+                    await this.loadRealOpportunities();
+                    await this.refreshSelectedProfileOpportunityCounts();
+                    if (this.selectedProfile) {
+                        await this.loadPlanResults(this.selectedProfile);
+                    }
+                    
+                    console.log('Opportunity deleted successfully:', result);
+                    
+                } else {
+                    const error = await response.json();
+                    this.showNotification(
+                        'Error', 
+                        `Failed to delete opportunity: ${error.detail || error.message || 'Unknown error'}`, 
+                        'error'
+                    );
+                    console.error('Delete failed:', error);
+                }
+                
+            } catch (error) {
+                this.showNotification('Error', `Network error: ${error.message}`, 'error');
+                console.error('Delete error:', error);
+            } finally {
+                this.deletingOpportunity = false;
+            }
         },
 
         // ENHANCED MODAL TAB VISIBILITY FUNCTIONS - STAGE-BASED

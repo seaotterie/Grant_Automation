@@ -6655,6 +6655,53 @@ async def get_opportunity_details(profile_id: str, opportunity_id: str):
         logger.error(f"Error getting opportunity details: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get opportunity details: {str(e)}")
 
+@app.delete("/api/profiles/{profile_id}/opportunities/{opportunity_id}")
+async def delete_opportunity(profile_id: str, opportunity_id: str):
+    """Delete a specific opportunity from a profile"""
+    try:
+        logger.info(f"DELETE request: profile_id={profile_id}, opportunity_id={opportunity_id}")
+        
+        # Validate profile exists
+        profile = profile_service.get_profile(profile_id)
+        if not profile:
+            logger.warning(f"Profile not found: {profile_id}")
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Profile not found", "profile_id": profile_id}
+            )
+        
+        logger.info(f"Profile found: {profile_id}")
+        
+        # Delete the opportunity using profile service
+        success = profile_service.delete_lead(opportunity_id, profile_id)
+        logger.info(f"Delete result: {success}")
+        
+        if not success:
+            logger.warning(f"Opportunity not found for deletion: {opportunity_id}")
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Opportunity not found", "opportunity_id": opportunity_id}
+            )
+        
+        logger.info(f"Successfully deleted opportunity {opportunity_id} from profile {profile_id}")
+        
+        response_data = {
+            "success": True,
+            "message": "Opportunity deleted successfully",
+            "profile_id": profile_id,
+            "opportunity_id": opportunity_id,
+            "deleted_at": datetime.now().isoformat()
+        }
+        logger.info(f"Returning response: {response_data}")
+        return response_data
+        
+    except Exception as e:
+        logger.error(f"Error deleting opportunity {opportunity_id} from profile {profile_id}: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"Failed to delete opportunity: {str(e)}", "opportunity_id": opportunity_id}
+        )
+
 @app.post("/api/profiles/{profile_id}/opportunities/bulk-promote", response_model=BulkPromotionResponse)
 async def bulk_promote_opportunities(profile_id: str, request: BulkPromotionRequest):
     """Bulk promote multiple opportunities"""

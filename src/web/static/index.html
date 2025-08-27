@@ -6957,7 +6957,7 @@
     </div>
 
     <!-- Opportunity Details Modal -->
-    <div x-show="showOpportunityModal" 
+    <div x-show="showOpportunityModal && selectedOpportunity" 
          x-transition:enter="ease-out duration-300"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
@@ -6989,18 +6989,18 @@
                         <!-- Overall Score Badge -->
                         <div class="flex items-center space-x-3">
                             <span class="inline-flex items-center px-4 py-2 rounded-full text-lg font-bold"
-                                  :class="getOpportunityScore(selectedOpportunity) >= 0.80 ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' : 
-                                          getOpportunityScore(selectedOpportunity) >= 0.65 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' : 
+                                  :class="selectedOpportunity && getOpportunityScore(selectedOpportunity) >= 0.80 ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' : 
+                                          selectedOpportunity && getOpportunityScore(selectedOpportunity) >= 0.65 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' : 
                                           'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'">
-                                <span x-text="(getOpportunityScore(selectedOpportunity) * 100).toFixed(1) + '%'"></span>
+                                <span x-text="selectedOpportunity ? (getOpportunityScore(selectedOpportunity) * 100).toFixed(1) + '%' : 'N/A'"></span>
                             </span>
                             <!-- Promotion Status Badge -->
-                            <span x-show="getOpportunityScore(selectedOpportunity) >= 0.80" 
+                            <span x-show="selectedOpportunity && getOpportunityScore(selectedOpportunity) >= 0.80" 
                                   class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
                                 <div class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
                                 Auto-Promote Ready
                             </span>
-                            <span x-show="getOpportunityScore(selectedOpportunity) >= 0.65 && getOpportunityScore(selectedOpportunity) < 0.80" 
+                            <span x-show="selectedOpportunity && getOpportunityScore(selectedOpportunity) >= 0.65 && getOpportunityScore(selectedOpportunity) < 0.80" 
                                   class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
                                 <div class="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
                                 Review for Promotion
@@ -7191,17 +7191,17 @@
                                     <div class="bg-white dark:bg-gray-800 rounded-lg p-4">
                                         <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Stage</div>
                                         <div class="font-semibold">
-                                            <span :class="getStageColor(getActualStage(selectedOpportunity))"
+                                            <span :class="selectedOpportunity ? getStageColor(getActualStage(selectedOpportunity)) : ''"
                                                   class="px-2 py-1 rounded-full text-xs"
-                                                  x-text="formatStageWithNumber(getActualStage(selectedOpportunity))"></span>
+                                                  x-text="selectedOpportunity ? formatStageWithNumber(getActualStage(selectedOpportunity)) : 'N/A'"></span>
                                         </div>
                                     </div>
                                     <div class="bg-white dark:bg-gray-800 rounded-lg p-4">
                                         <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Match Score</div>
                                         <div class="font-semibold">
-                                            <span :class="getOpportunityScore(selectedOpportunity) >= 0.80 ? 'text-green-600' : 
-                                                          getOpportunityScore(selectedOpportunity) >= 0.65 ? 'text-yellow-600' : 'text-red-600'"
-                                                  x-text="(getOpportunityScore(selectedOpportunity) * 100).toFixed(1) + '%'"></span>
+                                            <span :class="selectedOpportunity && getOpportunityScore(selectedOpportunity) >= 0.80 ? 'text-green-600' : 
+                                                          selectedOpportunity && getOpportunityScore(selectedOpportunity) >= 0.65 ? 'text-yellow-600' : 'text-red-600'"
+                                                  x-text="selectedOpportunity ? (getOpportunityScore(selectedOpportunity) * 100).toFixed(1) + '%' : 'N/A'"></span>
                                         </div>
                                     </div>
                                 </div>
@@ -7242,7 +7242,7 @@
                                             <div x-show="selectedOpportunity?.min_revenue_requirement" class="flex items-center space-x-2">
                                                 <span class="w-2 h-2 bg-orange-500 rounded-full"></span>
                                                 <span class="text-sm text-gray-600 dark:text-gray-400">
-                                                    Min Revenue: <span x-text="'$' + (selectedOpportunity.min_revenue_requirement?.toLocaleString() || '0')"></span>
+                                                    Min Revenue: <span x-text="'$' + (selectedOpportunity?.min_revenue_requirement?.toLocaleString() || '0')"></span>
                                                 </span>
                                             </div>
                                         </div>
@@ -7264,7 +7264,7 @@
                                                       x-text="selectedOpportunity?.accepts_applications ? 'Accepts Direct Applications' : 'Invitation Only / No Applications'"></span>
                                             </div>
                                             <div x-show="selectedOpportunity?.application_deadline" class="text-sm text-gray-600 dark:text-gray-400">
-                                                Deadline: <span x-text="selectedOpportunity.application_deadline"></span>
+                                                Deadline: <span x-text="selectedOpportunity?.application_deadline || 'Not specified'"></span>
                                             </div>
                                         </div>
                                         <div x-show="selectedOpportunity?.accepts_applications === undefined" class="text-sm text-gray-500 dark:text-gray-400">
@@ -7282,11 +7282,11 @@
                                             </div>
                                             <div x-show="selectedOpportunity?.matching_requirement" class="text-sm text-gray-600 dark:text-gray-400">
                                                 <span class="font-medium">Matching Funds:</span> 
-                                                <span x-text="selectedOpportunity.matching_requirement + '% required'"></span>
+                                                <span x-text="selectedOpportunity?.matching_requirement ? selectedOpportunity.matching_requirement + '% required' : 'Not specified'"></span>
                                             </div>
                                             <div x-show="selectedOpportunity?.project_duration" class="text-sm text-gray-600 dark:text-gray-400">
                                                 <span class="font-medium">Project Duration:</span> 
-                                                <span x-text="selectedOpportunity.project_duration"></span>
+                                                <span x-text="selectedOpportunity?.project_duration || 'Not specified'"></span>
                                             </div>
                                         </div>
                                     </div>
@@ -7875,16 +7875,133 @@
                         </button>
                     </div>
                     
-                    <!-- Close Button -->
-                    <button @click="closeOpportunityModal()" 
-                            class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
-                        Close
-                    </button>
+                    <!-- Modal Footer with Actions -->
+                    <div class="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <!-- Delete Button (Left Side) -->
+                        <button @click="confirmDeleteOpportunity(selectedOpportunity)" 
+                                class="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors font-medium"
+                                aria-label="Delete this opportunity permanently"
+                                title="Delete this opportunity permanently">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            <span>Delete Opportunity</span>
+                        </button>
+                        
+                        <!-- Close Button (Right Side) -->
+                        <button @click="closeOpportunityModal()" 
+                                class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+                            Close
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     <!-- End Opportunity Details Modal -->
+    
+    <!-- Delete Confirmation Modal -->
+    <div x-show="showDeleteConfirmModal" 
+         x-transition:enter="ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="delete-modal-title"
+         aria-describedby="delete-modal-description"
+         @keydown.escape.window="cancelDeleteOpportunity()">
+        
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Background overlay -->
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+                 @click="cancelDeleteOpportunity()"></div>
+            
+            <!-- Modal positioning helper -->
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+            
+            <!-- Confirmation dialog -->
+            <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <!-- Header -->
+                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <!-- Warning Icon -->
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 sm:mx-0 sm:h-10 sm:w-10">
+                            <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                            </svg>
+                        </div>
+                        
+                        <!-- Content -->
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                            <h3 id="delete-modal-title" class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                                Delete Opportunity
+                            </h3>
+                            <div class="mt-2">
+                                <p id="delete-modal-description" class="text-sm text-gray-500 dark:text-gray-400">
+                                    Are you sure you want to delete 
+                                    <span class="font-semibold text-gray-900 dark:text-white" x-text="opportunityToDelete?.organization_name || 'this opportunity'"></span>?
+                                    This action cannot be undone.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Verification Step (shown after first confirmation) -->
+                <div x-show="deleteVerificationStep" class="bg-yellow-50 dark:bg-yellow-900 px-4 py-3 border-t border-yellow-200 dark:border-yellow-700">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-yellow-800 dark:text-yellow-200 font-medium">
+                                Verify this decision: This will permanently remove all data associated with this opportunity.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action buttons -->
+                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <!-- Delete button (changes after verification step) -->
+                    <button x-show="!deleteVerificationStep"
+                            @click="proceedToVerification()"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Delete
+                    </button>
+                    
+                    <!-- Final confirmation button -->
+                    <button x-show="deleteVerificationStep"
+                            @click="executeDeleteOpportunity()"
+                            :disabled="deletingOpportunity"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-800 text-base font-medium text-white hover:bg-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span x-show="!deletingOpportunity">Confirm Delete</span>
+                        <span x-show="deletingOpportunity" class="flex items-center">
+                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Deleting...
+                        </span>
+                    </button>
+                    
+                    <!-- Cancel button -->
+                    <button @click="cancelDeleteOpportunity()"
+                            :disabled="deletingOpportunity"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-500 shadow-sm px-4 py-2 bg-white dark:bg-gray-600 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End Delete Confirmation Modal -->
     
     
     <!-- Profile Creation/Edit Modal -->

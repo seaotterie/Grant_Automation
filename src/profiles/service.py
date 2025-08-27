@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 from .models import (
     OrganizationProfile, 
     OpportunityLead, 
+    UnifiedOpportunity,
     ProfileSearchParams,
     ProfileStatus,
     PipelineStage,
@@ -340,9 +341,9 @@ class ProfileService:
         with open(lead_file, 'w', encoding='utf-8') as f:
             json.dump(lead.model_dump(), f, indent=2, default=str, ensure_ascii=False)
     
-    def _get_lead(self, lead_id: str) -> Optional[OpportunityLead]:
-        """Get lead by ID"""
-        # Find lead file (pattern includes lead_id)
+    def _get_lead(self, lead_id: str):
+        """Get lead by ID - returns either OpportunityLead or UnifiedOpportunity"""
+        # First try legacy lead files (pattern includes lead_id)
         for lead_file in self.leads_dir.glob(f"{lead_id}_*.json"):
             try:
                 with open(lead_file, 'r', encoding='utf-8') as f:
@@ -351,7 +352,96 @@ class ProfileService:
             except (json.JSONDecodeError, ValueError):
                 continue
         
+        # Try new opportunity file format - check profile directories in parent
+        profiles_root = self.data_dir  # data/profiles
+        for profile_dir in profiles_root.iterdir():
+            if profile_dir.is_dir() and profile_dir.name.startswith('profile_'):
+                opportunities_dir = profile_dir / 'opportunities'
+                if opportunities_dir.exists():
+                    # Handle opportunity_id format (e.g. "opp_test_result_001" or "opp_lead_c721929257b6")
+                    if lead_id.startswith('opp_lead_'):
+                        # Remove "opp_lead_" prefix for legacy format
+                        opportunity_id = lead_id[9:]  # Remove "opp_lead_" prefix
+                        opportunity_file = opportunities_dir / f'opportunity_{opportunity_id}.json'
+                    elif lead_id.startswith('opp_'):
+                        # Remove "opp_" prefix for standard format
+                        opportunity_id = lead_id[4:]  # Remove "opp_" prefix
+                        opportunity_file = opportunities_dir / f'opportunity_{opportunity_id}.json'
+                    else:
+                        opportunity_file = opportunities_dir / f'opportunity_{lead_id}.json'
+                    
+                    if opportunity_file.exists():
+                        try:
+                            with open(opportunity_file, 'r', encoding='utf-8') as f:
+                                data = json.load(f)
+                            # Try UnifiedOpportunity first (new format)
+                            return UnifiedOpportunity(**data)
+                        except (json.JSONDecodeError, ValueError):
+                            continue
+                        except Exception:
+                            # Fallback to OpportunityLead if UnifiedOpportunity fails
+                            try:
+                                with open(opportunity_file, 'r', encoding='utf-8') as f:
+                                    data = json.load(f)
+                                return OpportunityLead(**data)
+                            except:
+                                continue
+        
         return None
+    
+    def delete_lead(self, lead_id: str, profile_id: str) -> bool:
+        """Delete a specific lead/opportunity"""
+        try:
+            # Get the lead first to verify it exists
+            lead = self._get_lead(lead_id)
+            if not lead:
+                return False
+            
+            # Remove lead from profile's associated opportunities (if field exists)
+            profile = self.get_profile(profile_id)
+            if profile and hasattr(profile, 'associated_opportunities') and lead_id in profile.associated_opportunities:
+                profile.associated_opportunities.remove(lead_id)
+                self._save_profile(profile)
+            
+            # Remove legacy lead file(s)
+            deleted_files = 0
+            for lead_file in self.leads_dir.glob(f"{lead_id}_*.json"):
+                try:
+                    lead_file.unlink()
+                    deleted_files += 1
+                except Exception as e:
+                    logger.warning(f"Failed to delete lead file {lead_file}: {e}")
+            
+            # Remove new opportunity file format
+            profile_dir = self.data_dir / profile_id
+            opportunities_dir = profile_dir / 'opportunities'
+            if opportunities_dir.exists():
+                # Handle opportunity_id format (e.g. "opp_test_result_001" or "opp_lead_c721929257b6")
+                if lead_id.startswith('opp_lead_'):
+                    # Remove "opp_lead_" prefix for legacy format
+                    opportunity_id = lead_id[9:]  # Remove "opp_lead_" prefix
+                    opportunity_file = opportunities_dir / f'opportunity_{opportunity_id}.json'
+                elif lead_id.startswith('opp_'):
+                    # Remove "opp_" prefix for standard format
+                    opportunity_id = lead_id[4:]  # Remove "opp_" prefix
+                    opportunity_file = opportunities_dir / f'opportunity_{opportunity_id}.json'
+                else:
+                    opportunity_file = opportunities_dir / f'opportunity_{lead_id}.json'
+                
+                if opportunity_file.exists():
+                    try:
+                        opportunity_file.unlink()
+                        deleted_files += 1
+                        logger.info(f"Deleted opportunity file: {opportunity_file}")
+                    except Exception as e:
+                        logger.warning(f"Failed to delete opportunity file {opportunity_file}: {e}")
+            
+            logger.info(f"Deleted lead {lead_id} for profile {profile_id}: {deleted_files} files removed")
+            return deleted_files > 0
+            
+        except Exception as e:
+            logger.error(f"Failed to delete lead {lead_id}: {e}")
+            return False
     
     # Discovery Session Management
     
