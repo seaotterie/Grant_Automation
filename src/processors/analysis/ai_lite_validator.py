@@ -107,14 +107,14 @@ class AILiteValidator(BaseProcessor):
         )
         super().__init__(metadata)
         
-        # Optimization settings for validation
+        # Optimization settings for validation (Updated for GPT-5-nano)
         self.batch_size = 20  # Higher batch size for simple validation
-        self.model = "gpt-4o-mini"  # Most cost-effective model
+        self.model = "gpt-5-nano"  # Most cost-effective GPT-5 model with higher accuracy
         self.max_tokens = 100  # Minimal tokens for fast validation
         self.temperature = 0.1  # Very low temperature for consistent validation
         
-        # Cost tracking
-        self.estimated_cost_per_candidate = 0.0001  # Ultra-low cost validation
+        # Cost tracking (Updated GPT-5-nano pricing: $0.05/1M input, $0.40/1M output)
+        self.estimated_cost_per_candidate = 0.000025  # Even more cost-effective with GPT-5-nano
         
         # Initialize OpenAI service
         self.openai_service = get_openai_service()

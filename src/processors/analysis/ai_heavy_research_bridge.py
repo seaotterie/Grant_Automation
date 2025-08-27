@@ -157,14 +157,14 @@ class AIHeavyResearchBridge(BaseProcessor):
         )
         super().__init__(metadata)
         
-        # Research bridge settings
+        # Research bridge settings (Updated for GPT-5)
         self.batch_size = 10  # Smaller batches for detailed research
-        self.model = "gpt-4o"  # More capable model for research tasks
+        self.model = "gpt-5"  # Most capable GPT-5 model with built-in reasoning
         self.max_tokens = 600  # Higher token limit for research gathering
         self.temperature = 0.4  # Moderate temperature for research accuracy
         
-        # Cost tracking
-        self.estimated_cost_per_candidate = 0.05  # Research gathering cost
+        # Cost tracking (Updated GPT-5 pricing: $1.25/1M input, $10/1M output)
+        self.estimated_cost_per_candidate = 0.025  # More cost-effective with GPT-5
         
         # Initialize OpenAI service
         self.openai_service = get_openai_service()

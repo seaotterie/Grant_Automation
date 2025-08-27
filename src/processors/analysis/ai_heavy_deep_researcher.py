@@ -49,8 +49,8 @@ class DeepResearchMetadata(BaseModel):
     target_organization: str
     research_depth: ResearchDepth = ResearchDepth.COMPREHENSIVE
     intelligence_types: List[IntelligenceType] = Field(default_factory=list)
-    model_preference: str = "gpt-4"
-    research_budget: float = 0.15
+    model_preference: str = "gpt-5-mini"
+    research_budget: float = 0.10
     priority: str = "standard"
 
 class OrganizationIntelligence(BaseModel):
@@ -209,13 +209,13 @@ class AIHeavyDeepResearcher(BaseProcessor):
         )
         super().__init__(metadata)
         
-        # Deep research settings
-        self.model = "gpt-4"  # Premium model for sophisticated intelligence
+        # Deep research settings (Updated for GPT-5-mini)
+        self.model = "gpt-5-mini"  # Advanced GPT-5 model for sophisticated intelligence
         self.max_tokens = 4500  # Extended token limit for deep research
         self.temperature = 0.3  # Lower temperature for consistent intelligence gathering
         
-        # Cost tracking
-        self.estimated_cost_per_research = 0.12  # Conservative estimate for deep research
+        # Cost tracking (Updated GPT-5-mini pricing)
+        self.estimated_cost_per_research = 0.06  # More cost-effective with GPT-5-mini
         self.research_depth_multipliers = {
             ResearchDepth.FOCUSED: 0.6,
             ResearchDepth.COMPREHENSIVE: 1.0,

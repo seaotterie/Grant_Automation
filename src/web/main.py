@@ -4,6 +4,10 @@ Catalynx - Modern Web Interface
 FastAPI backend with real-time progress monitoring
 """
 
+# Load environment variables first
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query, Body, Depends, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse

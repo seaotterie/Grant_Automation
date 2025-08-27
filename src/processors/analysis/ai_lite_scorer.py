@@ -87,8 +87,8 @@ class RequestMetadata(BaseModel):
     batch_id: str
     profile_id: str
     analysis_type: str = "compatibility_scoring"
-    model_preference: str = "gpt-3.5-turbo"
-    cost_limit: float = 0.01
+    model_preference: str = "gpt-5-nano"
+    cost_limit: float = 0.005
     priority: str = "standard"
 
 class FundingHistory(BaseModel):
@@ -186,16 +186,16 @@ class AILiteScorer(BaseProcessor):
         )
         super().__init__(metadata)
         
-        # Cost optimization settings
+        # Cost optimization settings (Updated for GPT-5-nano)
         self.batch_size = 15  # Optimal batch size for cost/performance
-        self.model = "gpt-3.5-turbo"  # Cost-effective model
+        self.model = "gpt-5-nano"  # Most cost-effective GPT-5 model
         self.max_tokens = 150  # Keep responses concise for cost control (scoring mode)
         self.max_tokens_research = 800  # Extended tokens for research mode
         self.temperature = 0.3  # Lower temperature for consistent analysis
         
-        # Cost tracking
-        self.estimated_cost_per_candidate = 0.0001  # Conservative estimate (scoring mode)
-        self.estimated_cost_per_candidate_research = 0.0008  # Research mode estimate
+        # Cost tracking (Updated GPT-5-nano pricing: $0.25/1M input, $2.0/1M output)
+        self.estimated_cost_per_candidate = 0.00005  # More cost-effective with GPT-5-nano
+        self.estimated_cost_per_candidate_research = 0.0004  # Research mode estimate
         
         # Phase 1 Enhancement: Research mode settings
         self.research_mode_default = True  # Enable research by default in Phase 1

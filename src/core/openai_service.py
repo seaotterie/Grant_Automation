@@ -50,11 +50,18 @@ class OpenAIService:
         self.cost_tracking = {}
         self.request_count = 0
         
-        # Cost per token (approximate rates as of 2024)
+        # Cost per token (updated August 2025)
         self.cost_per_token = {
+            # Legacy Models
             "gpt-3.5-turbo": {"input": 0.0010 / 1000, "output": 0.0020 / 1000},
             "gpt-4": {"input": 0.0300 / 1000, "output": 0.0600 / 1000},
-            "gpt-4-turbo": {"input": 0.0100 / 1000, "output": 0.0300 / 1000}
+            "gpt-4-turbo": {"input": 0.0100 / 1000, "output": 0.0300 / 1000},
+            "gpt-4o": {"input": 0.0025 / 1000, "output": 0.0100 / 1000},
+            # GPT-5 Models (August 2025 Release)
+            "gpt-5": {"input": 1.25 / 1000000, "output": 10.0 / 1000000},  # $1.25/1M input, $10/1M output
+            "gpt-5-mini": {"input": 0.5 / 1000000, "output": 4.0 / 1000000},  # Estimated pricing
+            "gpt-5-nano": {"input": 0.25 / 1000000, "output": 2.0 / 1000000}, # Estimated pricing
+            "gpt-5-chat-latest": {"input": 1.25 / 1000000, "output": 10.0 / 1000000}
         }
         
         # Rate limiting

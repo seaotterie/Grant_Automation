@@ -51,8 +51,8 @@ class ResearchMetadata(BaseModel):
     profile_id: str
     target_organization: str
     analysis_depth: AnalysisDepth = AnalysisDepth.COMPREHENSIVE
-    model_preference: str = "gpt-4"
-    cost_budget: float = 0.25
+    model_preference: str = "gpt-5-mini"
+    cost_budget: float = 0.15
     priority: Priority = Priority.HIGH
 
 class ContextProfileData(BaseModel):
@@ -302,13 +302,13 @@ class AIHeavyDossierBuilder(BaseProcessor):
         )
         super().__init__(metadata)
         
-        # Implementation planning settings
-        self.model = "gpt-4"  # Premium model for sophisticated implementation planning
+        # Implementation planning settings (Updated for GPT-5-mini)
+        self.model = "gpt-5-mini"  # Advanced GPT-5 model for sophisticated implementation planning
         self.max_tokens = 3500  # Optimized token limit for implementation analysis
         self.temperature = 0.3  # Lower temperature for consistent implementation planning
         
-        # Cost tracking
-        self.estimated_cost_per_dossier = 0.16  # Optimized cost for implementation-focused analysis
+        # Cost tracking (Updated GPT-5-mini pricing: ~$0.50/1M input, ~$4.0/1M output)
+        self.estimated_cost_per_dossier = 0.08  # More cost-effective with GPT-5-mini
         
         # Grant application intelligence
         self.grant_package_generator = GrantPackageGenerator()

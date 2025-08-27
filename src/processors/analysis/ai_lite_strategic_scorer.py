@@ -107,14 +107,14 @@ class AILiteStrategicScorer(BaseProcessor):
         )
         super().__init__(metadata)
         
-        # Strategic analysis settings
+        # Strategic analysis settings (Updated for GPT-5-nano)
         self.batch_size = 15  # Optimal batch for strategic analysis
-        self.model = "gpt-4o-mini"  # Cost-effective but capable model
+        self.model = "gpt-5-nano"  # Most cost-effective GPT-5 model with superior reasoning
         self.max_tokens = 200  # Moderate tokens for strategic reasoning
         self.temperature = 0.3  # Balanced temperature for strategic judgment
         
-        # Cost tracking
-        self.estimated_cost_per_candidate = 0.0003  # Strategic analysis cost
+        # Cost tracking (Updated GPT-5-nano pricing: $0.05/1M input, $0.40/1M output)
+        self.estimated_cost_per_candidate = 0.000075  # More cost-effective with better strategic reasoning
         
         # Initialize OpenAI service
         self.openai_service = get_openai_service()
