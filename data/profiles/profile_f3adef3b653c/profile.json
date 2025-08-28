@@ -24,50 +24,41 @@
     "F40"
   ],
   "created_at": "2025-08-10 14:40:01.485534",
-  "updated_at": "2025-08-20T14:37:56.313002",
+  "updated_at": "2025-08-27T19:05:35.165857",
   "analytics": {
-    "opportunity_count": 57,
+    "opportunity_count": 51,
     "stages_distribution": {
-      "pre_scoring": 14,
       "recommendations": 1,
-      "discovery": 41,
+      "pre_scoring": 10,
+      "discovery": 39,
       "deep_analysis": 1
     },
     "scoring_stats": {
-      "avg_score": 0.679,
-      "high_potential_count": 15,
-      "auto_promotion_eligible": 15,
-      "last_scored": "2025-08-19T17:53:12.550784"
+      "avg_score": 0.663,
+      "high_potential_count": 11,
+      "auto_promotion_eligible": 11,
+      "last_scored": "2025-08-19T17:53:12.519484"
     },
     "discovery_stats": {
       "total_sessions": 3,
-      "last_discovery": "2025-08-19T17:53:12.519289",
-      "last_session_results": 4,
-      "avg_results_per_session": 19.0
+      "last_discovery": "2025-08-19T17:53:12.519277",
+      "last_session_results": 1,
+      "avg_results_per_session": 17.0
     },
     "promotion_stats": {
-      "total_promotions": 6,
+      "total_promotions": 5,
       "auto_promotions": 1,
-      "manual_promotions": 5,
-      "promotion_rate": 0.11
+      "manual_promotions": 4,
+      "promotion_rate": 0.1
     }
   },
   "recent_activity": [
     {
       "type": "manual_promotion",
-      "date": "2025-08-20T14:37:56.292477",
+      "date": "2025-08-27T19:05:35.156099",
       "results": null,
       "source": null,
-      "opportunity": "Medium Score Foundation Test 1755640392",
-      "from_stage": "discovery",
-      "to_stage": "pre_scoring"
-    },
-    {
-      "type": "manual_promotion",
-      "date": "2025-08-20T14:37:19.957561",
-      "results": null,
-      "source": null,
-      "opportunity": "Test Foundation for Enhanced Discovery",
+      "opportunity": "IMPACT MINISTRY HUB",
       "from_stage": "discovery",
       "to_stage": "pre_scoring"
     },
@@ -81,9 +72,18 @@
       "to_stage": "recommendations"
     },
     {
+      "type": "auto_promotion",
+      "date": "2025-08-19T17:53:12.549615",
+      "results": null,
+      "source": null,
+      "opportunity": "Norfolk Foundation Test 1755640392",
+      "from_stage": "discovery",
+      "to_stage": "deep_analysis"
+    },
+    {
       "type": "discovery_session",
       "date": "2025-08-19T12:00:00",
-      "results": 4,
+      "results": 1,
       "source": "Multiple Sources",
       "opportunity": null,
       "from_stage": null,

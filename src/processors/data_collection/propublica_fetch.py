@@ -194,11 +194,7 @@ class ProPublicaFetchProcessor(BaseProcessor):
         
         try:
             # First check entity cache for existing ProPublica data
-            cached_data = await self.entity_cache_manager.get_entity_data(
-                entity_id=org.ein,
-                entity_type=EntityType.NONPROFIT,
-                data_source=DataSourceType.PROPUBLICA
-            )
+            cached_data = self.entity_cache_manager.get_entity_data(org.ein)
             
             if cached_data:
                 self.logger.info(f"Using cached ProPublica data for {org.ein}")

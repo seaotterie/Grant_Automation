@@ -2418,7 +2418,14 @@ function catalynxApp() {
         showCreateProfile: false,
         showViewProfile: false,
         showEditProfile: false,
-        selectedProfile: {},
+        selectedProfile: {
+            name: '',
+            ein: '',
+            organization_type: '',
+            status: 'active',
+            mission_statement: '',
+            focus_areas: []
+        },
         profileSearchQuery: '',
         totalProfiles: 0,
         
@@ -3122,7 +3129,14 @@ function catalynxApp() {
                 
                 // Clear selected profiles immediately if they match the deleted one
                 if (this.selectedProfile && this.selectedProfile.profile_id === this.pendingDeleteProfileId) {
-                    this.selectedProfile = null;
+                    this.selectedProfile = {
+                        name: '',
+                        ein: '',
+                        organization_type: '',
+                        status: 'active',
+                        mission_statement: '',
+                        focus_areas: []
+                    };
                 }
                 if (this.selectedDiscoveryProfile && this.selectedDiscoveryProfile.profile_id === this.pendingDeleteProfileId) {
                     this.selectedDiscoveryProfile = null;
@@ -4068,6 +4082,46 @@ function catalynxApp() {
             state: false,
             commercial: false
         },
+        
+        // Enhanced discovery progress with detailed states
+        enhancedDiscoveryProgress: {
+            nonprofit: { 
+                state: 'idle',  // idle, starting, processing, completing, success, error
+                processor: null,
+                progress: 0,
+                message: 'Ready to run',
+                startTime: null,
+                endTime: null,
+                results: 0
+            },
+            federal: { 
+                state: 'idle',
+                processor: null,
+                progress: 0,
+                message: 'Ready to run',
+                startTime: null,
+                endTime: null,
+                results: 0
+            },
+            state: { 
+                state: 'idle',
+                processor: null,
+                progress: 0,
+                message: 'Ready to run',
+                startTime: null,
+                endTime: null,
+                results: 0
+            },
+            commercial: { 
+                state: 'idle',
+                processor: null,
+                progress: 0,
+                message: 'Ready to run',
+                startTime: null,
+                endTime: null,
+                results: 0
+            }
+        },
 
         // Investigation progress tracking (EXAMINE tab)
         investigationProgress: {
@@ -4924,34 +4978,79 @@ function catalynxApp() {
                 return;
             }
 
-            // Set track progress
+            // Check if already running
+            if (this.isTrackRunning(track)) {
+                console.log(`Track ${track} is already running`);
+                return;
+            }
+
+            // Set track progress (legacy and enhanced)
             this.discoveryProgress[track] = true;
+            this.updateTrackProgress(track, 'starting', { 
+                message: 'Initializing discovery track...' 
+            });
 
             try {
+                this.updateTrackProgress(track, 'processing', { 
+                    message: 'Running discovery processors...' 
+                });
+
                 switch(track) {
                     case 'nonprofit':
+                        this.updateTrackProgress(track, 'processing', { 
+                            processor: 'ProPublica + BMF', 
+                            message: 'Searching nonprofit databases...' 
+                        });
                         await this.runNonprofitDiscovery();
                         break;
                     case 'federal':
+                        this.updateTrackProgress(track, 'processing', { 
+                            processor: 'Grants.gov', 
+                            message: 'Searching federal opportunities...' 
+                        });
                         await this.runFederalDiscovery();
                         break;
                     case 'state':
+                        this.updateTrackProgress(track, 'processing', { 
+                            processor: 'VA State', 
+                            message: 'Searching state agencies...' 
+                        });
                         await this.runStateDiscovery();
                         break;
                     case 'commercial':
+                        this.updateTrackProgress(track, 'processing', { 
+                            processor: 'Foundation Dir', 
+                            message: 'Searching foundations...' 
+                        });
                         await this.runCommercialDiscovery();
                         break;
                     default:
                         console.error(`Unknown track: ${track}`);
+                        this.updateTrackProgress(track, 'error', { 
+                            message: `Unknown track: ${track}` 
+                        });
                         this.showNotification('Error', `Unknown discovery track: ${track}`, 'error');
                         return;
                 }
                 
-                // Note: Individual track runners handle their own stats updates via updateDiscoveryStatsFromData()
+                this.updateTrackProgress(track, 'completing', { 
+                    message: 'Processing results...' 
+                });
+                
+                // Get result count for display
+                const results = this.discoveryStats[track] || 0;
+                this.updateTrackProgress(track, 'success', { 
+                    results: results,
+                    message: `Found ${results} opportunities` 
+                });
+                
                 this.showNotification('Discovery Complete', `${track.charAt(0).toUpperCase() + track.slice(1)} track completed successfully`, 'success');
                 
             } catch (error) {
                 console.error(`${track} discovery failed:`, error);
+                this.updateTrackProgress(track, 'error', { 
+                    message: `Discovery failed: ${error.message || 'Unknown error'}` 
+                });
                 this.showNotification('Discovery Error', `${track} discovery failed`, 'error');
             } finally {
                 this.discoveryProgress[track] = false;
@@ -9572,7 +9671,100 @@ function catalynxApp() {
                 commercial: false
             };
             
+            // Reset enhanced progress states
+            for (const track of ['nonprofit', 'federal', 'state', 'commercial']) {
+                this.resetTrackProgress(track);
+            }
+            
             this.showNotification('Results Cleared', 'All discovery results have been cleared', 'info');
+        },
+        
+        // Enhanced Progress Management Functions
+        updateTrackProgress(track, state, options = {}) {
+            if (!this.enhancedDiscoveryProgress[track]) return;
+            
+            const trackProgress = this.enhancedDiscoveryProgress[track];
+            trackProgress.state = state;
+            
+            // Update optional fields
+            if (options.processor) trackProgress.processor = options.processor;
+            if (options.progress !== undefined) trackProgress.progress = options.progress;
+            if (options.message) trackProgress.message = options.message;
+            if (options.results !== undefined) trackProgress.results = options.results;
+            
+            // Handle timing
+            if (state === 'starting') {
+                trackProgress.startTime = new Date();
+                trackProgress.endTime = null;
+            } else if (state === 'success' || state === 'error') {
+                trackProgress.endTime = new Date();
+            }
+            
+            console.log(`[Enhanced Progress] ${track}: ${state} - ${options.message || trackProgress.message}`);
+        },
+        
+        resetTrackProgress(track) {
+            if (!this.enhancedDiscoveryProgress[track]) return;
+            
+            this.enhancedDiscoveryProgress[track] = {
+                state: 'idle',
+                processor: null,
+                progress: 0,
+                message: 'Ready to run',
+                startTime: null,
+                endTime: null,
+                results: 0
+            };
+        },
+        
+        getTrackButtonText(track) {
+            if (!this.enhancedDiscoveryProgress[track]) return 'Run';
+            
+            const progress = this.enhancedDiscoveryProgress[track];
+            switch (progress.state) {
+                case 'idle':
+                    return 'Run';
+                case 'starting':
+                    return 'Starting...';
+                case 'processing':
+                    return progress.processor ? `${progress.processor}...` : 'Processing...';
+                case 'completing':
+                    return 'Finalizing...';
+                case 'success':
+                    return `✓ ${progress.results}`;
+                case 'error':
+                    return '✗ Failed';
+                default:
+                    return 'Run';
+            }
+        },
+        
+        getTrackButtonClass(track) {
+            if (!this.enhancedDiscoveryProgress[track]) return '';
+            
+            const progress = this.enhancedDiscoveryProgress[track];
+            const baseClasses = 'text-xs px-2 py-1 rounded transition-colors';
+            
+            switch (progress.state) {
+                case 'idle':
+                    return `${baseClasses} bg-blue-600 hover:bg-blue-700 text-white`;
+                case 'starting':
+                case 'processing':
+                case 'completing':
+                    return `${baseClasses} bg-yellow-500 text-white cursor-not-allowed`;
+                case 'success':
+                    return `${baseClasses} bg-green-600 text-white`;
+                case 'error':
+                    return `${baseClasses} bg-red-600 text-white`;
+                default:
+                    return `${baseClasses} bg-gray-400 text-white`;
+            }
+        },
+        
+        isTrackRunning(track) {
+            if (!this.enhancedDiscoveryProgress[track]) return false;
+            const state = this.enhancedDiscoveryProgress[track].state;
+            return ['starting', 'processing', 'completing'].includes(state);
         },
         
         // Discovery utility functions

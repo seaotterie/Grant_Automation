@@ -87,7 +87,12 @@
       "Bash(del test_*.py cleanup_*.py analyze_*.py fix_*.py)",
       "Bash(del government_data_migration.py)",
       "Bash(npm install:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(del fix_data_structure.py)",
+      "Bash(for:*)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(head:*)",
+      "Bash(done)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

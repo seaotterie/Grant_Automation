@@ -7,6 +7,10 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import logging
+import time
+import os
+import threading
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +24,7 @@ from .models import (
     PipelineStage,
     DiscoverySession
 )
+from .unified_opportunity_service import UnifiedOpportunityService
 
 
 class ProfileService:
@@ -31,11 +36,157 @@ class ProfileService:
         self.profiles_dir = self.data_dir / "profiles"
         self.leads_dir = self.data_dir / "leads"
         self.sessions_dir = self.data_dir / "sessions"
+        self.locks_dir = self.data_dir / "locks"
         
         # Create directories if they don't exist
         self.profiles_dir.mkdir(parents=True, exist_ok=True)
         self.leads_dir.mkdir(parents=True, exist_ok=True)
         self.sessions_dir.mkdir(parents=True, exist_ok=True)
+        self.locks_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize unified opportunity service
+        self.opportunity_service = UnifiedOpportunityService(str(self.data_dir))
+        
+        # Thread locks for in-process synchronization
+        self._profile_locks = {}
+        self._locks_lock = threading.Lock()
+    
+    # Session Locking Methods
+    
+    @contextmanager
+    def _acquire_discovery_lock(self, profile_id: str, timeout: int = 30):
+        """
+        Acquire a discovery lock for a profile to prevent race conditions.
+        Uses both file-based locking (for cross-process) and thread locks (for in-process).
+        """
+        lock_file = self.locks_dir / f"{profile_id}_discovery.lock"
+        thread_lock = None
+        file_lock = None
+        
+        try:
+            # Get or create thread lock for this profile
+            with self._locks_lock:
+                if profile_id not in self._profile_locks:
+                    self._profile_locks[profile_id] = threading.Lock()
+                thread_lock = self._profile_locks[profile_id]
+            
+            # Acquire thread lock first (for in-process synchronization)
+            if not thread_lock.acquire(timeout=timeout):
+                raise TimeoutError(f"Failed to acquire thread lock for profile {profile_id} within {timeout} seconds")
+            
+            # Acquire file lock (for cross-process synchronization)
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                try:
+                    # Try to create lock file atomically
+                    file_lock = open(lock_file, 'x')  # 'x' mode fails if file exists
+                    file_lock.write(f"locked_by_pid:{os.getpid()}_time:{datetime.now().isoformat()}\n")
+                    file_lock.flush()
+                    logger.info(f"Acquired discovery lock for profile {profile_id}")
+                    break
+                except FileExistsError:
+                    # Lock file exists, check if it's stale
+                    if self._is_stale_lock(lock_file):
+                        logger.warning(f"Removing stale lock file: {lock_file}")
+                        try:
+                            lock_file.unlink()
+                            continue
+                        except FileNotFoundError:
+                            continue  # Another process removed it
+                    
+                    # Wait a bit before retrying
+                    time.sleep(0.1)
+            else:
+                thread_lock.release()
+                raise TimeoutError(f"Failed to acquire file lock for profile {profile_id} within {timeout} seconds")
+            
+            yield
+            
+        finally:
+            # Release file lock
+            if file_lock:
+                try:
+                    file_lock.close()
+                    lock_file.unlink()
+                    logger.info(f"Released discovery lock for profile {profile_id}")
+                except Exception as e:
+                    logger.warning(f"Error releasing file lock for profile {profile_id}: {e}")
+            
+            # Release thread lock
+            if thread_lock:
+                thread_lock.release()
+    
+    def _is_stale_lock(self, lock_file: Path, max_age_minutes: int = 30) -> bool:
+        """Check if a lock file is stale (older than max_age_minutes)"""
+        try:
+            if not lock_file.exists():
+                return False
+                
+            # Check file age
+            file_age = time.time() - lock_file.stat().st_mtime
+            if file_age > max_age_minutes * 60:
+                return True
+            
+            # Check if the PID in the lock file is still running (Unix-like systems)
+            try:
+                with open(lock_file, 'r') as f:
+                    content = f.read().strip()
+                if content.startswith("locked_by_pid:"):
+                    pid_str = content.split("_time:")[0].split(":")[1]
+                    pid = int(pid_str)
+                    
+                    # On Windows, this will raise an exception for non-existent PIDs
+                    # On Unix, we can check /proc/{pid} but for simplicity, we'll rely on age
+                    if os.name == 'nt':  # Windows
+                        # For Windows, we mainly rely on file age
+                        return file_age > 5 * 60  # 5 minutes for Windows
+                    else:  # Unix-like
+                        try:
+                            os.kill(pid, 0)  # Check if process exists
+                            return False  # Process exists, lock is not stale
+                        except ProcessLookupError:
+                            return True  # Process doesn't exist, lock is stale
+                        except PermissionError:
+                            return False  # Process exists but we can't signal it
+                            
+            except (ValueError, IndexError, FileNotFoundError):
+                # If we can't parse the lock file, consider it stale if it's old enough
+                return file_age > max_age_minutes * 60
+                
+        except Exception as e:
+            logger.warning(f"Error checking if lock file is stale: {e}")
+            return False
+        
+        return False
+    
+    def is_discovery_in_progress(self, profile_id: str) -> bool:
+        """Check if discovery is currently in progress for a profile"""
+        lock_file = self.locks_dir / f"{profile_id}_discovery.lock"
+        
+        # Check for file lock first
+        if lock_file.exists() and not self._is_stale_lock(lock_file):
+            logger.debug(f"Discovery in progress due to active lock file: {lock_file}")
+            return True
+        
+        # Check for active sessions (this is the most reliable indicator)
+        active_sessions = [s for s in self.get_profile_sessions(profile_id, limit=10) 
+                         if s.status == "in_progress"]
+        
+        if active_sessions:
+            logger.debug(f"Discovery in progress due to {len(active_sessions)} active sessions")
+            return True
+        
+        # Check profile status only as final fallback
+        profile = self.get_profile(profile_id)
+        if profile and profile.discovery_status == "in_progress":
+            # Profile says in progress but no active sessions - this is likely stale
+            logger.warning(f"Profile {profile_id} shows discovery_status='in_progress' but no active sessions found - likely stale")
+            # Reset the status since we have no active sessions
+            profile.discovery_status = "completed"
+            self._save_profile(profile)
+            return False
+        
+        return False
     
     # Profile CRUD Operations
     
@@ -179,56 +330,25 @@ class ProfileService:
     # Opportunity Lead Management
     
     def add_opportunity_lead(self, profile_id: str, lead_data: Dict[str, Any]) -> Optional[OpportunityLead]:
-        """Add opportunity lead to profile with deduplication"""
+        """Add opportunity lead to profile with deduplication (uses unified opportunity service)"""
         # Verify profile exists
         profile = self.get_profile(profile_id)
         if not profile:
             return None
         
-        # Check for duplicate opportunities based on organization name and funding amount
-        existing_leads = self.get_profile_leads(profile_id)
-        org_name = lead_data.get("organization_name", "").strip().lower()
-        funding_amount = lead_data.get("funding_amount", 0)
+        # Use unified opportunity service (returns lead format for backward compatibility)
+        lead = self.opportunity_service.add_opportunity_lead(profile_id, lead_data)
         
-        for existing_lead in existing_leads:
-            existing_org = existing_lead.organization_name.strip().lower()
-            existing_amount = existing_lead.funding_amount or 0
+        if lead:
+            # Update profile opportunities count and metadata
+            profile.opportunities_count = len(self.get_profile_leads(profile_id))
+            if lead.lead_id not in profile.associated_opportunities:
+                profile.associated_opportunities.append(lead.lead_id)
+            profile.last_discovery_date = datetime.now()
+            profile.discovery_status = "completed"
             
-            # Check for duplicate based on organization name and funding amount
-            if existing_org == org_name and existing_amount == funding_amount:
-                # Update the existing lead with new data if it has better score
-                new_score = lead_data.get("compatibility_score", 0.0)
-                if new_score > (existing_lead.compatibility_score or 0.0):
-                    # Update existing lead with better data
-                    existing_lead.compatibility_score = new_score
-                    existing_lead.match_factors.update(lead_data.get("match_factors", {}))
-                    existing_lead.external_data.update(lead_data.get("external_data", {}))
-                    existing_lead.last_analyzed = datetime.now()
-                    self._save_lead(existing_lead)
-                return existing_lead
-        
-        # Generate lead ID
-        lead_id = f"lead_{uuid.uuid4().hex[:12]}"
-        
-        lead_data.update({
-            'lead_id': lead_id,
-            'profile_id': profile_id
-        })
-        
-        lead = OpportunityLead(**lead_data)
-        
-        # Save lead
-        self._save_lead(lead)
-        
-        # Update profile opportunities count
-        profile.opportunities_count = len(self.get_profile_leads(profile_id))
-        if lead_id not in profile.associated_opportunities:
-            profile.associated_opportunities.append(lead_id)
-        profile.last_discovery_date = datetime.now()
-        profile.discovery_status = "completed"
-        
-        # Save updated profile
-        self.update_profile(profile_id, profile)
+            # Save updated profile
+            self.update_profile(profile_id, profile)
         
         return lead
     
@@ -238,26 +358,9 @@ class ProfileService:
         stage: Optional[PipelineStage] = None,
         min_score: Optional[float] = None
     ) -> List[OpportunityLead]:
-        """Get all leads for a profile"""
-        leads = []
-        
-        # Load all lead files for this profile
-        for lead_file in self.leads_dir.glob(f"*_{profile_id}_*.json"):
-            try:
-                with open(lead_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                lead = OpportunityLead(**data)
-                
-                # Apply filters
-                if stage and lead.pipeline_stage != stage:
-                    continue
-                if min_score and (not lead.compatibility_score or lead.compatibility_score < min_score):
-                    continue
-                
-                leads.append(lead)
-                
-            except (json.JSONDecodeError, ValueError):
-                continue
+        """Get all leads for a profile (uses unified opportunity service)"""
+        # Use unified opportunity service with backward compatibility
+        leads = self.opportunity_service.get_profile_leads(profile_id, stage, min_score)
         
         # Sort by compatibility score descending
         leads.sort(key=lambda l: l.compatibility_score or 0, reverse=True)
@@ -265,30 +368,26 @@ class ProfileService:
         return leads
     
     def update_lead_stage(self, lead_id: str, new_stage: PipelineStage, analysis_data: Optional[Dict] = None) -> bool:
-        """Update lead pipeline stage with optional analysis data"""
-        lead = self._get_lead(lead_id)
+        """Update lead pipeline stage with optional analysis data (uses unified opportunity service)"""
+        # Find the profile ID for this lead (required for unified service)
+        profile_id = None
+        for profile in self.list_profiles():
+            if lead_id in getattr(profile, 'associated_opportunities', []):
+                profile_id = profile.profile_id
+                break
         
-        if not lead:
+        if not profile_id:
             return False
         
-        lead.pipeline_stage = new_stage
-        lead.last_analyzed = datetime.now()
-        
+        stage_str = new_stage.value if hasattr(new_stage, 'value') else str(new_stage)
+        reason = "Stage updated via ProfileService"
         if analysis_data:
-            lead.match_factors.update(analysis_data.get('match_factors', {}))
-            lead.risk_factors.update(analysis_data.get('risk_factors', {}))
-            lead.recommendations.extend(analysis_data.get('recommendations', []))
-            lead.network_insights.update(analysis_data.get('network_insights', {}))
-            
-            if 'compatibility_score' in analysis_data:
-                lead.compatibility_score = analysis_data['compatibility_score']
-            if 'success_probability' in analysis_data:
-                lead.success_probability = analysis_data['success_probability']
-            if 'approach_strategy' in analysis_data:
-                lead.approach_strategy = analysis_data['approach_strategy']
+            reason = f"Stage updated with analysis data: {', '.join(analysis_data.keys())}"
         
-        self._save_lead(lead)
-        return True
+        # Use unified opportunity service
+        return self.opportunity_service.update_opportunity_stage(
+            lead_id, profile_id, stage_str, reason
+        )
     
     # Analytics and Reporting
     
@@ -325,6 +424,10 @@ class ProfileService:
             'funding_types': [ft.value for ft in profile.funding_preferences.funding_types]
         }
     
+    def save_profile(self, profile: OrganizationProfile):
+        """Public method to save profile to storage"""
+        return self._save_profile(profile)
+    
     # Private helper methods
     
     def _save_profile(self, profile: OrganizationProfile):
@@ -334,110 +437,26 @@ class ProfileService:
         with open(profile_file, 'w', encoding='utf-8') as f:
             json.dump(profile.model_dump(), f, indent=2, default=str, ensure_ascii=False)
     
-    def _save_lead(self, lead: OpportunityLead):
-        """Save lead to storage"""
-        lead_file = self.leads_dir / f"{lead.lead_id}_{lead.profile_id}_{lead.pipeline_stage.value}.json"
-        
-        with open(lead_file, 'w', encoding='utf-8') as f:
-            json.dump(lead.model_dump(), f, indent=2, default=str, ensure_ascii=False)
+    # Legacy _save_lead method removed - now handled by UnifiedOpportunityService
     
-    def _get_lead(self, lead_id: str):
-        """Get lead by ID - returns either OpportunityLead or UnifiedOpportunity"""
-        # First try legacy lead files (pattern includes lead_id)
-        for lead_file in self.leads_dir.glob(f"{lead_id}_*.json"):
-            try:
-                with open(lead_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                return OpportunityLead(**data)
-            except (json.JSONDecodeError, ValueError):
-                continue
-        
-        # Try new opportunity file format - check profile directories in parent
-        profiles_root = self.data_dir  # data/profiles
-        for profile_dir in profiles_root.iterdir():
-            if profile_dir.is_dir() and profile_dir.name.startswith('profile_'):
-                opportunities_dir = profile_dir / 'opportunities'
-                if opportunities_dir.exists():
-                    # Handle opportunity_id format (e.g. "opp_test_result_001" or "opp_lead_c721929257b6")
-                    if lead_id.startswith('opp_lead_'):
-                        # Remove "opp_lead_" prefix for legacy format
-                        opportunity_id = lead_id[9:]  # Remove "opp_lead_" prefix
-                        opportunity_file = opportunities_dir / f'opportunity_{opportunity_id}.json'
-                    elif lead_id.startswith('opp_'):
-                        # Remove "opp_" prefix for standard format
-                        opportunity_id = lead_id[4:]  # Remove "opp_" prefix
-                        opportunity_file = opportunities_dir / f'opportunity_{opportunity_id}.json'
-                    else:
-                        opportunity_file = opportunities_dir / f'opportunity_{lead_id}.json'
-                    
-                    if opportunity_file.exists():
-                        try:
-                            with open(opportunity_file, 'r', encoding='utf-8') as f:
-                                data = json.load(f)
-                            # Try UnifiedOpportunity first (new format)
-                            return UnifiedOpportunity(**data)
-                        except (json.JSONDecodeError, ValueError):
-                            continue
-                        except Exception:
-                            # Fallback to OpportunityLead if UnifiedOpportunity fails
-                            try:
-                                with open(opportunity_file, 'r', encoding='utf-8') as f:
-                                    data = json.load(f)
-                                return OpportunityLead(**data)
-                            except:
-                                continue
-        
-        return None
+    # Legacy _get_lead method removed - now handled by UnifiedOpportunityService
     
     def delete_lead(self, lead_id: str, profile_id: str) -> bool:
-        """Delete a specific lead/opportunity"""
+        """Delete a specific lead/opportunity (uses unified opportunity service)"""
         try:
-            # Get the lead first to verify it exists
-            lead = self._get_lead(lead_id)
-            if not lead:
-                return False
-            
-            # Remove lead from profile's associated opportunities (if field exists)
+            # Remove lead from profile's associated opportunities
             profile = self.get_profile(profile_id)
             if profile and hasattr(profile, 'associated_opportunities') and lead_id in profile.associated_opportunities:
                 profile.associated_opportunities.remove(lead_id)
                 self._save_profile(profile)
             
-            # Remove legacy lead file(s)
-            deleted_files = 0
-            for lead_file in self.leads_dir.glob(f"{lead_id}_*.json"):
-                try:
-                    lead_file.unlink()
-                    deleted_files += 1
-                except Exception as e:
-                    logger.warning(f"Failed to delete lead file {lead_file}: {e}")
+            # Use unified opportunity service for deletion
+            success = self.opportunity_service.delete_lead(lead_id, profile_id)
             
-            # Remove new opportunity file format
-            profile_dir = self.data_dir / profile_id
-            opportunities_dir = profile_dir / 'opportunities'
-            if opportunities_dir.exists():
-                # Handle opportunity_id format (e.g. "opp_test_result_001" or "opp_lead_c721929257b6")
-                if lead_id.startswith('opp_lead_'):
-                    # Remove "opp_lead_" prefix for legacy format
-                    opportunity_id = lead_id[9:]  # Remove "opp_lead_" prefix
-                    opportunity_file = opportunities_dir / f'opportunity_{opportunity_id}.json'
-                elif lead_id.startswith('opp_'):
-                    # Remove "opp_" prefix for standard format
-                    opportunity_id = lead_id[4:]  # Remove "opp_" prefix
-                    opportunity_file = opportunities_dir / f'opportunity_{opportunity_id}.json'
-                else:
-                    opportunity_file = opportunities_dir / f'opportunity_{lead_id}.json'
-                
-                if opportunity_file.exists():
-                    try:
-                        opportunity_file.unlink()
-                        deleted_files += 1
-                        logger.info(f"Deleted opportunity file: {opportunity_file}")
-                    except Exception as e:
-                        logger.warning(f"Failed to delete opportunity file {opportunity_file}: {e}")
+            if success:
+                logger.info(f"Deleted lead {lead_id} for profile {profile_id} via unified service")
             
-            logger.info(f"Deleted lead {lead_id} for profile {profile_id}: {deleted_files} files removed")
-            return deleted_files > 0
+            return success
             
         except Exception as e:
             logger.error(f"Failed to delete lead {lead_id}: {e}")
@@ -446,28 +465,50 @@ class ProfileService:
     # Discovery Session Management
     
     def start_discovery_session(self, profile_id: str, tracks: List[str] = None) -> Optional[DiscoverySession]:
-        """Start a new discovery session for a profile"""
+        """Start a new discovery session for a profile with locking to prevent race conditions"""
         profile = self.get_profile(profile_id)
         if not profile:
             return None
         
-        # Generate session ID
-        session_id = f"session_{uuid.uuid4().hex[:12]}"
-        
-        session = DiscoverySession(
-            session_id=session_id,
-            profile_id=profile_id,
-            tracks_executed=tracks or []
-        )
-        
-        # Update profile discovery status
-        profile.discovery_status = "in_progress"
-        self._save_profile(profile)
-        
-        # Save session
-        self._save_session(session)
-        
-        return session
+        try:
+            # Acquire discovery lock to prevent race conditions
+            with self._acquire_discovery_lock(profile_id, timeout=10):
+                # Double-check that no discovery is in progress after acquiring lock
+                # Note: we skip lock file check since we just created the lock file ourselves
+                active_sessions = [s for s in self.get_profile_sessions(profile_id, limit=10) 
+                                 if s.status == "in_progress"]
+                
+                # Mark any existing in-progress sessions as failed (these should be rare/abandoned)
+                for session in active_sessions:
+                    logger.warning(f"Marking abandoned session {session.session_id} as failed")
+                    self.fail_discovery_session(session.session_id, 
+                                               ["Session abandoned - new session started"])
+                
+                # Generate session ID
+                session_id = f"session_{uuid.uuid4().hex[:12]}"
+                
+                session = DiscoverySession(
+                    session_id=session_id,
+                    profile_id=profile_id,
+                    tracks_executed=tracks or []
+                )
+                
+                # Update profile discovery status
+                profile.discovery_status = "in_progress"
+                self._save_profile(profile)
+                
+                # Save session
+                self._save_session(session)
+                
+                logger.info(f"Started discovery session {session_id} for profile {profile_id}")
+                return session
+                
+        except TimeoutError as e:
+            logger.error(f"Failed to acquire discovery lock for profile {profile_id}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Error starting discovery session for profile {profile_id}: {e}")
+            return None
     
     def complete_discovery_session(
         self, 
@@ -503,8 +544,12 @@ class ProfileService:
             profile.next_recommended_discovery = datetime.now() + timedelta(days=30)
             
             self._save_profile(profile)
+            
+            # Clean up any stale lock files after completion
+            self._cleanup_stale_locks(session.profile_id)
         
         self._save_session(session)
+        logger.info(f"Completed discovery session {session_id} for profile {session.profile_id}")
         return True
     
     def fail_discovery_session(self, session_id: str, error_messages: List[str]) -> bool:
@@ -522,9 +567,23 @@ class ProfileService:
         if profile:
             profile.discovery_status = "failed"
             self._save_profile(profile)
+            
+            # Clean up any stale lock files after failure
+            self._cleanup_stale_locks(session.profile_id)
         
         self._save_session(session)
+        logger.info(f"Failed discovery session {session_id} for profile {session.profile_id}")
         return True
+    
+    def _cleanup_stale_locks(self, profile_id: str):
+        """Clean up stale lock files for a profile"""
+        try:
+            lock_file = self.locks_dir / f"{profile_id}_discovery.lock"
+            if lock_file.exists() and self._is_stale_lock(lock_file, max_age_minutes=1):
+                lock_file.unlink()
+                logger.info(f"Cleaned up stale lock file for profile {profile_id}")
+        except Exception as e:
+            logger.warning(f"Error cleaning up stale lock for profile {profile_id}: {e}")
     
     def get_profile_sessions(self, profile_id: str, limit: Optional[int] = None) -> List[DiscoverySession]:
         """Get discovery sessions for a profile"""

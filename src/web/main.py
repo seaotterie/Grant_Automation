@@ -4110,7 +4110,7 @@ async def discover_nonprofits(request: Dict[str, Any]):
             else:
                 results["propublica_results"] = []
         
-        # Phase 3.1: Store opportunities directly through profile service like BMF endpoint
+        # Phase 3.1: Store opportunities through unified adapter (with duplicate detection)
         try:
             stored_opportunities = []
             
@@ -4120,10 +4120,15 @@ async def discover_nonprofits(request: Dict[str, Any]):
             
             if profile_context:
                 profile_id = profile_context.get('profile_id', 'test_profile')
-                from src.profiles.service import get_profile_service
-                profile_service = get_profile_service()
+                from src.discovery.unified_discovery_adapter import UnifiedDiscoveryAdapter
+                from src.discovery.base_discoverer import DiscoveryResult
+                from src.profiles.models import FundingType
+                
+                unified_adapter = UnifiedDiscoveryAdapter()
+                session_id = f"nonprofit_discovery_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                discovery_results = []
             
-                # Process BMF results
+                # Process BMF results - Convert to DiscoveryResult format
                 for bmf_org in results.get("bmf_results", []):
                     org_name = bmf_org.get('name', '').strip()
                     if not org_name or org_name == '[Organization Name Missing]':
@@ -4148,18 +4153,19 @@ async def discover_nonprofits(request: Dict[str, Any]):
                     if is_self_match:
                         continue
                     
-                    # Create lead data similar to BMF endpoint pattern
-                    lead_data = {
-                        "source": "Nonprofit Discovery - BMF",
-                        "opportunity_type": "grants", 
-                        "organization_name": org_name,
-                        "program_name": None,
-                        "description": f"Nonprofit organization from IRS Business Master File. Revenue: ${bmf_org.get('revenue', 0) or 0:,}",
-                        "funding_amount": None,
-                        "pipeline_stage": "discovery",
-                        "compatibility_score": 0.6,
-                        "success_probability": None,
-                        "match_factors": {
+                    # Convert to DiscoveryResult format
+                    discovery_result = DiscoveryResult(
+                        opportunity_id=f"bmf_{bmf_org.get('ein', 'unknown')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                        organization_name=org_name,
+                        source_type=FundingType.GRANTS,
+                        discovery_source="bmf_filter",
+                        description=f"Nonprofit organization from IRS Business Master File. Revenue: ${bmf_org.get('revenue', 0) or 0:,}",
+                        funding_amount=None,
+                        program_name=None,
+                        compatibility_score=0.6,
+                        confidence_level=0.75,
+                        discovered_at=datetime.now(),
+                        match_factors={
                             "source_type": "Nonprofit",
                             "ntee_code": bmf_org.get("ntee_code"),
                             "state": bmf_org.get("state", "VA"),
@@ -4167,30 +4173,17 @@ async def discover_nonprofits(request: Dict[str, Any]):
                             "deadline": None,
                             "eligibility": []
                         },
-                        "risk_factors": {},
-                        "recommendations": [],
-                        "board_connections": [],
-                        "network_insights": {},
-                        "approach_strategy": None,
-                        "status": "active",
-                        "assigned_to": None,
-                        "external_data": {
+                        external_data={
                             "ein": bmf_org.get("ein"),
                             "ntee_code": bmf_org.get("ntee_code"),
                             "discovery_source": "bmf_filter",
-                            "source_url": None
+                            "source_url": None,
+                            "revenue": bmf_org.get("revenue", 0)
                         }
-                    }
-                    
-                    # Store lead and capture actual lead_id
-                    lead = profile_service.add_opportunity_lead(profile_id, lead_data)
-                    if lead:
-                        opportunity_data = lead.model_dump()
-                        opportunity_data['discovery_opportunity_id'] = f"bmf_{bmf_org.get('ein', 'unknown')}"
-                        opportunity_data['lead_id'] = lead.lead_id
-                        stored_opportunities.append(opportunity_data)
+                    )
+                    discovery_results.append(discovery_result)
             
-                # Process ProPublica results
+                # Process ProPublica results - Convert to DiscoveryResult format
                 for pp_org in results.get("propublica_results", []):
                     org_name = pp_org.get('name', '').strip()
                     if not org_name or org_name == '[Organization Name Missing]':
@@ -4215,18 +4208,19 @@ async def discover_nonprofits(request: Dict[str, Any]):
                     if is_self_match:
                         continue
                     
-                    # Create lead data for ProPublica results
-                    lead_data = {
-                        "source": "Nonprofit Discovery - ProPublica",
-                        "opportunity_type": "grants", 
-                        "organization_name": org_name,
-                        "program_name": None,
-                        "description": f"Nonprofit organization from ProPublica database. Revenue: ${pp_org.get('revenue', 0) or 0:,}",
-                        "funding_amount": None,
-                        "pipeline_stage": "discovery",
-                        "compatibility_score": 0.7,
-                        "success_probability": None,
-                        "match_factors": {
+                    # Convert to DiscoveryResult format
+                    discovery_result = DiscoveryResult(
+                        opportunity_id=f"propublica_{pp_org.get('ein', 'unknown')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                        organization_name=org_name,
+                        source_type=FundingType.GRANTS,
+                        discovery_source="propublica_fetch",
+                        description=f"Nonprofit organization from ProPublica database. Revenue: ${pp_org.get('revenue', 0) or 0:,}",
+                        funding_amount=None,
+                        program_name=None,
+                        compatibility_score=0.7,
+                        confidence_level=0.80,
+                        discovered_at=datetime.now(),
+                        match_factors={
                             "source_type": "Nonprofit",
                             "ntee_code": pp_org.get("ntee_code"),
                             "state": pp_org.get("state", "VA"),
@@ -4234,38 +4228,34 @@ async def discover_nonprofits(request: Dict[str, Any]):
                             "deadline": None,
                             "eligibility": []
                         },
-                        "risk_factors": {},
-                        "recommendations": [],
-                        "board_connections": [],
-                        "network_insights": {},
-                        "approach_strategy": None,
-                        "status": "active",
-                        "assigned_to": None,
-                        "external_data": {
+                        external_data={
                             "ein": pp_org.get("ein"),
                             "ntee_code": pp_org.get("ntee_code"),
                             "discovery_source": "propublica_fetch",
-                            "source_url": None
+                            "source_url": None,
+                            "revenue": pp_org.get("revenue", 0)
                         }
-                    }
-                    
-                    # Store lead and capture actual lead_id
-                    lead = profile_service.add_opportunity_lead(profile_id, lead_data)
-                    if lead:
-                        opportunity_data = lead.model_dump()
-                        opportunity_data['discovery_opportunity_id'] = f"propublica_{pp_org.get('ein', 'unknown')}"
-                        opportunity_data['lead_id'] = lead.lead_id
-                        stored_opportunities.append(opportunity_data)
+                    )
+                    discovery_results.append(discovery_result)
                 
-                logger.info(f"Added {len(stored_opportunities)} opportunities to profile {profile_id}")
+                # Save all discovery results through unified adapter (with duplicate detection)
+                save_results = await unified_adapter.save_discovery_results(
+                    discovery_results, profile_id, session_id
+                )
+                
+                logger.info(f"Unified adapter results: {save_results['saved_count']} saved, {save_results['duplicates_skipped']} duplicates skipped, {save_results['failed_count']} failed")
+                
+                # Update stored_opportunities for compatibility with existing code
+                stored_opportunities = save_results.get('saved_opportunities', [])
             
         except Exception as e:
             logger.error(f"Failed to store nonprofit discovery opportunities: {str(e)}")
         
-        # Calculate total opportunities found from all sources
+        # Calculate total opportunities found from all sources  
         total_bmf = len(results.get("bmf_results", []))
         total_propublica = len(results.get("propublica_results", []))
         total_found = total_bmf + total_propublica
+        total_stored = len(stored_opportunities)
         
         # Automated Promotion Integration
         promotion_result = None
@@ -4306,6 +4296,9 @@ async def discover_nonprofits(request: Dict[str, Any]):
             "status": "completed",
             "track": "nonprofit",
             "total_found": total_found,
+            "total_stored": total_stored,
+            "duplicates_skipped": save_results.get('duplicates_skipped', 0) if 'save_results' in locals() else 0,
+            "failed_saves": save_results.get('failed_count', 0) if 'save_results' in locals() else 0,
             "results": results,
             "profile_context": profile_context.get('name') if profile_context else None,
             "parameters_used": {

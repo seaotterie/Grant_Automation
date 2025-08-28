@@ -693,46 +693,74 @@
                             <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-blue-900 dark:text-blue-100">Nonprofits</h5>
-                                    <button @click="runDiscoveryTrack('nonprofit')" :disabled="discoveryProgress.nonprofit"
-                                            class="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-2 py-1 rounded">
-                                        <span x-show="!discoveryProgress.nonprofit">Run</span>
-                                        <span x-show="discoveryProgress.nonprofit">Running...</span>
+                                    <button @click="runDiscoveryTrack('nonprofit')" 
+                                            :disabled="isTrackRunning('nonprofit')"
+                                            :class="getTrackButtonClass('nonprofit')"
+                                            x-text="getTrackButtonText('nonprofit')">
                                     </button>
                                 </div>
                                 <p class="text-sm text-blue-700 dark:text-blue-300">NTEE + BMF + 990 data</p>
+                                <!-- Enhanced Progress Indicator -->
+                                <div x-show="isTrackRunning('nonprofit')" class="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="animate-spin h-3 w-3 border border-blue-600 border-t-transparent rounded-full"></div>
+                                        <span x-text="enhancedDiscoveryProgress.nonprofit.message"></span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-green-900 dark:text-green-100">Federal Grants</h5>
-                                    <button @click="runDiscoveryTrack('federal')" :disabled="discoveryProgress.federal"
-                                            class="text-xs bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-2 py-1 rounded">
-                                        <span x-show="!discoveryProgress.federal">Run</span>
-                                        <span x-show="discoveryProgress.federal">Running...</span>
+                                    <button @click="runDiscoveryTrack('federal')" 
+                                            :disabled="isTrackRunning('federal')"
+                                            :class="getTrackButtonClass('federal')"
+                                            x-text="getTrackButtonText('federal')">
                                     </button>
                                 </div>
                                 <p class="text-sm text-green-700 dark:text-green-300">Grants.gov opportunities</p>
+                                <!-- Enhanced Progress Indicator -->
+                                <div x-show="isTrackRunning('federal')" class="mt-2 text-xs text-green-600 dark:text-green-400">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="animate-spin h-3 w-3 border border-green-600 border-t-transparent rounded-full"></div>
+                                        <span x-text="enhancedDiscoveryProgress.federal.message"></span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-purple-900 dark:text-purple-100">State Agencies</h5>
-                                    <button @click="runDiscoveryTrack('state')" :disabled="discoveryProgress.state"
-                                            class="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-2 py-1 rounded">
-                                        <span x-show="!discoveryProgress.state">Run</span>
-                                        <span x-show="discoveryProgress.state">Running...</span>
+                                    <button @click="runDiscoveryTrack('state')" 
+                                            :disabled="isTrackRunning('state')"
+                                            :class="getTrackButtonClass('state')"
+                                            x-text="getTrackButtonText('state')">
                                     </button>
                                 </div>
                                 <p class="text-sm text-purple-700 dark:text-purple-300">Virginia state grants</p>
+                                <!-- Enhanced Progress Indicator -->
+                                <div x-show="isTrackRunning('state')" class="mt-2 text-xs text-purple-600 dark:text-purple-400">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="animate-spin h-3 w-3 border border-purple-600 border-t-transparent rounded-full"></div>
+                                        <span x-text="enhancedDiscoveryProgress.state.message"></span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
                                 <div class="flex items-center justify-between mb-2">
                                     <h5 class="font-medium text-orange-900 dark:text-orange-100">Commercial</h5>
-                                    <button @click="runDiscoveryTrack('commercial')" :disabled="discoveryProgress.commercial"
-                                            class="text-xs bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-2 py-1 rounded">
-                                        <span x-show="!discoveryProgress.commercial">Run</span>
-                                        <span x-show="discoveryProgress.commercial">Running...</span>
+                                    <button @click="runDiscoveryTrack('commercial')" 
+                                            :disabled="isTrackRunning('commercial')"
+                                            :class="getTrackButtonClass('commercial')"
+                                            x-text="getTrackButtonText('commercial')">
                                     </button>
                                 </div>
                                 <p class="text-sm text-orange-700 dark:text-orange-300">Corporate foundations</p>
+                                <!-- Enhanced Progress Indicator -->
+                                <div x-show="isTrackRunning('commercial')" class="mt-2 text-xs text-orange-600 dark:text-orange-400">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="animate-spin h-3 w-3 border border-orange-600 border-t-transparent rounded-full"></div>
+                                        <span x-text="enhancedDiscoveryProgress.commercial.message"></span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
@@ -4962,7 +4990,7 @@
                                         </label>
                                         <input type="text" x-model="selectedProfile.name" required
                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
-                                               x-init="if (!selectedProfile.name) selectedProfile.name = ''">
+                                               x-init="if (selectedProfile && !selectedProfile.name) selectedProfile.name = ''">
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -4971,7 +4999,7 @@
                                         <input type="text" x-model="selectedProfile.ein"
                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white font-mono"
                                                placeholder="XX-XXXXXXX"
-                                               x-init="if (!selectedProfile.ein) selectedProfile.ein = ''">
+                                               x-init="if (selectedProfile && !selectedProfile.ein) selectedProfile.ein = ''">
                                     </div>
                                 </div>
                                 
@@ -4982,7 +5010,7 @@
                                         </label>
                                         <select x-model="selectedProfile.organization_type" required
                                                 class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
-                                                x-init="if (!selectedProfile.organization_type) selectedProfile.organization_type = ''">
+                                                x-init="if (selectedProfile && !selectedProfile.organization_type) selectedProfile.organization_type = ''">
                                             <option value="nonprofit">Nonprofit</option>
                                             <option value="government">Government</option>
                                             <option value="educational">Educational Institution</option>
@@ -4996,7 +5024,7 @@
                                         </label>
                                         <select x-model="selectedProfile.status"
                                                 class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
-                                                x-init="if (!selectedProfile.status) selectedProfile.status = 'active'">
+                                                x-init="if (selectedProfile && !selectedProfile.status) selectedProfile.status = 'active'">
                                             <option value="active">Active</option>
                                             <option value="archived">Archived</option>
                                             <option value="draft">Draft</option>
@@ -5012,7 +5040,7 @@
                                     <textarea x-model="selectedProfile.mission_statement" rows="3"
                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
                                               placeholder="Describe the organization's mission and purpose"
-                                              x-init="if (!selectedProfile.mission_statement) selectedProfile.mission_statement = ''"></textarea>
+                                              x-init="if (selectedProfile && !selectedProfile.mission_statement) selectedProfile.mission_statement = ''"></textarea>
                                     <div class="mt-1 flex justify-end">
                                         <span class="text-xs text-gray-500">
                                             <span x-text="(selectedProfile?.mission_statement || '').length"></span>/1000 characters
@@ -5027,7 +5055,7 @@
                                     <input type="text" x-model="selectedProfile.focus_areas" required
                                            class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
                                            placeholder="health, education, community development"
-                                           x-init="if (!selectedProfile.focus_areas) selectedProfile.focus_areas = ''">
+                                           x-init="if (selectedProfile && !selectedProfile.focus_areas) selectedProfile.focus_areas = ''">
                                 </div>
                             </div>
                             
@@ -8824,7 +8852,7 @@
         }, 5000);
     </script>
     
-    <script src="/static/app.js?v=MINIMAL_FIX_1.0" onerror="console.error('Failed to load app.js')"></script>
+    <script src="/static/app.js?v=PROFILE_DELETE_FIX_1.0" onerror="console.error('Failed to load app.js')"></script>
     
     <!-- INLINE FIX: Override getOrganizationTypeColor for PROFILER and DISCOVER cache issue -->
     <script>

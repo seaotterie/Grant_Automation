@@ -95,3 +95,24 @@ secrets.json
 output/
 results/
 dossiers/
+# Data files and directories
+data/profiles/leads/
+data/profiles/opportunities/
+data/profiles/sessions/
+data/profiles/archived_backups/
+data/source_data/
+*.json
+!src/**/*.json
+!config/*.json
+
+# Profile data patterns
+data/profiles/profile_*/
+data/profiles/profiles/profile_*.json
+lead_*.json
+opportunity_*.json
+session_*.json
+
+# Cache and processing files
+*.cache
+processing_*.json
+analytics_*.json

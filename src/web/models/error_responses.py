@@ -247,9 +247,12 @@ class SystemErrorResponse(StandardErrorResponse):
     error_type: ErrorResponseType = Field(default=ErrorResponseType.SYSTEM_ERROR)
     
     def __init__(self, **kwargs):
+        # Extract message from kwargs to avoid conflict
+        message = kwargs.pop("message", "A system error occurred. Please try again later.")
+        
         super().__init__(
             error_code="SYSTEM_ERROR",
-            message="A system error occurred. Please try again later.",
+            message=message,
             recovery_guidance=RecoveryGuidance(
                 suggested_actions=[
                     "Try the request again in a few moments",

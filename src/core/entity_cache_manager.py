@@ -75,6 +75,24 @@ class EntityCacheManager:
         except Exception:
             return False
     
+    async def cache_nonprofit_propublica_data(self, propublica_data: Dict[str, Any], ein: str) -> bool:
+        """Cache nonprofit ProPublica data"""
+        try:
+            entity_key = f"nonprofit_{ein}"
+            existing_data = self._cache.get(entity_key, {})
+            
+            # Merge with existing data
+            existing_data.update({
+                "propublica_data": propublica_data,
+                "entity_type": "nonprofit",
+                "ein": ein,
+                "last_propublica_update": datetime.now().isoformat()
+            })
+            
+            return self.store_entity_data(entity_key, existing_data)
+        except Exception as e:
+            return False
+    
     async def list_entities(self, entity_type: EntityType) -> List[str]:
         """List entities of a specific type"""
         # For testing purposes, return sample data based on type
