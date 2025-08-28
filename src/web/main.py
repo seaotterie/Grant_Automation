@@ -2338,7 +2338,8 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
         try:
             unified_opportunities = unified_service.get_profile_opportunities(
                 profile_id=profile_id,
-                stage_filter=unified_stage_filter
+                stage=unified_stage_filter,
+                min_score=min_score
             )
             logger.info(f"DEBUG: Unified service returned {len(unified_opportunities) if unified_opportunities else 0} opportunities")
         except Exception as e:
