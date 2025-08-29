@@ -70,7 +70,7 @@ class AIServiceManager:
                 batch_id=batch_id,
                 profile_id=profile_data.get("profile_id", "unknown"),
                 analysis_type="compatibility_scoring",
-                model_preference=frontend_data.get("model_preference", "gpt-3.5-turbo"),
+                model_preference=frontend_data.get("model_preference", "gpt-5-nano"),
                 cost_limit=frontend_data.get("cost_limit", 0.01),
                 priority="standard"
             )
@@ -225,7 +225,7 @@ class AIServiceManager:
                 profile_id=profile_data.get("profile_id", "unknown"),
                 target_organization=target_data.get("organization_name", "Unknown"),
                 analysis_depth=AnalysisDepth.COMPREHENSIVE,
-                model_preference=frontend_data.get("model_preference", "gpt-4"),
+                model_preference=frontend_data.get("model_preference", "gpt-5-mini"),
                 cost_budget=frontend_data.get("cost_budget", 0.25),
                 priority=Priority.HIGH
             )

@@ -101,7 +101,7 @@ class VirginiaStateGrantsFetch(BaseProcessor):
             focus_areas = data.get("focus_areas", [])
             geographic_scope = data.get("geographic_scope", ["VA"])
             funding_range = data.get("funding_range", {})
-            max_results = data.get("max_results", 50)
+            max_results = data.get("max_results", 1000)
             
             self.logger.info(f"Searching Virginia state databases for {len(focus_areas)} focus areas")
             
@@ -592,7 +592,7 @@ class VirginiaStateGrantsFetch(BaseProcessor):
             # Calculate relevance score
             relevance_score = self._calculate_opportunity_relevance(opportunity, focus_areas)
             
-            if relevance_score > 0.3:  # Minimum relevance threshold
+            if relevance_score > 0.1:  # Lower threshold for maximum capture
                 opportunity.confidence_score = min(opportunity.confidence_score + (relevance_score * 0.2), 1.0)
                 filtered.append(opportunity)
         

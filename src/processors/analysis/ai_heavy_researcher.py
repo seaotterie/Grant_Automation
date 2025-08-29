@@ -1266,8 +1266,12 @@ RESPONSE (JSON only):"""
         
         return insights[:5]  # Limit to top 5 insights
     
-    async def _call_openai_api(self, prompt: str, model: str = "gpt-4") -> str:
+    async def _call_openai_api(self, prompt: str, model: Optional[str] = None) -> str:
         """Call OpenAI API with premium settings for comprehensive analysis"""
+        # Use configured model if none specified
+        if model is None:
+            model = self.model
+            
         try:
             # Note: In production, you would set up OpenAI client with API key
             # For now, we'll simulate the API response for development

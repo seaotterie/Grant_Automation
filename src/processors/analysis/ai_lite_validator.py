@@ -51,10 +51,10 @@ class EligibilityStatus(str, Enum):
 
 
 class ValidationAnalysis(BaseModel):
-    """Results from AI-Lite validation analysis"""
+    """Results from AI-Lite validation analysis with enhanced intelligence"""
     opportunity_id: str
     
-    # Validation Results
+    # Core Validation Results
     validation_result: ValidationResult
     eligibility_status: EligibilityStatus
     confidence_level: float = Field(..., ge=0.0, le=1.0)
@@ -64,13 +64,29 @@ class ValidationAnalysis(BaseModel):
     priority_level: str = Field(..., pattern="^(low|medium|high|urgent)$")
     go_no_go: str = Field(..., pattern="^(go|no_go|investigate)$")
     
-    # Brief Analysis
-    validation_reasoning: str = Field(..., max_length=200, description="Brief explanation of validation decision")
+    # Enhanced Validation Intelligence (Phase 2A)
+    funding_provider_type: str = Field(default="unknown", description="Actual funder vs aggregator vs information site")
+    program_status: str = Field(default="unknown", description="Active, archived, seasonal, or unclear")
+    application_pathway: str = Field(default="unknown", description="Clear process, vague inquiry, or no pathway")
+    
+    # Competition & Complexity Pre-Screening
+    competition_level: str = Field(default="unknown", pattern="^(low|moderate|high|extreme|unknown)$")
+    application_complexity: str = Field(default="unknown", pattern="^(simple|moderate|complex|extreme|unknown)$")
+    success_probability: float = Field(default=0.5, ge=0.0, le=1.0, description="Early success probability assessment")
+    
+    # Website Intelligence
+    deadline_indicators: List[str] = Field(default_factory=list, description="Application deadlines found")
+    contact_quality: str = Field(default="unknown", pattern="^(program_officer|direct|generic|none|unknown)$")
+    recent_activity: List[str] = Field(default_factory=list, description="Recent awards, announcements, updates")
+    
+    # Original Analysis Fields
+    validation_reasoning: str = Field(..., max_length=300, description="Enhanced validation reasoning")
     key_flags: List[str] = Field(default_factory=list, description="Important flags or concerns")
     next_actions: List[str] = Field(default_factory=list, description="Recommended next steps")
     
     # Metadata
     analysis_timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
+    enhancement_level: str = Field(default="enhanced_2a", description="Validation enhancement version")
 
 
 class ValidationRequest(BaseModel):
@@ -107,14 +123,14 @@ class AILiteValidator(BaseProcessor):
         )
         super().__init__(metadata)
         
-        # Optimization settings for validation (Updated for GPT-5-nano)
+        # Optimization settings for enhanced validation (GPT-5-nano for cost-effective reliability)
         self.batch_size = 20  # Higher batch size for simple validation
-        self.model = "gpt-5-nano"  # Most cost-effective GPT-5 model with higher accuracy
-        self.max_tokens = 100  # Minimal tokens for fast validation
-        self.temperature = 0.1  # Very low temperature for consistent validation
+        self.model = "gpt-5-nano"  # Most cost-effective GPT-5 model with superior reasoning
+        self.max_tokens = 800  # Sufficient tokens for enhanced multi-opportunity analysis
+        self.temperature = 0.2  # Low temperature for consistent validation
         
-        # Cost tracking (Updated GPT-5-nano pricing: $0.05/1M input, $0.40/1M output)
-        self.estimated_cost_per_candidate = 0.000025  # Even more cost-effective with GPT-5-nano
+        # Cost tracking (GPT-5-nano pricing: $0.25/1M input, $2.0/1M output)
+        self.estimated_cost_per_candidate = 0.00008  # More cost-effective with GPT-5-nano enhanced intelligence
         
         # Initialize OpenAI service
         self.openai_service = get_openai_service()
@@ -181,56 +197,84 @@ Organization Type: {profile.get('organization_type', 'Nonprofit')}"""
    Basic Info: {candidate.get('description', 'No description')[:150]}..."""
             candidate_summaries.append(summary)
 
-        # Create focused validation prompt
-        prompt = f"""OPPORTUNITY VALIDATION SPECIALIST
+        # Create enhanced validation prompt with GPT-5 intelligence
+        prompt = f"""ENHANCED OPPORTUNITY VALIDATION SPECIALIST (GPT-5 Phase 2A)
 
 {org_context}
 
-VALIDATION MISSION: Quickly assess if these are legitimate funding opportunities worth pursuing.
+VALIDATION MISSION: Perform comprehensive validation with enhanced intelligence to optimize downstream processing efficiency.
 
-CANDIDATES FOR VALIDATION:
+CANDIDATES FOR ENHANCED VALIDATION:
 {''.join(candidate_summaries)}
 
-For each candidate, provide validation analysis in EXACT JSON format:
+For each candidate, provide enhanced validation analysis in EXACT JSON format:
 {{
   "opportunity_id": {{
     "validation_result": "valid_funding",
-    "eligibility_status": "eligible",
+    "eligibility_status": "eligible", 
     "confidence_level": 0.85,
     "discovery_track": "foundation",
     "priority_level": "medium",
     "go_no_go": "go",
-    "validation_reasoning": "Confirmed active foundation with technology grants matching our mission",
-    "key_flags": ["application_deadline_approaching", "high_competition"],
-    "next_actions": ["detailed_research", "contact_program_officer"]
+    
+    "funding_provider_type": "actual_funder",
+    "program_status": "active",
+    "application_pathway": "clear_process",
+    
+    "competition_level": "moderate",
+    "application_complexity": "moderate",
+    "success_probability": 0.75,
+    
+    "deadline_indicators": ["March 15, 2025", "Annual cycle"],
+    "contact_quality": "program_officer",
+    "recent_activity": ["2024 awards announced", "Program guidelines updated"],
+    
+    "validation_reasoning": "Confirmed active foundation with clear application process, moderate competition, strong mission alignment indicators",
+    "key_flags": ["application_deadline_approaching", "moderate_competition"],
+    "next_actions": ["detailed_strategic_analysis", "contact_program_officer"]
   }}
 }}
 
-VALIDATION CRITERIA:
-1. FUNDING VERIFICATION: Is this a real funding source or just information/services?
-2. ACTIVE STATUS: Are they currently accepting applications?
-3. BASIC ELIGIBILITY: Do we meet fundamental requirements (nonprofit status, geography)?
-4. TRACK ASSIGNMENT: Which discovery track does this belong to?
-5. PRIORITY ASSESSMENT: How urgently should this be researched?
+ENHANCED VALIDATION CRITERIA (GPT-5 Intelligence):
 
-VALIDATION RESULTS:
-- "valid_funding": Confirmed funding opportunity
-- "invalid_not_funding": Not a funding source
-- "uncertain_needs_research": Requires investigation
-- "expired_inactive": Program inactive
+1. FUNDING PROVIDER VERIFICATION:
+   - "actual_funder": Direct grant-making organization with funding capacity
+   - "fiscal_sponsor": Intermediary managing funds for others  
+   - "aggregator": Information site listing multiple opportunities
+   - "service_provider": Consulting or application assistance (not funding)
+   - "unknown": Cannot determine funding capacity
 
-ELIGIBILITY STATUS:
-- "eligible": We meet basic requirements
-- "ineligible": We don't qualify
-- "conditional": Requirements unclear
-- "unknown": Cannot determine from available info
+2. PROGRAM STATUS ASSESSMENT:
+   - "active": Currently accepting applications with recent activity
+   - "seasonal": Regular cycle, currently open or opening soon
+   - "archived": Program exists but not currently active
+   - "unclear": Status ambiguous, requires investigation
+   - "unknown": Cannot determine program status
 
-GO/NO-GO DECISIONS:
-- "go": Proceed to strategic scoring
-- "no_go": Stop processing this candidate
-- "investigate": Needs research before decision
+3. APPLICATION PATHWAY ANALYSIS:
+   - "clear_process": Detailed guidelines, application forms, submission process
+   - "inquiry_based": Letter of inquiry or initial contact required
+   - "vague_process": General interest but unclear application method
+   - "no_pathway": No clear application mechanism identified
+   - "unknown": Cannot determine application process
 
-Focus on fast, accurate validation to eliminate non-opportunities early.
+4. COMPETITION & COMPLEXITY PRE-SCREENING:
+   - Competition: "low" (niche/specialized), "moderate" (typical), "high" (national/prestigious), "extreme" (ultra-competitive)
+   - Complexity: "simple" (basic application), "moderate" (standard requirements), "complex" (extensive documentation), "extreme" (multi-stage process)
+   - Success Probability: 0.0-1.0 based on organizational fit, competition level, and requirement match
+
+5. WEBSITE INTELLIGENCE EXTRACTION:
+   - Deadline Indicators: Application deadlines, funding cycles, key dates
+   - Contact Quality: "program_officer" (named contact), "direct" (department), "generic" (general inquiry), "none" (no contact info)
+   - Recent Activity: Award announcements, program updates, news, guidelines changes
+
+STRATEGIC FILTERING OBJECTIVES:
+- Eliminate non-funding sources before expensive AI-heavy processing
+- Identify high-probability opportunities for priority processing
+- Extract actionable intelligence for strategic decision-making
+- Optimize resource allocation through enhanced early-stage intelligence
+
+Focus on maximizing downstream processing efficiency through superior early-stage intelligence.
 
 RESPONSE (JSON only):"""
         
@@ -246,19 +290,51 @@ RESPONSE (JSON only):"""
                 temperature=self.temperature
             )
             
-            return response.choices[0].message.content.strip()
+            return response.content.strip()
             
         except Exception as e:
             logger.error(f"OpenAI API call failed: {str(e)}")
             raise
     
     def _parse_validation_response(self, response: str, candidates: List[Dict]) -> Dict[str, ValidationAnalysis]:
-        """Parse and validate API response"""
+        """Parse and validate API response with enhanced debugging"""
         validations = {}
         
         try:
+            # Debug: Log the raw response for troubleshooting
+            logger.info(f"Raw API response length: {len(response)}")
+            if len(response) > 0:
+                logger.info(f"Raw API response (first 200 chars): {repr(response[:200])}")
+            else:
+                logger.error("Empty response received from API")
+                raise ValueError("Empty response from OpenAI API")
+            
+            # Clean the response - remove any markdown formatting or extra text
+            cleaned_response = response.strip()
+            
+            # Remove markdown json blocks
+            if cleaned_response.startswith("```json"):
+                cleaned_response = cleaned_response[7:]
+            elif cleaned_response.startswith("```"):
+                cleaned_response = cleaned_response[3:]
+                
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3]
+                
+            cleaned_response = cleaned_response.strip()
+            
+            # Find JSON content between first { and last }
+            start_idx = cleaned_response.find('{')
+            end_idx = cleaned_response.rfind('}')
+            
+            if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                cleaned_response = cleaned_response[start_idx:end_idx+1]
+                
+            logger.info(f"Cleaned response length: {len(cleaned_response)}")
+            logger.info(f"Cleaned response preview: {cleaned_response[:100]}...")
+            
             # Parse JSON response
-            response_data = json.loads(response)
+            response_data = json.loads(cleaned_response)
             
             # Process each validation
             for opportunity_id, analysis_data in response_data.items():
@@ -288,6 +364,12 @@ RESPONSE (JSON only):"""
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON response: {str(e)}")
+            logger.error(f"Problematic JSON content: {cleaned_response}")
+            
+            # Try to save the malformed JSON for debugging
+            with open("debug_malformed_json.txt", "w") as f:
+                f.write(f"Original response:\n{response}\n\nCleaned response:\n{cleaned_response}")
+            
             # Create fallback validations for all candidates
             for candidate in candidates:
                 opportunity_id = candidate.get('opportunity_id', 'unknown')

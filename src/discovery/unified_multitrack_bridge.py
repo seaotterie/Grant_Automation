@@ -106,7 +106,7 @@ class UnifiedMultiTrackBridge:
         self,
         profile: OrganizationProfile,
         funding_types: Optional[List[FundingSourceType]] = None,
-        max_results_per_type: int = 100,
+        max_results_per_type: int = 1000,
         progress_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
     ) -> BridgedDiscoverySession:
         """

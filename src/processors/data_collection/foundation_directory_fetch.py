@@ -86,7 +86,7 @@ class FoundationDirectoryAPIClient:
         focus_areas: List[str],
         geographic_scope: List[str],
         funding_range: Dict[str, int],
-        max_results: int = 100
+        max_results: int = 1000
     ) -> List[FoundationGrant]:
         """
         Search for corporate foundations matching criteria
@@ -144,7 +144,7 @@ class FoundationDirectoryAPIClient:
         
         params = {
             "funder_type": "corporate",  # Focus on corporate foundations
-            "limit": min(max_results, 100),  # API limit per request
+            "limit": max_results,  # Use requested limit - maximize capture
             "format": "json"
         }
         
@@ -587,7 +587,7 @@ class FoundationDirectoryFetch(BaseProcessor):
             focus_areas = data.get("focus_areas", [])
             geographic_scope = data.get("geographic_scope", [])
             funding_range = data.get("funding_range", {})
-            max_results = data.get("max_results", 50)
+            max_results = data.get("max_results", 1000)
             
             self.logger.info(f"Searching Foundation Directory for {len(focus_areas)} focus areas")
             

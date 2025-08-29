@@ -31,8 +31,8 @@ class WorkflowRequest(BaseModel):
         default=["E21", "E30", "E32", "E60", "E86", "F30", "F32"],
         description="NTEE codes to include"
     )
-    min_revenue: int = Field(default=100000, ge=0, description="Minimum revenue threshold")
-    max_results: int = Field(default=100, gt=0, description="Maximum results to process")
+    min_revenue: int = Field(default=0, ge=0, description="Minimum revenue threshold (0 = no filter)")
+    max_results: int = Field(default=1000, gt=0, description="Maximum results to process")
     include_classified: bool = Field(default=False, description="Include classified organizations")
     classification_threshold: float = Field(
         default=0.5, ge=0.0, le=1.0, 

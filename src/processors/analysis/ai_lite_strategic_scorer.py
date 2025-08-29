@@ -265,7 +265,7 @@ RESPONSE (JSON only):"""
                 temperature=self.temperature
             )
             
-            return response.choices[0].message.content.strip()
+            return response.content.strip()
             
         except Exception as e:
             logger.error(f"OpenAI API call failed: {str(e)}")

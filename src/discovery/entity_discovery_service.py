@@ -96,8 +96,8 @@ class EntityDiscoveryService:
         self.network_analytics = get_network_analytics()
         self.profile_matcher = get_profile_matcher()
         
-        # Discovery configuration
-        self.max_entities_per_type = 50
+        # Discovery configuration - Non-restrictive defaults for maximum opportunity capture
+        self.max_entities_per_type = 500
         self.scoring_weights = {
             "financial_health": 0.35,
             "profile_compatibility": 0.40,
@@ -106,7 +106,7 @@ class EntityDiscoveryService:
     
     async def discover_nonprofit_opportunities(self, 
                                              profile: OrganizationProfile,
-                                             max_results: int = 100,
+                                             max_results: int = 1000,
                                              filters: Optional[Dict[str, Any]] = None) -> AsyncIterator[EntityDiscoveryResult]:
         """
         Discover nonprofit grant opportunities using entity-based data.
@@ -162,7 +162,7 @@ class EntityDiscoveryService:
     
     async def discover_government_opportunities(self,
                                               profile: OrganizationProfile,
-                                              max_results: int = 100,
+                                              max_results: int = 1000,
                                               filters: Optional[Dict[str, Any]] = None) -> AsyncIterator[EntityDiscoveryResult]:
         """
         Discover government funding opportunities using entity-based data.
@@ -218,7 +218,7 @@ class EntityDiscoveryService:
     
     async def discover_combined_opportunities(self,
                                             profile: OrganizationProfile,
-                                            max_results: int = 100,
+                                            max_results: int = 1000,
                                             include_types: List[str] = None,
                                             filters: Optional[Dict[str, Any]] = None) -> List[EntityDiscoveryResult]:
         """
@@ -484,12 +484,12 @@ class EntityDiscoveryService:
     def _apply_entity_filters(self, eins: List[str], filters: Dict[str, Any]) -> List[str]:
         """Apply filters to entity list"""
         # For now, return limited list - could be enhanced with actual filtering
-        max_entities = filters.get('max_entities', 50)
+        max_entities = filters.get('max_entities', 500)
         return eins[:max_entities]
     
     def _apply_opportunity_filters(self, opp_ids: List[str], filters: Dict[str, Any]) -> List[str]:
         """Apply filters to opportunity list"""
-        max_opportunities = filters.get('max_opportunities', 50)
+        max_opportunities = filters.get('max_opportunities', 500)
         return opp_ids[:max_opportunities]
     
     async def _apply_cross_entity_analysis(self, results: List[EntityDiscoveryResult]):

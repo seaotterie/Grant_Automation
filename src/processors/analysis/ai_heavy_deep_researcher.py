@@ -481,7 +481,7 @@ RESPONSE (JSON only):"""
         
         return prompt
     
-    async def _call_openai_api(self, prompt: str, model: str = "gpt-4") -> str:
+    async def _call_openai_api(self, prompt: str, model: str = "gpt-5-mini") -> str:
         """Call OpenAI API with deep research settings"""
         try:
             # Note: In production, you would set up OpenAI client with API key

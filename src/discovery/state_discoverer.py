@@ -33,7 +33,7 @@ class StateDiscoverer(BaseDiscoverer):
         self, 
         profile: OrganizationProfile,
         search_params: ProfileSearchParams,
-        max_results: int = 100
+        max_results: int = 1000
     ) -> AsyncIterator[DiscoveryResult]:
         """Discover state-level grant opportunities"""
         

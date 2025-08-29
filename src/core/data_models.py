@@ -477,13 +477,13 @@ class WorkflowConfig(BaseModel):
     states: List[str] = Field(default_factory=list, description="Multiple states to include")
     
     # Financial Filters
-    min_revenue: Optional[int] = Field(100000, description="Minimum revenue threshold")
-    max_revenue: Optional[int] = Field(None, description="Maximum revenue threshold")
-    min_assets: Optional[int] = Field(None, description="Minimum assets threshold")
-    max_assets: Optional[int] = Field(None, description="Maximum assets threshold")
+    min_revenue: Optional[int] = Field(None, description="Minimum revenue threshold (None = no filter)")
+    max_revenue: Optional[int] = Field(None, description="Maximum revenue threshold (None = no filter)")
+    min_assets: Optional[int] = Field(None, description="Minimum assets threshold (None = no filter)")
+    max_assets: Optional[int] = Field(None, description="Maximum assets threshold (None = no filter)")
     
-    # Processing Options
-    max_results: int = Field(100, description="Maximum number of results to process")
+    # Processing Options - Non-restrictive defaults for maximum opportunity capture
+    max_results: int = Field(1000, description="Maximum number of results to process")
     scoring_profile: str = Field("default", description="Scoring profile to use")
     processors_to_run: List[str] = Field(default_factory=list, description="Specific processors to run (empty = all)")
     processors_to_skip: List[str] = Field(default_factory=list, description="Processors to skip")

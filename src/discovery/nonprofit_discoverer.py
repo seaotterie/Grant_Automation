@@ -24,7 +24,7 @@ class NonprofitDiscoverer(BaseDiscoverer):
         self, 
         profile: OrganizationProfile,
         search_params: ProfileSearchParams,
-        max_results: int = 100
+        max_results: int = 1000
     ) -> AsyncIterator[DiscoveryResult]:
         """Discover nonprofit grant opportunities using existing workflow system"""
         
@@ -155,7 +155,7 @@ class NonprofitDiscoverer(BaseDiscoverer):
             ntee_codes = ["E21", "E30", "F30", "P30", "S30"]
         
         funding_range = discovery_filters.get("funding_range", {})
-        min_revenue = funding_range.get("min_amount", 50000)
+        min_revenue = funding_range.get("min_amount", None)  # No default filter
         
         # Create workflow configuration
         config = WorkflowConfig(
@@ -165,7 +165,7 @@ class NonprofitDiscoverer(BaseDiscoverer):
             states=states[:5],  # Limit to 5 states for performance
             ntee_codes=ntee_codes[:10],  # Limit NTEE codes
             min_revenue=min_revenue,
-            max_results=min(max_results, 500),  # Cap at 500 for performance
+            max_results=max_results,  # No cap - maximize opportunity capture
             include_classified_organizations=True,
             classification_score_threshold=search_params.min_compatibility_threshold
         )

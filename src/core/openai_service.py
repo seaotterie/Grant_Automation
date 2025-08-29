@@ -13,6 +13,7 @@ from dataclasses import dataclass
 import openai
 from openai import AsyncOpenAI
 import time
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -50,18 +51,13 @@ class OpenAIService:
         self.cost_tracking = {}
         self.request_count = 0
         
-        # Cost per token (updated August 2025)
+        # Cost per token (GPT-5 Models Only - August 2025 Release)
         self.cost_per_token = {
-            # Legacy Models
-            "gpt-3.5-turbo": {"input": 0.0010 / 1000, "output": 0.0020 / 1000},
-            "gpt-4": {"input": 0.0300 / 1000, "output": 0.0600 / 1000},
-            "gpt-4-turbo": {"input": 0.0100 / 1000, "output": 0.0300 / 1000},
-            "gpt-4o": {"input": 0.0025 / 1000, "output": 0.0100 / 1000},
-            # GPT-5 Models (August 2025 Release)
             "gpt-5": {"input": 1.25 / 1000000, "output": 10.0 / 1000000},  # $1.25/1M input, $10/1M output
-            "gpt-5-mini": {"input": 0.5 / 1000000, "output": 4.0 / 1000000},  # Estimated pricing
-            "gpt-5-nano": {"input": 0.25 / 1000000, "output": 2.0 / 1000000}, # Estimated pricing
-            "gpt-5-chat-latest": {"input": 1.25 / 1000000, "output": 10.0 / 1000000}
+            "gpt-5-mini": {"input": 0.5 / 1000000, "output": 4.0 / 1000000},  # Mid-tier GPT-5
+            "gpt-5-nano": {"input": 0.25 / 1000000, "output": 2.0 / 1000000}, # Most cost-effective GPT-5
+            "gpt-5-chat-latest": {"input": 1.25 / 1000000, "output": 10.0 / 1000000}, # Latest GPT-5
+            "gpt-5-preview": {"input": 1.25 / 1000000, "output": 10.0 / 1000000} # Preview version
         }
         
         # Rate limiting
@@ -71,8 +67,26 @@ class OpenAIService:
         
         # Initialize client if API key is available
         if self.api_key:
-            self.client = AsyncOpenAI(api_key=self.api_key)
-            logger.info("OpenAI service initialized with API key")
+            # Configure custom limits for connection pooling
+            limits = httpx.Limits(
+                max_keepalive_connections=20,
+                max_connections=100,
+                keepalive_expiry=30.0
+            )
+            
+            # Custom HTTP client with shorter timeouts
+            http_client = httpx.AsyncClient(
+                limits=limits,
+                timeout=httpx.Timeout(30.0, connect=5.0)  # Shorter timeouts
+            )
+            
+            self.client = AsyncOpenAI(
+                api_key=self.api_key,
+                http_client=http_client,
+                max_retries=3,  # Reduced from default 10 to 3
+                timeout=30.0    # 30 second timeout
+            )
+            logger.info("OpenAI service initialized with API key and reduced retry configuration (3 attempts max)")
         else:
             logger.warning("OpenAI service initialized without API key - using simulation mode")
     
@@ -105,20 +119,40 @@ class OpenAIService:
             return await self._simulate_completion(model, messages, max_tokens)
         
         try:
-            # Make API call
+            # Make API call with model-specific parameters
             start_time = time.time()
-            response = await self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
+            
+            # Prepare parameters based on model
+            api_params = {
+                "model": model,
+                "messages": messages,
                 **kwargs
-            )
+            }
+            
+            # GPT-5 models have different parameter requirements
+            if model.startswith("gpt-5"):
+                if max_tokens is not None:
+                    api_params["max_completion_tokens"] = max_tokens
+                # GPT-5 models only support temperature=1 (default)
+                if temperature is not None and temperature != 1.0:
+                    logger.info(f"GPT-5 model {model} only supports temperature=1, ignoring temperature={temperature}")
+                # Don't set temperature for GPT-5 models (use default)
+            else:
+                if max_tokens is not None:
+                    api_params["max_tokens"] = max_tokens
+                if temperature is not None:
+                    api_params["temperature"] = temperature
+            
+            response = await self.client.chat.completions.create(**api_params)
             end_time = time.time()
             
-            # Extract response data
-            content = response.choices[0].message.content
-            usage = response.usage._asdict() if response.usage else {}
+            # Extract response data with None check
+            content = response.choices[0].message.content or ""
+            usage = {
+                "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
+                "completion_tokens": response.usage.completion_tokens if response.usage else 0,
+                "total_tokens": response.usage.total_tokens if response.usage else 0
+            }
             finish_reason = response.choices[0].finish_reason
             
             # Calculate cost estimate
@@ -283,8 +317,8 @@ class OpenAIService:
     def _calculate_cost(self, model: str, usage: Dict[str, int]) -> float:
         """Calculate estimated cost for API call"""
         if model not in self.cost_per_token:
-            # Default to GPT-3.5 rates for unknown models
-            model = "gpt-3.5-turbo"
+            # Default to GPT-5-nano rates for unknown models
+            model = "gpt-5-nano"
         
         rates = self.cost_per_token[model]
         

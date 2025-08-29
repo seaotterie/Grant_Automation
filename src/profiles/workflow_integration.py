@@ -278,7 +278,7 @@ class ProfileWorkflowIntegrator:
         
         # Extract funding range
         funding_range = discovery_filters.get("funding_range", {})
-        min_revenue = funding_range.get("min_amount", 50000)
+        min_revenue = funding_range.get("min_amount", None)  # No default filter
         
         # Create workflow configuration
         config = WorkflowConfig(
