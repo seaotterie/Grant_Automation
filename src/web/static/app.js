@@ -725,6 +725,8 @@ function catalynxApp() {
             network_running: false,
             enhanced_scoring_running: false,
             strategic_running: false,
+            unified_ai_running: false,  // New unified AI research
+            ai_heavy_light_running: false,  // AI-Heavy Light screening for ANALYZE tab
             ai: false  // AI-Heavy-1 Research Bridge
         },
         
@@ -732,6 +734,7 @@ function catalynxApp() {
         showNetworkCharts: false,
         loadingNetworkData: false,
         networkVisualizationData: null,
+        lightAnalysisResults: null,  // AI-Heavy Light screening results
         fullscreenNetwork: {
             board: false,
             influence: false
@@ -7811,6 +7814,254 @@ function catalynxApp() {
                 this.showNotification('Strategic Analysis Error', `AI-Lite-2 Strategic Scorer failed: ${error.message}`, 'error');
             } finally {
                 this.analysisProgress.strategic_running = false;
+            }
+        },
+        
+        // New Unified AI Research Function (replaces Network Discovery + Enhanced Scoring + Strategic Insights)
+        async startUnifiedAIResearch() {
+            if (!this.selectedProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile before starting AI research', 'warning');
+                return;
+            }
+            
+            if (this.analysisProgress.unified_ai_running) {
+                return;
+            }
+            
+            this.analysisProgress.unified_ai_running = true;
+            
+            try {
+                this.showNotification('Unified AI Research', 'Starting comprehensive AI analysis (~$0.0004/candidate)...', 'info');
+                
+                // Get qualified prospects for analysis
+                const qualifiedCandidates = this.qualifiedProspects.filter(prospect => 
+                    prospect.xml_990_score > 0 || prospect.organization_name
+                );
+                
+                if (qualifiedCandidates.length === 0) {
+                    this.showNotification('No Candidates', 'Run 990 Analysis first to identify candidates for AI research', 'warning');
+                    return;
+                }
+                
+                // Prepare data for unified AI-Lite processor
+                const candidatesData = qualifiedCandidates.map(prospect => ({
+                    opportunity_id: prospect.opportunity_id || prospect.id,
+                    organization_name: prospect.organization_name,
+                    source_type: prospect.source_type || 'foundation',
+                    description: prospect.description || 'Foundation opportunity',
+                    funding_amount: prospect.funding_amount,
+                    application_deadline: prospect.application_deadline,
+                    geographic_location: prospect.geographic_location,
+                    current_score: prospect.combined_score || 0.0
+                }));
+                
+                console.log(`Sending ${candidatesData.length} candidates to AI-Lite Unified processor`);
+                
+                // Call AI-Lite Unified processor endpoint
+                const response = await fetch('/api/ai/lite-1/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        candidates: candidatesData,
+                        selected_profile: this.selectedProfile,
+                        cost_limit: 0.05,
+                        analysis_mode: 'comprehensive'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Unified AI Research failed: ${response.statusText}`);
+                }
+                
+                const unifiedResults = await response.json();
+                console.log('Unified AI Research Results:', unifiedResults);
+                
+                // Process unified analysis results
+                if (unifiedResults.status === 'success' && unifiedResults.results) {
+                    const analyses = unifiedResults.results.analyses || {};
+                    
+                    // Update prospects with unified analysis results
+                    this.qualifiedProspects.forEach(prospect => {
+                        const analysis = analyses[prospect.opportunity_id || prospect.id];
+                        
+                        if (analysis) {
+                            // Network discovery results
+                            prospect.network_score = analysis.relationship_potential || 0.7;
+                            prospect.network_advantages = analysis.network_advantages || [];
+                            prospect.introduction_pathways = analysis.introduction_pathways || [];
+                            
+                            // Enhanced scoring results
+                            prospect.enhanced_score = analysis.compatibility_score || 0.0;
+                            prospect.funding_likelihood = analysis.funding_likelihood || 0.0;
+                            prospect.priority_rank = analysis.priority_rank || 99;
+                            
+                            // Strategic insights results
+                            prospect.strategic_score = analysis.strategic_value_score || 0.0;
+                            prospect.mission_alignment = analysis.mission_alignment_score || 0.0;
+                            prospect.strategic_value = analysis.strategic_value || 'medium';
+                            prospect.strategic_rationale = analysis.strategic_rationale || '';
+                            prospect.key_advantages = analysis.key_advantages || [];
+                            prospect.potential_concerns = analysis.potential_concerns || [];
+                            prospect.next_actions = analysis.next_actions || [];
+                            
+                            // Update combined score
+                            this.calculateCombinedScore(prospect);
+                            
+                            console.log(`✅ Unified AI analyzed ${prospect.organization_name}: Combined ${(prospect.combined_score * 100).toFixed(1)}%`);
+                        }
+                    });
+                    
+                    const totalCost = unifiedResults.results.total_cost || 0;
+                    const processedCount = unifiedResults.results.processed_count || 0;
+                    
+                    this.showNotification('Unified AI Complete', 
+                        `Comprehensive analysis completed for ${processedCount} candidates (Cost: $${totalCost.toFixed(4)})`, 
+                        'success');
+                    
+                    // Mark multiple progress items as complete
+                    this.analysisProgress.network_running = false;
+                    this.analysisProgress.enhanced_scoring_running = false;
+                    this.analysisProgress.strategic_running = false;
+                    this.workflowProgress.plan = true;
+                    
+                } else {
+                    throw new Error('Invalid unified AI research response format');
+                }
+                
+            } catch (error) {
+                console.error('Unified AI Research failed:', error);
+                this.showNotification('AI Research Error', `Unified AI Research failed: ${error.message}`, 'error');
+            } finally {
+                this.analysisProgress.unified_ai_running = false;
+            }
+        },
+        
+        // AI-Heavy Light Analysis for ANALYZE tab (cost-effective screening)
+        async runAIHeavyLightAnalysis() {
+            if (!this.selectedAnalyzeProfile) {
+                this.showNotification('No Profile Selected', 'Please select a profile before running AI-Heavy Light analysis', 'warning');
+                return;
+            }
+            
+            if (this.analysisProgress.ai_heavy_light_running) {
+                return;
+            }
+            
+            this.analysisProgress.ai_heavy_light_running = true;
+            
+            try {
+                this.showNotification('AI-Heavy Light Screening', 'Starting cost-effective candidate screening (~$0.03/candidate)...', 'info');
+                
+                // Get candidates for screening from qualified prospects
+                const candidates = this.qualifiedProspects.filter(prospect => 
+                    prospect.combined_score > 0 || prospect.xml_990_score > 0
+                );
+                
+                if (candidates.length === 0) {
+                    this.showNotification('No Candidates', 'Complete PLAN stage first to generate candidates for screening', 'warning');
+                    return;
+                }
+                
+                // Prepare candidate data for AI-Heavy Light processor
+                const candidatesData = candidates.map(candidate => ({
+                    opportunity_id: candidate.opportunity_id || candidate.id,
+                    organization_name: candidate.organization_name,
+                    source_type: candidate.source_type || 'foundation',
+                    description: candidate.description || 'Foundation opportunity',
+                    funding_amount: candidate.funding_amount,
+                    application_deadline: candidate.application_deadline,
+                    geographic_location: candidate.geographic_location,
+                    current_score: candidate.combined_score || 0.0,
+                    existing_analysis: {
+                        xml_990_score: candidate.xml_990_score || 0.0,
+                        network_score: candidate.network_score || 0.0,
+                        enhanced_score: candidate.enhanced_score || 0.0
+                    }
+                }));
+                
+                console.log(`Sending ${candidatesData.length} candidates to AI-Heavy Light processor`);
+                
+                // Call AI-Heavy Light processor endpoint
+                const response = await fetch('/api/ai/heavy-light/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        candidates: candidatesData,
+                        selected_profile: this.selectedAnalyzeProfile,
+                        analysis_focus: 'screening',
+                        cost_budget: 0.10,
+                        priority_level: 'standard'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`AI-Heavy Light analysis failed: ${response.statusText}`);
+                }
+                
+                const results = await response.json();
+                console.log('AI-Heavy Light Results:', results);
+                
+                // Process screening results
+                if (results.status === 'success' && results.results) {
+                    const analysisResults = results.results.analyses || {};
+                    const screeningSummary = results.screening_summary || {};
+                    const recommendations = results.recommendations || {};
+                    
+                    // Update candidates with screening results
+                    this.qualifiedProspects.forEach(prospect => {
+                        const analysis = analysisResults[prospect.opportunity_id || prospect.id];
+                        
+                        if (analysis) {
+                            // Update with light analysis results
+                            prospect.viability_level = analysis.viability_level;
+                            prospect.overall_score = analysis.overall_score;
+                            prospect.recommendation = analysis.recommendation;
+                            prospect.strategic_fit = analysis.strategic_fit;
+                            prospect.risk_level = analysis.risk_level;
+                            prospect.financial_health = analysis.financial_health;
+                            prospect.relationship_potential = analysis.relationship_potential;
+                            prospect.competition_level = analysis.competition_level;
+                            prospect.confidence_level = analysis.confidence_level;
+                            prospect.next_step_recommendation = analysis.next_step_recommendation;
+                            
+                            // Store detailed analysis data
+                            prospect.light_analysis = analysis;
+                            
+                            console.log(`✅ AI-Heavy Light screened ${prospect.organization_name}: ${analysis.recommendation} (${(analysis.overall_score * 100).toFixed(1)}%)`);
+                        }
+                    });
+                    
+                    // Store screening summary for display
+                    this.lightAnalysisResults = {
+                        summary: screeningSummary,
+                        recommendations: recommendations,
+                        total_cost: results.results.total_cost || 0,
+                        processed_count: results.results.processed_count || 0
+                    };
+                    
+                    const proceedCount = recommendations.proceed_to_examine?.count || 0;
+                    const totalCost = results.results.total_cost || 0;
+                    
+                    this.showNotification('AI-Heavy Light Complete', 
+                        `Screening completed for ${results.results.processed_count} candidates. ${proceedCount} recommended for deep analysis (Cost: $${totalCost.toFixed(3)})`, 
+                        'success');
+                    
+                    // Update workflow progress
+                    this.workflowProgress.analyze = true;
+                    
+                } else {
+                    throw new Error('Invalid AI-Heavy Light response format');
+                }
+                
+            } catch (error) {
+                console.error('AI-Heavy Light analysis failed:', error);
+                this.showNotification('Screening Error', `AI-Heavy Light screening failed: ${error.message}`, 'error');
+            } finally {
+                this.analysisProgress.ai_heavy_light_running = false;
             }
         },
         

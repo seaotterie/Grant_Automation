@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-from .ai_lite_scorer import AILiteAnalysis, ResearchReport, WebsiteIntelligence, FactExtraction, CompetitiveAnalysis
+from .ai_lite_unified_processor import ComprehensiveAnalysis
 from .ai_heavy_researcher import AILiteResults, TargetPreliminaryData
 from .ai_heavy_deep_researcher import (
     DeepResearchIntelligenceReport, RelationshipIntelligence, CompetitiveIntelligence,
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class ResearchHandoffData(BaseModel):
     """Research data handoff from AI-Lite to AI-Heavy"""
     opportunity_id: str
-    ai_lite_analysis: AILiteAnalysis
+    ai_lite_analysis: ComprehensiveAnalysis
     research_quality_score: float = Field(ge=0.0, le=1.0, description="Quality of research data")
     handoff_timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
     
@@ -69,7 +69,7 @@ class ResearchIntegrationService:
         self.integration_enabled = True
         self.three_way_integration_enabled = True
         
-    def create_research_handoff(self, opportunity_id: str, ai_lite_analysis: AILiteAnalysis) -> ResearchHandoffData:
+    def create_research_handoff(self, opportunity_id: str, ai_lite_analysis: ComprehensiveAnalysis) -> ResearchHandoffData:
         """Create research handoff data from AI-Lite to AI-Heavy"""
         
         # Calculate research quality score based on available research components
@@ -164,7 +164,7 @@ class ResearchIntegrationService:
             if workflow_stage == "approach":
                 context.integration_completeness_score = 1.0  # Complete
     
-    def _extract_ai_lite_components(self, ai_lite_analysis: AILiteAnalysis) -> List[str]:
+    def _extract_ai_lite_components(self, ai_lite_analysis: ComprehensiveAnalysis) -> List[str]:
         """Extract available AI-Lite research components"""
         components = []
         if ai_lite_analysis.research_report:
@@ -219,7 +219,7 @@ class ResearchIntegrationService:
     def integrate_ai_lite_research_to_ai_heavy_input(
         self, 
         opportunity_id: str, 
-        ai_lite_analysis: AILiteAnalysis
+        ai_lite_analysis: ComprehensiveAnalysis
     ) -> AILiteResults:
         """Convert AI-Lite analysis to AI-Heavy input format"""
         
@@ -240,7 +240,7 @@ class ResearchIntegrationService:
     def enrich_target_data_with_research(
         self,
         base_target_data: TargetPreliminaryData,
-        ai_lite_analysis: AILiteAnalysis
+        ai_lite_analysis: ComprehensiveAnalysis
     ) -> EnhancedTargetData:
         """Enrich target data with AI-Lite research findings"""
         
@@ -298,7 +298,7 @@ class ResearchIntegrationService:
         
         return enhanced_target_data
     
-    def create_evidence_based_scoring_summary(self, ai_lite_analysis: AILiteAnalysis) -> Dict[str, Any]:
+    def create_evidence_based_scoring_summary(self, ai_lite_analysis: ComprehensiveAnalysis) -> Dict[str, Any]:
         """Create evidence-based scoring summary for decision support"""
         
         summary = {
@@ -334,7 +334,7 @@ class ResearchIntegrationService:
         
         return summary
     
-    def _calculate_research_quality_score(self, ai_lite_analysis: AILiteAnalysis) -> float:
+    def _calculate_research_quality_score(self, ai_lite_analysis: ComprehensiveAnalysis) -> float:
         """Calculate research quality score based on available research components"""
         
         base_score = 0.3  # Base score for scoring analysis

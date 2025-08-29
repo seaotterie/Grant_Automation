@@ -1,17 +1,23 @@
 """
-AI Heavy Dossier Builder - Phase 1.5: Grant Application & Implementation Planning for APPROACH tab
+AI Heavy Implementation Planner - Enhanced Implementation Planning for APPROACH tab
 
-Purpose: Grant application decision-making and implementation planning with deep research integration
-Model: GPT-4 for sophisticated implementation analysis (~$0.12-0.20 per implementation dossier)
+Purpose: Comprehensive grant application planning and implementation strategy
+Model: GPT-5-mini for sophisticated implementation analysis (~$0.12-0.18 per implementation dossier)
 Processing: Implementation-focused analysis with comprehensive planning and resource optimization
 
-Phase 1.5 Specialized Features:
+APPROACH Tab Specialization (Implementation Planning Focus):
 - Grant application intelligence with detailed effort estimation
 - Implementation blueprints with resource allocation and timeline optimization
 - Proposal strategy development with positioning and messaging recommendations
 - Go/No-Go decision frameworks with success probability modeling
 - Application package coordination with submission planning
-- Deep integration with EXAMINE tab intelligence for implementation planning
+- ENHANCED: Grant size optimization modeling and multi-year funding strategies
+- ENHANCED: Market entry strategies and partnership risk assessment
+- ENHANCED: Sustainability prospects analysis and long-term planning
+- Deep integration with EXAMINE tab strategic intelligence
+
+NOTE: Strategic intelligence features (competitive analysis, relationship mapping) 
+have been consolidated in EXAMINE tab AI-Heavy Deep Research processor.
 """
 
 import json
@@ -166,12 +172,21 @@ class RelationshipStrategy(BaseModel):
     engagement_timeline: str
 
 class FinancialAnalysis(BaseModel):
-    """Financial and capacity analysis"""
+    """Enhanced financial analysis and funding strategy"""
     funding_capacity_assessment: str
     grant_size_optimization: str
     multi_year_potential: str
     sustainability_prospects: str
     financial_health_score: int = Field(..., ge=0, le=100)
+
+class ImplementationPlanning(BaseModel):
+    """Enhanced implementation planning (moved from EXAMINE tab)"""
+    market_entry_strategies: List[str] = Field(default_factory=list)
+    partnership_risk_assessment: Dict[str, Any] = Field(default_factory=dict)
+    resource_optimization_plan: Dict[str, Any] = Field(default_factory=dict)
+    implementation_timeline: Dict[str, Any] = Field(default_factory=dict)
+    sustainability_framework: List[str] = Field(default_factory=list)
+    long_term_planning: Dict[str, Any] = Field(default_factory=dict)
 
 class RiskAssessment(BaseModel):
     """Risk assessment and mitigation"""

@@ -1099,55 +1099,41 @@
                             </div>
                         </div>
 
-                        <!-- Analysis Action Cards -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="font-medium text-blue-900 dark:text-blue-100">990 & 990-PF Analysis</h5>
+                        <!-- Analysis Action Cards - Consolidated to 2 Sections -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                            <div class="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h5 class="text-lg font-semibold text-blue-900 dark:text-blue-100">990 & 990-PF Analysis</h5>
                                     <button @click="start990Analysis()" 
                                             :disabled="analysisProgress.xml_990_running" 
-                                            class="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
+                                            class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded transition-colors">
                                         <span x-show="!analysisProgress.xml_990_running">Analyze Forms</span>
                                         <span x-show="analysisProgress.xml_990_running">Running...</span>
                                     </button>
                                 </div>
-                                <p class="text-sm text-blue-700 dark:text-blue-300">Detailed Document Reviews</p>
+                                <p class="text-blue-700 dark:text-blue-300 mb-2">Comprehensive document processing and financial analysis</p>
+                                <ul class="text-sm text-blue-600 dark:text-blue-400 space-y-1">
+                                    <li>• Financial data extraction and analysis</li>
+                                    <li>• Board member identification</li>
+                                    <li>• Grant-making pattern analysis</li>
+                                </ul>
                             </div>
-                            <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="font-medium text-purple-900 dark:text-purple-100">Network Discovery</h5>
-                                    <button @click="startNetworkDiscovery()" 
-                                            :disabled="analysisProgress.network_running" 
-                                            class="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
-                                        <span x-show="!analysisProgress.network_running">Map Networks</span>
-                                        <span x-show="analysisProgress.network_running">Running...</span>
+                            <div class="bg-gradient-to-br from-purple-50 to-green-50 dark:from-purple-900/20 dark:to-green-900/20 p-6 rounded-lg border border-purple-200 dark:border-purple-700">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h5 class="text-lg font-semibold text-purple-900 dark:text-purple-100">Comprehensive AI Research</h5>
+                                    <button @click="startUnifiedAIResearch()" 
+                                            :disabled="analysisProgress.unified_ai_running" 
+                                            class="bg-gradient-to-r from-purple-600 to-green-600 hover:from-purple-700 hover:to-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded transition-colors">
+                                        <span x-show="!analysisProgress.unified_ai_running">AI Analysis</span>
+                                        <span x-show="analysisProgress.unified_ai_running">Running...</span>
                                     </button>
                                 </div>
-                                <p class="text-sm text-purple-700 dark:text-purple-300">Board connections & influence</p>
-                            </div>
-                            <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="font-medium text-green-900 dark:text-green-100">Enhanced Scoring</h5>
-                                    <button @click="startEnhancedScoring()" 
-                                            :disabled="analysisProgress.enhanced_scoring_running" 
-                                            class="text-xs bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
-                                        <span x-show="!analysisProgress.enhanced_scoring_running">Run AI Scoring</span>
-                                        <span x-show="analysisProgress.enhanced_scoring_running">Running...</span>
-                                    </button>
-                                </div>
-                                <p class="text-sm text-green-700 dark:text-green-300">AI-enhanced compatibility scoring</p>
-                            </div>
-                            <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="font-medium text-orange-900 dark:text-orange-100">Strategic Insights</h5>
-                                    <button @click="generateStrategicPlan()" 
-                                            :disabled="analysisProgress.strategic_running" 
-                                            class="text-xs bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-3 py-1 rounded transition-colors">
-                                        <span x-show="!analysisProgress.strategic_running">Generate AI Insights</span>
-                                        <span x-show="analysisProgress.strategic_running">Running...</span>
-                                    </button>
-                                </div>
-                                <p class="text-sm text-orange-700 dark:text-orange-300">AI-generated strategic insights</p>
+                                <p class="text-purple-700 dark:text-purple-300 mb-2">Unified AI-powered strategic intelligence and analysis</p>
+                                <ul class="text-sm text-purple-600 dark:text-purple-400 space-y-1">
+                                    <li>• Network discovery & relationship mapping</li>
+                                    <li>• AI-enhanced compatibility scoring</li>
+                                    <li>• Strategic insights & recommendations</li>
+                                </ul>
                             </div>
                         </div>
 
@@ -1694,55 +1680,41 @@
                             </div>
                         </div>
 
-                        <!-- Analysis Tracks - REORDERED: AI Intelligence → Financial → Network → Risk -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            <!-- 1. AI Intelligence (AI-Heavy-1 Research Bridge) -->
-                            <div class="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="font-medium text-orange-900 dark:text-orange-100">AI Intelligence</h5>
-                                    <button @click="showAIIntelligenceConfirmation = true" :disabled="analysisProgress.ai"
-                                            class="text-xs bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-2 py-1 rounded">
-                                        <span x-show="!analysisProgress.ai">Run</span>
-                                        <span x-show="analysisProgress.ai">Running...</span>
-                                    </button>
+                        <!-- AI-Heavy Light Analysis - Comprehensive Screening -->
+                        <div class="mb-6 bg-gradient-to-br from-orange-50 to-purple-50 dark:from-orange-900/10 dark:to-purple-900/10 rounded-lg border border-orange-200 dark:border-orange-700 p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-3 h-3 bg-gradient-to-r from-orange-500 to-purple-500 rounded-full"></div>
+                                    <h5 class="text-xl font-semibold text-gray-900 dark:text-white">AI-Heavy Light Screening</h5>
+                                    <span class="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200 text-xs font-medium rounded-full">Cost-Effective</span>
                                 </div>
-                                <p class="text-sm text-orange-700 dark:text-orange-300">Intelligence gathering & fact extraction</p>
+                                <button @click="runAIHeavyLightAnalysis()" 
+                                        :disabled="analysisProgress.ai_heavy_light_running" 
+                                        class="bg-gradient-to-r from-orange-600 to-purple-600 hover:from-orange-700 hover:to-purple-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105">
+                                    <span x-show="!analysisProgress.ai_heavy_light_running">Run Comprehensive Screening</span>
+                                    <span x-show="analysisProgress.ai_heavy_light_running">Analyzing...</span>
+                                </button>
                             </div>
-                            <!-- 2. Financial Analysis -->
-                            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="font-medium text-blue-900 dark:text-blue-100">Financial Analysis</h5>
-                                    <button @click="runAnalysisTrack('financial')" :disabled="analysisProgress.financial"
-                                            class="text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-2 py-1 rounded">
-                                        <span x-show="!analysisProgress.financial">Run</span>
-                                        <span x-show="analysisProgress.financial">Running...</span>
-                                    </button>
+                            <p class="text-gray-700 dark:text-gray-300 mb-4">Intelligent screening analysis to filter candidates for expensive deep analysis (~$0.03 per candidate)</p>
+                            
+                            <!-- Feature Grid -->
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-orange-200 dark:border-orange-700">
+                                    <div class="text-orange-600 dark:text-orange-400 font-semibold text-sm mb-1">AI Intelligence</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Strategic assessment & screening</div>
                                 </div>
-                                <p class="text-sm text-blue-700 dark:text-blue-300">Revenue trends, financial health</p>
-                            </div>
-                            <!-- 3. Network Analysis -->
-                            <div class="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="font-medium text-purple-900 dark:text-purple-100">Network Analysis</h5>
-                                    <button @click="runAnalysisTrack('network')" :disabled="analysisProgress.network"
-                                            class="text-xs bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-2 py-1 rounded">
-                                        <span x-show="!analysisProgress.network">Run</span>
-                                        <span x-show="analysisProgress.network">Running...</span>
-                                    </button>
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+                                    <div class="text-blue-600 dark:text-blue-400 font-semibold text-sm mb-1">Risk Assessment</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Compliance & stability analysis</div>
                                 </div>
-                                <p class="text-sm text-purple-700 dark:text-purple-300">Board connections, relationships</p>
-                            </div>
-                            <!-- 4. Risk Assessment -->
-                            <div class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="font-medium text-green-900 dark:text-green-100">Risk Assessment</h5>
-                                    <button @click="runAnalysisTrack('risk')" :disabled="analysisProgress.risk"
-                                            class="text-xs bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-2 py-1 rounded">
-                                        <span x-show="!analysisProgress.risk">Run</span>
-                                        <span x-show="analysisProgress.risk">Running...</span>
-                                    </button>
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-purple-200 dark:border-purple-700">
+                                    <div class="text-purple-600 dark:text-purple-400 font-semibold text-sm mb-1">Financial Analysis</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">AI-enhanced financial health</div>
                                 </div>
-                                <p class="text-sm text-green-700 dark:text-green-300">Compliance, stability scoring</p>
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-green-200 dark:border-green-700">
+                                    <div class="text-green-600 dark:text-green-400 font-semibold text-sm mb-1">Network Analysis</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Relationship potential mapping</div>
+                                </div>
                             </div>
                         </div>
 
@@ -1774,7 +1746,7 @@
                             <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <p class="text-sm text-blue-700 dark:text-blue-300">AI-Lite Analyzed</p>
+                                        <p class="text-sm text-blue-700 dark:text-blue-300">AI Analyzed</p>
                                         <p class="text-2xl font-bold text-blue-900 dark:text-blue-100" x-text="getAILiteAnalyzedCount()">0</p>
                                     </div>
                                     <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
@@ -1837,7 +1809,7 @@
                                     <div>
                                         <h5 class="font-medium text-orange-900 dark:text-orange-100">Ready for Deep Research</h5>
                                         <p class="text-sm text-orange-700 dark:text-orange-300">
-                                            <span x-text="getEligibleCandidatesCount()"></span> candidates with AI-Lite scores ≥75% can be promoted to comprehensive AI-Heavy analysis
+                                            <span x-text="getEligibleCandidatesCount()"></span> candidates with AI scores ≥75% can be promoted to comprehensive deep analysis
                                         </p>
                                     </div>
                                 </div>
@@ -1861,12 +1833,12 @@
                             </svg>
                             <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">No candidates ready for AI-Heavy research</h3>
                             <p class="mt-2 text-gray-500 dark:text-gray-400">
-                                Run AI-Lite analysis first to identify high-scoring candidates (≥75%) eligible for deep research
+                                Run AI analysis first to identify high-scoring candidates (≥75%) eligible for deep research
                             </p>
                             <div class="mt-4">
-                                <button @click="runAILiteAnalysis()" 
+                                <button @click="startUnifiedAIResearch()" 
                                         class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
-                                    Run AI-Lite Analysis
+                                    Run AI Analysis
                                 </button>
                             </div>
                         </div>
@@ -2080,7 +2052,7 @@
                                                         <div>
                                                             <span x-show="hasAIAnalysis(candidate)" 
                                                                   class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                                                AI Lite
+                                                                AI Analyzed
                                                             </span>
                                                         </div>
                                                         
@@ -2103,7 +2075,7 @@
                                                     
                                                     <!-- Action Buttons -->
                                                     <div>
-                                                        <!-- Initiate Deep AI button (requires AI Lite + high score) -->
+                                                        <!-- Initiate Deep AI button (requires AI Analysis + high score) -->
                                                         <button x-show="(!candidate.ai_analyzed && !candidate.ai_processing && !candidate.ai_error && hasAIAnalysis(candidate) && getAICompatibilityScore(candidate) >= 0.75)"
                                                                 @click="runSingleAIAnalysis(candidate)" 
                                                                 class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors">
@@ -2488,7 +2460,7 @@
                                             Type
                                         </th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            AI Lite Score
+                                            AI Analysis Score
                                         </th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                             Funding Amount
@@ -2539,7 +2511,7 @@
                                                     </div>
                                                 </div>
                                                 <div x-show="!hasAIAnalysis(target)" class="text-xs text-gray-400 dark:text-gray-500">
-                                                    No AI Lite analysis
+                                                    No AI analysis
                                                 </div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
@@ -2571,7 +2543,7 @@
                                                     
                                                     <!-- Deep AI Action Buttons -->
                                                     <div>
-                                                        <!-- Initiate Deep AI button (requires AI Lite + high score) -->
+                                                        <!-- Initiate Deep AI button (requires AI Analysis + high score) -->
                                                         <button x-show="(!target.deep_ai_analyzed && !target.deep_ai_processing && !target.deep_ai_error && hasAIAnalysis(target) && getAICompatibilityScore(target) >= 0.75)"
                                                                 @click="runDeepAIAnalysis(target)" 
                                                                 class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded transition-colors">
@@ -2602,7 +2574,7 @@
                                                         <!-- Needs AI Lite first -->
                                                         <div x-show="!hasAIAnalysis(target)"
                                                              class="text-xs text-gray-500 dark:text-gray-400">
-                                                            Requires AI Lite analysis first
+                                                            Requires AI analysis first
                                                         </div>
                                                     </div>
                                                 </div>
@@ -3138,8 +3110,8 @@
                                             <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="`${profileMetrics?.roi_multiplier?.toFixed(1) || '0.0'}x`">0.0x</span>
                                         </div>
                                         <div class="flex items-center justify-between">
-                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">AI Lite Calls</span>
-                                            <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="profileMetrics?.ai_lite_calls || 0">0</span>
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">AI Analysis Calls</span>
+                                            <span class="text-sm font-semibold text-gray-900 dark:text-white" x-text="profileMetrics?.ai_analysis_calls || 0">0</span>
                                         </div>
                                         <div class="flex items-center justify-between">
                                             <span class="text-sm font-medium text-gray-700 dark:text-gray-300">AI Heavy Calls</span>

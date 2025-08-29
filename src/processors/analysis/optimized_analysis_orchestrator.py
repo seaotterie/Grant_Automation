@@ -27,10 +27,10 @@ from enum import Enum
 from dataclasses import dataclass
 from pydantic import BaseModel, Field
 
-from src.processors.analysis.ai_lite_validator import AILiteValidator, ValidationRequest, ValidationResult
-from src.processors.analysis.ai_lite_strategic_scorer import AILiteStrategicScorer, StrategicScoringRequest
+from src.processors.analysis.ai_lite_unified_processor import AILiteUnifiedProcessor, UnifiedRequest, ComprehensiveAnalysis
+# Strategic scoring now handled by unified AI-Lite processor
 from src.processors.analysis.ai_heavy_research_bridge import AIHeavyResearchBridge, ResearchBridgeRequest
-from src.processors.analysis.ai_heavy_researcher import AIHeavyResearcher
+from src.processors.analysis.ai_heavy_researcher import AIHeavyDossierBuilder
 from src.processors.analysis.government_opportunity_scorer import GovernmentOpportunityScorerProcessor
 from src.processors.analysis.financial_scorer import FinancialScorerProcessor
 from src.processors.analysis.risk_assessor import RiskAssessorProcessor
@@ -113,8 +113,8 @@ class OptimizedAnalysisOrchestrator:
     
     def __init__(self):
         # Initialize processors
-        self.ai_lite_validator = AILiteValidator()
-        self.ai_lite_strategic_scorer = AILiteStrategicScorer()
+        self.ai_lite_unified = AILiteUnifiedProcessor()
+        # Strategic scoring now handled by unified processor
         self.ai_heavy_research_bridge = AIHeavyResearchBridge()
         
         # Local scoring processors
@@ -123,7 +123,7 @@ class OptimizedAnalysisOrchestrator:
         self.risk_assessor = RiskAssessorProcessor()
         
         # Existing AI-Heavy processors (will be updated to use bridge data)
-        self.ai_heavy_researcher = AIHeavyResearcher()
+        self.ai_heavy_dossier_builder = AIHeavyDossierBuilder()
         
         # Pipeline configuration
         self.max_concurrent_stages = 3
@@ -225,7 +225,7 @@ class OptimizedAnalysisOrchestrator:
         )
         
         # Execute validation
-        validation_result = await self.ai_lite_validator.execute(validation_request)
+        validation_result = await self.ai_lite_unified.execute(validation_request)
         
         # Filter for valid opportunities only
         validated_candidates = {}
@@ -275,7 +275,7 @@ class OptimizedAnalysisOrchestrator:
         )
         
         # Execute strategic scoring
-        strategic_result = await self.ai_lite_strategic_scorer.execute(strategic_request)
+        # Strategic analysis now included in unified processor validation_result
         
         # Combine with validated candidate data
         strategic_candidates = {}

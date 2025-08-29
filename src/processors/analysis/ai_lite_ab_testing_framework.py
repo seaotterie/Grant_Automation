@@ -17,9 +17,7 @@ from pydantic import BaseModel, Field
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata
 from src.processors.analysis.ai_lite_unified_processor import AILiteUnifiedProcessor, UnifiedRequest
-from src.processors.analysis.ai_lite_validator import AILiteValidator, ValidationRequest
-from src.processors.analysis.ai_lite_strategic_scorer import AILiteStrategicScorer, StrategicScoringRequest
-from src.processors.analysis.ai_lite_scorer import AILiteScorer, AILiteRequest
+# Legacy processors replaced by unified processor
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +82,7 @@ class AILiteABTestingFramework(BaseProcessor):
             name="ai_lite_ab_testing_framework",
             description="A/B testing framework comparing unified vs 3-stage AI-Lite processors",
             version="1.0.0",
-            dependencies=["ai_lite_unified_processor", "ai_lite_validator", "ai_lite_strategic_scorer", "ai_lite_scorer"],
+            dependencies=["ai_lite_unified_processor"],
             estimated_duration=180,  # 3 minutes for A/B testing
             requires_network=True,
             requires_api_key=True,
@@ -100,9 +98,7 @@ class AILiteABTestingFramework(BaseProcessor):
         
         # Initialize processors
         self.unified_processor = AILiteUnifiedProcessor()
-        self.validator = AILiteValidator()
-        self.strategic_scorer = AILiteStrategicScorer()
-        self.scorer = AILiteScorer()
+        # All AI-Lite functionality now unified in single processor
         
         # Test tracking
         self.test_results: List[ABTestResults] = []

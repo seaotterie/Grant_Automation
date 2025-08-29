@@ -17,10 +17,9 @@ from typing import Dict, List, Optional, Any, Union
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-from .ai_lite_scorer import (
-    AILiteScorer, AILiteRequest, AILiteAnalysis, AILiteBatchResult,
-    RequestMetadata, ProfileContext, CandidateData, FundingHistory, 
-    ExistingAnalysis, StrategicValue, ActionPriority
+from .ai_lite_unified_processor import (
+    AILiteUnifiedProcessor, UnifiedRequest, ComprehensiveAnalysis, UnifiedBatchResult,
+    ValidationResult, StrategicValue, ActionPriority
 )
 from .ai_heavy_researcher import (
     AIHeavyDossierBuilder, AIHeavyRequest, AIHeavyResult,
@@ -47,7 +46,7 @@ class AIServiceManager:
     """Unified AI service management for both Lite and Heavy tiers"""
     
     def __init__(self):
-        self.ai_lite_processor = AILiteScorer()
+        self.ai_lite_processor = AILiteUnifiedProcessor()
         self.ai_heavy_processor = AIHeavyDossierBuilder()
         self.active_requests: Dict[str, ProcessingStatus] = {}
         
@@ -57,64 +56,49 @@ class AIServiceManager:
         
     # AI LITE PROCESSING METHODS
     
-    def prepare_ai_lite_request(self, frontend_data: Dict[str, Any]) -> AILiteRequest:
+    def prepare_ai_lite_request(self, frontend_data: Dict[str, Any]) -> UnifiedRequest:
         """Transform frontend opportunity data into AI Lite request packet"""
         try:
             # Extract profile context from frontend data
             profile_data = frontend_data.get("selected_profile", {})
             candidates_data = frontend_data.get("candidates", [])
             
-            # Generate request metadata
-            batch_id = f"ai_lite_{int(datetime.now().timestamp())}"
-            request_metadata = RequestMetadata(
-                batch_id=batch_id,
-                profile_id=profile_data.get("profile_id", "unknown"),
-                analysis_type="compatibility_scoring",
-                model_preference=frontend_data.get("model_preference", "gpt-5-nano"),
-                cost_limit=frontend_data.get("cost_limit", 0.01),
-                priority="standard"
-            )
+            # Generate unified request
+            batch_id = f"ai_lite_unified_{int(datetime.now().timestamp())}"
             
-            # Build comprehensive profile context
-            funding_history = None
-            if profile_data.get("funding_history"):
-                funding_history = FundingHistory(**profile_data["funding_history"])
+            # Build profile context dictionary  
+            profile_context = {
+                "organization_name": profile_data.get("name", "[Organization Name Missing]"),
+                "mission_statement": profile_data.get("mission", "Mission not specified"),
+                "focus_areas": profile_data.get("focus_areas", []),
+                "ntee_codes": profile_data.get("ntee_codes", []),
+                "government_criteria": profile_data.get("government_criteria", []),
+                "keywords": profile_data.get("keywords", []),
+                "geographic_scope": profile_data.get("geographic_scope", "National")
+            }
             
-            profile_context = ProfileContext(
-                organization_name=profile_data.get("name", "[Organization Name Missing]"),
-                mission_statement=profile_data.get("mission", "Mission not specified"),
-                focus_areas=profile_data.get("focus_areas", []),
-                ntee_codes=profile_data.get("ntee_codes", []),
-                government_criteria=profile_data.get("government_criteria", []),
-                keywords=profile_data.get("keywords", []),
-                geographic_scope=profile_data.get("geographic_scope", "National"),
-                funding_history=funding_history
-            )
-            
-            # Transform candidates data
+            # Transform candidates data to dictionary format
             candidates = []
             for candidate in candidates_data:
-                existing_analysis = None
-                if candidate.get("existing_analysis"):
-                    existing_analysis = ExistingAnalysis(**candidate["existing_analysis"])
-                
-                candidate_data = CandidateData(
-                    opportunity_id=candidate.get("opportunity_id", "unknown"),
-                    organization_name=candidate.get("organization_name", "Unknown"),
-                    source_type=candidate.get("source_type", "Unknown"),
-                    description=candidate.get("description", "No description available"),
-                    funding_amount=candidate.get("funding_amount"),
-                    application_deadline=candidate.get("application_deadline"),
-                    geographic_location=candidate.get("geographic_location"),
-                    current_score=candidate.get("combined_score", 0.0),
-                    existing_analysis=existing_analysis
-                )
-                candidates.append(candidate_data)
+                candidate_dict = {
+                    "opportunity_id": candidate.get("opportunity_id", "unknown"),
+                    "organization_name": candidate.get("organization_name", "Unknown"),
+                    "source_type": candidate.get("source_type", "Unknown"),
+                    "description": candidate.get("description", "No description available"),
+                    "funding_amount": candidate.get("funding_amount"),
+                    "application_deadline": candidate.get("application_deadline"),
+                    "geographic_location": candidate.get("geographic_location"),
+                    "current_score": candidate.get("combined_score", 0.0)
+                }
+                candidates.append(candidate_dict)
             
-            request = AILiteRequest(
-                request_metadata=request_metadata,
+            request = UnifiedRequest(
+                batch_id=batch_id,
                 profile_context=profile_context,
-                candidates=candidates
+                candidates=candidates,
+                analysis_mode="comprehensive",
+                cost_budget=frontend_data.get("cost_limit", 0.01),
+                priority_level="standard"
             )
             
             logger.info(f"Prepared AI Lite request for {len(candidates)} candidates")
@@ -171,7 +155,7 @@ class AIServiceManager:
                 self.active_requests[batch_id].status = "failed"
             raise
     
-    def format_ai_lite_result(self, result: AILiteBatchResult) -> Dict[str, Any]:
+    def format_ai_lite_result(self, result: UnifiedBatchResult) -> Dict[str, Any]:
         """Transform AI Lite result into frontend-compatible format"""
         try:
             frontend_result = {

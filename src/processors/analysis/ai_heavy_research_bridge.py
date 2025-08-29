@@ -22,8 +22,8 @@ from pydantic import BaseModel, Field
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata
 from src.core.openai_service import get_openai_service
-from src.processors.analysis.ai_lite_validator import ValidationAnalysis
-from src.processors.analysis.ai_lite_strategic_scorer import StrategicAnalysis
+from src.processors.analysis.ai_lite_unified_processor import UnifiedRequest, ComprehensiveAnalysis
+# Strategic analysis now handled by unified processor
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,7 @@ class ResearchBridgeRequest(BaseModel):
     batch_id: str
     profile_context: Dict[str, Any]
     validated_opportunities: List[Dict[str, Any]]  # From AI-Lite validation
-    strategic_analyses: Dict[str, StrategicAnalysis]  # From AI-Lite strategic scoring
+    strategic_analyses: Dict[str, ComprehensiveAnalysis]  # From AI-Lite unified processor
     research_priority: str = "standard"
 
 
@@ -148,7 +148,7 @@ class AIHeavyResearchBridge(BaseProcessor):
             name="ai_heavy_research_bridge",
             description="Stage 3: Intelligence gathering bridge for AI-Heavy analysis pipeline",
             version="1.0.0",
-            dependencies=["ai_lite_validator", "ai_lite_strategic_scorer"],
+            dependencies=["ai_lite_unified_processor"],
             estimated_duration=90,  # 1.5 minutes for research gathering
             requires_network=True,
             requires_api_key=True,

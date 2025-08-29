@@ -1,17 +1,20 @@
 """
-AI Heavy Deep Research Tool - Specialized Intelligence Gathering for EXAMINE tab
+AI Heavy Deep Research Tool - Strategic Intelligence Gathering for EXAMINE tab
 
-Purpose: Comprehensive strategic intelligence and research analysis
-Model: GPT-4 for sophisticated research analysis (~$0.08-0.15 per deep research)
-Processing: Deep intelligence gathering with multi-thousand token research output
+Purpose: Strategic intelligence and competitive analysis for positioning decisions
+Model: GPT-5-mini for sophisticated research analysis (~$0.08-0.12 per deep research)
+Processing: Deep intelligence gathering focused on strategic positioning
 
-Phase 1.5 Specialized Features:
+EXAMINE Tab Specialization (Strategic Intelligence Focus):
 - Deep relationship intelligence and network mapping
 - Comprehensive competitive landscape analysis  
-- Financial deep-dive with multi-year funding potential
-- Strategic partnership assessment with synergy identification
+- Strategic partnership assessment and synergy identification
 - Market intelligence and positioning analysis
-- Risk assessment with sophisticated mitigation strategies
+- Historical giving pattern analysis
+- Strategic risk assessment and mitigation strategies
+
+NOTE: Implementation planning features (grant size optimization, multi-year funding,
+market entry strategies) have been moved to APPROACH tab AI-Heavy Implementation processor.
 """
 
 import json
@@ -123,13 +126,13 @@ class CompetitiveIntelligence(BaseModel):
     differentiation_opportunities: List[str] = Field(default_factory=list)
 
 class FinancialIntelligence(BaseModel):
-    """Financial deep-dive analysis"""
+    """Financial intelligence analysis for strategic positioning"""
     funding_capacity_assessment: Dict[str, Any] = Field(default_factory=dict)
     historical_giving_patterns: List[Dict[str, Any]] = Field(default_factory=list)
     financial_health_indicators: Dict[str, float] = Field(default_factory=dict)
-    grant_size_optimization: Dict[str, Any] = Field(default_factory=dict)
-    multi_year_funding_potential: Dict[str, Any] = Field(default_factory=dict)
-    sustainability_prospects: List[str] = Field(default_factory=list)
+    giving_trend_analysis: Dict[str, Any] = Field(default_factory=dict)
+    funding_priority_areas: List[str] = Field(default_factory=list)
+    financial_stability_assessment: Dict[str, Any] = Field(default_factory=dict)
 
 class StrategicPartnershipIntelligence(BaseModel):
     """Strategic partnership assessment"""
@@ -141,12 +144,13 @@ class StrategicPartnershipIntelligence(BaseModel):
     partnership_risks: List[Dict[str, Any]] = Field(default_factory=list)
 
 class MarketIntelligence(BaseModel):
-    """Market intelligence and positioning"""
+    """Market intelligence and strategic positioning analysis"""
     market_landscape_analysis: Dict[str, Any] = Field(default_factory=dict)
     funding_trend_analysis: List[Dict[str, Any]] = Field(default_factory=list)
     opportunity_market_size: Dict[str, Any] = Field(default_factory=dict)
-    positioning_recommendations: List[str] = Field(default_factory=list)
-    market_entry_strategies: List[str] = Field(default_factory=list)
+    strategic_positioning_analysis: List[str] = Field(default_factory=list)
+    competitive_landscape_insights: Dict[str, Any] = Field(default_factory=dict)
+    timing_optimization_analysis: Dict[str, Any] = Field(default_factory=dict)
     timing_optimization: Dict[str, Any] = Field(default_factory=dict)
 
 class RiskIntelligence(BaseModel):

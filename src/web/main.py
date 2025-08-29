@@ -874,11 +874,11 @@ async def get_research_capabilities():
     try:
         # Import research integration service
         from src.processors.analysis.research_integration_service import get_research_integration_service
-        from src.processors.analysis.ai_lite_scorer import AILiteScorer
+        from src.processors.analysis.ai_lite_unified_processor import AILiteUnifiedProcessor
         from src.processors.analysis.ai_heavy_researcher import AIHeavyResearcher
         
         integration_service = get_research_integration_service()
-        ai_lite = AILiteScorer()
+        ai_lite = AILiteUnifiedProcessor()
         ai_heavy = AIHeavyResearcher()
         
         return {
@@ -905,38 +905,34 @@ async def ai_lite_research_analysis(
 ):
     """Trigger AI-Lite research analysis for opportunities"""
     try:
-        from src.processors.analysis.ai_lite_scorer import AILiteScorer, AILiteRequest, RequestMetadata, ProfileContext, CandidateData
+        from src.processors.analysis.ai_lite_unified_processor import AILiteUnifiedProcessor, UnifiedRequest, UnifiedBatchResult
         
-        ai_lite = AILiteScorer()
+        ai_lite = AILiteUnifiedProcessor()
         
         # Create mock request data for demonstration
         # In production, this would pull real data from the profile and opportunity systems
-        request_data = AILiteRequest(
-            request_metadata=RequestMetadata(
-                batch_id=f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                profile_id=profile_id,
-                analysis_type="research_analysis" if research_mode else "compatibility_scoring",
-                model_preference="gpt-3.5-turbo",
-                cost_limit=0.05,
-                priority="high"
-            ),
-            profile_context=ProfileContext(
-                organization_name="Sample Organization",
-                mission_statement="Sample mission for demonstration",
-                focus_areas=["health", "education"],
-                ntee_codes=["A01", "B01"],
-                geographic_scope="National"
-            ),
+        request_data = UnifiedRequest(
+            batch_id=f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            profile_context={
+                "organization_name": "Sample Organization",
+                "mission_statement": "Sample mission for demonstration",
+                "focus_areas": ["health", "education"],
+                "ntee_codes": ["A01", "B01"],
+                "geographic_scope": "National"
+            },
             candidates=[
-                CandidateData(
-                    opportunity_id=opp_id,
-                    organization_name=f"Target Organization {i+1}",
-                    source_type="foundation",
-                    description=f"Sample opportunity description for {opp_id}",
-                    funding_amount=100000,
-                    current_score=0.7
-                ) for i, opp_id in enumerate(opportunity_ids[:3])  # Limit to 3 for demo
-            ]
+                {
+                    "opportunity_id": opp_id,
+                    "organization_name": f"Target Organization {i+1}",
+                    "source_type": "foundation",
+                    "description": f"Sample opportunity description for {opp_id}",
+                    "funding_amount": 100000,
+                    "current_score": 0.7
+                } for i, opp_id in enumerate(opportunity_ids[:3])  # Limit to 3 for demo
+            ],
+            analysis_mode="comprehensive" if research_mode else "validation_only",
+            cost_budget=0.05,
+            priority_level="high"
         )
         
         # Execute analysis
@@ -6312,32 +6308,37 @@ async def execute_batch_ai_analysis(request: Dict[str, Any]):
 
 @app.post("/api/ai/lite-1/validate")
 async def execute_ai_lite_validator(request: Dict[str, Any]):
-    """Execute AI-Lite-1 Validator processor for fast opportunity screening."""
+    """Execute AI-Lite Unified processor for comprehensive opportunity analysis."""
     try:
-        logger.info("Starting AI-Lite-1 Validator analysis")
+        logger.info("Starting AI-Lite Unified analysis (formerly AI-Lite-1 Validator)")
         
-        # Import the specific processor
-        from src.processors.analysis.ai_lite_validator import AILiteValidator
+        # Import the unified processor
+        from src.processors.analysis.ai_lite_unified_processor import AILiteUnifiedProcessor, UnifiedRequest
         
         # Validate request data
         candidates = request.get("candidates", [])
         profile = request.get("selected_profile", {})
         
         if not candidates:
-            raise HTTPException(status_code=400, detail="No candidates provided for validation")
+            raise HTTPException(status_code=400, detail="No candidates provided for analysis")
         if not profile:
-            raise HTTPException(status_code=400, detail="Profile context required for validation")
+            raise HTTPException(status_code=400, detail="Profile context required for analysis")
         
         # Initialize processor
-        validator = AILiteValidator()
+        unified_processor = AILiteUnifiedProcessor()
         
-        # Execute validation
-        results = await validator.execute({
-            "candidates": candidates,
-            "profile_context": profile,
-            "batch_size": request.get("batch_size", 20),
-            "cost_optimization": request.get("cost_optimization", True)
-        })
+        # Create unified request
+        unified_request = UnifiedRequest(
+            batch_id=f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            profile_context=profile,
+            candidates=candidates,
+            analysis_mode="validation_only",
+            cost_budget=request.get("cost_limit", 0.05),
+            priority_level="standard"
+        )
+        
+        # Execute unified analysis
+        results = await unified_processor.execute(unified_request)
         
         return {
             "status": "success",
@@ -6353,44 +6354,97 @@ async def execute_ai_lite_validator(request: Dict[str, Any]):
 
 @app.post("/api/ai/lite-2/strategic-score")
 async def execute_ai_lite_strategic_scorer(request: Dict[str, Any]):
-    """Execute AI-Lite-2 Strategic Scorer for semantic reasoning and priority ranking."""
+    """Execute AI-Lite Unified processor for comprehensive strategic analysis."""
     try:
-        logger.info("Starting AI-Lite-2 Strategic Scorer analysis")
+        logger.info("Starting AI-Lite Unified analysis (formerly AI-Lite-2 Strategic Scorer)")
         
-        # Import the specific processor
-        from src.processors.analysis.ai_lite_strategic_scorer import AILiteStrategicScorer
+        # Import the unified processor
+        from src.processors.analysis.ai_lite_unified_processor import AILiteUnifiedProcessor, UnifiedRequest
         
         # Validate request data
         qualified_candidates = request.get("qualified_candidates", [])
         profile = request.get("selected_profile", {})
         
         if not qualified_candidates:
-            raise HTTPException(status_code=400, detail="No qualified candidates provided for strategic scoring")
+            raise HTTPException(status_code=400, detail="No candidates provided for strategic analysis")
         if not profile:
             raise HTTPException(status_code=400, detail="Profile context required for strategic analysis")
         
         # Initialize processor
-        strategic_scorer = AILiteStrategicScorer()
+        unified_processor = AILiteUnifiedProcessor()
         
-        # Execute strategic scoring
-        results = await strategic_scorer.execute({
-            "qualified_candidates": qualified_candidates,
-            "profile_context": profile,
-            "analysis_depth": request.get("analysis_depth", "standard"),
-            "focus_areas": request.get("focus_areas", [])
-        })
+        # Create unified request
+        unified_request = UnifiedRequest(
+            batch_id=f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            profile_context=profile,
+            candidates=qualified_candidates,
+            analysis_mode="strategic_only",
+            cost_budget=request.get("cost_limit", 0.05),
+            priority_level="standard"
+        )
+        
+        # Execute strategic analysis
+        results = await unified_processor.execute(unified_request)
         
         return {
             "status": "success",
-            "processor": "ai_lite_strategic_scorer", 
+            "processor": "ai_lite_unified_processor", 
             "results": results,
-            "cost_estimate": "$0.0003 per candidate",
+            "cost_estimate": "$0.0004 per candidate",
             "timestamp": datetime.now().isoformat()
         }
         
     except Exception as e:
         logger.error(f"AI-Lite-2 Strategic Scorer failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Strategic scoring failed: {str(e)}")
+
+@app.post("/api/ai/heavy-light/analyze")
+async def execute_ai_heavy_light_analyzer(request: Dict[str, Any]):
+    """Execute AI-Heavy Light processor for cost-effective candidate screening."""
+    try:
+        logger.info("Starting AI-Heavy Light analysis for ANALYZE tab")
+        
+        # Import the processor
+        from src.processors.analysis.ai_heavy_light_analyzer import AIHeavyLightAnalyzer, LightAnalysisRequest
+        
+        # Validate request data
+        candidates = request.get("candidates", [])
+        profile = request.get("selected_profile", {})
+        
+        if not candidates:
+            raise HTTPException(status_code=400, detail="No candidates provided for light analysis")
+        if not profile:
+            raise HTTPException(status_code=400, detail="Profile context required for analysis")
+        
+        # Initialize processor
+        light_analyzer = AIHeavyLightAnalyzer()
+        
+        # Create analysis request
+        analysis_request = LightAnalysisRequest(
+            batch_id=f"light_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            profile_context=profile,
+            candidates=candidates,
+            analysis_focus=request.get("analysis_focus", "screening"),
+            cost_budget=request.get("cost_budget", 0.05),
+            priority_level=request.get("priority_level", "standard")
+        )
+        
+        # Execute light analysis
+        results = await light_analyzer.execute(analysis_request)
+        
+        return {
+            "status": "success",
+            "processor": "ai_heavy_light_analyzer",
+            "results": results.dict(),
+            "cost_estimate": f"${results.cost_per_candidate:.4f} per candidate",
+            "timestamp": datetime.now().isoformat(),
+            "screening_summary": results.screening_summary,
+            "recommendations": results.recommendations
+        }
+        
+    except Exception as e:
+        logger.error(f"AI-Heavy Light analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Light analysis failed: {str(e)}")
 
 @app.post("/api/ai/heavy-1/research-bridge")
 async def execute_ai_heavy_research_bridge(request: Dict[str, Any]):
