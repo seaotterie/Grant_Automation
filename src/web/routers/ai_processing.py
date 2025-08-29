@@ -12,8 +12,7 @@ from typing import List, Dict, Optional, Any
 
 # Import AI services and processors
 from src.processors.analysis.ai_service_manager import get_ai_service_manager
-from src.processors.analysis.ai_lite_validator import AILiteValidator
-from src.processors.analysis.ai_lite_strategic_scorer import AILiteStrategicScorer
+from src.processors.analysis.ai_lite_unified_processor import AILiteUnifiedProcessor
 from src.processors.analysis.ai_heavy_researcher import AIHeavyDossierBuilder
 from src.processors.analysis.ai_heavy_research_bridge import AIHeavyResearchBridge
 from src.profiles.unified_service import get_unified_profile_service
@@ -45,7 +44,7 @@ async def ai_lite_validate(
             raise HTTPException(status_code=400, detail="Selected profile is required")
         
         # Initialize AI-Lite validator
-        validator = AILiteValidator()
+        validator = AILiteUnifiedProcessor()
         
         # Validate each candidate
         validation_results = []
@@ -90,7 +89,7 @@ async def ai_lite_validate(
             "validation_results": validation_results,
             "total_candidates": len(candidates),
             "successful_validations": len([r for r in validation_results if r["validation_status"] == "validated"]),
-            "ai_processor": "ai_lite_validator",
+            "ai_processor": "ai_lite_unified",
             "timestamp": datetime.now().isoformat()
         }
         
@@ -114,7 +113,7 @@ async def ai_lite_strategic_score(
             raise HTTPException(status_code=400, detail="Selected profile is required")
         
         # Initialize AI-Lite strategic scorer
-        scorer = AILiteStrategicScorer()
+        scorer = AILiteUnifiedProcessor()
         
         # Score each candidate
         scoring_results = []
@@ -163,7 +162,7 @@ async def ai_lite_strategic_score(
             "scoring_results": scoring_results,
             "total_candidates": len(candidates),
             "successful_scorings": len([r for r in scoring_results if r["scoring_status"] == "scored"]),
-            "ai_processor": "ai_lite_strategic_scorer",
+            "ai_processor": "ai_lite_unified",
             "timestamp": datetime.now().isoformat()
         }
         
@@ -356,7 +355,7 @@ async def ai_orchestrated_pipeline(
             # Stage 1: AI-Lite Validation
             if "validation" in pipeline_config["stages"]:
                 try:
-                    validator = AILiteValidator()
+                    validator = AILiteUnifiedProcessor()
                     validation_result = validator.execute({
                         "profile": selected_profile,
                         "opportunity": candidate
@@ -378,7 +377,7 @@ async def ai_orchestrated_pipeline(
             # Stage 2: Strategic Scoring (only if validation passed)
             if "strategic_scoring" in pipeline_config["stages"] and stage_results.get("validation", {}).get("passed", False):
                 try:
-                    scorer = AILiteStrategicScorer()
+                    scorer = AILiteUnifiedProcessor()
                     scoring_result = scorer.execute({
                         "profile": selected_profile,
                         "opportunity": candidate
@@ -503,8 +502,7 @@ async def get_ai_usage_metrics() -> Dict[str, Any]:
                 "budget_utilization": 67.89
             },
             "processor_performance": {
-                "ai_lite_validator": {"avg_response_time": 1.2, "success_rate": 95.5},
-                "ai_lite_strategic_scorer": {"avg_response_time": 2.1, "success_rate": 92.3},
+                "ai_lite_unified": {"avg_response_time": 0.8, "success_rate": 97.1},
                 "ai_heavy_researcher": {"avg_response_time": 15.7, "success_rate": 88.9},
                 "ai_heavy_research_bridge": {"avg_response_time": 8.4, "success_rate": 91.2}
             }

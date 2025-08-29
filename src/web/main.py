@@ -6342,7 +6342,7 @@ async def execute_ai_lite_validator(request: Dict[str, Any]):
         
         return {
             "status": "success",
-            "processor": "ai_lite_validator",
+            "processor": "ai_lite_unified",
             "results": results,
             "cost_estimate": "$0.0001 per candidate",
             "timestamp": datetime.now().isoformat()
