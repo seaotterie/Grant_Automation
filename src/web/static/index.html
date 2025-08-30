@@ -3854,7 +3854,7 @@
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                        <template x-for="result in filteredResults.slice(0, 50)" :key="result.ein">
+                                        <template x-for="result in filteredResults.slice(0, 50)" :key="result.id || result.ein || result.name || $index">
                                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
                                                 <td class="px-6 py-4 whitespace-nowrap">
                                                     <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="result.name"></div>
@@ -4457,7 +4457,7 @@
                                 <div>
                                     <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Similar Organizations</h5>
                                     <div class="space-y-3">
-                                        <template x-for="org in getSimilarOrganizations(selectedProfile).slice(0, 3)" :key="org.ein">
+                                        <template x-for="org in getSimilarOrganizations(selectedProfile).slice(0, 3)" :key="org.id || org.ein || org.name || $index">
                                             <div class="flex items-center space-x-3 p-2 border border-gray-200 dark:border-gray-600 rounded-lg">
                                                 <div class="flex-1 min-w-0">
                                                     <h6 class="text-sm font-medium text-gray-900 dark:text-white truncate" x-text="org.name">Organization Name</h6>
@@ -5410,7 +5410,8 @@
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                        <template x-for="org in analyticsData.topOrganizations || []" :key="org.ein">
+                                        <template x-if="analyticsData && Array.isArray(analyticsData.topOrganizations)">
+                                            <template x-for="org in analyticsData.topOrganizations" :key="org.id || org.ein || org.name || $index">
                                             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
                                                 <td class="px-6 py-4 whitespace-nowrap">
                                                     <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="org.name"></div>
@@ -5432,6 +5433,16 @@
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                     <span x-text="(org.city || '') + ', ' + (org.state || '')"></span>
+                                                </td>
+                                            </tr>
+                                            </template>
+                                        </template>
+                                        <!-- Empty state for analytics -->
+                                        <template x-if="!analyticsData || !analyticsData.topOrganizations || analyticsData.topOrganizations.length === 0">
+                                            <tr>
+                                                <td colspan="4" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                                    <div class="text-sm">No analytics data available</div>
+                                                    <div class="text-xs mt-1">Run discovery to generate analytics</div>
                                                 </td>
                                             </tr>
                                         </template>
@@ -9110,8 +9121,9 @@
                                 </tr>
                             </thead>
                             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
-                                <template x-for="result in opportunitiesData" :key="result.organization_name">
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <template x-if="Array.isArray(opportunitiesData)">
+                                    <template x-for="result in opportunitiesData" :key="result.opportunity_id || result.id">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="result.organization_name"></div>
                                             <div class="text-sm text-gray-500 dark:text-gray-400" x-text="result.ein || 'No EIN'"></div>
@@ -9134,6 +9146,19 @@
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400" x-text="result.discovery_source || 'Unknown'"></td>
+                                        </tr>
+                                    </template>
+                                </template>
+                                <!-- Empty state message -->
+                                <template x-if="!Array.isArray(opportunitiesData) || opportunitiesData.length === 0">
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                            <div>
+                                                <div class="text-sm font-medium">No opportunities found</div>
+                                                <div class="text-xs mt-1" x-show="selectedProfile">Loading opportunities...</div>
+                                                <div class="text-xs mt-1" x-show="!selectedProfile">Select a profile to view opportunities</div>
+                                            </div>
+                                        </td>
                                     </tr>
                                 </template>
                             </tbody>
