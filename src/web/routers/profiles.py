@@ -10,20 +10,21 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Optional, Any
 
-# Import services and dependencies
-from src.profiles.service import ProfileService
-from src.profiles.unified_service import get_unified_profile_service
-from src.profiles.entity_service import get_entity_profile_service
-from src.profiles.models import OrganizationProfile, FundingType
-from src.profiles.workflow_integration import ProfileWorkflowIntegrator
-from src.profiles.metrics_tracker import get_metrics_tracker
-from src.discovery.unified_discovery_adapter import get_unified_discovery_adapter
-from src.discovery.entity_discovery_service import get_entity_discovery_service
-from src.auth.jwt_auth import get_current_user_dependency, User
-from src.web.services.scoring_service import get_scoring_service, ScoreRequest, ScoreResponse
-from src.web.services.automated_promotion_service import get_automated_promotion_service
-from src.web.services.enhanced_data_service import get_enhanced_data_service
-from src.web.services.search_export_service import get_search_export_service
+# Import essential services only
+from src.database.query_interface import DatabaseQueryInterface, QueryFilter
+
+# Try to import optional services (with fallbacks)
+try:
+    from src.profiles.service import ProfileService
+    PROFILE_SERVICE_AVAILABLE = True
+except ImportError:
+    PROFILE_SERVICE_AVAILABLE = False
+
+try:
+    from src.auth.jwt_auth import get_current_user_dependency, User
+    AUTH_AVAILABLE = True
+except ImportError:
+    AUTH_AVAILABLE = False
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -31,20 +32,46 @@ logger = logging.getLogger(__name__)
 # Create router instance
 router = APIRouter(prefix="/api/profiles", tags=["profiles"])
 
-# Initialize services
-profile_service = ProfileService()
-unified_service = get_unified_profile_service()
-entity_profile_service = get_entity_profile_service()
-discovery_adapter = get_unified_discovery_adapter()
-entity_discovery = get_entity_discovery_service()
-metrics_tracker = get_metrics_tracker()
-scoring_service = get_scoring_service()
-automated_promotion_service = get_automated_promotion_service()
-enhanced_data_service = get_enhanced_data_service()
-search_export_service = get_search_export_service()
+# Initialize essential services
+db_query_interface = DatabaseQueryInterface()
+
+# Initialize optional services with fallbacks
+profile_service = None
+if PROFILE_SERVICE_AVAILABLE:
+    try:
+        profile_service = ProfileService()
+    except Exception as e:
+        logger.warning(f"Could not initialize ProfileService: {e}")
+        PROFILE_SERVICE_AVAILABLE = False
 
 
 # Core Profile CRUD Operations
+
+@router.get("/database")
+async def list_profiles_from_database() -> Dict[str, Any]:
+    """List all organization profiles directly from database."""
+    try:
+        profiles, total_count = db_query_interface.filter_profiles(QueryFilter())
+        
+        # Add opportunity count for each profile
+        for profile in profiles:
+            opportunities, opp_count = db_query_interface.filter_opportunities(
+                QueryFilter(profile_ids=[profile["id"]])
+            )
+            profile["opportunities_count"] = len(opportunities)
+            profile["total_opportunities"] = opp_count
+        
+        logger.info(f"Returned {len(profiles)} profiles from database")
+        return {
+            "profiles": profiles,
+            "total_count": total_count,
+            "source": "database"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to list profiles from database: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("")
 async def list_profiles(
@@ -52,39 +79,48 @@ async def list_profiles(
     limit: Optional[int] = None
     # Temporarily removed authentication: current_user: User = Depends(get_current_user_dependency)
 ) -> Dict[str, Any]:
-    """List all organization profiles with unified analytics."""
+    """List all organization profiles with database integration."""
     try:
-        # Use both services - old for profile metadata, unified for opportunity analytics
-        old_profiles = profile_service.list_profiles(status=status, limit=limit)
-        unified_profile_ids = unified_service.list_profiles()
+        # Use database directly for reliable profile listing
+        profiles, total_count = db_query_interface.filter_profiles(QueryFilter())
         
-        # Convert profiles to dict format and add analytics from unified service
-        profile_dicts = []
-        for profile in old_profiles:
-            profile_dict = profile.model_dump()
+        # Add opportunity count for each profile
+        for profile in profiles:
+            opportunities, opp_count = db_query_interface.filter_opportunities(
+                QueryFilter(profile_ids=[profile["id"]])
+            )
+            profile["opportunities_count"] = len(opportunities)
             
-            # Try to get unified profile analytics for enhanced data
-            if profile.profile_id in unified_profile_ids:
-                unified_profile = unified_service.get_profile(profile.profile_id)
-                if unified_profile and unified_profile.analytics:
-                    # Use unified analytics for accurate opportunity counts
-                    profile_dict["opportunities_count"] = unified_profile.analytics.opportunity_count
-                    profile_dict["analytics"] = unified_profile.analytics.model_dump()
-                else:
-                    # Fallback to old method
-                    profile_dict["opportunities_count"] = len(profile.associated_opportunities)
-            else:
-                # Fallback to old method
-                profile_dict["opportunities_count"] = len(profile.associated_opportunities)
-            
-            profile_dicts.append(profile_dict)
+            # Rename 'id' to 'profile_id' for frontend compatibility
+            profile["profile_id"] = profile["id"]
         
-        logger.info(f"Returned {len(profile_dicts)} profiles with unified analytics")
-        return {"profiles": profile_dicts}
+        # Apply limit if specified
+        if limit:
+            profiles = profiles[:limit]
+        
+        logger.info(f"Returned {len(profiles)} profiles from database")
+        return {"profiles": profiles}
         
     except Exception as e:
-        logger.error(f"Failed to list profiles: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to list profiles from database: {e}")
+        # Fallback to old method if database fails and service is available
+        if PROFILE_SERVICE_AVAILABLE and profile_service:
+            try:
+                old_profiles = profile_service.list_profiles(status=status, limit=limit)
+                profile_dicts = []
+                for profile in old_profiles:
+                    profile_dict = profile.model_dump()
+                    profile_dict["opportunities_count"] = len(profile.associated_opportunities)
+                    profile_dicts.append(profile_dict)
+                
+                logger.info(f"Fallback: Returned {len(profile_dicts)} profiles from file system")
+                return {"profiles": profile_dicts}
+            except Exception as fallback_error:
+                logger.error(f"Fallback also failed: {fallback_error}")
+        
+        # Return empty result if all methods fail
+        logger.error("All profile retrieval methods failed, returning empty result")
+        return {"profiles": [], "error": "Unable to retrieve profiles"}
 
 
 @router.post("")
