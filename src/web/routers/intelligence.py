@@ -14,6 +14,8 @@ import logging
 from datetime import datetime
 
 from src.intelligence.standard_tier_processor import StandardTierProcessor, StandardTierResult
+from src.intelligence.enhanced_tier_processor import EnhancedTierProcessor, EnhancedTierResult
+from src.intelligence.complete_tier_processor import CompleteTierProcessor, CompleteTierResult
 
 logger = logging.getLogger(__name__)
 
@@ -223,6 +225,8 @@ class TaskManager:
 cost_calculator = TierCostCalculator()
 task_manager = TaskManager()
 standard_tier_processor = StandardTierProcessor()
+enhanced_tier_processor = EnhancedTierProcessor()
+complete_tier_processor = CompleteTierProcessor()
 
 # Router
 router = APIRouter(prefix="/api/intelligence", tags=["Intelligence Analysis"])
@@ -260,6 +264,27 @@ async def generate_intelligence_analysis(
                 status="completed"
             )
         
+        # For Enhanced tier, process immediately (newly implemented)
+        elif request.tier == ServiceTier.ENHANCED:
+            start_time = time.time()
+            
+            # Process with Enhanced tier processor
+            result = await enhanced_tier_processor.process_opportunity(
+                profile_id=profile_id,
+                opportunity_id=request.opportunity_id,
+                add_ons=[addon.value for addon in request.add_ons] if request.add_ons else []
+            )
+            
+            processing_time = time.time() - start_time
+            
+            return IntelligenceResponse(
+                result=result.to_dict(),
+                estimated_cost=estimated_cost,
+                actual_cost=result.total_processing_cost,
+                estimated_completion_time=f"Completed in {processing_time:.2f}s",
+                status="completed"
+            )
+        
         # For other tiers, return not implemented for MVP
         elif request.tier == ServiceTier.CURRENT:
             return IntelligenceResponse(
@@ -270,27 +295,30 @@ async def generate_intelligence_analysis(
                 status="available_via_existing_system"
             )
         
-        else:
-            # Enhanced and Complete tiers - create background task
-            task_id = str(uuid.uuid4())
-            task_manager.create_task(task_id, request.tier, profile_id, request.opportunity_id)
+        # For Complete tier, process immediately (newly implemented)
+        elif request.tier == ServiceTier.COMPLETE:
+            start_time = time.time()
             
-            # Add background processing
-            background_tasks.add_task(
-                process_advanced_tier, 
-                task_id, 
-                profile_id, 
-                request.opportunity_id, 
-                request.tier, 
-                request.add_ons
+            # Process with Complete tier processor
+            result = await complete_tier_processor.process_opportunity(
+                profile_id=profile_id,
+                opportunity_id=request.opportunity_id,
+                add_ons=[addon.value for addon in request.add_ons] if request.add_ons else []
             )
+            
+            processing_time = time.time() - start_time
             
             return IntelligenceResponse(
-                task_id=task_id,
+                result=result.to_dict(),
                 estimated_cost=estimated_cost,
-                estimated_completion_time=cost_calculator.delivery_times[request.tier],
-                status="processing"
+                actual_cost=result.total_processing_cost,
+                estimated_completion_time=f"Completed in {processing_time:.2f}s",
+                status="completed"
             )
+        
+        else:
+            # Unsupported tier
+            raise HTTPException(status_code=400, detail=f"Unsupported tier: {request.tier}")
         
     except Exception as e:
         logger.error(f"Intelligence analysis failed: {e}", exc_info=True)
@@ -388,7 +416,7 @@ async def get_available_tiers():
                     "Strategic partnership opportunity identification"
                 ],
                 "best_for": ["High-value opportunities", "Strategic partnerships", "Relationship-driven funding"],
-                "status": "coming_soon"
+                "status": "available"
             },
             {
                 "id": "complete",
@@ -404,7 +432,7 @@ async def get_available_tiers():
                     "Real-time monitoring and premium documentation"
                 ],
                 "best_for": ["Major institutional opportunities", "Multi-million dollar programs", "Complex partnerships"],
-                "status": "coming_soon"
+                "status": "available"
             }
         ],
         "add_ons": [
