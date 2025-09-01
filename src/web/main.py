@@ -6033,7 +6033,7 @@ async def execute_ai_heavy_research(request: Dict[str, Any]):
         "target_opportunity": {...},
         "selected_profile": {...},
         "ai_lite_results": {...},
-        "model_preference": "gpt-4",
+        "model_preference": "gpt-5",
         "cost_budget": 0.25,
         "research_priority_areas": [...],
         "research_risk_areas": [...],
@@ -6113,7 +6113,7 @@ async def handle_batch_promotion(request: Dict[str, Any], ai_service):
                 "target_opportunity": target_opportunity,
                 "selected_profile": selected_profile,
                 "ai_lite_results": candidate.get("ai_lite_insights", {}),
-                "model_preference": "gpt-4o-mini" if candidate.get("research_depth") == "standard" else "gpt-4o",
+                "model_preference": "gpt-5-nano" if candidate.get("research_depth") == "standard" else "gpt-5-mini",
                 "cost_budget": candidate.get("estimated_cost", 0.08),
                 "research_priority_areas": ["funding_strategy", "competitive_analysis"],
                 "research_risk_areas": ["capacity_assessment", "timeline_feasibility"],
@@ -6316,7 +6316,7 @@ async def execute_batch_ai_analysis(request: Dict[str, Any]):
                     "target_opportunity": candidate,
                     "selected_profile": request["selected_profile"],
                     "ai_lite_results": candidate.get("ai_lite_results", {}),
-                    "model_preference": request.get("model_preference", "gpt-4"),
+                    "model_preference": request.get("model_preference", "gpt-5"),
                     "cost_budget": request.get("cost_budget", 0.25)
                 }
                 
@@ -7522,15 +7522,15 @@ async def ai_lite_profile_analysis(profile_id: str, request_data: Dict[str, Any]
         # Check budget before processing
         from src.analytics.cost_tracker import AIService, CostCategory
         
-        # Map model preference to AI service
+        # Map model preference to AI service (GPT-5 models only)
         service_mapping = {
-            "gpt-3.5-turbo": AIService.OPENAI_GPT3_5_TURBO,
-            "gpt-4o-mini": AIService.OPENAI_GPT4O_MINI,
-            "gpt-4o": AIService.OPENAI_GPT4O,
-            "gpt-4": AIService.OPENAI_GPT4
+            "gpt-5-nano": AIService.OPENAI_GPT5_NANO,
+            "gpt-5-mini": AIService.OPENAI_GPT5_MINI,
+            "gpt-5": AIService.OPENAI_GPT5,
+            "gpt-5-chat-latest": AIService.OPENAI_GPT5_CHAT_LATEST
         }
         
-        service = service_mapping.get(model_preference, AIService.OPENAI_GPT3_5_TURBO)
+        service = service_mapping.get(model_preference, AIService.OPENAI_GPT5_NANO)
         
         # Estimate cost for all candidates
         avg_tokens = 1500 if not research_mode else 3000  # Research mode uses more tokens

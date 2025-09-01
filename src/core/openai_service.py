@@ -129,19 +129,18 @@ class OpenAIService:
                 **kwargs
             }
             
-            # GPT-5 models have different parameter requirements
-            if model.startswith("gpt-5"):
-                if max_tokens is not None:
-                    api_params["max_completion_tokens"] = max_tokens
-                # GPT-5 models only support temperature=1 (default)
-                if temperature is not None and temperature != 1.0:
-                    logger.info(f"GPT-5 model {model} only supports temperature=1, ignoring temperature={temperature}")
-                # Don't set temperature for GPT-5 models (use default)
-            else:
-                if max_tokens is not None:
-                    api_params["max_tokens"] = max_tokens
-                if temperature is not None:
-                    api_params["temperature"] = temperature
+            # GPT-5 models only - validate model
+            if not model.startswith("gpt-5"):
+                logger.error(f"Unsupported model: {model}. Only GPT-5 models are supported.")
+                raise ValueError(f"Only GPT-5 models are supported. Received: {model}")
+            
+            # GPT-5 models have specific parameter requirements
+            if max_tokens is not None:
+                api_params["max_completion_tokens"] = max_tokens
+            # GPT-5 models only support temperature=1 (default)
+            if temperature is not None and temperature != 1.0:
+                logger.info(f"GPT-5 model {model} only supports temperature=1, ignoring temperature={temperature}")
+            # Don't set temperature for GPT-5 models (use default)
             
             response = await self.client.chat.completions.create(**api_params)
             end_time = time.time()
