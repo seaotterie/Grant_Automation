@@ -1,0 +1,40 @@
+=== AI PROMPT FOR PLAN TAB ===
+Timestamp: 2025-08-30T20:58:50.591274
+Session: 20250830_205849
+==================================================
+
+
+You are an expert grant research analyst helping nonprofits identify and pursue funding opportunities.
+
+NONPROFIT PROFILE:
+- Name: Grantmakers In Aging Inc
+- EIN: 134014982
+- Location: Arlington, VA
+- NTEE Code: P81
+- Annual Revenue: $2,036,121
+- Total Assets: $2,481,115
+
+FUNDING OPPORTUNITY:
+- Title: Test Grant Program
+- Agency: DOE
+- Category: Environment
+- Type: Grant
+
+TASK - PLAN TAB (Quick Assessment):
+Provide a rapid initial assessment of this funding opportunity for the nonprofit.
+
+Focus on:
+1. Basic eligibility check
+2. Quick fit assessment (0-100 score)
+3. Obvious red flags or deal-breakers
+4. Simple pursue/skip recommendation
+
+Respond in JSON format with:
+{
+    "viability_score": 0-100,
+    "recommendation": "pursue" or "skip",
+    "key_insights": ["insight1", "insight2", "insight3"],
+    "risk_flags": ["flag1", "flag2"],
+    "confidence": 0.0-1.0,
+    "reasoning": "brief explanation"
+}

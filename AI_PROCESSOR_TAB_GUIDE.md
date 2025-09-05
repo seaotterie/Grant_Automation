@@ -9,9 +9,14 @@
 
 ## Overview
 
-This guide provides comprehensive, tab-organized documentation for all AI processors, scoring algorithms, and intelligent analysis features in the Catalynx grant research platform. The system implements a **cost-efficient funnel architecture** with logical progression through four main processing stages.
+This guide provides comprehensive, tab-organized documentation for all AI processors, scoring algorithms, and intelligent analysis features in the Catalynx grant research platform. The system implements a **dual architecture approach**:
 
-### 🚀 **Cost-Efficient AI Funnel (OPERATIONAL)**
+1. **Tab-Based Processors**: Cost-efficient funnel architecture with logical progression through four main processing stages
+2. **Intelligence Tier Services**: Comprehensive business-ready intelligence packages with professional deliverables
+
+Both architectures work together to provide granular control for developers and complete intelligence packages for business users.
+
+### 🚀 **Tab-Based AI Processor Funnel (OPERATIONAL)**
 
 ```
 PLAN Tab         →    ANALYZE Tab        →    EXAMINE Tab        →    APPROACH Tab
@@ -24,11 +29,34 @@ AI-Lite Unified      AI-Heavy Light        AI-Heavy Deep         AI-Heavy Implem
 • Batch Processing   • Market Analysis     • Partnership Assess  • Success Probability
 ```
 
+### 🎯 **Intelligence Tier Services (BUSINESS-READY PACKAGES)**
+
+```
+CURRENT Intelligence  →  STANDARD Intelligence  →  ENHANCED Intelligence  →  COMPLETE Intelligence
+$0.75 (5-10 min)         $7.50 (15-20 min)         $22.00 (30-45 min)         $42.00 (45-60 min)
+
+4-Stage AI Analysis      + Historical Analysis     + Document Analysis        + Policy Analysis
+• Strategic scoring      • 5-year patterns        • RFP/NOFO parsing        • Regulatory environment
+• Risk assessment        • Geographic trends       • Network intelligence    • Real-time monitoring  
+• Success modeling       • Success factors         • Decision maker profiles • Premium documentation
+• Implementation plan    • Timeline optimization   • Competitive deep dive   • Strategic consulting
+```
+
 ### 📊 **Performance Achievements**
-- **95% Cost Reduction**: Achieved through unified processor architecture
+- **95% Cost Reduction**: Achieved through unified processor architecture (tab-based)
+- **4-Tier Intelligence System**: Complete business-ready intelligence packages operational
 - **28 Processors Operational**: Complete ecosystem with Phase 5 optimization
 - **Sub-millisecond Processing**: Excellent performance rating across all operations
 - **Zero Critical Errors**: All import errors resolved, comprehensive error handling
+
+### 🔄 **Architecture Integration**
+
+The tab-based processors serve as the **foundation technology** that powers the intelligence tier services:
+
+- **Tab Processors**: Granular, developer-focused analysis components
+- **Tier Services**: Business-focused comprehensive intelligence packages  
+- **Shared Technology**: Tier services utilize tab processors internally
+- **Flexible Usage**: Choose tab processors for custom workflows or tier services for complete analysis
 
 ---
 
@@ -317,6 +345,27 @@ PLAN (Screening)     →     ANALYZE (Filtering)     →     EXAMINE (Intelligen
 • Batch optimization       • Competition review          • Partnership assessment       • Decision frameworks
 ```
 
+### 🎯 **Intelligence Tier Integration**
+
+#### **Tab Processors → Tier Services Workflow**
+```
+Tab-Based Analysis                    Intelligence Tier Services
+┌─────────────────────────┐          ┌─────────────────────────────┐
+│ PLAN → ANALYZE →        │          │ CURRENT Intelligence        │
+│ EXAMINE → APPROACH      │   ──→    │ • Uses all 4 tab processors │
+│ ($0.0004 - $0.20)       │          │ • Professional deliverables │
+└─────────────────────────┘          │ • $0.75 comprehensive pkg   │
+                                     └─────────────────────────────┘
+                                     ┌─────────────────────────────┐
+Individual Tab Usage                 │ STANDARD → ENHANCED →       │
+┌─────────────────────────┐   ──→    │ COMPLETE Intelligence       │
+│ Custom workflow control │          │ • Advanced capabilities     │
+│ Granular cost control   │          │ • Historical data           │
+│ Developer integration   │          │ • Network analysis          │
+└─────────────────────────┘          │ • Policy context ($7.50-42)│
+                                     └─────────────────────────────┘
+```
+
 #### **Quality Gates & Promotion Criteria**
 - **PLAN → ANALYZE**: Compatibility score ≥ 0.75, validation status = valid_funding
 - **ANALYZE → EXAMINE**: Viability level ≥ high, success probability ≥ 0.6  
@@ -380,14 +429,27 @@ PLAN (Screening)     →     ANALYZE (Filtering)     →     EXAMINE (Intelligen
 2. **Access Interface**: Navigate to http://localhost:8000
 3. **Create Profile**: Set up organizational profile in PROFILER tab
 4. **Begin Discovery**: Use DISCOVER tab to identify opportunities
-5. **Follow Funnel**: Progress through PLAN → ANALYZE → EXAMINE → APPROACH
+5. **Choose Analysis Approach**:
+   - **Tab-Based**: Progress through PLAN → ANALYZE → EXAMINE → APPROACH for custom control
+   - **Tier Services**: Select Intelligence tier (Current/Standard/Enhanced/Complete) for comprehensive packages
 
 ### 📖 **Best Practices**
+
+#### **Tab-Based Processor Usage**
 - **Start with PLAN**: Use AI-Lite Unified for comprehensive screening
 - **Quality Gates**: Progress only high-scoring opportunities to expensive analysis
 - **Resource Planning**: Balance thorough analysis with cost efficiency
-- **Decision Support**: Leverage go/no-go frameworks for strategic decisions
-- **Continuous Learning**: Monitor success rates and optimize strategies
+- **Custom Workflows**: Leverage individual processors for specific analysis needs
+
+#### **Intelligence Tier Services Usage**
+- **Current Tier**: Use for initial assessment and budget-conscious comprehensive analysis
+- **Standard Tier**: Ideal for most strategic opportunities requiring historical context
+- **Enhanced Tier**: Best for high-priority opportunities requiring relationship intelligence
+- **Complete Tier**: Reserve for transformational opportunities requiring comprehensive analysis
+
+#### **Decision Support**
+- **Leverage Go/No-Go Frameworks**: Use both tab processors and tier services for strategic decisions
+- **Continuous Learning**: Monitor success rates and optimize strategies across both architectures
 
 ### 🎯 **Success Optimization**
 - **Cost Management**: Utilize funnel architecture for optimal resource allocation
@@ -398,6 +460,10 @@ PLAN (Screening)     →     ANALYZE (Filtering)     →     EXAMINE (Intelligen
 
 ---
 
-**System Status**: All processors operational ✅ | Web application functional ✅ | Cost-efficient funnel active ✅
+**System Status**: All processors operational ✅ | 4-Tier intelligence system operational ✅ | Web application functional ✅ | Dual architecture active ✅
 
-*For technical support or advanced configuration, refer to the comprehensive processor documentation or contact the development team.*
+*For technical support, intelligence tier selection guidance, or advanced configuration, refer to the comprehensive documentation suite:*
+- **AI_INTELLIGENCE_TIER_SYSTEM.md**: Complete 4-tier system documentation
+- **TIER_SERVICE_TECHNICAL_GUIDE.md**: Technical implementation details
+- **TIER_SELECTION_GUIDE.md**: User decision framework
+- *Contact the development team for additional support*

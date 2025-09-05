@@ -1,0 +1,56 @@
+2025-08-30 20:46:00,842 - RealDataAITester - INFO - Loaded nonprofit data: Grantmakers In Aging Inc
+2025-08-30 20:46:00,842 - RealDataAITester - INFO - Loaded opportunity data: TEST-GRANTS-2024-001
+2025-08-30 20:46:00,842 - RealDataAITester - INFO - === Real Data AI Processor Testing Started ===
+2025-08-30 20:46:00,842 - RealDataAITester - INFO - Budget: $5.0
+2025-08-30 20:46:00,842 - RealDataAITester - INFO - Test data loaded: 2 entities
+2025-08-30 20:46:00,842 - RealDataAITester - INFO - 
+Starting Complete Workflow Test (All 4 Processors)
+2025-08-30 20:46:00,843 - RealDataAITester - INFO - 
+--- Processing PLAN Tab ---
+2025-08-30 20:46:00,843 - RealDataAITester - INFO - 
+=== Testing PLAN Tab - ai_lite_unified_processor ===
+2025-08-30 20:46:00,846 - RealDataAITester - INFO - Saved input package: processor_input_plan.json
+2025-08-30 20:46:00,847 - RealDataAITester - INFO - Saved AI prompt: processor_prompt_plan.txt
+2025-08-30 20:46:02,850 - RealDataAITester - INFO - Saved AI response: processor_response_plan.json
+2025-08-30 20:46:02,853 - RealDataAITester - INFO - Saved processed output: processor_output_plan.json
+2025-08-30 20:46:02,855 - RealDataAITester - INFO - Saved metrics for ai_lite_unified_processor
+2025-08-30 20:46:02,855 - RealDataAITester - INFO - [SUCCESS] PLAN tab completed successfully
+2025-08-30 20:46:02,855 - RealDataAITester - INFO -    Cost: $0.0000, Tokens: 298, Time: 2.0s
+2025-08-30 20:46:02,855 - RealDataAITester - INFO - 
+--- Processing ANALYZE Tab ---
+2025-08-30 20:46:02,855 - RealDataAITester - INFO - 
+=== Testing ANALYZE Tab - ai_heavy_light_analyzer ===
+2025-08-30 20:46:02,859 - RealDataAITester - INFO - Saved input package: processor_input_analyze.json
+2025-08-30 20:46:02,860 - RealDataAITester - INFO - Saved AI prompt: processor_prompt_analyze.txt
+2025-08-30 20:46:04,862 - RealDataAITester - INFO - Saved AI response: processor_response_analyze.json
+2025-08-30 20:46:04,863 - RealDataAITester - INFO - Saved processed output: processor_output_analyze.json
+2025-08-30 20:46:04,864 - RealDataAITester - INFO - Saved metrics for ai_heavy_light_analyzer
+2025-08-30 20:46:04,864 - RealDataAITester - INFO - [SUCCESS] ANALYZE tab completed successfully
+2025-08-30 20:46:04,864 - RealDataAITester - INFO -    Cost: $0.0001, Tokens: 454, Time: 2.0s
+2025-08-30 20:46:04,864 - RealDataAITester - INFO - 
+--- Processing EXAMINE Tab ---
+2025-08-30 20:46:04,864 - RealDataAITester - INFO - 
+=== Testing EXAMINE Tab - ai_heavy_deep_researcher ===
+2025-08-30 20:46:04,867 - RealDataAITester - INFO - Saved input package: processor_input_examine.json
+2025-08-30 20:46:04,867 - RealDataAITester - INFO - Saved AI prompt: processor_prompt_examine.txt
+2025-08-30 20:46:06,868 - RealDataAITester - INFO - Saved AI response: processor_response_examine.json
+2025-08-30 20:46:06,869 - RealDataAITester - INFO - Saved processed output: processor_output_examine.json
+2025-08-30 20:46:06,870 - RealDataAITester - INFO - Saved metrics for ai_heavy_deep_researcher
+2025-08-30 20:46:06,870 - RealDataAITester - INFO - [SUCCESS] EXAMINE tab completed successfully
+2025-08-30 20:46:06,870 - RealDataAITester - INFO -    Cost: $0.0138, Tokens: 460, Time: 2.0s
+2025-08-30 20:46:06,870 - RealDataAITester - INFO - 
+--- Processing APPROACH Tab ---
+2025-08-30 20:46:06,870 - RealDataAITester - INFO - 
+=== Testing APPROACH Tab - ai_heavy_researcher ===
+2025-08-30 20:46:06,872 - RealDataAITester - INFO - Saved input package: processor_input_approach.json
+2025-08-30 20:46:06,873 - RealDataAITester - INFO - Saved AI prompt: processor_prompt_approach.txt
+2025-08-30 20:46:08,875 - RealDataAITester - INFO - Saved AI response: processor_response_approach.json
+2025-08-30 20:46:08,876 - RealDataAITester - INFO - Saved processed output: processor_output_approach.json
+2025-08-30 20:46:08,877 - RealDataAITester - INFO - Saved metrics for ai_heavy_researcher
+2025-08-30 20:46:08,878 - RealDataAITester - INFO - [SUCCESS] APPROACH tab completed successfully
+2025-08-30 20:46:08,878 - RealDataAITester - INFO -    Cost: $0.0148, Tokens: 494, Time: 2.0s
+2025-08-30 20:46:08,878 - RealDataAITester - INFO - [SUCCESS] Complete workflow test successful!
+2025-08-30 20:46:08,879 - RealDataAITester - INFO -    Total cost: $0.0287
+2025-08-30 20:46:08,879 - RealDataAITester - INFO -    Budget remaining: $4.9713
+2025-08-30 20:46:08,880 - RealDataAITester - INFO - [REPORT] Review report generated: test_results\20250830_204600\REVIEW_REPORT.json
+2025-08-30 20:46:08,880 - RealDataAITester - INFO - [RESULTS] All test results saved in: test_results\20250830_204600

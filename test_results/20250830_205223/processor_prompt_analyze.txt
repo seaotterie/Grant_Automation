@@ -1,0 +1,67 @@
+=== AI PROMPT FOR ANALYZE TAB ===
+Timestamp: 2025-08-30T20:52:28.855258
+Session: 20250830_205223
+==================================================
+
+
+You are an expert grant research analyst helping nonprofits identify and pursue funding opportunities.
+
+NONPROFIT PROFILE:
+- Name: Grantmakers In Aging Inc
+- EIN: 134014982
+- Location: Arlington, VA
+- NTEE Code: P81
+- Annual Revenue: $2,036,121
+- Total Assets: $2,481,115
+
+FUNDING OPPORTUNITY:
+- Title: Test Grant Program
+- Agency: DOE
+- Category: Environment
+- Type: Grant
+
+TASK - ANALYZE TAB (Strategic Analysis):
+Provide detailed strategic analysis of this opportunity for the nonprofit.
+
+Previous Results:
+{
+  "tab": "PLAN",
+  "timestamp": "2025-08-30T20:52:28.851120",
+  "model_used": "gpt-4o-mini-2024-07-18",
+  "tokens_used": 450,
+  "parsed_response": {
+    "viability_score": 60,
+    "recommendation": "skip",
+    "key_insights": [
+      "The funding opportunity is focused on environmental initiatives, which may not align directly with the nonprofit's mission.",
+      "The agency is the Department of Energy (DOE), which typically funds projects related to energy and environmental technologies.",
+      "Grantmakers In Aging Inc primarily focuses on aging-related issues, making this opportunity less relevant."
+    ],
+    "risk_flags": [
+      "Mismatch between nonprofit's mission and funding focus.",
+      "Potentially high competition from organizations more aligned with environmental projects."
+    ],
+    "confidence": 0.75,
+    "reasoning": "While the nonprofit has a solid financial standing, the focus of the grant does not align with its mission, making it a less strategic pursuit."
+  },
+  "processing_success": true
+}
+
+Focus on:
+1. Strategic alignment with nonprofit's mission and capabilities
+2. Competitive positioning and advantage
+3. Resource requirements and capacity assessment
+4. Market analysis and positioning
+
+Respond in JSON format with:
+{
+    "strategic_alignment": 0-100,
+    "competitive_advantage": "detailed analysis",
+    "resource_requirements": {
+        "staff": "requirement description",
+        "budget": "budget estimate",
+        "timeline": "time requirements"
+    },
+    "success_probability": 0.0-1.0,
+    "market_position": "analysis of competitive landscape"
+}

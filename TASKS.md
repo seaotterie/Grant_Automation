@@ -27,179 +27,147 @@ Manual Inputs
 - Comments on View Details provided Promote and Demote reasoning
 - Feedback loop where BOD and Grantor Networks feed back in to the DISCOVERY tab
 
+## API Costs
+ 🤖 AI API Costs Per Tier
+
+  | Tier              | Total Price | AI API Cost | Platform/Infrastructure | Development/Margin |
+  |-------------------|-------------|-------------|-------------------------|--------------------|
+  | Current ($0.75)   | $0.75       | $0.31       | $0.19                   | $0.25              |
+  | Standard ($7.50)  | $7.50       | $0.94       | $2.50                   | $4.06              |
+  | Enhanced ($22.00) | $22.00      | $4.19       | $2.50                   | $15.31             |
+  | Complete ($42.00) | $42.00      | $7.44       | $4.50                   | $30.06             |
+
+  📊 AI API Cost Breakdown Details
+
+  Current Tier ($0.31 API cost)
+
+  - Tab processor integration and business packaging
+  - Basic 4-stage AI analysis pipeline
+
+  Standard Tier ($0.94 API cost)
+
+  - All Current tier capabilities
+  - Enhanced historical funding intelligence
+  - Geographic pattern analysis
+  - Temporal intelligence validation
+
+  Enhanced Tier ($4.19 API cost)
+
+  - All Standard tier capabilities
+  - Complete RFP/NOFO document analysis (+$1.75)
+  - Network intelligence and relationship mapping (+$0.75)
+  - Decision maker profiling (+$0.69)
+
+  Complete Tier ($7.44 API cost)
+
+  - All Enhanced tier capabilities (+$4.19)
+  - Advanced network mapping (+$1.25)
+  - Policy analysis and regulatory intelligence (+$0.75)
+  - Real-time monitoring system (+$0.50)
+  - Strategic consulting integration (+$0.75)
+
 ## PLAN
-● Perfect! Thank you for those clarifications. Based on your responses, here's a much more focused and practical plan:
-
-●User approved Claude's plan:
-  ⎿ Focused Single-User Grant Research Platform Enhancement Plan
-
-    Revised Scope & Priorities
-
-    Target System: Single-user desktop/laptop solution for 50 profiles, ~150 opportunities each
-    Focus Areas: Workflow validation, data quality, real AI testing, simple database optimization
-    Timeline: 6-8 weeks vs original 12 weeks
-
-    Phase 1: Database Migration & Data Optimization (Weeks 1-2)
-
-    Priority 1: Simple Local Database Implementation
-
-    Current: 7,500+ individual JSON opportunity files (50 profiles × 150 opportunities)
-    Solution: SQLite database for structured queries with JSON storage for flexibility
-
-    Implementation:
-    - Create SQLite database for profiles, opportunities, and scoring data
-    - Migrate existing 42 nonprofit entities and current profiles
-    - Keep JSON flexibility for unstructured AI analysis data
-    - Build simple query interface for filtering/searching opportunities
-
-    Benefits for Single-User:
-    - Faster opportunity filtering and search
-    - Easier progress tracking across all profiles
-    - Simple backup (single database file)
-    - Better data integrity validation
-
-    Priority 2: File System Cleanup
-
-    Current: Scattered cache files and redundant storage
-    Solution: Streamlined file organization
-
-    Implementation:
-    - Consolidate API cache into database
-    - Organize export files by profile/date
-    - Implement automatic cleanup of old temporary files
-    - Simple backup folder structure
-
-    Phase 2: Real AI Testing & Cost Validation (Weeks 3-4)
-
-    Priority 1: OpenAI Integration & Cost Tracking
-
-    Current: Mock AI responses
-    Solution: Real API calls with budget tracking
-
-    Implementation:
-    - Implement OpenAI API integration with real cost tracking
-    - Set up usage monitoring and daily/monthly budget alerts
-    - Test actual cost-efficient funnel: PLAN ($0.0004) → ANALYZE ($0.02-0.04) → EXAMINE ($0.08-0.15) → APPROACH ($0.12-0.20)
-    - Validate 95% cost reduction vs 3-stage architecture
-
-    Real-World Testing Scenarios:
-    - Process 10-20 real opportunities through complete funnel
-    - Measure actual processing times (1-3 minutes for deep research acceptable)
-    - Validate AI quality and decision-making accuracy
-    - Track cumulative costs across workflow stages
-
-    Priority 2: Workflow Decision Quality Validation
-
-    Current: Untested AI decision-making
-    Solution: Real-world validation with known opportunities
-
-    Implementation:
-    - Test with mix of known good/bad grant opportunities
-    - Validate AI scoring accuracy against human judgment
-    - Test funnel progression decisions (which opportunities advance to expensive analysis)
-    - Measure false positive/negative rates
-
-    Phase 3: Export & Reporting Enhancement (Weeks 5-6)
-
-    Priority 1: Professional Export Capabilities
-
-    Current: Basic data export
-    Solution: Grant team ready reports
-
-    Implementation:
-    - Enhanced PDF reports with professional formatting
-    - Excel workbooks with multiple sheets (opportunities, analysis, scoring)
-    - Profile-specific export packages
-    - Opportunity comparison reports
-
-    Priority 2: Simple Backup System
-
-    Current: Manual file management
-    Solution: Automated backup with simple restore
-
-    Implementation:
-    - Daily automated database backups
-    - Export data archiving by date
-    - Simple restore functionality
-    - Cloud backup integration (optional)
-
-    Phase 4: Workflow Testing & Validation (Weeks 7-8)
-
-    Priority 1: End-to-End Workflow Testing
-
-    Focus: Complete grant research workflow validation
-
-    Test Scenarios:
-    - Profile Creation → Discovery → Complete Funnel: Test 5 different profile types
-    - Cost Efficiency Validation: Verify funnel saves money by filtering before expensive analysis
-    - Decision Quality: Compare AI recommendations against manual grant research experience
-    - Time Efficiency: Measure total time from profile creation to final opportunity list
-
-    Priority 2: Data Quality & Integrity Testing
-
-    Focus: Ensure reliable data throughout workflow
-
-    Validation Areas:
-    - Profile data consistency across workflow stages
-    - Opportunity progression tracking accuracy
-    - AI analysis data preservation
-    - Export data completeness and accuracy
-    - Database backup/restore reliability
-
-    Success Metrics (Realistic for Single-User System)
-
-    Performance Targets:
-
-    - Database Migration: <5 second opportunity searches across all 7,500 opportunities
-    - AI Processing: 1-3 minute processing acceptable for deep research
-    - Cost Tracking: Real-time budget monitoring, monthly cost reports
-    - Export Quality: Professional PDF/Excel reports ready for grant teams
-
-    Workflow Validation Metrics:
-
-    - AI Accuracy: 80%+ agreement with manual grant research judgment
-    - Cost Efficiency: Confirmed 95% cost reduction through funnel filtering
-    - Time Efficiency: 50%+ reduction in manual research time per opportunity
-    - Data Integrity: 99%+ data consistency across workflow stages
-
-    Implementation Strategy (Single-User Optimized)
-
-    Development Approach:
-
-    - Same machine development/production (no deployment complexity)
-    - Direct testing with real data and real AI costs
-    - Immediate validation of each enhancement
-    - Simple rollback via database/file backups
-
-    Cost Management:
-
-    - Start with $50-100 OpenAI budget for testing
-    - Monitor cost per opportunity processed
-    - Set daily spending limits during testing phase
-    - Track ROI of AI processing vs manual research time
-
-    Quality Assurance:
-
-    - Test with 5-10 known grant opportunities (mix of good/bad matches)
-    - Validate against your existing grant research experience
-    - Focus on practical workflow efficiency over technical metrics
-    - Ensure export formats work well with your grant team collaboration needs
-
-    Risk Mitigation (Single-User Context)
-
-    Data Safety:
-
-    - Simple file-based backups before any changes
-    - Database export before migration
-    - Keep existing JSON files as backup during transition
-    - Test restore procedures
-
-    Cost Control:
-
-    - OpenAI spending limits and alerts
-    - Start with small test batches
-    - Monitor cost per opportunity and adjust funnel thresholds if needed
-    - Ability to revert to mock responses if costs exceed budget
-
-    This focused plan eliminates enterprise complexity while ensuring the core grant research workflow is optimized, validated, and cost-effective for your      
-    single-user needs.
+│ Here is Claude's plan:                                                                                                                                                                                     │
+│ ╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │
+│ │ COMPREHENSIVE CATALYNX TESTING STRATEGY - TEST EVERYTHING                                                                                                                                              │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ CONFIGURATION REQUIREMENTS - GPT-5 MODELS ONLY ✅                                                                                                                                                       │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ - MAINTAIN GPT-5 Models: Keep existing GPT-5 configuration in .env and openai_service.py                                                                                                               │ │
+│ │ - GPT-5 Benefits: Newer, more cost-effective, and available                                                                                                                                            │ │
+│ │ - No Model Changes: Stop switching between GPT-4/GPT-5 - GPT-5 models are the correct choice                                                                                                           │ │
+│ │ - Fix Simulation Mode: Address fallback issues WITHOUT changing model configuration                                                                                                                    │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ COMPLETE SYSTEM ARCHITECTURE TO TEST:                                                                                                                                                                  │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ 4-Stage AI Processing Pipeline (GPT-5 APIs):                                                                                                                                                           │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ - PLAN: AI-Lite Unified Processor (src/processors/analysis/ai_lite_unified_processor.py)                                                                                                               │ │
+│ │ - ANALYZE: AI-Heavy Light Analyzer (src/processors/analysis/ai_heavy_light_analyzer.py)                                                                                                                │ │
+│ │ - EXAMINE: AI-Heavy Deep Researcher (src/processors/analysis/ai_heavy_deep_researcher.py)                                                                                                              │ │
+│ │ - APPROACH: AI-Heavy Researcher (src/processors/analysis/ai_heavy_researcher.py)                                                                                                                       │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ 18+ Additional Processors:                                                                                                                                                                             │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ - Data Collection (6): ProPublica, Grants.gov, USASpending, Foundation Directory, VA State, BMF Filter                                                                                                 │ │
+│ │ - Analysis (12+): Government Scorer, Financial Scorer, Board Network, Success Scorer, Risk Assessor, etc.                                                                                              │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ COMPREHENSIVE 4-TIER TESTING APPROACH:                                                                                                                                                                 │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ 1. EXECUTE ALL 4 INTELLIGENCE TIERS                                                                                                                                                                    │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ Run complete analysis using Heroes Bridge + Fauquier Foundation data:                                                                                                                                  │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ CURRENT Tier ($0.75)                                                                                                                                                                                   │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ - 4-stage AI analysis + scoring                                                                                                                                                                        │ │
+│ │ - Processing time: 5-10 minutes                                                                                                                                                                        │ │
+│ │ - Capture: Token usage, processing time, data depth, output quality                                                                                                                                    │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ STANDARD Tier ($7.50)                                                                                                                                                                                  │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ - CURRENT + Historical funding analysis                                                                                                                                                                │ │
+│ │ - Processing time: 15-20 minutes                                                                                                                                                                       │ │
+│ │ - Capture: Additional token usage, enhanced analysis depth                                                                                                                                             │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ ENHANCED Tier ($22.00)                                                                                                                                                                                 │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ - STANDARD + Network intelligence + RFP analysis                                                                                                                                                       │ │
+│ │ - Processing time: 30-45 minutes                                                                                                                                                                       │ │
+│ │ - Capture: Advanced processing metrics, comprehensive intelligence depth                                                                                                                               │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ COMPLETE Tier ($42.00)                                                                                                                                                                                 │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ - Masters thesis level with comprehensive analysis                                                                                                                                                     │ │
+│ │ - Processing time: 45-60 minutes                                                                                                                                                                       │ │
+│ │ - Capture: Maximum token usage, professional deliverable quality                                                                                                                                       │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ 2. COMPREHENSIVE DATA COLLECTION                                                                                                                                                                       │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ For each tier, document:                                                                                                                                                                               │ │
+│ │ - Token Usage: Actual GPT-5 consumption per AI processor                                                                                                                                               │ │
+│ │ - Processing Time: Real execution duration per tier                                                                                                                                                    │ │
+│ │ - Data Depth: Level of analysis detail and comprehensiveness                                                                                                                                           │ │
+│ │ - Cost Validation: Actual API costs vs estimated tier pricing                                                                                                                                          │ │
+│ │ - Output Quality: Professional depth and intelligence value                                                                                                                                            │ │
+│ │ - Processor Execution: All 18+ processors completion status                                                                                                                                            │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ 3. REAL DATA VALIDATION REQUIREMENTS                                                                                                                                                                   │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ - Data Source: ONLY real ProPublica 990/990-PF data                                                                                                                                                    │ │
+│ │   - Heroes Bridge (EIN 81-2827604): $504,030 revenue, Warrenton VA                                                                                                                                     │ │
+│ │   - Fauquier Health Foundation (EIN 30-0219424): $249.9M assets, $11.67M distributions                                                                                                                 │ │
+│ │ - API Authentication: Real GPT-5 API calls (NO simulation mode)                                                                                                                                        │ │
+│ │ - Processing Verification: All processors execute with real data                                                                                                                                       │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ 4. MANDATORY SUCCESS VALIDATION CHECKLIST                                                                                                                                                              │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ - OpenAI GPT-5 API connects successfully                                                                                                                                                               │ │
+│ │ - PLAN Tab: AI-Lite shows GPT-5 token usage > 0                                                                                                                                                        │ │
+│ │ - ANALYZE Tab: AI-Heavy Light shows GPT-5 token usage > 0                                                                                                                                              │ │
+│ │ - EXAMINE Tab: AI-Heavy Deep shows GPT-5 token usage > 0                                                                                                                                               │ │
+│ │ - APPROACH Tab: AI-Heavy Researcher shows GPT-5 token usage > 0                                                                                                                                        │ │
+│ │ - All 18+ processors execute successfully                                                                                                                                                              │ │
+│ │ - All 4 tiers (CURRENT/STANDARD/ENHANCED/COMPLETE) complete                                                                                                                                            │ │
+│ │ - Real Heroes Bridge + Fauquier data used throughout                                                                                                                                                   │ │
+│ │ - Actual cost tracking for each tier                                                                                                                                                                   │ │
+│ │ - NO "simulation mode" messages in any output                                                                                                                                                          │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ 5. FINAL DELIVERABLE REQUIREMENTS                                                                                                                                                                      │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ - Masters Thesis Dossier: Use COMPLETE Tier results                                                                                                                                                    │ │
+│ │ - Template: heroes_bridge_fauquier_complete_masters_dossier.html (5-section structure)                                                                                                                 │ │
+│ │ - Section 4 Enhancement: Include comparative analysis of all 4 tiers                                                                                                                                   │ │
+│ │ - Token Analysis: Document GPT-5 usage and data depth for each tier                                                                                                                                    │ │
+│ │ - Professional Quality: Executive summary + comprehensive technical analysis                                                                                                                           │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ 6. COMPARATIVE TIER ANALYSIS OUTPUT                                                                                                                                                                    │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ Generate detailed comparison showing:                                                                                                                                                                  │ │
+│ │ - Processing Progression: How analysis depth increases across tiers                                                                                                                                    │ │
+│ │ - Token Utilization: GPT-5 usage scaling from CURRENT to COMPLETE                                                                                                                                      │ │
+│ │ - Value Proposition: Cost vs intelligence depth for each tier                                                                                                                                          │ │
+│ │ - Business Applications: When to use each tier based on requirements                                                                                                                                   │ │
+│ │                                                                                                                                                                                                        │ │
+│ │ This comprehensive strategy tests EVERYTHING - all processors, all AI stages, all intelligence tiers, using GPT-5 models with real data to produce the ultimate masters thesis dossier with complete   │ │
+│ │ tier comparison analysis.    

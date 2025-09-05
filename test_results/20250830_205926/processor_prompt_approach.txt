@@ -1,0 +1,55 @@
+=== AI PROMPT FOR APPROACH TAB ===
+Timestamp: 2025-08-30T20:59:41.603727
+Session: 20250830_205926
+==================================================
+
+
+You are an expert grant research analyst helping nonprofits identify and pursue funding opportunities.
+
+NONPROFIT PROFILE:
+- Name: Grantmakers In Aging Inc
+- EIN: 134014982
+- Location: Arlington, VA
+- NTEE Code: P81
+- Annual Revenue: $2,036,121
+- Total Assets: $2,481,115
+
+FUNDING OPPORTUNITY:
+- Title: Test Grant Program
+- Agency: DOE
+- Category: Environment
+- Type: Grant
+
+TASK - APPROACH TAB (Implementation Strategy):
+Develop detailed implementation strategy and approach for pursuing this opportunity.
+
+Previous Results:
+{
+  "tab": "EXAMINE",
+  "timestamp": "2025-08-30T20:59:41.586853",
+  "model_used": "gpt-4o-2024-08-06",
+  "tokens_used": 1003,
+  "parsed_response": {
+    "raw_response": "```json\n{\n    \"comprehensive_analysis\": \"Grantmakers In Aging Inc is exploring the Test Grant Program offered by the DOE, focusing on environmental initiatives. The organization must assess its capabilities in integrating aging-related issues with environmental projects. The primary challenge lies in the lack of direct experience in environmental initiatives, which necessitates strategic partnerships and potential hiring of environmental experts. The opportunity to create a niche by addressing the intersection of aging and environmental issues could be leveraged, but it requires careful planning and execution.\",\n    \"risk_matrix\": {\n        \"technical\": \"medium\",\n        \"financial\": \"medium\",\n        \"regulatory\": \"low\",\n        \"competitive\": \"high\"\n    },\n    \"implementation_roadmap\": [\n        \"phase1: Conduct a feasibility study to identify potential project areas where aging and environmental issues intersect. Engage with environmental experts and stakeholders to gather insights.\",\n        \"phase2: Develop strategic partnerships with organizations that have a strong environmental focus. Allocate resources for project development and begin pilot testing.\",\n        \"phase3: Implement the full-scale project, monitor progress, and adjust strategies as needed. Focus on achieving measurable outcomes and documenting best practices for future initiatives.\"\n    ],\n    \"success_probability\": 0.45,\n    \"market_analysis\": \"The market for environmental grants is highly competitive, with numerous organizations possessing strong environmental credentials. Grantmakers In Aging Inc can differentiate itself by focusing on the unique intersection of aging and environmental issues, a relatively underexplored area. This approach may attract attention from funders interested in innovative solutions that address multiple societal challenges. However, the organization must overcome significant competition from established environmental nonprofits and demonstrate its capability to deliver impactful projects in this domain.\"\n}\n```"
+  },
+  "processing_success": true
+}
+
+Focus on:
+1. Detailed implementation strategy
+2. Timeline and milestone planning
+3. Resource allocation and optimization
+4. Success metrics and KPI definition
+
+Respond in JSON format with:
+{
+    "implementation_strategy": "detailed strategy description",
+    "detailed_timeline": "comprehensive timeline with milestones",
+    "resource_allocation": {
+        "personnel": "percentage",
+        "equipment": "percentage", 
+        "overhead": "percentage"
+    },
+    "success_metrics": ["metric1", "metric2", "metric3"],
+    "risk_mitigation": "detailed risk management plan"
+}

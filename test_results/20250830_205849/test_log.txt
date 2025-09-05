@@ -1,0 +1,23 @@
+2025-08-30 20:58:49,519 - RealDataAITester - INFO - Loaded nonprofit data: Grantmakers In Aging Inc
+2025-08-30 20:58:49,520 - RealDataAITester - INFO - Loaded opportunity data: TEST-GRANTS-2024-001
+2025-08-30 20:58:50,586 - RealDataAITester - INFO - [SUCCESS] OpenAI API client initialized successfully
+2025-08-30 20:58:50,586 - RealDataAITester - INFO - === Real Data AI Processor Testing Started ===
+2025-08-30 20:58:50,586 - RealDataAITester - INFO - Budget: $5.0
+2025-08-30 20:58:50,586 - RealDataAITester - INFO - Test data loaded: 2 entities
+2025-08-30 20:58:50,587 - RealDataAITester - INFO - 
+Starting Complete Workflow Test (All 4 Processors)
+2025-08-30 20:58:50,587 - RealDataAITester - INFO - 
+--- Processing PLAN Tab ---
+2025-08-30 20:58:50,588 - RealDataAITester - INFO - 
+=== Testing PLAN Tab - ai_lite_unified_processor ===
+2025-08-30 20:58:50,590 - RealDataAITester - INFO - Saved input package: processor_input_plan.json
+2025-08-30 20:58:50,591 - RealDataAITester - INFO - Saved AI prompt: processor_prompt_plan.txt
+2025-08-30 20:58:50,591 - RealDataAITester - INFO - Making real OpenAI API call with model: gpt-5-nano
+2025-08-30 20:58:51,188 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2025-08-30 20:58:51,189 - RealDataAITester - ERROR - [ERROR] OpenAI API call failed: Error code: 400 - {'error': {'message': "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.", 'type': 'invalid_request_error', 'param': 'max_tokens', 'code': 'unsupported_parameter'}}
+2025-08-30 20:58:51,189 - RealDataAITester - ERROR - Error testing ai_lite_unified_processor: Error code: 400 - {'error': {'message': "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.", 'type': 'invalid_request_error', 'param': 'max_tokens', 'code': 'unsupported_parameter'}}
+2025-08-30 20:58:51,193 - RealDataAITester - INFO - Saved metrics for ai_lite_unified_processor
+2025-08-30 20:58:51,193 - RealDataAITester - ERROR - [FAILED] Workflow failed at PLAN tab
+2025-08-30 20:58:51,194 - RealDataAITester - ERROR - [FAILED] Complete workflow test failed
+2025-08-30 20:58:51,196 - RealDataAITester - INFO - [REPORT] Review report generated: test_results\20250830_205849\REVIEW_REPORT.json
+2025-08-30 20:58:51,196 - RealDataAITester - INFO - [RESULTS] All test results saved in: test_results\20250830_205849

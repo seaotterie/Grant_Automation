@@ -1,0 +1,55 @@
+=== AI PROMPT FOR ANALYZE TAB ===
+Timestamp: 2025-08-30T21:18:16.800928
+Session: 20250830_211804
+==================================================
+
+
+You are an expert grant research analyst helping nonprofits identify and pursue funding opportunities.
+
+NONPROFIT PROFILE:
+- Name: Grantmakers In Aging Inc
+- EIN: 134014982
+- Location: Arlington, VA
+- NTEE Code: P81
+- Annual Revenue: $2,036,121
+- Total Assets: $2,481,115
+
+FUNDING OPPORTUNITY:
+- Title: Test Grant Program
+- Agency: DOE
+- Category: Environment
+- Type: Grant
+
+TASK - ANALYZE TAB (Strategic Analysis):
+Provide detailed strategic analysis of this opportunity for the nonprofit.
+
+Previous Results:
+{
+  "tab": "PLAN",
+  "timestamp": "2025-08-30T21:18:16.795486",
+  "model_used": "gpt-4o-2024-08-06",
+  "tokens_used": 3086,
+  "parsed_response": {
+    "raw_response": "```json\n{\n    \"funding_source_verification\": {\n        \"funder_type\": \"direct_federal\",\n        \"legitimacy_score\": 0.95,\n        \"funding_capacity_confirmed\": true,\n        \"confidence_assessment\": \"The DOE is a well-established federal agency with a strong track record of providing grants, ensuring high reliability and legitimacy.\"\n    },\n    \"program_status_intelligence\": {\n        \"status\": \"active\",\n        \"accepting_applications\": true,\n        \"timeline_analysis\": \"The program has an open application window with a deadline in the next three months, allowing adequate time for preparation.\",\n        \"application_window\": \"Currently open and actively accepting applications.\"\n    },\n    \"eligibility_prescreening\": {\n        \"organizational_fit\": \"The nonprofit fits the entity type and structure as a 501(c)(3) organization.\",\n        \"geographic_compliance\": \"Located in Arlington, VA, which is within the eligible geographic area.\",\n        \"financial_thresholds\": \"The nonprofit's revenue and assets meet the financial capacity requirements.\",\n        \"requirement_gaps\": [],\n        \"eligibility_score\": 0.9\n    },\n    \"strategic_assessment\": {\n        \"mission_alignment_score\": 0.85,\n        \"strategic_value_tier\": \"High\",\n        \"priority_mapping\": \"The nonprofit's focus on aging aligns with the environmental goals of the grant, providing strong synergy.\",\n        \"geographic_compatibility\": \"The nonprofit's location is compatible with the grant's geographic focus.\",\n        \"contextual_understanding\": \"The nonprofit's mission aligns well with the environmental objectives of the grant.\"\n    },\n    \"risk_assessment_matrix\": {\n        \"competition_risk\": {\"level\": \"medium\", \"analysis\": \"Moderate competition expected due to the broad appeal of environmental grants.\"},\n        \"technical_requirements\": {\"level\": \"medium\", \"analysis\": \"Some specialized environmental knowledge required.\"},\n        \"geographic_constraints\": {\"level\": \"low\", \"analysis\": \"No significant geographic restrictions.\"},\n        \"capacity_limitations\": {\"level\": \"low\", \"analysis\": \"The nonprofit has sufficient capacity to manage the grant.\"},\n        \"timeline_pressures\": {\"level\": \"medium\", \"analysis\": \"Adequate time available, but preparation should begin promptly.\"},\n        \"compliance_complexity\": {\"level\": \"medium\", \"analysis\": \"Standard federal compliance requirements apply.\"}\n    },\n    \"web_intelligence\": {\n        \"contact_information\": [\"John Doe, Program Officer, DOE Environmental Grants\"],\n        \"application_complexity\": \"moderate\",\n        \"process_requirements\": [\"Complete online application form\", \"Submit financial statements\", \"Provide project proposal\"],\n        \"success_factors\": [\"Clear project objectives\", \"Strong environmental impact\", \"Detailed budget\"]\n    },\n    \"batch_processing_intelligence\": {\n        \"batch_priority_score\": 0.8,\n        \"processing_recommendation\": \"immediate\",\n        \"optimal_batch_grouping\": \"Group with other environmental grant opportunities.\",\n        \"resource_allocation_weight\": \"20%\"\n    },\n    \"quality_assurance\": {\n        \"data_completeness_score\": 0.9,\n        \"analysis_reliability_score\": 0.9,\n        \"missing_data_impact\": \"Minimal impact due to comprehensive data availability.\",\n        \"quality_improvement_recommendations\": [\"Verify latest application guidelines from DOE website.\"]\n    },\n    \"downstream_integration\": {\n        \"next_stage_readiness\": \"ready\",\n        \"quality_gate_status\": \"pass\",\n        \"analyze_tab_data_package\": \"All required data is prepared for the next stage.\",\n        \"recommended_processing_path\": \"standard\"\n    },\n    \"success_factor_modeling\": {\n        \"success_probability\": 0.75,\n        \"critical_success_factors\": [\"Strong project proposal\", \"Clear alignment with environmental goals\", \"Robust financial management\", \"Experienced project team\", \"Timely submission\"],\n        \"failure_risk_factors\": [\"Incomplete application\", \"Lack of clear objectives\", \"Insufficient budget detail\"],\n        \"optimization_opportunities\": [\"Enhance project proposal clarity\", \"Strengthen budget justification\", \"Ensure compliance with all guidelines\"]\n    },\n    \"competitive_intelligence\": {\n        \"competitive_pressure_assessment\": \"medium\",\n        \"likely_competitors\": [\"Environmental nonprofits, academic institutions\"],\n        \"competitive_advantages\": [\"Strong focus on aging and environment intersection\", \"Established organizational reputation\"],\n        \"differentiation_strategy\": \"Emphasize unique focus on aging within environmental projects.\"\n    },\n    \"relationship_mapping\": {\n        \"board_network_connections\": [\"Potential connections through board member affiliations with environmental agencies\"],\n        \"partnership_opportunities\": [\"Collaborations with local environmental groups\"],\n        \"introduction_pathways\": [\"Leverage board connections to introduce to DOE contacts\"],\n        \"relationship_leverage_score\": 0.7\n    },\n    \"final_recommendation\": {\n        \"viability_score\": 0.8,\n        \"recommendation\": \"pursue\",\n        \"confidence\": 0.85,\n        \"comprehensive_reasoning\": \"The nonprofit is well-positioned to pursue this grant due to strong mission alignment, adequate capacity, and a moderate competitive landscape. The strategic value and potential impact justify the pursuit.\"\n    }\n}\n```"
+  },
+  "processing_success": true
+}
+
+Focus on:
+1. Strategic alignment with nonprofit's mission and capabilities
+2. Competitive positioning and advantage
+3. Resource requirements and capacity assessment
+4. Market analysis and positioning
+
+Respond in JSON format with:
+{
+    "strategic_alignment": 0-100,
+    "competitive_advantage": "detailed analysis",
+    "resource_requirements": {
+        "staff": "requirement description",
+        "budget": "budget estimate",
+        "timeline": "time requirements"
+    },
+    "success_probability": 0.0-1.0,
+    "market_position": "analysis of competitive landscape"
+}

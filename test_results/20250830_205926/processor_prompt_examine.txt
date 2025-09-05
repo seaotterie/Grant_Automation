@@ -1,0 +1,56 @@
+=== AI PROMPT FOR EXAMINE TAB ===
+Timestamp: 2025-08-30T20:59:37.820737
+Session: 20250830_205926
+==================================================
+
+
+You are an expert grant research analyst helping nonprofits identify and pursue funding opportunities.
+
+NONPROFIT PROFILE:
+- Name: Grantmakers In Aging Inc
+- EIN: 134014982
+- Location: Arlington, VA
+- NTEE Code: P81
+- Annual Revenue: $2,036,121
+- Total Assets: $2,481,115
+
+FUNDING OPPORTUNITY:
+- Title: Test Grant Program
+- Agency: DOE
+- Category: Environment
+- Type: Grant
+
+TASK - EXAMINE TAB (Deep Research):
+Conduct comprehensive research and deep analysis of this opportunity.
+
+Previous Results:
+{
+  "tab": "ANALYZE",
+  "timestamp": "2025-08-30T20:59:37.796820",
+  "model_used": "gpt-4o-2024-08-06",
+  "tokens_used": 823,
+  "parsed_response": {
+    "raw_response": "```json\n{\n    \"strategic_alignment\": 30,\n    \"competitive_advantage\": \"Grantmakers In Aging Inc has a strong reputation and established networks in the aging sector, which could be leveraged to create innovative projects that intersect aging and environmental issues. However, the lack of direct experience in environmental initiatives is a significant disadvantage compared to organizations with a primary focus on environmental concerns.\",\n    \"resource_requirements\": {\n        \"staff\": \"The organization would need to allocate or hire staff with expertise in environmental science or policy to effectively manage and implement the grant project.\",\n        \"budget\": \"An estimated budget of $150,000 to $250,000 may be required to cover staffing, project development, and implementation costs, including potential partnerships with environmental experts.\",\n        \"timeline\": \"A timeline of 12 to 18 months would be necessary to develop a comprehensive project plan, secure partnerships, and execute the project effectively.\"\n    },\n    \"success_probability\": 0.4,\n    \"market_position\": \"The competitive landscape is dominated by organizations with established environmental credentials. Grantmakers In Aging Inc would need to position itself as a unique player by highlighting the intersection of aging and environmental issues, potentially carving out a niche market. However, the competition from specialized environmental nonprofits remains a significant challenge.\"\n}\n```"
+  },
+  "processing_success": true
+}
+
+Focus on:
+1. Comprehensive risk assessment
+2. Implementation feasibility analysis
+3. Success probability modeling
+4. Market research and competitive analysis
+
+Respond in JSON format with:
+{
+    "comprehensive_analysis": "detailed research findings",
+    "risk_matrix": {
+        "technical": "low/medium/high",
+        "financial": "low/medium/high",
+        "regulatory": "low/medium/high",
+        "competitive": "low/medium/high"
+    },
+    "implementation_roadmap": ["phase1", "phase2", "phase3"],
+    "success_probability": 0.0-1.0,
+    "market_analysis": "comprehensive market research"
+}

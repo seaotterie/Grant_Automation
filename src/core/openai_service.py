@@ -56,8 +56,7 @@ class OpenAIService:
             "gpt-5": {"input": 1.25 / 1000000, "output": 10.0 / 1000000},  # $1.25/1M input, $10/1M output
             "gpt-5-mini": {"input": 0.5 / 1000000, "output": 4.0 / 1000000},  # Mid-tier GPT-5
             "gpt-5-nano": {"input": 0.25 / 1000000, "output": 2.0 / 1000000}, # Most cost-effective GPT-5
-            "gpt-5-chat-latest": {"input": 1.25 / 1000000, "output": 10.0 / 1000000}, # Latest GPT-5
-            "gpt-5-preview": {"input": 1.25 / 1000000, "output": 10.0 / 1000000} # Preview version
+            "gpt-5-chat-latest": {"input": 1.25 / 1000000, "output": 10.0 / 1000000} # Latest GPT-5
         }
         
         # Rate limiting
@@ -114,9 +113,11 @@ class OpenAIService:
         # Rate limiting check
         await self._check_rate_limits()
         
-        # If no API key, use simulation mode
+        # If no API key, STOP THE TEST - do not fall back to simulation
         if not self.client:
-            return await self._simulate_completion(model, messages, max_tokens)
+            error_msg = "CRITICAL ERROR: OpenAI client not initialized - API key missing or invalid. STOPPING TEST to prevent simulation mode."
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
         
         try:
             # Make API call with model-specific parameters
@@ -182,9 +183,9 @@ class OpenAIService:
             
         except Exception as e:
             logger.error(f"OpenAI API call failed: {str(e)}")
-            # Fall back to simulation mode
-            logger.info("Falling back to simulation mode due to API error")
-            return await self._simulate_completion(model, messages, max_tokens)
+            # GPT-5 models are available - re-raise the error instead of simulation
+            logger.error(f"GPT-5 model API call failed for {model}: {str(e)}")
+            raise
     
     async def _simulate_completion(
         self,

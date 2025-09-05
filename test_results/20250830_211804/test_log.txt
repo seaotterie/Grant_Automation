@@ -1,0 +1,73 @@
+2025-08-30 21:18:04,240 - RealDataAITester - INFO - Loaded nonprofit data: Grantmakers In Aging Inc
+2025-08-30 21:18:04,240 - RealDataAITester - INFO - Loaded opportunity data: TEST-GRANTS-2024-001
+2025-08-30 21:18:06,180 - RealDataAITester - INFO - [SUCCESS] OpenAI API client initialized successfully
+2025-08-30 21:18:06,180 - RealDataAITester - INFO - === Real Data AI Processor Testing Started ===
+2025-08-30 21:18:06,180 - RealDataAITester - INFO - Budget: $5.0
+2025-08-30 21:18:06,180 - RealDataAITester - INFO - Test data loaded: 2 entities
+2025-08-30 21:18:06,180 - RealDataAITester - INFO - 
+Starting Complete Workflow Test (All 4 Processors)
+2025-08-30 21:18:06,180 - RealDataAITester - INFO - 
+--- Processing PLAN Tab ---
+2025-08-30 21:18:06,181 - RealDataAITester - INFO - 
+=== Testing PLAN Tab - ai_lite_unified_processor ===
+2025-08-30 21:18:06,187 - RealDataAITester - INFO - Saved input package: processor_input_plan.json
+2025-08-30 21:18:06,189 - RealDataAITester - INFO - Saved AI prompt: processor_prompt_plan.txt
+2025-08-30 21:18:06,189 - RealDataAITester - INFO - Making real OpenAI API call with model: gpt-5-mini
+2025-08-30 21:18:06,189 - RealDataAITester - INFO - Mapping gpt-5-mini to gpt-4o (GPT-5 not available)
+2025-08-30 21:18:16,780 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-30 21:18:16,793 - RealDataAITester - INFO - [SUCCESS] API call successful - Tokens: 3086
+2025-08-30 21:18:16,795 - RealDataAITester - INFO - Saved AI response: processor_response_plan.json
+2025-08-30 21:18:16,796 - RealDataAITester - INFO - Saved processed output: processor_output_plan.json
+2025-08-30 21:18:16,796 - RealDataAITester - INFO - Saved metrics for ai_lite_unified_processor
+2025-08-30 21:18:16,796 - RealDataAITester - INFO - [SUCCESS] PLAN tab completed successfully
+2025-08-30 21:18:16,797 - RealDataAITester - INFO -    Cost: $0.0264, Tokens: 3086, Time: 10.6s
+2025-08-30 21:18:16,797 - RealDataAITester - INFO - 
+--- Processing ANALYZE Tab ---
+2025-08-30 21:18:16,797 - RealDataAITester - INFO - 
+=== Testing ANALYZE Tab - ai_heavy_light_analyzer ===
+2025-08-30 21:18:16,799 - RealDataAITester - INFO - Saved input package: processor_input_analyze.json
+2025-08-30 21:18:16,801 - RealDataAITester - INFO - Saved AI prompt: processor_prompt_analyze.txt
+2025-08-30 21:18:16,801 - RealDataAITester - INFO - Making real OpenAI API call with model: gpt-5-mini
+2025-08-30 21:18:16,801 - RealDataAITester - INFO - Mapping gpt-5-mini to gpt-4o (GPT-5 not available)
+2025-08-30 21:18:20,466 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-30 21:18:20,468 - RealDataAITester - INFO - [SUCCESS] API call successful - Tokens: 1916
+2025-08-30 21:18:20,470 - RealDataAITester - INFO - Saved AI response: processor_response_analyze.json
+2025-08-30 21:18:20,472 - RealDataAITester - INFO - Saved processed output: processor_output_analyze.json
+2025-08-30 21:18:20,474 - RealDataAITester - INFO - Saved metrics for ai_heavy_light_analyzer
+2025-08-30 21:18:20,474 - RealDataAITester - INFO - [SUCCESS] ANALYZE tab completed successfully
+2025-08-30 21:18:20,474 - RealDataAITester - INFO -    Cost: $0.0125, Tokens: 1916, Time: 3.7s
+2025-08-30 21:18:20,474 - RealDataAITester - INFO - 
+--- Processing EXAMINE Tab ---
+2025-08-30 21:18:20,474 - RealDataAITester - INFO - 
+=== Testing EXAMINE Tab - ai_heavy_deep_researcher ===
+2025-08-30 21:18:20,476 - RealDataAITester - INFO - Saved input package: processor_input_examine.json
+2025-08-30 21:18:20,477 - RealDataAITester - INFO - Saved AI prompt: processor_prompt_examine.txt
+2025-08-30 21:18:20,478 - RealDataAITester - INFO - Making real OpenAI API call with model: gpt-5-mini
+2025-08-30 21:18:20,478 - RealDataAITester - INFO - Mapping gpt-5-mini to gpt-4o (GPT-5 not available)
+2025-08-30 21:18:25,995 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-30 21:18:25,996 - RealDataAITester - INFO - [SUCCESS] API call successful - Tokens: 1037
+2025-08-30 21:18:25,997 - RealDataAITester - INFO - Saved AI response: processor_response_examine.json
+2025-08-30 21:18:25,998 - RealDataAITester - INFO - Saved processed output: processor_output_examine.json
+2025-08-30 21:18:25,999 - RealDataAITester - INFO - Saved metrics for ai_heavy_deep_researcher
+2025-08-30 21:18:25,999 - RealDataAITester - INFO - [SUCCESS] EXAMINE tab completed successfully
+2025-08-30 21:18:25,999 - RealDataAITester - INFO -    Cost: $0.0087, Tokens: 1037, Time: 5.5s
+2025-08-30 21:18:25,999 - RealDataAITester - INFO - 
+--- Processing APPROACH Tab ---
+2025-08-30 21:18:25,999 - RealDataAITester - INFO - 
+=== Testing APPROACH Tab - ai_heavy_researcher ===
+2025-08-30 21:18:26,001 - RealDataAITester - INFO - Saved input package: processor_input_approach.json
+2025-08-30 21:18:26,002 - RealDataAITester - INFO - Saved AI prompt: processor_prompt_approach.txt
+2025-08-30 21:18:26,002 - RealDataAITester - INFO - Making real OpenAI API call with model: gpt-5-mini
+2025-08-30 21:18:26,003 - RealDataAITester - INFO - Mapping gpt-5-mini to gpt-4o (GPT-5 not available)
+2025-08-30 21:18:30,512 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-30 21:18:30,513 - RealDataAITester - INFO - [SUCCESS] API call successful - Tokens: 1129
+2025-08-30 21:18:30,514 - RealDataAITester - INFO - Saved AI response: processor_response_approach.json
+2025-08-30 21:18:30,515 - RealDataAITester - INFO - Saved processed output: processor_output_approach.json
+2025-08-30 21:18:30,516 - RealDataAITester - INFO - Saved metrics for ai_heavy_researcher
+2025-08-30 21:18:30,516 - RealDataAITester - INFO - [SUCCESS] APPROACH tab completed successfully
+2025-08-30 21:18:30,516 - RealDataAITester - INFO -    Cost: $0.0095, Tokens: 1129, Time: 4.5s
+2025-08-30 21:18:30,517 - RealDataAITester - INFO - [SUCCESS] Complete workflow test successful!
+2025-08-30 21:18:30,517 - RealDataAITester - INFO -    Total cost: $0.0571
+2025-08-30 21:18:30,517 - RealDataAITester - INFO -    Budget remaining: $4.9429
+2025-08-30 21:18:30,520 - RealDataAITester - INFO - [REPORT] Review report generated: test_results\20250830_211804\REVIEW_REPORT.json
+2025-08-30 21:18:30,520 - RealDataAITester - INFO - [RESULTS] All test results saved in: test_results\20250830_211804

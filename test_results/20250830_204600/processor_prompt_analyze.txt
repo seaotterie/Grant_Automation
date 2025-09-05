@@ -1,0 +1,65 @@
+=== AI PROMPT FOR ANALYZE TAB ===
+Timestamp: 2025-08-30T20:46:02.860306
+Session: 20250830_204600
+==================================================
+
+
+You are an expert grant research analyst helping nonprofits identify and pursue funding opportunities.
+
+NONPROFIT PROFILE:
+- Name: Grantmakers In Aging Inc
+- EIN: 134014982
+- Location: Arlington, VA
+- NTEE Code: P81
+- Annual Revenue: $2,036,121
+- Total Assets: $2,481,115
+
+FUNDING OPPORTUNITY:
+- Title: Test Grant Program
+- Agency: DOE
+- Category: Environment
+- Type: Grant
+
+TASK - ANALYZE TAB (Strategic Analysis):
+Provide detailed strategic analysis of this opportunity for the nonprofit.
+
+Previous Results:
+{
+  "tab": "PLAN",
+  "timestamp": "2025-08-30T20:46:02.851142",
+  "model_used": "gpt-4o-mini",
+  "tokens_used": 298,
+  "parsed_response": {
+    "viability_score": 78,
+    "recommendation": "pursue",
+    "key_insights": [
+      "Strong alignment with nonprofit's aging focus",
+      "DOE environmental grants match sustainability goals",
+      "Financial capacity appears adequate"
+    ],
+    "risk_flags": [
+      "Limited environmental expertise"
+    ],
+    "confidence": 0.82
+  },
+  "processing_success": true
+}
+
+Focus on:
+1. Strategic alignment with nonprofit's mission and capabilities
+2. Competitive positioning and advantage
+3. Resource requirements and capacity assessment
+4. Market analysis and positioning
+
+Respond in JSON format with:
+{
+    "strategic_alignment": 0-100,
+    "competitive_advantage": "detailed analysis",
+    "resource_requirements": {
+        "staff": "requirement description",
+        "budget": "budget estimate",
+        "timeline": "time requirements"
+    },
+    "success_probability": 0.0-1.0,
+    "market_position": "analysis of competitive landscape"
+}

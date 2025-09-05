@@ -1,0 +1,55 @@
+=== AI PROMPT FOR APPROACH TAB ===
+Timestamp: 2025-08-30T20:52:38.674308
+Session: 20250830_205223
+==================================================
+
+
+You are an expert grant research analyst helping nonprofits identify and pursue funding opportunities.
+
+NONPROFIT PROFILE:
+- Name: Grantmakers In Aging Inc
+- EIN: 134014982
+- Location: Arlington, VA
+- NTEE Code: P81
+- Annual Revenue: $2,036,121
+- Total Assets: $2,481,115
+
+FUNDING OPPORTUNITY:
+- Title: Test Grant Program
+- Agency: DOE
+- Category: Environment
+- Type: Grant
+
+TASK - APPROACH TAB (Implementation Strategy):
+Develop detailed implementation strategy and approach for pursuing this opportunity.
+
+Previous Results:
+{
+  "tab": "EXAMINE",
+  "timestamp": "2025-08-30T20:52:38.666503",
+  "model_used": "gpt-4o-2024-08-06",
+  "tokens_used": 956,
+  "parsed_response": {
+    "raw_response": "```json\n{\n    \"comprehensive_analysis\": \"Grantmakers In Aging Inc, with its primary focus on aging-related issues, faces significant challenges in pursuing the Test Grant Program due to its environmental focus. The nonprofit lacks direct expertise and strategic alignment in environmental initiatives, which are critical for this grant. The competitive landscape is dominated by organizations with established environmental credentials and DOE relationships. To pursue this opportunity, Grantmakers In Aging Inc would need to significantly pivot its strategic focus, which may not be feasible given its current mission and resources.\",\n    \"risk_matrix\": {\n        \"technical\": \"high\",\n        \"financial\": \"medium\",\n        \"regulatory\": \"low\",\n        \"competitive\": \"high\"\n    },\n    \"implementation_roadmap\": [\n        \"phase1: Conduct internal assessment to evaluate potential for strategic pivot and identify necessary resources.\",\n        \"phase2: Develop partnerships with environmental organizations to bolster expertise and credibility.\",\n        \"phase3: Allocate resources for proposal development, including hiring or consulting with environmental experts.\"\n    ],\n    \"success_probability\": 0.05,\n    \"market_analysis\": \"The market for the Test Grant Program is highly competitive, with numerous organizations specializing in environmental projects. These organizations often have established relationships with the DOE and possess the necessary expertise to develop compelling proposals. Grantmakers In Aging Inc would need to overcome significant barriers to entry, including developing new competencies and forming strategic partnerships, to compete effectively in this space.\"\n}\n```"
+  },
+  "processing_success": true
+}
+
+Focus on:
+1. Detailed implementation strategy
+2. Timeline and milestone planning
+3. Resource allocation and optimization
+4. Success metrics and KPI definition
+
+Respond in JSON format with:
+{
+    "implementation_strategy": "detailed strategy description",
+    "detailed_timeline": "comprehensive timeline with milestones",
+    "resource_allocation": {
+        "personnel": "percentage",
+        "equipment": "percentage", 
+        "overhead": "percentage"
+    },
+    "success_metrics": ["metric1", "metric2", "metric3"],
+    "risk_mitigation": "detailed risk management plan"
+}

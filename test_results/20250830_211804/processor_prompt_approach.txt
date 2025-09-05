@@ -1,0 +1,55 @@
+=== AI PROMPT FOR APPROACH TAB ===
+Timestamp: 2025-08-30T21:18:26.002573
+Session: 20250830_211804
+==================================================
+
+
+You are an expert grant research analyst helping nonprofits identify and pursue funding opportunities.
+
+NONPROFIT PROFILE:
+- Name: Grantmakers In Aging Inc
+- EIN: 134014982
+- Location: Arlington, VA
+- NTEE Code: P81
+- Annual Revenue: $2,036,121
+- Total Assets: $2,481,115
+
+FUNDING OPPORTUNITY:
+- Title: Test Grant Program
+- Agency: DOE
+- Category: Environment
+- Type: Grant
+
+TASK - APPROACH TAB (Implementation Strategy):
+Develop detailed implementation strategy and approach for pursuing this opportunity.
+
+Previous Results:
+{
+  "tab": "EXAMINE",
+  "timestamp": "2025-08-30T21:18:25.997781",
+  "model_used": "gpt-4o-2024-08-06",
+  "tokens_used": 1037,
+  "parsed_response": {
+    "raw_response": "```json\n{\n    \"comprehensive_analysis\": \"The Test Grant Program by the DOE, focusing on environmental initiatives, presents a unique opportunity for Grantmakers In Aging Inc to leverage its niche expertise in aging and environmental issues. The organization can propose projects that integrate environmental sustainability with aging population needs, potentially appealing to funders interested in innovative and interdisciplinary approaches. However, the primary challenge lies in the organization's relative lack of direct experience in environmental projects compared to other competitors, such as specialized environmental nonprofits and academic institutions.\",\n    \"risk_matrix\": {\n        \"technical\": \"medium\",\n        \"financial\": \"medium\",\n        \"regulatory\": \"low\",\n        \"competitive\": \"high\"\n    },\n    \"implementation_roadmap\": [\n        \"phase1: Initial Research and Proposal Development - Conduct in-depth research on environmental impacts on aging populations, draft a comprehensive proposal aligning with DOE's objectives.\",\n        \"phase2: Partnership and Resource Allocation - Establish partnerships with environmental experts, allocate necessary resources including staff and budget, and refine project plans.\",\n        \"phase3: Project Execution and Monitoring - Implement the project with continuous monitoring and evaluation to ensure alignment with DOE requirements and project goals.\"\n    ],\n    \"success_probability\": 0.70,\n    \"market_analysis\": \"The market for environmental grants is highly competitive, with numerous organizations vying for funding. Environmental nonprofits and academic institutions often have established track records in this domain, presenting a significant competitive challenge. However, Grantmakers In Aging Inc can capitalize on its unique positioning by emphasizing its focus on the aging population, potentially attracting funders interested in diverse impacts. The organization should highlight its innovative approach to integrating environmental and aging issues, which may appeal to funders seeking novel solutions.\"\n}\n```"
+  },
+  "processing_success": true
+}
+
+Focus on:
+1. Detailed implementation strategy
+2. Timeline and milestone planning
+3. Resource allocation and optimization
+4. Success metrics and KPI definition
+
+Respond in JSON format with:
+{
+    "implementation_strategy": "detailed strategy description",
+    "detailed_timeline": "comprehensive timeline with milestones",
+    "resource_allocation": {
+        "personnel": "percentage",
+        "equipment": "percentage", 
+        "overhead": "percentage"
+    },
+    "success_metrics": ["metric1", "metric2", "metric3"],
+    "risk_mitigation": "detailed risk management plan"
+}

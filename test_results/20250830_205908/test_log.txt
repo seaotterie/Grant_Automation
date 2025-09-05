@@ -1,0 +1,23 @@
+2025-08-30 20:59:08,003 - RealDataAITester - INFO - Loaded nonprofit data: Grantmakers In Aging Inc
+2025-08-30 20:59:08,004 - RealDataAITester - INFO - Loaded opportunity data: TEST-GRANTS-2024-001
+2025-08-30 20:59:08,996 - RealDataAITester - INFO - [SUCCESS] OpenAI API client initialized successfully
+2025-08-30 20:59:08,996 - RealDataAITester - INFO - === Real Data AI Processor Testing Started ===
+2025-08-30 20:59:08,996 - RealDataAITester - INFO - Budget: $5.0
+2025-08-30 20:59:08,996 - RealDataAITester - INFO - Test data loaded: 2 entities
+2025-08-30 20:59:08,996 - RealDataAITester - INFO - 
+Starting Complete Workflow Test (All 4 Processors)
+2025-08-30 20:59:08,996 - RealDataAITester - INFO - 
+--- Processing PLAN Tab ---
+2025-08-30 20:59:08,998 - RealDataAITester - INFO - 
+=== Testing PLAN Tab - ai_lite_unified_processor ===
+2025-08-30 20:59:09,001 - RealDataAITester - INFO - Saved input package: processor_input_plan.json
+2025-08-30 20:59:09,002 - RealDataAITester - INFO - Saved AI prompt: processor_prompt_plan.txt
+2025-08-30 20:59:09,003 - RealDataAITester - INFO - Making real OpenAI API call with model: gpt-5-nano
+2025-08-30 20:59:09,561 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2025-08-30 20:59:09,561 - RealDataAITester - ERROR - [ERROR] OpenAI API call failed: Error code: 400 - {'error': {'message': "Unsupported value: 'temperature' does not support 0.3 with this model. Only the default (1) value is supported.", 'type': 'invalid_request_error', 'param': 'temperature', 'code': 'unsupported_value'}}
+2025-08-30 20:59:09,562 - RealDataAITester - ERROR - Error testing ai_lite_unified_processor: Error code: 400 - {'error': {'message': "Unsupported value: 'temperature' does not support 0.3 with this model. Only the default (1) value is supported.", 'type': 'invalid_request_error', 'param': 'temperature', 'code': 'unsupported_value'}}
+2025-08-30 20:59:09,564 - RealDataAITester - INFO - Saved metrics for ai_lite_unified_processor
+2025-08-30 20:59:09,564 - RealDataAITester - ERROR - [FAILED] Workflow failed at PLAN tab
+2025-08-30 20:59:09,566 - RealDataAITester - ERROR - [FAILED] Complete workflow test failed
+2025-08-30 20:59:09,567 - RealDataAITester - INFO - [REPORT] Review report generated: test_results\20250830_205908\REVIEW_REPORT.json
+2025-08-30 20:59:09,567 - RealDataAITester - INFO - [RESULTS] All test results saved in: test_results\20250830_205908

@@ -1,0 +1,178 @@
+=== AI PROMPT FOR ANALYZE TAB ===
+Timestamp: 2025-08-31T06:45:13.844216
+Session: 20250831_064502
+==================================================
+
+
+You are an expert grant research analyst helping nonprofits identify and pursue funding opportunities.
+
+NONPROFIT PROFILE:
+- Name: Grantmakers In Aging Inc
+- EIN: 134014982
+- Location: Arlington, VA
+- NTEE Code: P81
+- Annual Revenue: $2,036,121
+- Total Assets: $2,481,115
+
+FUNDING OPPORTUNITY:
+- Title: Test Grant Program
+- Agency: DOE
+- Category: Environment
+- Type: Grant
+
+TASK - ANALYZE TAB (Enhanced Screening and Intelligent Filtering):
+You are conducting comprehensive enhanced screening as described in the AI_PROCESSOR_TAB_GUIDE. This analysis must cover ALL capability areas with detailed intelligence for cost-effective filtering before expensive deep analysis.
+
+Previous Results:
+{
+  "tab": "PLAN",
+  "timestamp": "2025-08-31T06:45:13.835988",
+  "model_used": "gpt-4o-2024-08-06",
+  "tokens_used": 3157,
+  "parsed_response": {
+    "raw_response": "```json\n{\n    \"funding_source_verification\": {\n        \"funder_type\": \"direct_federal\",\n        \"legitimacy_score\": 0.95,\n        \"funding_capacity_confirmed\": true,\n        \"confidence_assessment\": \"The DOE is a well-established federal agency with a strong history of providing grants, confirming high reliability and legitimacy.\"\n    },\n    \"program_status_intelligence\": {\n        \"status\": \"active\",\n        \"accepting_applications\": true,\n        \"timeline_analysis\": \"The program is currently open for applications with a deadline in approximately 60 days, allowing sufficient preparation time.\",\n        \"application_window\": \"The program operates on an annual cycle, with applications typically accepted in the fall.\"\n    },\n    \"eligibility_prescreening\": {\n        \"organizational_fit\": \"Grantmakers In Aging Inc fits the nonprofit entity type required by the program.\",\n        \"geographic_compliance\": \"The organization is based in Arlington, VA, which is eligible under the program's national scope.\",\n        \"financial_thresholds\": \"The organization's revenue and asset levels meet the program's financial capacity requirements.\",\n        \"requirement_gaps\": [],\n        \"eligibility_score\": 0.9\n    },\n    \"strategic_assessment\": {\n        \"mission_alignment_score\": 0.8,\n        \"strategic_value_tier\": \"High\",\n        \"priority_mapping\": \"The program's focus on environmental impact aligns well with the nonprofit's broader mission of supporting aging populations through sustainable practices.\",\n        \"geographic_compatibility\": \"The national scope of the program aligns with the nonprofit's operational capabilities.\",\n        \"contextual_understanding\": \"The nonprofit's mission to enhance the quality of life for aging populations can be supported by environmental initiatives.\"\n    },\n    \"risk_assessment_matrix\": {\n        \"competition_risk\": {\"level\": \"medium\", \"analysis\": \"Moderate competition expected from similar nonprofits and environmental organizations.\"},\n        \"technical_requirements\": {\"level\": \"medium\", \"analysis\": \"Application requires detailed environmental impact analysis, which may require external expertise.\"},\n        \"geographic_constraints\": {\"level\": \"low\", \"analysis\": \"No significant geographic restrictions beyond national eligibility.\"},\n        \"capacity_limitations\": {\"level\": \"low\", \"analysis\": \"The organization has the necessary capacity to manage the grant.\"},\n        \"timeline_pressures\": {\"level\": \"medium\", \"analysis\": \"Preparation time is adequate but requires immediate action to meet the deadline.\"},\n        \"compliance_complexity\": {\"level\": \"medium\", \"analysis\": \"Standard federal compliance requirements apply, necessitating careful documentation.\"}\n    },\n    \"web_intelligence\": {\n        \"contact_information\": [\"John Doe, Program Officer, DOE Environmental Grants\"],\n        \"application_complexity\": \"moderate\",\n        \"process_requirements\": [\"Initial proposal submission\", \"Detailed project plan\", \"Budget justification\", \"Environmental impact assessment\"],\n        \"success_factors\": [\"Strong environmental impact narrative\", \"Clear budget alignment\", \"Demonstrated organizational capacity\"]\n    },\n    \"batch_processing_intelligence\": {\n        \"batch_priority_score\": 0.85,\n        \"processing_recommendation\": \"immediate\",\n        \"optimal_batch_grouping\": \"Group with other federal environmental grant opportunities\",\n        \"resource_allocation_weight\": \"25%\"\n    },\n    \"quality_assurance\": {\n        \"data_completeness_score\": 0.9,\n        \"analysis_reliability_score\": 0.95,\n        \"missing_data_impact\": \"Minimal impact; data is largely complete with minor gaps in competitor analysis.\",\n        \"quality_improvement_recommendations\": [\"Further detail on competing organizations' past successes\"]\n    },\n    \"downstream_integration\": {\n        \"next_stage_readiness\": \"ready\",\n        \"quality_gate_status\": \"pass\",\n        \"analyze_tab_data_package\": \"All necessary data for analysis is prepared and verified.\",\n        \"recommended_processing_path\": \"standard\"\n    },\n    \"success_factor_modeling\": {\n        \"success_probability\": 0.75,\n        \"critical_success_factors\": [\"Strong alignment with environmental goals\", \"Robust project plan\", \"Experienced project team\", \"Effective stakeholder engagement\", \"Clear financial management plan\"],\n        \"failure_risk_factors\": [\"Insufficient environmental impact evidence\", \"Lack of competitive differentiation\", \"Inadequate stakeholder support\"],\n        \"optimization_opportunities\": [\"Enhance environmental impact narrative\", \"Strengthen stakeholder partnerships\", \"Improve competitive positioning\"]\n    },\n    \"competitive_intelligence\": {\n        \"competitive_pressure_assessment\": \"medium\",\n        \"likely_competitors\": [\"Environmental nonprofits\", \"Research institutions\"],\n        \"competitive_advantages\": [\"Established network in aging community\", \"Strong track record in grant management\"],\n        \"differentiation_strategy\": \"Emphasize unique focus on aging populations and environmental sustainability.\"\n    },\n    \"relationship_mapping\": {\n        \"board_network_connections\": [\"Potential connections with DOE officials through board members\"],\n        \"partnership_opportunities\": [\"Collaborations with environmental research organizations\"],\n        \"introduction_pathways\": [\"Leverage board member connections for introductions to key DOE contacts\"],\n        \"relationship_leverage_score\": 0.7\n    },\n    \"final_recommendation\": {\n        \"viability_score\": 0.8,\n        \"recommendation\": \"pursue\",\n        \"confidence\": 0.85,\n        \"comprehensive_reasoning\": \"The Test Grant Program from DOE presents a high-value opportunity with strong alignment to Grantmakers In Aging Inc's mission. The nonprofit's capacity and strategic positioning make it a viable candidate, with manageable risks and a clear path to application success.\"\n    }\n}\n```"
+  },
+  "processing_success": true
+}
+
+REQUIRED ANALYSIS AREAS:
+
+1. ENHANCED SCREENING FRAMEWORK:
+
+   A. VIABILITY ASSESSMENT ENGINE:
+   - Strategic Viability: Long-term strategic value and organizational impact assessment (0.0-1.0)
+   - Financial Viability: Revenue compatibility and funding capacity evaluation (0.0-1.0)  
+   - Operational Viability: Implementation feasibility and resource requirement analysis (0.0-1.0)
+   - Timeline Viability: Deadline feasibility and preparation time assessment (0.0-1.0)
+   - Success Viability: Funding probability and competitive advantage evaluation (0.0-1.0)
+
+   B. RISK ASSESSMENT & MITIGATION:
+   - Competition Analysis: Competitive landscape evaluation and positioning assessment
+   - Technical Risk: Complex requirement identification and capability gaps
+   - Financial Risk: Budget constraints and resource allocation challenges
+   - Timeline Risk: Deadline pressure and preparation time limitations
+   - Compliance Risk: Regulatory and administrative complexity assessment
+
+   C. MARKET INTELLIGENCE INTEGRATION:
+   - Funding Trends: Sector-specific funding pattern analysis
+   - Competitive Positioning: Market position and differentiation opportunities
+   - Strategic Timing: Optimal application timing and market conditions
+   - Partnership Opportunities: Collaborative advantage and alliance potential
+   - Innovation Assessment: Unique value proposition and differentiation factors
+
+2. SUCCESS PROBABILITY MODELING:
+
+   A. MULTI-DIMENSIONAL SCORING:
+   - Overall Compatibility: Comprehensive fit assessment (0.0-1.0 scale)
+   - Strategic Fit: Mission alignment and organizational priority matching (0.0-1.0)
+   - Competitive Advantage: Unique strengths and differentiating factors (0.0-1.0)
+   - Resource Alignment: Capacity and capability matching with requirements (0.0-1.0)
+   - Historical Patterns: Learning from past funding decisions and outcomes (0.0-1.0)
+
+   B. DECISION SUPPORT ANALYTICS:
+   - Go/No-Go Recommendations: Data-driven decision framework with confidence levels
+   - Resource Allocation: Optimal effort distribution across opportunities
+   - Priority Ranking: Comparative assessment within analysis batches
+   - Timeline Optimization: Strategic sequencing and application scheduling
+   - Success Optimization: Probability enhancement strategies and recommendations
+
+Respond in comprehensive JSON format with ALL sections:
+{
+    "enhanced_screening_framework": {
+        "viability_assessment_engine": {
+            "strategic_viability": 0.0-1.0,
+            "financial_viability": 0.0-1.0,
+            "operational_viability": 0.0-1.0,
+            "timeline_viability": 0.0-1.0,
+            "success_viability": 0.0-1.0,
+            "overall_viability_score": 0.0-1.0,
+            "viability_tier": "exceptional|high|medium|low|critical",
+            "viability_reasoning": "detailed assessment explanation"
+        },
+        "risk_assessment_mitigation": {
+            "competition_analysis": {
+                "level": "low|medium|high|extreme",
+                "assessment": "detailed competitive landscape evaluation",
+                "positioning_strategy": "recommended competitive positioning"
+            },
+            "technical_risk": {
+                "level": "low|medium|high|critical", 
+                "assessment": "complex requirement and capability gap analysis",
+                "mitigation_strategy": "recommended technical risk mitigation"
+            },
+            "financial_risk": {
+                "level": "low|medium|high|critical",
+                "assessment": "budget constraints and resource allocation analysis",
+                "mitigation_strategy": "recommended financial risk mitigation"
+            },
+            "timeline_risk": {
+                "level": "low|medium|high|critical",
+                "assessment": "deadline pressure and preparation time analysis",
+                "mitigation_strategy": "recommended timeline risk mitigation"
+            },
+            "compliance_risk": {
+                "level": "low|medium|high|critical",
+                "assessment": "regulatory and administrative complexity analysis",
+                "mitigation_strategy": "recommended compliance risk mitigation"
+            },
+            "overall_risk_level": "low|medium|high|critical",
+            "risk_mitigation_priority": ["top 3 risk mitigation priorities"]
+        },
+        "market_intelligence_integration": {
+            "funding_trends": "sector-specific funding pattern analysis",
+            "competitive_positioning": "market position and differentiation opportunities",
+            "strategic_timing": "optimal application timing and market conditions",
+            "partnership_opportunities": ["collaborative advantage and alliance potential"],
+            "innovation_assessment": "unique value proposition and differentiation analysis",
+            "market_opportunity_score": 0.0-1.0
+        }
+    },
+    "success_probability_modeling": {
+        "multi_dimensional_scoring": {
+            "overall_compatibility": 0.0-1.0,
+            "strategic_fit": 0.0-1.0,
+            "competitive_advantage": 0.0-1.0,
+            "resource_alignment": 0.0-1.0,
+            "historical_patterns": 0.0-1.0,
+            "composite_score": 0.0-1.0,
+            "scoring_confidence": 0.0-1.0
+        },
+        "decision_support_analytics": {
+            "go_no_go_recommendation": "proceed|proceed_with_caution|monitor|reject",
+            "recommendation_confidence": 0.0-1.0,
+            "recommendation_reasoning": "detailed decision framework analysis",
+            "resource_allocation": {
+                "effort_level": "minimal|moderate|high|intensive",
+                "resource_priority": "low|medium|high|critical",
+                "estimated_effort_hours": 0,
+                "cost_benefit_ratio": 0.0-10.0
+            },
+            "priority_ranking": {
+                "priority_score": 0.0-1.0,
+                "ranking_rationale": "comparative assessment explanation",
+                "batch_position": "top_tier|high_priority|medium_priority|low_priority"
+            },
+            "timeline_optimization": {
+                "optimal_timing": "immediate|short_term|medium_term|long_term",
+                "preparation_timeline": "preparation time recommendation",
+                "deadline_feasibility": 0.0-1.0,
+                "scheduling_recommendation": "strategic sequencing advice"
+            },
+            "success_optimization": {
+                "probability_enhancement_strategies": ["top 5 enhancement strategies"],
+                "competitive_advantage_amplification": ["strategies to amplify advantages"],
+                "weakness_mitigation": ["strategies to address weaknesses"],
+                "success_probability_improvement": 0.0-1.0
+            }
+        }
+    },
+    "comprehensive_recommendation": {
+        "overall_assessment": "exceptional|high_potential|moderate_potential|low_potential|not_recommended",
+        "confidence_level": 0.0-1.0,
+        "key_success_factors": ["top 5 critical success factors"],
+        "key_risk_factors": ["top 3 critical risk factors"],
+        "next_steps": ["specific actionable next steps"],
+        "examine_tab_readiness": "ready|conditional|not_ready",
+        "resource_investment_justification": "detailed ROI and strategic value analysis"
+    }
+}

@@ -1,0 +1,188 @@
+=== AI PROMPT FOR PLAN TAB ===
+Timestamp: 2025-08-31T21:44:33.762391
+Session: 20250831_214432
+==================================================
+
+
+You are an expert grant research analyst helping nonprofits identify and pursue funding opportunities.
+
+NONPROFIT PROFILE:
+- Name: Grantmakers In Aging Inc
+- EIN: 134014982
+- Location: Arlington, VA
+- NTEE Code: P81
+- Annual Revenue: $2,036,121
+- Total Assets: $2,481,115
+
+FUNDING OPPORTUNITY:
+- Title: Test Grant Program
+- Agency: DOE
+- Category: Environment
+- Type: Grant
+
+TASK - PLAN TAB (Comprehensive Strategic Intelligence):
+You are conducting comprehensive opportunity screening and strategic assessment as described in the AI_PROCESSOR_TAB_GUIDE. This analysis must cover ALL 15 capability areas with detailed intelligence.
+
+REQUIRED ANALYSIS AREAS:
+
+1. FUNDING SOURCE VERIFICATION:
+   - Assess DOE as legitimate federal funder with confirmed funding capacity
+   - Determine if this is direct funding, fiscal sponsor, aggregator, or service provider
+   - Evaluate funding provider reliability and classification confidence (0.0-1.0)
+   - Verify actual grant-making vs information aggregation
+
+2. PROGRAM STATUS INTELLIGENCE:
+   - Evaluate current program status (active/seasonal/archived/ambiguous)
+   - Assess if program is currently accepting applications
+   - Analyze application timeline and deadline proximity
+   - Determine seasonal patterns or cyclical nature
+
+3. ELIGIBILITY PRE-SCREENING:
+   - Parse comprehensive qualification criteria
+   - Assess organizational fit (entity type, status, structure)
+   - Evaluate geographic compliance and location-based restrictions
+   - Analyze financial thresholds and capacity requirements
+   - Identify requirement gaps and potential solutions
+
+4. STRATEGIC ASSESSMENT FRAMEWORK:
+   - Mission alignment scoring using NLP-powered semantic analysis (0.0-1.0)
+   - Strategic value classification (Exceptional/High/Medium/Low/Minimal Value)
+   - Priority mapping between nonprofit and funder objectives
+   - Geographic scope compatibility analysis
+   - Contextual understanding of organizational mission fit
+
+5. RISK ASSESSMENT MATRIX (All 6 Categories):
+   - Competition Risk: competitive pressure and application volume assessment
+   - Technical Requirements: specialized requirement complexity evaluation
+   - Geographic Constraints: location-based restrictions and compliance
+   - Capacity Limitations: organizational capability and resource gaps
+   - Timeline Pressures: deadline constraints and preparation requirements
+   - Compliance Complexity: regulatory and administrative burden
+
+6. ENHANCED WEB INTELLIGENCE:
+   - Extract and analyze contact information (program officers, departments)
+   - Assess application process complexity (simple/moderate/complex)
+   - Map step-by-step application workflow and requirements
+   - Identify critical success factors for application completion
+
+7. BATCH PROCESSING INTELLIGENCE:
+   - Assign batch priority score (0.0-1.0) for processing optimization
+   - Recommend processing approach (immediate/batched/deferred)
+   - Suggest optimal batch grouping with similar opportunities
+   - Calculate resource allocation weight as percentage of total effort
+
+8. QUALITY ASSURANCE SCORING:
+   - Evaluate data completeness score (0.0-1.0) for input information
+   - Assess analysis reliability score (0.0-1.0) for confidence in findings
+   - Identify missing data gaps and their impact on analysis accuracy
+   - Recommend specific additional data needed for quality improvement
+
+9. DOWNSTREAM INTEGRATION:
+   - Assess readiness for next stage analysis (ready/needs_data/skip)
+   - Evaluate quality gate status (pass/conditional/fail) for ANALYZE tab
+   - Prepare data package requirements for ANALYZE tab processing
+   - Recommend optimal processing path (standard/expedited/enhanced)
+
+10. SUCCESS FACTOR MODELING:
+    - Calculate statistical success probability (0.0-1.0) based on analysis
+    - Identify and rank top 5 critical success factors
+    - Assess top 3 failure risk factors and mitigation strategies
+    - Recommend specific optimization opportunities for success improvement
+
+11. COMPETITIVE INTELLIGENCE:
+    - Assess competitive pressure level (low/medium/high)
+    - Identify likely competing organizations and organization types
+    - Analyze nonprofit's unique competitive advantages and differentiators
+    - Recommend differentiation strategy and positioning approach
+
+12. RELATIONSHIP MAPPING:
+    - Analyze board network connections and potential pathways
+    - Identify strategic partnership and collaboration opportunities
+    - Map introduction pathways to key decision makers and contacts
+    - Calculate relationship leverage score (0.0-1.0) for existing connections
+
+Respond in comprehensive JSON format with ALL sections:
+{
+    "funding_source_verification": {
+        "funder_type": "direct_federal|fiscal_sponsor|aggregator|service_provider",
+        "legitimacy_score": 0.0-1.0,
+        "funding_capacity_confirmed": true/false,
+        "confidence_assessment": "detailed reliability analysis"
+    },
+    "program_status_intelligence": {
+        "status": "active|seasonal|archived|ambiguous",
+        "accepting_applications": true/false,
+        "timeline_analysis": "deadline proximity and timing assessment",
+        "application_window": "current status and availability analysis"
+    },
+    "eligibility_prescreening": {
+        "organizational_fit": "detailed entity type and structure assessment",
+        "geographic_compliance": "location-based eligibility analysis", 
+        "financial_thresholds": "revenue and capacity requirement evaluation",
+        "requirement_gaps": ["identified gaps and solutions"],
+        "eligibility_score": 0.0-1.0
+    },
+    "strategic_assessment": {
+        "mission_alignment_score": 0.0-1.0,
+        "strategic_value_tier": "Exceptional|High|Medium|Low|Minimal",
+        "priority_mapping": "detailed alignment analysis between nonprofit and funder",
+        "geographic_compatibility": "location-based strategic fit assessment",
+        "contextual_understanding": "deep mission comprehension analysis"
+    },
+    "risk_assessment_matrix": {
+        "competition_risk": {"level": "low|medium|high", "analysis": "detailed assessment"},
+        "technical_requirements": {"level": "low|medium|high", "analysis": "complexity evaluation"},
+        "geographic_constraints": {"level": "low|medium|high", "analysis": "location restrictions"},
+        "capacity_limitations": {"level": "low|medium|high", "analysis": "organizational capability gaps"},
+        "timeline_pressures": {"level": "low|medium|high", "analysis": "deadline and preparation constraints"},
+        "compliance_complexity": {"level": "low|medium|high", "analysis": "regulatory burden assessment"}
+    },
+    "web_intelligence": {
+        "contact_information": ["extracted contacts with roles and relevance"],
+        "application_complexity": "simple|moderate|complex",
+        "process_requirements": ["step-by-step application workflow"],
+        "success_factors": ["critical elements for application completion"]
+    },
+    "batch_processing_intelligence": {
+        "batch_priority_score": 0.0-1.0,
+        "processing_recommendation": "immediate|batched|deferred",
+        "optimal_batch_grouping": "suggested categorization with similar opportunities",
+        "resource_allocation_weight": "percentage of total effort recommended"
+    },
+    "quality_assurance": {
+        "data_completeness_score": 0.0-1.0,
+        "analysis_reliability_score": 0.0-1.0,
+        "missing_data_impact": "assessment of information gaps on analysis quality",
+        "quality_improvement_recommendations": ["specific additional data needed"]
+    },
+    "downstream_integration": {
+        "next_stage_readiness": "ready|needs_data|skip",
+        "quality_gate_status": "pass|conditional|fail",
+        "analyze_tab_data_package": "prepared information requirements for next stage",
+        "recommended_processing_path": "standard|expedited|enhanced"
+    },
+    "success_factor_modeling": {
+        "success_probability": 0.0-1.0,
+        "critical_success_factors": ["top 5 ranked factors for success"],
+        "failure_risk_factors": ["top 3 risk factors with mitigation strategies"],
+        "optimization_opportunities": ["specific actionable improvement recommendations"]
+    },
+    "competitive_intelligence": {
+        "competitive_pressure_assessment": "low|medium|high",
+        "likely_competitors": ["organization types and potential competitor analysis"],
+        "competitive_advantages": ["nonprofit's unique strengths and differentiators"],
+        "differentiation_strategy": "recommended strategic positioning approach"
+    },
+    "relationship_mapping": {
+        "board_network_connections": ["potential connections identified from board analysis"],
+        "partnership_opportunities": ["strategic collaboration possibilities"],
+        "introduction_pathways": ["routes to key decision makers and contacts"],
+        "relationship_leverage_score": 0.0-1.0
+    },
+    "final_recommendation": {
+        "viability_score": 0.0-1.0,
+        "recommendation": "pursue|skip|investigate_further",
+        "confidence": 0.0-1.0,
+        "comprehensive_reasoning": "detailed analysis summary integrating all assessment areas"
+    }
+}

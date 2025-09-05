@@ -7,8 +7,8 @@
 **Opportunity:** HRSA Rural Health Innovation Technology Implementation Grant  
 **Funding Amount:** $2,500,000 over 3 years  
 **Analysis Tier:** COMPLETE Intelligence ($42.00)  
-**Analysis Date:** September 01, 2025  
-**Generation Date:** 2025-09-01 21:18:30
+**Analysis Date:** September 02, 2025  
+**Generation Date:** 2025-09-02 15:59:09
 
 ---
 

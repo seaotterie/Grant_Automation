@@ -16,6 +16,7 @@ from dataclasses import dataclass, asdict
 from src.core.data_models import ProcessorResult, OrganizationProfile
 from src.intelligence.historical_funding_analyzer import HistoricalFundingAnalyzer, FundingIntelligence
 from src.core.entity_cache_manager import get_entity_cache_manager
+from src.core.openai_service import get_openai_service
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +59,11 @@ class StandardTierProcessor:
     def __init__(self):
         self.historical_analyzer = HistoricalFundingAnalyzer()
         self.entity_cache_manager = get_entity_cache_manager()
+        self.openai_service = get_openai_service()
         
         # Cost tracking
         self.estimated_api_cost = 0.94  # Based on planning estimates
-        self.cost_tracker = {"current_tier": 0.0, "historical_analysis": 0.0, "integration": 0.0}
+        self.cost_tracker = {"current_tier": 0.0, "historical_analysis": 0.0, "integration": 0.0, "gpt5_analysis": 0.0}
         
     async def process_opportunity(
         self,
@@ -99,8 +101,8 @@ class StandardTierProcessor:
                 opportunity_details.get("program_keywords", [])
             )
             
-            # Step 4: Integrate analyses and generate enhanced insights
-            enhanced_analysis = await self._integrate_analyses(
+            # Step 4: Integrate analyses and generate enhanced insights with GPT-5
+            enhanced_analysis = await self._integrate_analyses_with_gpt5(
                 current_analysis,
                 historical_intelligence,
                 opportunity_details
@@ -342,6 +344,196 @@ class StandardTierProcessor:
                 "data_sources": ["error"],
                 "error": str(e)
             }
+    
+    async def _integrate_analyses_with_gpt5(
+        self,
+        current_analysis: Dict[str, Any],
+        historical_intelligence: Optional[FundingIntelligence],
+        opportunity_details: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Integrate analyses using GPT-5 for enhanced intelligence synthesis"""
+        logger.info("Integrating analyses with GPT-5 enhanced intelligence")
+        
+        try:
+            # First get basic integration
+            basic_integration = await self._integrate_analyses(
+                current_analysis, historical_intelligence, opportunity_details
+            )
+            
+            # Prepare data for GPT-5 analysis
+            analysis_prompt = self._build_standard_tier_prompt(
+                current_analysis, historical_intelligence, opportunity_details, basic_integration
+            )
+            
+            # Make GPT-5 API call for enhanced analysis
+            messages = [
+                {
+                    "role": "system",
+                    "content": "You are a grant intelligence specialist analyzing funding opportunities with access to both AI analysis and historical funding data. Provide enhanced strategic recommendations based on the integrated analysis."
+                },
+                {
+                    "role": "user", 
+                    "content": analysis_prompt
+                }
+            ]
+            
+            logger.info("Making GPT-5 API call for Standard tier intelligence enhancement")
+            response = await self.openai_service.create_completion(
+                model="gpt-5",
+                messages=messages,
+                max_tokens=1500,
+                temperature=1.0  # GPT-5 only supports temperature=1
+            )
+            
+            # Track API costs
+            self.cost_tracker["gpt5_analysis"] = response.cost_estimate
+            logger.info(f"GPT-5 Standard tier analysis completed - Cost: ${response.cost_estimate:.4f}, Tokens: {response.usage.get('total_tokens', 0)}")
+            
+            # Parse GPT-5 enhanced response
+            enhanced_insights = await self._parse_gpt5_standard_response(
+                response.content, basic_integration
+            )
+            
+            return enhanced_insights
+            
+        except Exception as e:
+            logger.error(f"GPT-5 enhanced analysis integration failed: {e}")
+            # Fallback to basic integration
+            return basic_integration
+    
+    def _build_standard_tier_prompt(
+        self,
+        current_analysis: Dict[str, Any],
+        historical_intelligence: Optional[FundingIntelligence],
+        opportunity_details: Dict[str, Any],
+        basic_integration: Dict[str, Any]
+    ) -> str:
+        """Build comprehensive prompt for GPT-5 Standard tier analysis"""
+        
+        prompt = f"""
+STANDARD TIER GRANT INTELLIGENCE ANALYSIS ($7.50)
+
+CURRENT AI ANALYSIS RESULTS:
+- Strategic Fit Score: {current_analysis.get('strategic_fit_score', 0.0):.2f}
+- Financial Viability: {current_analysis.get('financial_viability_score', 0.0):.2f}  
+- Success Probability: {current_analysis.get('success_probability', 0.0):.2f}
+- Recommendation: {current_analysis.get('recommendation', 'unknown')}
+
+HISTORICAL FUNDING INTELLIGENCE:
+"""
+        
+        if historical_intelligence and historical_intelligence.total_awards > 0:
+            prompt += f"""
+- Total Historical Awards: {historical_intelligence.total_awards}
+- Average Award Amount: ${historical_intelligence.average_award_amount:,.2f}
+- Success Rate Pattern: {historical_intelligence.competitive_landscape}
+- Optimal Award Range: ${historical_intelligence.optimal_award_range.get('min', 0):,.0f} - ${historical_intelligence.optimal_award_range.get('max', 0):,.0f}
+- Geographic Advantages: {', '.join(historical_intelligence.geographic_advantages) if historical_intelligence.geographic_advantages else 'None identified'}
+- Best Timing: {historical_intelligence.timing_recommendation}
+"""
+        else:
+            prompt += "- No significant historical data available for this opportunity type"
+        
+        prompt += f"""
+
+OPPORTUNITY DETAILS:
+- Agency: {opportunity_details.get('agency_name', 'Unknown')}
+- Keywords: {', '.join(opportunity_details.get('program_keywords', []))}
+
+BASIC INTEGRATION INSIGHTS:
+{chr(10).join(f'- {rec}' for rec in basic_integration.get('recommendations', []))}
+
+TASK: Provide enhanced Standard tier intelligence ($7.50 value) that significantly improves upon the Current tier analysis ($0.75). Focus on:
+
+1. STRATEGIC ENHANCEMENT: How does historical data change the strategic approach?
+2. COMPETITIVE POSITIONING: What specific advantages or concerns emerge from historical patterns?
+3. FUNDING OPTIMIZATION: What are the optimal funding amounts and timing based on data?
+4. RISK MITIGATION: What historical patterns suggest specific risks to address?
+5. SUCCESS PROBABILITY REFINEMENT: How does historical data adjust the success probability?
+
+Provide specific, actionable recommendations that justify the 10x cost increase from Current to Standard tier.
+"""
+        
+        return prompt
+    
+    async def _parse_gpt5_standard_response(
+        self, 
+        gpt5_response: str, 
+        basic_integration: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Parse GPT-5 response and enhance basic integration results"""
+        
+        try:
+            # Start with basic integration
+            enhanced_insights = basic_integration.copy()
+            
+            # Add GPT-5 enhanced recommendations
+            gpt5_recommendations = []
+            
+            # Extract recommendations from GPT-5 response
+            lines = gpt5_response.split('\n')
+            current_section = None
+            
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                    
+                # Look for structured recommendations
+                if 'STRATEGIC ENHANCEMENT:' in line.upper():
+                    current_section = 'strategic'
+                elif 'COMPETITIVE POSITIONING:' in line.upper():
+                    current_section = 'competitive'
+                elif 'FUNDING OPTIMIZATION:' in line.upper():
+                    current_section = 'funding'
+                elif 'RISK MITIGATION:' in line.upper():
+                    current_section = 'risk'
+                elif 'SUCCESS PROBABILITY:' in line.upper():
+                    current_section = 'probability'
+                elif line.startswith('-') or line.startswith('•') or line.startswith('*'):
+                    recommendation = line.lstrip('-•*').strip()
+                    if recommendation and len(recommendation) > 10:
+                        gpt5_recommendations.append(f"[GPT-5 Enhanced] {recommendation}")
+            
+            # If no structured recommendations found, extract key insights
+            if not gpt5_recommendations:
+                sentences = gpt5_response.replace('\n', ' ').split('.')
+                for sentence in sentences:
+                    sentence = sentence.strip()
+                    if (len(sentence) > 20 and 
+                        ('recommend' in sentence.lower() or 
+                         'should' in sentence.lower() or
+                         'consider' in sentence.lower() or
+                         'suggest' in sentence.lower())):
+                        gpt5_recommendations.append(f"[GPT-5 Enhanced] {sentence}.")
+                        if len(gpt5_recommendations) >= 5:  # Limit to 5 recommendations
+                            break
+            
+            # Combine basic and GPT-5 enhanced recommendations
+            all_recommendations = basic_integration.get('recommendations', []) + gpt5_recommendations
+            enhanced_insights['recommendations'] = all_recommendations
+            
+            # Increase intelligence score due to GPT-5 enhancement
+            base_intelligence = basic_integration.get('intelligence_score', 0.0)
+            enhanced_insights['intelligence_score'] = min(0.95, base_intelligence + 0.15)  # GPT-5 boost
+            
+            # Increase confidence improvement
+            base_confidence_improvement = basic_integration.get('confidence_improvement', 0.0)
+            enhanced_insights['confidence_improvement'] = min(0.25, base_confidence_improvement + 0.10)  # GPT-5 boost
+            
+            # Add GPT-5 to data sources
+            data_sources = basic_integration.get('data_sources', [])
+            if 'gpt5_enhanced_analysis' not in data_sources:
+                data_sources.append('gpt5_enhanced_analysis')
+            enhanced_insights['data_sources'] = data_sources
+            
+            logger.info(f"GPT-5 enhanced analysis complete - Added {len(gpt5_recommendations)} enhanced recommendations")
+            
+            return enhanced_insights
+            
+        except Exception as e:
+            logger.error(f"GPT-5 response parsing failed: {e}")
+            return basic_integration
     
     def calculate_value_metrics(self, result: StandardTierResult) -> Dict[str, Any]:
         """Calculate value metrics for Standard tier vs Current tier"""

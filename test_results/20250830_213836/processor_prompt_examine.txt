@@ -1,0 +1,56 @@
+=== AI PROMPT FOR EXAMINE TAB ===
+Timestamp: 2025-08-30T21:39:05.532781
+Session: 20250830_213836
+==================================================
+
+
+You are an expert grant research analyst helping nonprofits identify and pursue funding opportunities.
+
+NONPROFIT PROFILE:
+- Name: Grantmakers In Aging Inc
+- EIN: 134014982
+- Location: Arlington, VA
+- NTEE Code: P81
+- Annual Revenue: $2,036,121
+- Total Assets: $2,481,115
+
+FUNDING OPPORTUNITY:
+- Title: Test Grant Program
+- Agency: DOE
+- Category: Environment
+- Type: Grant
+
+TASK - EXAMINE TAB (Deep Research):
+Conduct comprehensive research and deep analysis of this opportunity.
+
+Previous Results:
+{
+  "tab": "ANALYZE",
+  "timestamp": "2025-08-30T21:39:05.528052",
+  "model_used": "gpt-4o-2024-08-06",
+  "tokens_used": 4507,
+  "parsed_response": {
+    "raw_response": "```json\n{\n    \"enhanced_screening_framework\": {\n        \"viability_assessment_engine\": {\n            \"strategic_viability\": 0.78,\n            \"financial_viability\": 0.85,\n            \"operational_viability\": 0.80,\n            \"timeline_viability\": 0.65,\n            \"success_viability\": 0.70,\n            \"overall_viability_score\": 0.76,\n            \"viability_tier\": \"high\",\n            \"viability_reasoning\": \"The grant opportunity aligns well with the organization's mission and financial capacity. The operational feasibility is strong, but the timeline poses some challenges due to the approaching deadline.\"\n        },\n        \"risk_assessment_mitigation\": {\n            \"competition_analysis\": {\n                \"level\": \"medium\",\n                \"assessment\": \"The grant is likely to attract a moderate number of applicants from both environmental and aging-focused nonprofits.\",\n                \"positioning_strategy\": \"Emphasize the unique intersection of aging and environment in the proposal.\"\n            },\n            \"technical_risk\": {\n                \"level\": \"medium\",\n                \"assessment\": \"The application requires specific technical details related to environmental projects, which may require additional expertise.\",\n                \"mitigation_strategy\": \"Engage environmental experts to refine technical aspects of the proposal.\"\n            },\n            \"financial_risk\": {\n                \"level\": \"low\",\n                \"assessment\": \"The organization's financial capacity is sufficient to meet the grant requirements.\",\n                \"mitigation_strategy\": \"Maintain a detailed budget plan to ensure financial compliance.\"\n            },\n            \"timeline_risk\": {\n                \"level\": \"high\",\n                \"assessment\": \"The approaching deadline necessitates a rapid response and preparation.\",\n                \"mitigation_strategy\": \"Allocate additional resources to expedite the application process.\"\n            },\n            \"compliance_risk\": {\n                \"level\": \"medium\",\n                \"assessment\": \"Standard federal compliance requirements apply, which may require dedicated administrative resources.\",\n                \"mitigation_strategy\": \"Ensure dedicated administrative support for compliance management.\"\n            },\n            \"overall_risk_level\": \"medium\",\n            \"risk_mitigation_priority\": [\"timeline risk\", \"technical risk\", \"compliance risk\"]\n        },\n        \"market_intelligence_integration\": {\n            \"funding_trends\": \"There is a growing trend in funding for environmental projects that intersect with social issues like aging.\",\n            \"competitive_positioning\": \"The organization can differentiate itself by focusing on the unique needs of aging populations in environmental contexts.\",\n            \"strategic_timing\": \"Immediate application is recommended due to the current open window and high relevance of the project.\",\n            \"partnership_opportunities\": [\"Collaboration with environmental advocacy groups\"],\n            \"innovation_assessment\": \"The organization's focus on aging populations provides a unique value proposition that can enhance the environmental outcomes sought by the DOE.\",\n            \"market_opportunity_score\": 0.82\n        }\n    },\n    \"success_probability_modeling\": {\n        \"multi_dimensional_scoring\": {\n            \"overall_compatibility\": 0.80,\n            \"strategic_fit\": 0.75,\n            \"competitive_advantage\": 0.78,\n            \"resource_alignment\": 0.82,\n            \"historical_patterns\": 0.70,\n            \"composite_score\": 0.77,\n            \"scoring_confidence\": 0.85\n        },\n        \"decision_support_analytics\": {\n            \"go_no_go_recommendation\": \"proceed\",\n            \"recommendation_confidence\": 0.85,\n            \"recommendation_reasoning\": \"The opportunity aligns well with the nonprofit's mission and capabilities. The DOE is a reliable funder, and the organization meets eligibility criteria. Immediate action is required due to the approaching deadline.\",\n            \"resource_allocation\": {\n                \"effort_level\": \"high\",\n                \"resource_priority\": \"high\",\n                \"estimated_effort_hours\": 120,\n                \"cost_benefit_ratio\": 7.5\n            },\n            \"priority_ranking\": {\n                \"priority_score\": 0.78,\n                \"ranking_rationale\": \"The grant opportunity is highly aligned with the organization's strategic goals and offers significant funding potential.\",\n                \"batch_position\": \"top_tier\"\n            },\n            \"timeline_optimization\": {\n                \"optimal_timing\": \"immediate\",\n                \"preparation_timeline\": \"Allocate resources immediately to meet the deadline.\",\n                \"deadline_feasibility\": 0.70,\n                \"scheduling_recommendation\": \"Prioritize this application in the current cycle due to the approaching deadline.\"\n            },\n            \"success_optimization\": {\n                \"probability_enhancement_strategies\": [\n                    \"Engage environmental experts for proposal refinement\",\n                    \"Ensure early submission to avoid last-minute issues\",\n                    \"Highlight unique organizational strengths\",\n                    \"Develop a comprehensive budget plan\",\n                    \"Strengthen partnerships with environmental groups\"\n                ],\n                \"competitive_advantage_amplification\": [\"Emphasize the unique intersection of aging and environment\"],\n                \"weakness_mitigation\": [\"Address technical expertise gaps by consulting with experts\"],\n                \"success_probability_improvement\": 0.15\n            }\n        }\n    },\n    \"comprehensive_recommendation\": {\n        \"overall_assessment\": \"high_potential\",\n        \"confidence_level\": 0.85,\n        \"key_success_factors\": [\n            \"Strong project proposal\",\n            \"Clear alignment with DOE goals\",\n            \"Timely submission\",\n            \"Robust budget plan\",\n            \"Experienced project team\"\n        ],\n        \"key_risk_factors\": [\n            \"Inadequate technical detail\",\n            \"Missed deadline\",\n            \"Insufficient alignment with environmental focus\"\n        ],\n        \"next_steps\": [\n            \"Engage environmental experts to refine the proposal\",\n            \"Allocate additional resources to expedite the application process\",\n            \"Strengthen partnerships with environmental advocacy groups\"\n        ],\n        \"examine_tab_readiness\": \"ready\",\n        \"resource_investment_justification\": \"The potential funding from this grant aligns with strategic goals and offers significant financial support, justifying the resource investment.\"\n    }\n}\n```"
+  },
+  "processing_success": true
+}
+
+Focus on:
+1. Comprehensive risk assessment
+2. Implementation feasibility analysis
+3. Success probability modeling
+4. Market research and competitive analysis
+
+Respond in JSON format with:
+{
+    "comprehensive_analysis": "detailed research findings",
+    "risk_matrix": {
+        "technical": "low/medium/high",
+        "financial": "low/medium/high",
+        "regulatory": "low/medium/high",
+        "competitive": "low/medium/high"
+    },
+    "implementation_roadmap": ["phase1", "phase2", "phase3"],
+    "success_probability": 0.0-1.0,
+    "market_analysis": "comprehensive market research"
+}

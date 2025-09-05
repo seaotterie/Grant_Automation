@@ -6,6 +6,19 @@
 
 **4-TIER INTELLIGENCE SYSTEM OPERATIONAL**: Comprehensive business-ready intelligence packages ranging from $0.75 to $42.00, providing complete analysis from basic AI assessment to masters thesis-level intelligence with strategic consulting.
 
+## IMPORTANT: GPT-5 MODEL CONFIGURATION ✅
+
+**CRITICAL REQUIREMENT**: Catalynx uses GPT-5 models exclusively for all AI processing. GPT-5 models are:
+- **Newer and More Advanced**: Latest generation AI with superior reasoning capabilities
+- **More Cost-Effective**: Better performance per dollar compared to GPT-4 alternatives  
+- **Available and Operational**: Confirmed working in production environment
+- **System Optimized**: All processors designed and calibrated for GPT-5 architecture
+
+**DO NOT CHANGE TO GPT-4 MODELS**: The system configuration uses GPT-5 models for optimal performance. Previous test issues were related to API connectivity, not model availability. Maintain GPT-5 configuration in:
+- `.env` file: AI_LITE_MODEL, AI_HEAVY_MODEL, AI_RESEARCH_MODEL (all GPT-5 variants)
+- `src/core/openai_service.py`: GPT-5 model validation and cost tracking
+- All AI processors: Designed for GPT-5 token limits and response patterns
+
 ### Current System Status (Comprehensive Production Platform)
 - **4-Tier Intelligence System**: CURRENT ($0.75), STANDARD ($7.50), ENHANCED ($22.00), COMPLETE ($42.00) - fully operational
 - **Dual Architecture Design**: Tab-based processors for granular control + tier services for complete business packages
