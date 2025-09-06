@@ -376,10 +376,10 @@ class DatabaseManager:
             board_members=json.loads(row['board_members']) if row['board_members'] else None,
             discovery_count=row['discovery_count'],
             opportunities_count=row['opportunities_count'],
-            last_discovery_date=datetime.fromisoformat(row['last_discovery_date']) if row['last_discovery_date'] else None,
+            last_discovery_date=row['last_discovery_date'] if row['last_discovery_date'] else None,
             performance_metrics=json.loads(row['performance_metrics']) if row['performance_metrics'] else None,
-            created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
-            updated_at=datetime.fromisoformat(row['updated_at']) if row['updated_at'] else None,
+            created_at=row['created_at'] if row['created_at'] else None,
+            updated_at=row['updated_at'] if row['updated_at'] else None,
             processing_history=json.loads(row['processing_history']) if row['processing_history'] else None
         )
 
@@ -473,6 +473,87 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Failed to get opportunities for profile {profile_id}: {e}")
             return []
+
+    def get_opportunity(self, profile_id: str, opportunity_id: str) -> Optional[Dict]:
+        """Get single opportunity by profile ID and opportunity ID"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM opportunities 
+                    WHERE profile_id = ? AND id = ?
+                """, (profile_id, opportunity_id))
+                
+                row = cursor.fetchone()
+                if row:
+                    opp_dict = dict(row)
+                    # Parse JSON fields
+                    for json_field in ['stage_history', 'analysis_discovery', 'analysis_plan', 
+                                     'analysis_analyze', 'analysis_examine', 'analysis_approach',
+                                     'tags', 'promotion_history', 'legacy_mappings', 'processing_errors']:
+                        if opp_dict[json_field]:
+                            opp_dict[json_field] = json.loads(opp_dict[json_field])
+                    return opp_dict
+                else:
+                    logger.warning(f"Opportunity not found: {opportunity_id} for profile {profile_id}")
+                    return None
+                    
+        except Exception as e:
+            logger.error(f"Failed to get opportunity {opportunity_id} for profile {profile_id}: {e}")
+            return None
+
+    def update_opportunity_stage(self, profile_id: str, opportunity_id: str, new_stage: str, 
+                               reason: str, promoted_by: str = 'system') -> bool:
+        """Update opportunity stage with audit trail"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Get current opportunity data
+                cursor.execute("""
+                    SELECT current_stage, stage_history FROM opportunities 
+                    WHERE profile_id = ? AND id = ?
+                """, (profile_id, opportunity_id))
+                
+                row = cursor.fetchone()
+                if not row:
+                    logger.warning(f"Opportunity not found for stage update: {opportunity_id}")
+                    return False
+                
+                current_stage = row['current_stage']
+                stage_history = json.loads(row['stage_history']) if row['stage_history'] else []
+                
+                # Add stage transition to history
+                stage_transition = {
+                    'from_stage': current_stage,
+                    'to_stage': new_stage,
+                    'reason': reason,
+                    'promoted_by': promoted_by,
+                    'timestamp': datetime.now().isoformat()
+                }
+                stage_history.append(stage_transition)
+                
+                # Update opportunity with new stage
+                cursor.execute("""
+                    UPDATE opportunities SET 
+                        current_stage = ?,
+                        stage_history = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE profile_id = ? AND id = ?
+                """, (new_stage, json.dumps(stage_history), profile_id, opportunity_id))
+                
+                conn.commit()
+                
+                if cursor.rowcount > 0:
+                    logger.info(f"Opportunity stage updated: {opportunity_id} from {current_stage} to {new_stage}")
+                    return True
+                else:
+                    logger.warning(f"No rows updated for opportunity stage change: {opportunity_id}")
+                    return False
+                    
+        except Exception as e:
+            logger.error(f"Failed to update opportunity stage for {opportunity_id}: {e}")
+            return False
 
     def search_opportunities(self, query: str, profile_id: Optional[str] = None,
                            stage: Optional[str] = None, limit: int = 100) -> List[Dict]:

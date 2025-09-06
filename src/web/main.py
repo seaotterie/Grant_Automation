@@ -6632,63 +6632,128 @@ async def score_opportunity(profile_id: str, opportunity_id: str, request: Score
 async def promote_opportunity(profile_id: str, opportunity_id: str, request: PromotionRequest):
     """Promote or demote an opportunity using unified service"""
     try:
-        # Try unified service first for stage updates
-        if request.action in ["promote", "next_stage"]:
-            # Get current opportunity to determine next stage
-            opportunity = unified_service.get_opportunity(profile_id, opportunity_id)
-            if opportunity:
-                # Determine target stage based on current stage
-                stage_progression = {
-                    "discovery": "pre_scoring",
-                    "pre_scoring": "deep_analysis", 
-                    "deep_analysis": "recommendations",
-                    "recommendations": "recommendations"  # Stay in final stage
+        # Get database manager for direct access
+        from src.database.database_manager import DatabaseManager
+        db_manager = DatabaseManager()
+        
+        # Get current opportunity from database directly 
+        logger.info(f"Looking for opportunity {opportunity_id} in profile {profile_id} via database")
+        opportunity_data = db_manager.get_opportunity(profile_id, opportunity_id)
+        logger.info(f"Database found opportunity: {opportunity_data is not None}")
+        
+        if opportunity_data:
+            # Determine target stage based on current stage - FIXED to match frontend funnel_stage values
+            stage_progression = {
+                "prospects": "qualified_prospects",
+                "qualified_prospects": "candidates", 
+                "candidates": "targets",
+                "targets": "opportunities",
+                "opportunities": "opportunities"  # Stay in final stage
+            }
+            
+            # Map database current_stage to frontend funnel_stage if needed
+            current_stage_mapping = {
+                "discovery": "prospects",
+                "pre_scoring": "qualified_prospects",
+                "deep_analysis": "candidates", 
+                "recommendations": "targets"
+            }
+            
+            # Map frontend funnel_stage back to database current_stage for updates
+            database_stage_mapping = {
+                "prospects": "discovery",
+                "qualified_prospects": "pre_scoring", 
+                "candidates": "deep_analysis",
+                "targets": "recommendations",
+                "opportunities": "recommendations"  # Final stage maps to recommendations
+            }
+            
+            # Get current stage from database opportunity
+            current_db_stage = opportunity_data.get('current_stage', 'discovery')
+            current_frontend_stage = current_stage_mapping.get(current_db_stage, current_db_stage)
+            logger.info(f"Current stage: DB={current_db_stage}, Frontend={current_frontend_stage}")
+            
+            # Determine target stage based on action
+            if request.action == "promote":
+                target_stage = stage_progression.get(current_frontend_stage, current_frontend_stage)
+            elif request.action == "demote":
+                # Reverse progression for demotion
+                stage_regression = {
+                    "opportunities": "targets",
+                    "targets": "candidates",
+                    "candidates": "qualified_prospects", 
+                    "qualified_prospects": "prospects",
+                    "prospects": "prospects"  # Stay at lowest stage
                 }
+                target_stage = stage_regression.get(current_frontend_stage, current_frontend_stage)
+            else:
+                target_stage = stage_progression.get(current_frontend_stage, current_frontend_stage)
+            
+            if target_stage != current_frontend_stage:
+                # Convert frontend stage back to database stage for the update
+                database_target_stage = database_stage_mapping.get(target_stage, target_stage)
+                logger.info(f"Updating stage: {current_frontend_stage} → {target_stage} (DB: {current_db_stage} → {database_target_stage})")
                 
-                target_stage = stage_progression.get(opportunity.current_stage, opportunity.current_stage)
-                if target_stage != opportunity.current_stage:
-                    success = unified_service.update_opportunity_stage(
-                        profile_id, 
-                        opportunity_id,
-                        target_stage,
-                        reason=f"Manual promotion via API - {request.action}",
-                        promoted_by="user"
+                # Update opportunity stage directly in database
+                logger.info(f"Attempting database update: {profile_id}, {opportunity_id}, {database_target_stage}")
+                success = db_manager.update_opportunity_stage(
+                    profile_id,
+                    opportunity_id, 
+                    database_target_stage,
+                    reason=f"Manual {request.action} via API - {current_frontend_stage} → {target_stage}",
+                    promoted_by="web_user"
+                )
+                logger.info(f"Database update result: {success}")
+                
+                if success:
+                    return PromotionResponse(
+                        decision="approved",
+                        reason=f"Manual {request.action} to {target_stage}",
+                        current_score=opportunity_data.get('overall_score', 0.5),
+                        target_stage=target_stage,
+                        confidence_level=0.95,
+                        requires_manual_review=False,
+                        promotion_metadata={"source": "database_direct", "original_stage": current_frontend_stage, "action": request.action}
                     )
-                    
-                    if success:
-                        return PromotionResponse(
-                            decision="approved",
-                            reason=f"Manual promotion to {target_stage}",
-                            current_score=opportunity.scoring.overall_score if opportunity.scoring else 0.5,
-                            target_stage=target_stage,
-                            confidence_level=0.95,
-                            requires_manual_review=False,
-                            promotion_metadata={"source": "manual_api", "original_stage": opportunity.current_stage}
-                        )
-                    else:
-                        return PromotionResponse(
-                            decision="failed",
-                            reason="Failed to update stage",
-                            current_score=opportunity.scoring.overall_score if opportunity.scoring else 0.5,
-                            target_stage=opportunity.current_stage,
-                            confidence_level=0.1,
-                            requires_manual_review=True,
-                            promotion_metadata={"error": "stage_update_failed"}
-                        )
                 else:
                     return PromotionResponse(
-                        decision="no_change",
-                        reason=f"Already in final stage: {opportunity.current_stage}",
-                        current_score=opportunity.scoring.overall_score if opportunity.scoring else 0.5,
-                        target_stage=opportunity.current_stage,
-                        confidence_level=0.8,
-                        requires_manual_review=False,
-                        promotion_metadata={"status": "already_at_target"}
+                        decision="failed",
+                        reason="Failed to update stage in database",
+                        current_score=opportunity_data.get('overall_score', 0.5),
+                        target_stage=current_frontend_stage,
+                        confidence_level=0.1,
+                        requires_manual_review=True,
+                        promotion_metadata={"error": "database_update_failed", "action": request.action}
                     )
-        
-        # Fallback to scoring service for complex promotion logic
-        scoring_service = get_scoring_service()
-        return await scoring_service.promote_opportunity(profile_id, opportunity_id, request)
+            else:
+                # Determine appropriate no-change message
+                if request.action == "promote":
+                    reason = f"Already at highest stage: {current_frontend_stage}" 
+                elif request.action == "demote":
+                    reason = f"Already at lowest stage: {current_frontend_stage}"
+                else:
+                    reason = f"No stage change needed: {current_frontend_stage}"
+                    
+                return PromotionResponse(
+                    decision="no_change",
+                    reason=reason,
+                    current_score=opportunity_data.get('overall_score', 0.5),
+                    target_stage=current_frontend_stage,
+                    confidence_level=0.8,
+                    requires_manual_review=False,
+                    promotion_metadata={"status": "already_at_target", "action": request.action}
+                )
+        else:
+            logger.warning(f"Opportunity {opportunity_id} not found in database for profile {profile_id}")
+            return PromotionResponse(
+                decision="error",
+                reason=f"Opportunity not found: {opportunity_id}",
+                current_score=0.0,
+                target_stage="unknown",
+                confidence_level=0.0,
+                requires_manual_review=True,
+                promotion_metadata={"error": "opportunity_not_found", "opportunity_id": opportunity_id}
+            )
         
     except Exception as e:
         logger.error(f"Error promoting opportunity {opportunity_id}: {e}")

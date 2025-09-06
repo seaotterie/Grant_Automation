@@ -429,13 +429,25 @@ const CatalynxUtils = {
             return null;
         }
         
-        // CANONICAL STAGE CONVERSION - Convert pipeline_stage to funnel_stage
-        const pipeline_stage = rawOpportunity.pipeline_stage || rawOpportunity.stage || 'discovery';
-        const funnel_stage = rawOpportunity.funnel_stage || CANONICAL_STAGE_MAPPING[pipeline_stage] || 'prospects';
+        // CANONICAL STAGE CONVERSION - Convert pipeline_stage/current_stage to funnel_stage
+        // FORCE mapping to override any existing funnel_stage (database is the source of truth)
+        const pipeline_stage = rawOpportunity.pipeline_stage || rawOpportunity.stage || rawOpportunity.current_stage || 'discovery';
+        const funnel_stage = CANONICAL_STAGE_MAPPING[pipeline_stage] || rawOpportunity.funnel_stage || 'prospects';
         
         // Log stage transformations for debugging
-        if (rawOpportunity.pipeline_stage && rawOpportunity.pipeline_stage !== pipeline_stage) {
-            console.log(`Stage standardization: ${rawOpportunity.pipeline_stage} → ${pipeline_stage} → ${funnel_stage}`);
+        if (rawOpportunity.current_stage || rawOpportunity.pipeline_stage || rawOpportunity.stage) {
+            console.log(`Stage standardization: database(${rawOpportunity.current_stage}) pipeline(${rawOpportunity.pipeline_stage}) stage(${rawOpportunity.stage}) → ${pipeline_stage} → ${funnel_stage}`);
+            console.log(`CANONICAL_STAGE_MAPPING[${pipeline_stage}] = ${CANONICAL_STAGE_MAPPING[pipeline_stage]}`);
+            
+            // Special debugging for Richmond Memorial
+            if (rawOpportunity.organization_name && rawOpportunity.organization_name.includes('Richmond Memorial')) {
+                console.log(`🔍 RICHMOND MEMORIAL DEBUG:`, {
+                    organization_name: rawOpportunity.organization_name,
+                    current_stage: rawOpportunity.current_stage,
+                    mapped_funnel_stage: funnel_stage,
+                    expected_display: funnel_stage === 'candidates' ? '#3 Candidate' : 'MAPPING ERROR'
+                });
+            }
         }
         
         const standardized = {
@@ -554,8 +566,11 @@ const CatalynxUtils = {
 const CANONICAL_STAGE_MAPPING = {
     // All data sources must use these exact mappings - NO exceptions
     'discovery': 'prospects',        // DISCOVER → #1 prospects
+    'pre_scoring': 'qualified_prospects', // Database pre_scoring → #2 qualified
     'plan': 'qualified_prospects',   // PLAN → #2 qualified  
+    'deep_analysis': 'candidates',   // Database deep_analysis → #3 candidates
     'analyze': 'candidates',         // ANALYZE → #3 candidates
+    'recommendations': 'targets',    // Database recommendations → #4 targets
     'examine': 'targets',            // EXAMINE → #4 targets
     'approach': 'opportunities'      // APPROACH → #5 opportunities
 };
@@ -2575,6 +2590,17 @@ function catalynxApp() {
         opportunityLoading: false,
         isProcessing: false,
         modalActiveTab: 'overview', // Tab state for opportunity modal
+        
+        // Stage Change Confirmation Modal System
+        showStageChangeModal: false,
+        stageChangeAction: '', // 'promote' or 'demote'
+        stageChangeReason: '',
+        stageChangeOpportunity: null,
+        stageChangeFromStage: '',
+        stageChangeToStage: '',
+        
+        // Comment saving timeout
+        commentSaveTimeout: null,
         
         // Delete Confirmation Modal System
         showDeleteConfirmModal: false,
@@ -6376,6 +6402,18 @@ function catalynxApp() {
         // OPPORTUNITY MODAL FUNCTIONS
         async openOpportunityModal(opportunity, origin = 'overview') {
             console.log('Opening opportunity modal for:', opportunity);
+            
+            // Debug logging for Richmond Memorial
+            if (opportunity.organization_name && opportunity.organization_name.includes('Richmond Memorial')) {
+                console.log(`🔍 MODAL OPENED for Richmond Memorial:`, {
+                    opportunity_id: opportunity.opportunity_id,
+                    organization_name: opportunity.organization_name,
+                    current_stage: opportunity.current_stage,
+                    funnel_stage: opportunity.funnel_stage,
+                    expected_display: opportunity.funnel_stage ? this.getStageDisplayName(opportunity.funnel_stage) : 'NO FUNNEL STAGE'
+                });
+            }
+            
             this.selectedOpportunity = opportunity;
             this.opportunityLoading = true;
             this.showOpportunityModal = true;
@@ -6397,6 +6435,9 @@ function catalynxApp() {
                     discovery_method: 'Profile Discovery',
                     confidence_rating: this.selectedOpportunity.confidence_level || 0.7
                 };
+                
+                // Initialize user_comments if not present
+                this.selectedOpportunity.user_comments = this.selectedOpportunity.user_comments || '';
                 
                 console.log('Enhanced opportunity modal data:', this.selectedOpportunity);
                 
@@ -6777,17 +6818,11 @@ function catalynxApp() {
         canPromote(opportunity) {
             if (!opportunity) return false;
             // Can promote if not at the highest stage (opportunities) and meets score threshold
-            const currentStage = opportunity.stage || 'prospects';
+            const currentStage = opportunity.funnel_stage || opportunity.stage || 'prospects';
             const score = this.getOpportunityScore(opportunity);
             return currentStage !== 'opportunities' && score >= 0.65;
         },
 
-        canDemote(opportunity) {
-            if (!opportunity) return false;
-            // Can demote if not at the lowest stage (prospects)
-            const currentStage = opportunity.stage || 'prospects';
-            return currentStage !== 'prospects';
-        },
 
         // STAGE DISPLAY FUNCTIONS
         getStageDisplayName(stage) {
@@ -6866,7 +6901,30 @@ function catalynxApp() {
         },
 
         canDemote(opportunity) {
-            return opportunity && opportunity.current_stage !== 'prospects';
+            if (!opportunity) return false;
+            
+            // Can demote if not at the lowest stage (prospects)
+            const currentStage = opportunity.funnel_stage || opportunity.stage || 'prospects';
+            const currentDbStage = opportunity.current_stage || 'discovery';
+            
+            // Define stage progression order
+            const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
+            const currentStageIndex = stageOrder.indexOf(currentStage);
+            
+            // Can demote if not at the lowest stage (index > 0)
+            const canDemoteBasedOnStage = currentStageIndex > 0;
+            
+            // Debug logging for Richmond Memorial
+            if (opportunity.organization_name && opportunity.organization_name.includes('Richmond Memorial')) {
+                console.log(`🔍 DEMOTE DEBUG for ${opportunity.organization_name}:`, {
+                    funnel_stage: currentStage,
+                    current_stage: currentDbStage,
+                    stage_index: currentStageIndex,
+                    can_demote: canDemoteBasedOnStage
+                });
+            }
+            
+            return canDemoteBasedOnStage;
         },
 
         reprocessOpportunity(opportunity) {
@@ -7127,7 +7185,78 @@ function catalynxApp() {
             console.warn('fetchOpportunityDetails deprecated - using enrichOpportunityData instead');
         },
 
-        async manualPromote(opportunity) {
+        // Stage Change Confirmation Modal Functions
+        showPromoteConfirmation(opportunity) {
+            if (!opportunity) return;
+            
+            const stageProgression = {
+                'prospects': 'qualified_prospects',
+                'qualified_prospects': 'candidates', 
+                'candidates': 'targets',
+                'targets': 'opportunities'
+            };
+            
+            const nextStage = stageProgression[opportunity.funnel_stage];
+            if (!nextStage) {
+                this.showNotification('Cannot Promote', 'Already at highest stage', 'warning');
+                return;
+            }
+            
+            this.stageChangeAction = 'promote';
+            this.stageChangeOpportunity = opportunity;
+            this.stageChangeFromStage = this.getStageDisplayName(opportunity.funnel_stage);
+            this.stageChangeToStage = this.getStageDisplayName(nextStage);
+            this.stageChangeReason = '';
+            this.showStageChangeModal = true;
+        },
+
+        showDemoteConfirmation(opportunity) {
+            if (!opportunity) return;
+            
+            const stageRegression = {
+                'opportunities': 'targets',
+                'targets': 'candidates',
+                'candidates': 'qualified_prospects',
+                'qualified_prospects': 'prospects'
+            };
+            
+            const prevStage = stageRegression[opportunity.funnel_stage];
+            if (!prevStage) {
+                this.showNotification('Cannot Demote', 'Already at lowest stage', 'warning');
+                return;
+            }
+            
+            this.stageChangeAction = 'demote';
+            this.stageChangeOpportunity = opportunity;
+            this.stageChangeFromStage = this.getStageDisplayName(opportunity.funnel_stage);
+            this.stageChangeToStage = this.getStageDisplayName(prevStage);
+            this.stageChangeReason = '';
+            this.showStageChangeModal = true;
+        },
+
+        async confirmStageChange() {
+            if (!this.stageChangeOpportunity) return;
+            
+            // Update the reason in the API call
+            if (this.stageChangeAction === 'promote') {
+                await this.manualPromote(this.stageChangeOpportunity, this.stageChangeReason);
+            } else {
+                await this.manualDemote(this.stageChangeOpportunity, this.stageChangeReason);
+            }
+            
+            this.cancelStageChange();
+        },
+
+        cancelStageChange() {
+            this.showStageChangeModal = false;
+            this.stageChangeAction = '';
+            this.stageChangeReason = '';
+            this.stageChangeOpportunity = null;
+            this.stageChangeFromStage = '';
+            this.stageChangeToStage = '';
+        },
+
+        async manualPromote(opportunity, reason = null) {
             if (!opportunity || !this.selectedProfile) {
                 console.warn('Missing opportunity or profile for promotion');
                 return;
@@ -7142,18 +7271,58 @@ function catalynxApp() {
                     },
                     body: JSON.stringify({
                         action: 'promote',
-                        reason: 'Manual promotion via modal',
+                        reason: reason || 'Manual promotion via modal',
                         user_id: 'web_user'
                     })
                 });
 
                 if (response.ok) {
                     const result = await response.json();
-                    this.showNotification('Success', `Opportunity promoted to ${result.target_stage}`, 'success');
+                    console.log(`DEBUG: Promotion API result:`, result);
+                    
+                    // Check if the promotion actually succeeded
+                    if (result.decision === 'error') {
+                        this.showNotification('Promotion Failed', result.reason, 'error');
+                        return;
+                    }
+                    
+                    // Determine which tab the opportunity moved to
+                    const stageToTab = {
+                        'prospects': 'DISCOVER',
+                        'qualified_prospects': 'DISCOVER', 
+                        'candidates': 'PLAN',
+                        'targets': 'ANALYZE',
+                        'opportunities': 'EXAMINE'
+                    };
+                    
+                    const targetTab = stageToTab[result.target_stage] || 'another tab';
+                    const stageDisplayName = this.getStageDisplayName(result.target_stage);
+                    
+                    this.showNotification('Promoted Successfully!', 
+                        `Opportunity promoted to ${stageDisplayName}. ${targetTab !== 'DISCOVER' ? `Check the ${targetTab} tab to continue working with it.` : 'It remains in the DISCOVER tab.'}`, 
+                        'success');
+                    
+                    // Preserve the selected opportunity ID for re-selection after reload
+                    const currentOpportunityId = opportunity.opportunity_id;
+                    console.log(`DEBUG: Promotion successful for ${currentOpportunityId}, target_stage: ${result.target_stage}`);
                     
                     // Update the opportunity in the current view
+                    console.log(`DEBUG: Before reload - current opportunities count: ${this.opportunitiesData.length}`);
                     await this.loadRealOpportunities();
-                    this.closeOpportunityModal();
+                    console.log(`DEBUG: After reload - opportunities count: ${this.opportunitiesData.length}`);
+                    
+                    // Re-select the updated opportunity to maintain modal state
+                    const updatedOpportunity = this.opportunitiesData.find(opp => opp.opportunity_id === currentOpportunityId);
+                    if (updatedOpportunity) {
+                        console.log(`DEBUG: Found updated opportunity, current_stage: ${updatedOpportunity.current_stage}, funnel_stage: ${updatedOpportunity.funnel_stage}`);
+                        this.selectedOpportunity = updatedOpportunity;
+                        // Ensure user_comments property is initialized
+                        this.selectedOpportunity.user_comments = this.selectedOpportunity.user_comments || '';
+                    } else {
+                        console.log(`DEBUG: Updated opportunity not found in current tab data, closing modal`);
+                        // Opportunity moved to another tab, close modal
+                        this.closeOpportunityModal();
+                    }
                 } else {
                     const error = await response.json();
                     this.showNotification('Error', `Failed to promote: ${error.detail}`, 'error');
@@ -7166,7 +7335,7 @@ function catalynxApp() {
             }
         },
 
-        async manualDemote(opportunity) {
+        async manualDemote(opportunity, reason = null) {
             if (!opportunity || !this.selectedProfile) {
                 console.warn('Missing opportunity or profile for demotion');
                 return;
@@ -7181,18 +7350,48 @@ function catalynxApp() {
                     },
                     body: JSON.stringify({
                         action: 'demote',
-                        reason: 'Manual demotion via modal',
+                        reason: reason || 'Manual demotion via modal',
                         user_id: 'web_user'
                     })
                 });
 
                 if (response.ok) {
                     const result = await response.json();
-                    this.showNotification('Success', `Opportunity demoted to ${result.target_stage}`, 'success');
+                    
+                    // Determine which tab the opportunity moved to
+                    const stageToTab = {
+                        'prospects': 'DISCOVER',
+                        'qualified_prospects': 'DISCOVER', 
+                        'candidates': 'PLAN',
+                        'targets': 'ANALYZE',
+                        'opportunities': 'EXAMINE'
+                    };
+                    
+                    const targetTab = stageToTab[result.target_stage] || 'another tab';
+                    const stageDisplayName = this.getStageDisplayName(result.target_stage);
+                    
+                    this.showNotification('Demoted Successfully!', 
+                        `Opportunity demoted to ${stageDisplayName}. ${targetTab !== 'DISCOVER' ? `It moved to the ${targetTab} tab.` : 'It remains in the DISCOVER tab.'}`, 
+                        'success');
+                    
+                    // Preserve the selected opportunity ID for re-selection after reload
+                    const currentOpportunityId = opportunity.opportunity_id;
                     
                     // Update the opportunity in the current view
                     await this.loadRealOpportunities();
-                    this.closeOpportunityModal();
+                    
+                    // Re-select the updated opportunity to maintain modal state
+                    const updatedOpportunity = this.opportunitiesData.find(opp => opp.opportunity_id === currentOpportunityId);
+                    if (updatedOpportunity) {
+                        console.log(`DEBUG: Found updated opportunity, current_stage: ${updatedOpportunity.current_stage}, funnel_stage: ${updatedOpportunity.funnel_stage}`);
+                        this.selectedOpportunity = updatedOpportunity;
+                        // Ensure user_comments property is initialized
+                        this.selectedOpportunity.user_comments = this.selectedOpportunity.user_comments || '';
+                    } else {
+                        console.log(`DEBUG: Updated opportunity not found in current tab data, closing modal`);
+                        // Opportunity moved to another tab, close modal
+                        this.closeOpportunityModal();
+                    }
                 } else {
                     const error = await response.json();
                     this.showNotification('Error', `Failed to demote: ${error.detail}`, 'error');
@@ -7247,6 +7446,53 @@ function catalynxApp() {
             } finally {
                 this.isProcessing = false;
             }
+        },
+
+        // Update user comments safely with null checking
+        updateUserComments(value) {
+            if (this.selectedOpportunity) {
+                this.selectedOpportunity.user_comments = value || '';
+            }
+        },
+
+        // Save user comments for opportunities (simple local storage for now)
+        saveOpportunityComments() {
+            if (!this.selectedOpportunity || !this.selectedOpportunity.opportunity_id) return;
+            
+            // Simple debounced save to avoid excessive API calls
+            clearTimeout(this.commentSaveTimeout);
+            this.commentSaveTimeout = setTimeout(() => {
+                console.log('Saving comments for opportunity:', this.selectedOpportunity.opportunity_id);
+                console.log('Comments:', this.selectedOpportunity.user_comments);
+                
+                // For now, just update the local opportunity data
+                // In a full implementation, you would send this to the backend
+                const oppIndex = this.opportunitiesData.findIndex(opp => 
+                    opp.opportunity_id === this.selectedOpportunity.opportunity_id
+                );
+                
+                if (oppIndex !== -1) {
+                    this.opportunitiesData[oppIndex].user_comments = this.selectedOpportunity.user_comments;
+                    console.log('✅ Comments saved locally');
+                }
+            }, 500); // Save after 500ms of no typing
+        },
+
+        // Intelligence Tier Functions
+        getSelectedTier() {
+            return this.intelligenceTiers.find(t => t.id === this.selectedIntelligenceTier);
+        },
+
+        getSelectedTierName() {
+            return this.getSelectedTier()?.name || 'Current Intelligence';
+        },
+
+        getSelectedTierPrice() {
+            return this.getSelectedTier()?.price || '0.75';
+        },
+
+        getSelectedTierTime() {
+            return this.getSelectedTier()?.delivery_time || '5-10 minutes';
         },
 
         // HELPER FUNCTIONS FOR OPPORTUNITY MODAL
