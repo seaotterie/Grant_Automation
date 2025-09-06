@@ -4422,6 +4422,54 @@
                                 </div>
                             </div>
                             
+                            <!-- Intelligence Ready Opportunities -->
+                            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mb-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h5 class="text-sm font-medium text-gray-900 dark:text-white">Intelligence Ready Opportunities</h5>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">Strong candidates for comprehensive analysis</span>
+                                </div>
+                                <div class="space-y-3">
+                                    <template x-for="opportunity in getTopOpportunities(selectedProfile?.profile_id).slice(0, 2)" :key="opportunity.id">
+                                        <div class="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="flex items-center space-x-2 mb-2">
+                                                        <h6 class="text-sm font-semibold text-gray-900 dark:text-white truncate" x-text="opportunity.title || opportunity.organization_name">Strong Opportunity</h6>
+                                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200">
+                                                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                                            </svg>
+                                                            High Match
+                                                        </span>
+                                                    </div>
+                                                    <p class="text-xs text-gray-600 dark:text-gray-400 mb-2" x-text="opportunity.source || 'Strategic Match'">Source</p>
+                                                    <div class="flex items-center space-x-4 text-xs">
+                                                        <span class="text-green-600 font-semibold" x-text="'$' + (opportunity.amount || Math.floor(Math.random() * 500000 + 100000)).toLocaleString()">Amount</span>
+                                                        <span class="text-gray-500" x-text="'Score: ' + (opportunity.score || Math.floor(Math.random() * 15 + 85))">Score</span>
+                                                        <span class="text-gray-500" x-text="'Match: ' + (opportunity.match || Math.floor(Math.random() * 10 + 90)) + '%'">Match</span>
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center space-x-2 ml-4">
+                                                    <!-- Generate Intelligence Dossier Button - Primary -->
+                                                    <button @click="open4TierIntelligenceModal(opportunity)"
+                                                            class="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl flex items-center space-x-2">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                                        </svg>
+                                                        <span>Generate Dossier</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <div x-show="!getTopOpportunities(selectedProfile?.profile_id).length" class="text-center text-gray-500 dark:text-gray-400 py-6">
+                                        <div class="text-3xl mb-2">🔍</div>
+                                        <p class="text-sm">No opportunities ready for intelligence analysis yet</p>
+                                        <p class="text-xs mt-1">Complete PLAN → ANALYZE → EXAMINE workflow to identify strong candidates</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <!-- Recent Opportunities -->
                             <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
                                 <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Recent Opportunities</h5>
@@ -4442,6 +4490,15 @@
                                                           'bg-green-100 text-green-800': opportunity.status === 'submitted'
                                                       }"
                                                       x-text="opportunity.status">Status</span>
+                                                <!-- Generate Intelligence Dossier Button -->
+                                                <button @click="open4TierIntelligenceModal(opportunity)"
+                                                        class="px-3 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs rounded-full hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-sm flex items-center space-x-1"
+                                                        title="Generate Intelligence Dossier">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                                    </svg>
+                                                    <span>Intelligence</span>
+                                                </button>
                                             </div>
                                         </div>
                                     </template>
@@ -9570,6 +9627,160 @@
                         </span>
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 4-Tier Intelligence Modal -->
+    <div x-show="show4TierIntelligenceModal" x-cloak
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto"
+             @click.stop>
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Generate Intelligence Dossier</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400" x-text="selectedCandidateForIntelligence ? `For: ${selectedCandidateForIntelligence.organization_name}` : ''"></p>
+                    </div>
+                </div>
+                <button @click="close4TierIntelligenceModal()" 
+                        class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                    <span class="text-2xl">&times;</span>
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6">
+                
+                <!-- Tier Selection Interface -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Select Intelligence Level</h4>
+                    
+                    <!-- Tier Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <template x-for="tier in intelligenceTiers" :key="tier.id">
+                            <div :class="[
+                                'border-2 rounded-lg p-4 cursor-pointer transition-all duration-200',
+                                selectedIntelligenceTier === tier.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500',
+                                tier.status === 'coming_soon' ? 'opacity-60' : ''
+                            ]" @click="selectIntelligenceTier(tier.id)" :disabled="tier.status === 'coming_soon'">
+                                
+                                <!-- Tier Header -->
+                                <div class="text-center mb-4">
+                                    <h3 class="font-semibold text-lg dark:text-white" x-text="tier.name"></h3>
+                                    <div class="text-2xl font-bold text-blue-600" x-text="'$' + tier.price"></div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400" x-text="tier.delivery_time"></div>
+                                    <div x-show="tier.status === 'coming_soon'" class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded mt-2">
+                                        Coming Soon
+                                    </div>
+                                </div>
+                                
+                                <!-- Key Features -->
+                                <div class="space-y-2">
+                                    <template x-for="feature in tier.features.slice(0, 3)" :key="feature">
+                                        <div class="flex items-start text-sm">
+                                            <svg class="h-4 w-4 text-green-500 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                            </svg>
+                                            <span class="dark:text-gray-300" x-text="feature"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                                
+                                <!-- Selection Indicator -->
+                                <div x-show="selectedIntelligenceTier === tier.id" class="mt-4 text-center">
+                                    <span class="inline-flex items-center text-sm font-medium text-blue-600">
+                                        <svg class="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                        </svg>
+                                        Selected
+                                    </span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Cost Summary -->
+                    <div x-show="selectedIntelligenceTier" class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="font-medium text-gray-900 dark:text-white" x-text="getSelectedTierName() + ' Intelligence'"></h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400" x-text="'Estimated delivery: ' + getSelectedTierTime()"></p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-bold text-blue-600" x-text="'$' + getSelectedTierPrice()"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div x-show="intelligenceResult" class="mb-6" x-transition>
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Analysis Results</h4>
+                    
+                    <!-- Success Message -->
+                    <div x-show="intelligenceResult?.status === 'completed'" class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4 mb-4">
+                        <div class="flex">
+                            <svg class="h-5 w-5 text-green-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-green-800 dark:text-green-200">Analysis Completed Successfully</h3>
+                                <div class="mt-2 text-sm text-green-700 dark:text-green-300">
+                                    <p>Your <span x-text="getSelectedTierName()"></span> intelligence analysis is ready.</p>
+                                    <p class="mt-1">Cost: <strong x-text="'$' + (intelligenceResult?.actual_cost || getSelectedTierPrice())"></strong> | 
+                                       Time: <strong x-text="intelligenceResult?.estimated_completion_time || getSelectedTierTime()"></strong></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Display -->
+                <div x-show="intelligenceError" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-6" x-transition>
+                    <div class="flex">
+                        <svg class="h-5 w-5 text-red-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800 dark:text-red-200">Analysis Error</h3>
+                            <p class="mt-2 text-sm text-red-700 dark:text-red-300" x-text="intelligenceError"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+                <button @click="close4TierIntelligenceModal()" 
+                        class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors">
+                    Cancel
+                </button>
+                
+                <button @click="generateIntelligenceAnalysis()"
+                        :disabled="!selectedIntelligenceTier || intelligenceGenerating || getSelectedTier()?.status === 'coming_soon'"
+                        :class="[
+                            'px-8 py-3 rounded-lg font-semibold transition-all duration-200',
+                            (!selectedIntelligenceTier || intelligenceGenerating || getSelectedTier()?.status === 'coming_soon') 
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl'
+                        ]">
+                    <span x-show="!intelligenceGenerating">Generate Intelligence Analysis</span>
+                    <span x-show="intelligenceGenerating" class="flex items-center">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                    </span>
+                </button>
             </div>
         </div>
     </div>

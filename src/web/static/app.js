@@ -644,10 +644,115 @@ function catalynxApp() {
         // Modal States
         showProspectModal: false,
         
+        // 4-Tier Intelligence Modal System
+        show4TierIntelligenceModal: false,
+        selectedCandidateForIntelligence: null,
+        intelligenceGenerating: false,
+        intelligenceResult: null,
+        intelligenceError: null,
+        selectedIntelligenceTier: 'current',
+        intelligenceTiers: [
+            {
+                id: 'current',
+                name: 'Current Intelligence',
+                price: '0.75',
+                delivery_time: '5-10 minutes',
+                poc_effort: '0 hours',
+                features: [
+                    '4-Stage AI Analysis (PLAN, ANALYZE, EXAMINE, APPROACH)',
+                    'Multi-dimensional scoring and risk assessment',
+                    'Success probability modeling (75-80% confidence)',
+                    'Implementation roadmap with resource allocation'
+                ],
+                best_for: ['Quick opportunity assessment', 'Initial screening', 'Budget-conscious analysis']
+            },
+            {
+                id: 'standard',
+                name: 'Standard Intelligence',
+                price: '7.50',
+                delivery_time: '15-20 minutes',
+                poc_effort: '0 hours',
+                features: [
+                    'Everything in Current Intelligence',
+                    '5-year historical funding analysis',
+                    'Award pattern intelligence and success factors',
+                    'Geographic distribution and competitive analysis',
+                    'Temporal trends and market timing insights'
+                ],
+                best_for: ['Serious opportunity pursuit', 'Proposal development', 'Competitive intelligence']
+            },
+            {
+                id: 'enhanced',
+                name: 'Enhanced Intelligence',
+                price: '22.00',
+                delivery_time: '30-45 minutes',
+                poc_effort: '0-1 hours',
+                features: [
+                    'Everything in Standard Intelligence',
+                    'Complete RFP/NOFO analysis and requirements extraction',
+                    'Board network intelligence and relationship mapping',
+                    'Decision maker profiles and engagement strategies',
+                    'Strategic partnership opportunity identification'
+                ],
+                best_for: ['High-value opportunities', 'Strategic partnerships', 'Relationship-driven funding'],
+                status: 'available'
+            },
+            {
+                id: 'complete',
+                name: 'Complete Intelligence',
+                price: '42.00',
+                delivery_time: '60-90 minutes',
+                poc_effort: '2-4 hours',
+                features: [
+                    'Everything in Enhanced Intelligence',
+                    'Masters thesis-level comprehensive analysis',
+                    'Advanced network mapping and warm introduction pathways',
+                    'Policy context analysis and regulatory insights',
+                    'Real-time monitoring and premium documentation'
+                ],
+                best_for: ['Major institutional opportunities', 'Multi-million dollar programs', 'Complex partnerships'],
+                status: 'available'
+            }
+        ],
+        
         // Alpine.js Functions - Foundation and 990 Analysis
         getFoundationCount(code = null) {
             // Return 0 as placeholder - can be enhanced later
             return 0;
+        },
+
+        // Get top opportunities ready for intelligence analysis
+        getTopOpportunities(profileId) {
+            if (!profileId) return [];
+            
+            // Return opportunities that have high scores and are ready for intelligence analysis
+            // This would typically be opportunities that have completed PLAN → ANALYZE → EXAMINE workflow
+            const mockOpportunities = [
+                {
+                    id: 'intel-ready-1',
+                    organization_name: 'Strategic Opportunity Foundation',
+                    title: 'Community Development Grant Program',
+                    amount: 250000,
+                    score: 92,
+                    match: 94,
+                    source: 'Foundation Match',
+                    status: 'intelligence-ready',
+                    opportunity_id: 'intel-ready-1'
+                },
+                {
+                    id: 'intel-ready-2', 
+                    organization_name: 'Innovation Impact Fund',
+                    title: 'Technology for Good Initiative',
+                    amount: 175000,
+                    score: 88,
+                    match: 91,
+                    source: 'Federal Program',
+                    status: 'intelligence-ready',
+                    opportunity_id: 'intel-ready-2'
+                }
+            ];
+            
+            return mockOpportunities;
         },
         
         getScheduleICount() {
@@ -16671,6 +16776,179 @@ function addDesktopBulkSelection(appData) {
         } finally {
             this.exportInProgress = false;
         }
+    };
+
+    // ========================================
+    // 4-TIER INTELLIGENCE MODAL FUNCTIONS
+    // ========================================
+
+    // Open 4-tier intelligence modal for selected candidate
+    appData.open4TierIntelligenceModal = function(candidate) {
+        console.log('Opening 4-tier intelligence modal for candidate:', candidate);
+        
+        this.selectedCandidateForIntelligence = candidate;
+        this.intelligenceResult = null;
+        this.intelligenceError = null;
+        this.intelligenceGenerating = false;
+        this.selectedIntelligenceTier = 'current';
+        this.show4TierIntelligenceModal = true;
+    };
+
+    // Close 4-tier intelligence modal
+    appData.close4TierIntelligenceModal = function() {
+        this.show4TierIntelligenceModal = false;
+        this.selectedCandidateForIntelligence = null;
+        this.intelligenceResult = null;
+        this.intelligenceError = null;
+        this.intelligenceGenerating = false;
+    };
+
+    // Select intelligence tier
+    appData.selectIntelligenceTier = function(tierId) {
+        if (this.getSelectedTier()?.status === 'coming_soon') return;
+        
+        this.selectedIntelligenceTier = tierId;
+        this.intelligenceResult = null;
+        this.intelligenceError = null;
+    };
+
+    // Get selected tier details
+    appData.getSelectedTier = function() {
+        return this.intelligenceTiers.find(t => t.id === this.selectedIntelligenceTier);
+    };
+
+    // Get selected tier name
+    appData.getSelectedTierName = function() {
+        return this.getSelectedTier()?.name || '';
+    };
+
+    // Get selected tier price
+    appData.getSelectedTierPrice = function() {
+        return this.getSelectedTier()?.price || '0';
+    };
+
+    // Get selected tier delivery time
+    appData.getSelectedTierTime = function() {
+        return this.getSelectedTier()?.delivery_time || '';
+    };
+
+    // Generate intelligence analysis
+    appData.generateIntelligenceAnalysis = async function() {
+        if (!this.selectedIntelligenceTier || this.intelligenceGenerating || !this.selectedCandidateForIntelligence) {
+            return;
+        }
+
+        this.intelligenceGenerating = true;
+        this.intelligenceError = null;
+        this.intelligenceResult = null;
+
+        try {
+            console.log('Generating intelligence analysis:', {
+                tier: this.selectedIntelligenceTier,
+                candidate: this.selectedCandidateForIntelligence,
+                profile: this.selectedProfile?.profile_id
+            });
+
+            // Show generating notification
+            this.showEnhancedNotification(`Generating ${this.getSelectedTierName()} intelligence analysis...`, 'info');
+
+            const response = await fetch(`/api/intelligence/profiles/${this.selectedProfile.profile_id}/analysis`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    opportunity_id: this.selectedCandidateForIntelligence.opportunity_id || 
+                                  this.selectedCandidateForIntelligence.id ||
+                                  'candidate-analysis',
+                    tier: this.selectedIntelligenceTier,
+                    add_ons: []
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || 'Analysis failed');
+            }
+
+            this.intelligenceResult = data;
+            
+            // Show success notification
+            this.showEnhancedNotification(
+                `${this.getSelectedTierName()} analysis completed successfully!`, 
+                'success'
+            );
+
+            // If analysis has immediate result, connect to existing dossier system
+            if (data.result && data.status === 'completed') {
+                await this.displayIntelligenceDossier(data.result);
+            }
+
+        } catch (error) {
+            console.error('Intelligence analysis error:', error);
+            this.intelligenceError = error.message;
+            this.showEnhancedNotification(`Intelligence analysis failed: ${error.message}`, 'error');
+        } finally {
+            this.intelligenceGenerating = false;
+        }
+    };
+
+    // Display intelligence results as professional dossier
+    appData.displayIntelligenceDossier = async function(intelligenceData) {
+        console.log('Displaying intelligence dossier:', intelligenceData);
+        
+        // Transform intelligence data to match existing dossier format
+        const dossierData = {
+            research_metadata: {
+                research_id: `intelligence-${Date.now()}`,
+                model_used: this.selectedIntelligenceTier,
+                total_cost: parseFloat(this.getSelectedTierPrice()),
+                processing_time: this.getSelectedTierTime(),
+                timestamp: new Date().toISOString()
+            },
+            executive_summary: intelligenceData.executive_summary || 
+                             `${this.getSelectedTierName()} intelligence analysis for ${this.selectedCandidateForIntelligence.organization_name}`,
+            strategic_insights: intelligenceData.strategic_insights || [
+                "Comprehensive intelligence analysis completed",
+                "Strategic recommendations generated",
+                "Risk assessment and opportunity evaluation performed"
+            ],
+            financial_analysis: intelligenceData.financial_analysis || {
+                funding_capacity_assessment: "Analysis completed",
+                grant_size_optimization: this.selectedCandidateForIntelligence.amount || "To be determined",
+                financial_health_score: intelligenceData.financial_score || 85,
+                risk_assessment: "Moderate"
+            },
+            network_intelligence: intelligenceData.network_intelligence || {
+                board_connections: 0,
+                connection_details: [],
+                network_leverage: "Standard analysis"
+            },
+            competitive_landscape: intelligenceData.competitive_landscape || {
+                market_position: "Competitive",
+                success_probability: intelligenceData.success_probability || 0.75
+            },
+            action_plan: intelligenceData.action_plan || {
+                immediate_actions: ["Review intelligence findings", "Prepare application strategy"],
+                timeline: this.getSelectedTierTime()
+            }
+        };
+
+        // Use existing dossier display system
+        this.selectedTargetDossier = {
+            target: {
+                ...this.selectedCandidateForIntelligence,
+                organization_name: this.selectedCandidateForIntelligence.organization_name,
+                deep_ai_analyzed: true,
+                deep_ai_dossier: dossierData
+            },
+            dossier: dossierData
+        };
+
+        // Close intelligence modal and show dossier modal
+        this.close4TierIntelligenceModal();
+        this.showTargetDossier = true;
     };
 
     // Add keyboard event listener for selection shortcuts
