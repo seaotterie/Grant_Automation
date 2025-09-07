@@ -296,9 +296,9 @@ const CatalynxUtils = {
             'pre_scoring': '#2 Qualified',
             'deep_analysis': '#3 Candidate',
             'recommendations': '#4 Target',
-            // Legacy support for old stages
+            // Current business stage terms (unified)
             'prospects': '#1 Prospect',
-            'qualified_prospects': '#2 Qualified',
+            'qualified': '#2 Qualified',
             'candidates': '#3 Candidate',
             'targets': '#4 Target', 
             'opportunities': '#5 Opportunity'
@@ -313,9 +313,9 @@ const CatalynxUtils = {
             'pre_scoring': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
             'deep_analysis': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
             'recommendations': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-            // Legacy support for old stages
+            // Current business stage terms (unified)
             'prospects': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-            'qualified_prospects': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+            'qualified': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
             'candidates': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
             'targets': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
             'opportunities': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
@@ -324,8 +324,8 @@ const CatalynxUtils = {
     },
     
     getActualStage(prospect) {
-        // Priority: pipeline_stage > funnel_stage > stage > default
-        return prospect.pipeline_stage || prospect.funnel_stage || prospect.stage || 'discovery';
+        // FIXED: Priority funnel_stage (corrected by backend) > pipeline_stage > stage > default
+        return prospect.funnel_stage || prospect.pipeline_stage || prospect.stage || 'prospects';
     },
     
     getOrganizationTypeColor(type) {
@@ -412,8 +412,8 @@ const CatalynxUtils = {
             }
         }
         
-        // Validate funnel stage
-        const validStages = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
+        // Validate funnel stage - UPDATED for business terms
+        const validStages = ['prospects', 'qualified', 'candidates', 'targets', 'opportunities'];
         if (!validStages.includes(opportunity.funnel_stage)) {
             console.warn('Invalid funnel stage:', opportunity.funnel_stage);
             return false;
@@ -429,25 +429,13 @@ const CatalynxUtils = {
             return null;
         }
         
-        // CANONICAL STAGE CONVERSION - Convert pipeline_stage/current_stage to funnel_stage
-        // FORCE mapping to override any existing funnel_stage (database is the source of truth)
-        const pipeline_stage = rawOpportunity.pipeline_stage || rawOpportunity.stage || rawOpportunity.current_stage || 'discovery';
-        const funnel_stage = CANONICAL_STAGE_MAPPING[pipeline_stage] || rawOpportunity.funnel_stage || 'prospects';
+        // SIMPLIFIED: Database now stores business terms directly
+        const current_stage = rawOpportunity.current_stage || rawOpportunity.pipeline_stage || rawOpportunity.stage || 'prospects';
+        const funnel_stage = current_stage;  // Direct assignment - no mapping needed
         
-        // Log stage transformations for debugging
+        // Log stage standardization for debugging
         if (rawOpportunity.current_stage || rawOpportunity.pipeline_stage || rawOpportunity.stage) {
-            console.log(`Stage standardization: database(${rawOpportunity.current_stage}) pipeline(${rawOpportunity.pipeline_stage}) stage(${rawOpportunity.stage}) → ${pipeline_stage} → ${funnel_stage}`);
-            console.log(`CANONICAL_STAGE_MAPPING[${pipeline_stage}] = ${CANONICAL_STAGE_MAPPING[pipeline_stage]}`);
-            
-            // Special debugging for Richmond Memorial
-            if (rawOpportunity.organization_name && rawOpportunity.organization_name.includes('Richmond Memorial')) {
-                console.log(`🔍 RICHMOND MEMORIAL DEBUG:`, {
-                    organization_name: rawOpportunity.organization_name,
-                    current_stage: rawOpportunity.current_stage,
-                    mapped_funnel_stage: funnel_stage,
-                    expected_display: funnel_stage === 'candidates' ? '#3 Candidate' : 'MAPPING ERROR'
-                });
-            }
+            console.log(`Stage standardization: database(${rawOpportunity.current_stage}) pipeline(${rawOpportunity.pipeline_stage}) stage(${rawOpportunity.stage}) → ${current_stage}`);
         }
         
         const standardized = {
@@ -455,8 +443,8 @@ const CatalynxUtils = {
             opportunity_id: rawOpportunity.opportunity_id || `opp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             organization_name: rawOpportunity.organization_name || rawOpportunity.name || '[Organization Name Missing]',
             
-            // CANONICAL STAGE FIELDS - Both preserved for compatibility
-            pipeline_stage: pipeline_stage,
+            // SIMPLIFIED STAGE FIELDS - Direct business terms
+            current_stage: current_stage,
             funnel_stage: funnel_stage,
             
             source_type: rawOpportunity.source_type || rawOpportunity.organization_type || 'Nonprofit',
@@ -562,23 +550,12 @@ const CatalynxUtils = {
     }
 };
 
-// CANONICAL STAGE MAPPING - Aligned with Tab Structure
-const CANONICAL_STAGE_MAPPING = {
-    // All data sources must use these exact mappings - NO exceptions
-    'discovery': 'prospects',        // DISCOVER → #1 prospects
-    'pre_scoring': 'qualified_prospects', // Database pre_scoring → #2 qualified
-    'plan': 'qualified_prospects',   // PLAN → #2 qualified  
-    'deep_analysis': 'candidates',   // Database deep_analysis → #3 candidates
-    'analyze': 'candidates',         // ANALYZE → #3 candidates
-    'recommendations': 'targets',    // Database recommendations → #4 targets
-    'examine': 'targets',            // EXAMINE → #4 targets
-    'approach': 'opportunities'      // APPROACH → #5 opportunities
-};
+// CANONICAL STAGE MAPPING REMOVED - Database now uses business terms directly
 
-// Tab to stage alignment for consistency
+// Tab to stage alignment for consistency - Updated for business terms
 const TAB_STAGE_ALIGNMENT = {
     'DISCOVER': 'prospects',         // #1 prospects
-    'PLAN': 'qualified_prospects',   // #2 qualified
+    'PLAN': 'qualified',             // #2 qualified  
     'ANALYZE': 'candidates',         // #3 candidates
     'EXAMINE': 'targets',            // #4 targets
     'APPROACH': 'opportunities'      // #5 opportunities
@@ -594,7 +571,7 @@ const OPPORTUNITY_SCHEMA = {
         'raw_score', 'compatibility_score', 'confidence_level',
         'xml_990_score', 'network_score', 'enhanced_score', 'combined_score'
     ],
-    VALID_STAGES: ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'],
+    VALID_STAGES: ['prospects', 'qualified', 'candidates', 'targets', 'opportunities'],
     VALID_SOURCE_TYPES: ['Nonprofit', 'Foundation', 'Government', 'Commercial', 'Corporate', 'State']
 };
 
@@ -611,7 +588,7 @@ function catalynxApp() {
         useMockData: false, // Toggle between mock data and real API data integration
         
         // Profile-specific data storage
-        planData: {}, // Strategic planning results for selected profile
+        strategicPlanData: {}, // Strategic planning results for selected profile
         selectedProfile: {
             name: '',
             ein: '',
@@ -652,7 +629,6 @@ function catalynxApp() {
             analysisCount: 0,
             lastUpdated: new Date()
         },
-        stageFilter: 'all',
         selectedTarget: null,
         availableProfiles: [],
         
@@ -2660,11 +2636,17 @@ function catalynxApp() {
                 await this.loadWelcomeStatus();
             }
             
-            // Watch for prospects stage filter changes
-            this.$watch('prospectsStageFilter', () => {
-                if (this.selectedDiscoveryProfile && this.activeStage === 'discover') {
-                    // Data loaded via discovery process
-                }
+
+            // Watch for discovery stage filter changes to trigger reactivity
+            this.$watch('discoveryStageFilter', () => {
+                console.log('FILTER CHANGE [discoveryStageFilter] changed to:', `"${this.discoveryStageFilter}"`);
+                this.updateDiscoverData();
+            });
+            
+            // Watch for plan stage filter changes to trigger reactivity
+            this.$watch('planStageFilter', () => {
+                console.log('FILTER CHANGE [planStageFilter] changed to:', `"${this.planStageFilter}"`);
+                this.updatePlanData();
             });
             
             // Watch for foundation type filter changes
@@ -3355,63 +3337,6 @@ function catalynxApp() {
         },
 
         // Get filtered prospects data based on dropdown selections
-        get filteredProspectsData() {
-            if (!this.prospectsData || this.prospectsData.length === 0) {
-                return [];
-            }
-
-            let filteredData = [...this.prospectsData];
-
-            // Apply stage filter
-            if (this.prospectsStageFilter) {
-                filteredData = filteredData.filter(prospect => {
-                    const currentStage = this.getActualStage(prospect);
-                    return currentStage === this.prospectsStageFilter;
-                });
-            }
-
-            // Apply foundation type filter
-            if (this.foundationTypeFilter) {
-                filteredData = filteredData.filter(prospect => {
-                    const orgType = prospect.organization_type?.toLowerCase();
-                    switch (this.foundationTypeFilter) {
-                        case 'private_non_operating':
-                            return orgType?.includes('private') && orgType?.includes('foundation');
-                        case 'private_operating':
-                            return orgType?.includes('private') && orgType?.includes('operating');
-                        case 'public_charity':
-                            return orgType?.includes('public') || orgType?.includes('charity');
-                        case 'supporting_organization':
-                            return orgType?.includes('supporting');
-                        case 'donor_advised_fund':
-                            return orgType?.includes('donor');
-                        default:
-                            return true;
-                    }
-                });
-            }
-
-            // Apply application status filter
-            if (this.applicationStatusFilter) {
-                filteredData = filteredData.filter(prospect => {
-                    const appStatus = prospect.application_status?.toLowerCase();
-                    switch (this.applicationStatusFilter) {
-                        case 'accepts_applications':
-                            return appStatus?.includes('accept') || appStatus === 'yes';
-                        case 'invitation_only':
-                            return appStatus?.includes('invitation') || appStatus?.includes('invite');
-                        case 'no_applications':
-                            return appStatus?.includes('no') || appStatus === 'none';
-                        case 'unknown':
-                            return !appStatus || appStatus === 'unknown' || appStatus === '';
-                        default:
-                            return true;
-                    }
-                });
-            }
-
-            return filteredData;
-        },
 
         sortProfiles(field) {
             if (this.profileSort.field === field) {
@@ -3504,7 +3429,7 @@ function catalynxApp() {
             
             // Clear any search terms or other filters used in the Discovery Results table
             this.scoreSortOrder = '';
-            this.prospectsStageFilter = '';
+            this.discoveryStageFilter = '';
             this.foundationTypeFilter = '';
             this.applicationStatusFilter = '';
             this.searchQuery = '';
@@ -4368,7 +4293,7 @@ function catalynxApp() {
             {
                 opportunity_id: 'unified_opp_003',
                 organization_name: 'United Way National',
-                funnel_stage: 'qualified_prospects',
+                funnel_stage: 'qualified',
                 source_type: 'Nonprofit',
                 discovery_source: 'ProPublica',
                 program_name: 'Community Impact Fund',
@@ -4389,7 +4314,7 @@ function catalynxApp() {
             {
                 opportunity_id: 'unified_opp_004',
                 organization_name: 'Virginia Health Foundation',
-                funnel_stage: 'qualified_prospects',
+                funnel_stage: 'qualified',
                 source_type: 'Foundation',
                 discovery_source: 'Foundation Directory',
                 program_name: 'Community Wellness Initiative',
@@ -4612,74 +4537,150 @@ function catalynxApp() {
             }
         ],
         
-        // COMPUTED PROPERTIES - Auto-filtered data for each tab with profile scoping
-        get prospectsData() {
-            // DISCOVER tab: prospects + qualified_prospects (profile-scoped) with error recovery
-            try {
-                // Ensure opportunitiesData is valid
-                if (!Array.isArray(this.opportunitiesData)) {
-                    console.warn('prospectsData: opportunitiesData is not an array:', typeof this.opportunitiesData);
-                    return [];
-                }
-                
-                // Filter by stage with error recovery
-                const stageFiltered = this.opportunitiesData.filter(opp => {
-                    try {
-                        return opp && ['prospects', 'qualified_prospects'].includes(opp.funnel_stage);
-                    } catch (error) {
-                        console.warn('prospectsData: Error filtering opportunity by stage:', opp, error);
-                        return false;
-                    }
-                });
-                
-                // Filter by profile scope with error recovery
-                const scopeFiltered = stageFiltered.filter(opp => {
-                    try {
-                        return this.isOpportunityInScope(opp);
-                    } catch (error) {
-                        console.warn('prospectsData: Error filtering opportunity by scope:', opp, error);
-                        return false;
-                    }
-                });
-                
-                return scopeFiltered;
-                
-            } catch (error) {
-                console.error('prospectsData: Complete failure:', error);
-                // Return empty array to prevent Alpine.js crashes
-                return [];
+        // Tab-specific reactive data properties for comprehensive filtering system
+        discoverData: [], // DISCOVER tab: Filtered data for stages 1,2,3,4,5 (prospects → opportunities)
+        planData: [], // PLAN tab: Filtered data for stages 2,3,4,5 (qualified → opportunities)
+        analyzeData: [], // ANALYZE tab: Filtered data for stages 3,4,5 (candidates → opportunities)
+        examineData: [], // EXAMINE tab: Filtered data for stages 4,5 (targets → opportunities)
+        approachData: [], // APPROACH tab: Filtered data for stage 5 only (opportunities)
+        
+        
+        // SIMPLE PER-TAB FILTERING SYSTEM - Each tab has independent filtering
+        
+        // Simple filter methods for each tab
+        updateDiscoverData() {
+            console.log(`[DEBUG] updateDiscoverData called, discoveryStageFilter: "${this.discoveryStageFilter}"`);
+            if (!this.opportunitiesData || this.opportunitiesData.length === 0) {
+                this.discoverData = [];
+                console.log(`[DEBUG] No opportunitiesData, setting discoverData to []`);
+                return;
             }
-        },
-        
-        get qualifiedProspects() {
-            // PLAN tab: pre_scoring + deep_analysis (profile-scoped)
-            // Updated to use pipeline_stage field instead of funnel_stage
-            return this.opportunitiesData.filter(opp => {
-                const stage = opp.pipeline_stage || opp.funnel_stage;
-                return ['pre_scoring', 'deep_analysis', 'qualified_prospects', 'candidates'].includes(stage) &&
+            
+            console.log(`[DEBUG] OpportunitiesData length: ${this.opportunitiesData.length}`);
+            let filtered = this.opportunitiesData.filter(opp => {
+                const stage = opp.funnel_stage || opp.current_stage;
+                return ['prospects', 'qualified', 'candidates', 'targets', 'opportunities'].includes(stage) &&
                        this.isOpportunityInScope(opp);
             });
+            console.log(`[DEBUG] After basic filtering: ${filtered.length} items`);
+            
+            // Apply stage filter if set
+            if (this.discoveryStageFilter) {
+                const beforeStageFilter = filtered.length;
+                filtered = filtered.filter(opp => {
+                    const stage = opp.funnel_stage || opp.current_stage;
+                    return stage === this.discoveryStageFilter;
+                });
+                console.log(`[DEBUG] After stage filter "${this.discoveryStageFilter}": ${beforeStageFilter} -> ${filtered.length} items`);
+            }
+            
+            this.discoverData = filtered;
+            console.log(`[DISCOVER FILTER] Updated discoverData: ${filtered.length} items`);
         },
         
-        get candidatesData() {
-            // ANALYZE tab: deep_analysis + recommendations (profile-scoped)
-            // Updated to use pipeline_stage field instead of funnel_stage
-            return this.opportunitiesData.filter(opp => {
-                const stage = opp.pipeline_stage || opp.funnel_stage;
-                return ['deep_analysis', 'recommendations', 'candidates', 'targets'].includes(stage) &&
+        updatePlanData() {
+            console.log(`[DEBUG] updatePlanData called, planStageFilter: "${this.planStageFilter}"`);
+            if (!this.opportunitiesData || this.opportunitiesData.length === 0) {
+                this.planData = [];
+                console.log(`[DEBUG] No opportunitiesData, setting planData to []`);
+                return;
+            }
+            
+            console.log(`[DEBUG] OpportunitiesData length: ${this.opportunitiesData.length}`);
+            let filtered = this.opportunitiesData.filter(opp => {
+                const stage = opp.funnel_stage || opp.current_stage;
+                return ['qualified', 'candidates', 'targets', 'opportunities'].includes(stage) &&
                        this.isOpportunityInScope(opp);
             });
+            console.log(`[DEBUG] After basic PLAN filtering: ${filtered.length} items`);
+            
+            // Apply stage filter if set  
+            if (this.planStageFilter) {
+                const beforeStageFilter = filtered.length;
+                filtered = filtered.filter(opp => {
+                    const stage = opp.funnel_stage || opp.current_stage;
+                    return stage === this.planStageFilter;
+                });
+                console.log(`[DEBUG] After PLAN stage filter "${this.planStageFilter}": ${beforeStageFilter} -> ${filtered.length} items`);
+            }
+            
+            this.planData = filtered;
+            console.log(`[PLAN FILTER] Updated planData: ${filtered.length} items`);
         },
         
-        get targetsData() {
-            // EXAMINE tab: recommendations + future stages (profile-scoped)
-            // Updated to use pipeline_stage field instead of funnel_stage
-            return this.opportunitiesData.filter(opp => {
-                const stage = opp.pipeline_stage || opp.funnel_stage;
-                return ['recommendations', 'targets', 'opportunities'].includes(stage) &&
+        updateAnalyzeData() {
+            if (!this.opportunitiesData || this.opportunitiesData.length === 0) {
+                this.analyzeData = [];
+                return;
+            }
+            
+            let filtered = this.opportunitiesData.filter(opp => {
+                const stage = opp.funnel_stage || opp.current_stage;
+                return ['candidates', 'targets', 'opportunities'].includes(stage) &&
                        this.isOpportunityInScope(opp);
             });
+            
+            // Apply stage filter if set
+            if (this.analyzeStageFilter) {
+                filtered = filtered.filter(opp => {
+                    const stage = opp.funnel_stage || opp.current_stage;
+                    return stage === this.analyzeStageFilter;
+                });
+            }
+            
+            this.analyzeData = filtered;
+            console.log(`[ANALYZE FILTER] Updated analyzeData: ${filtered.length} items`);
         },
+        
+        updateExamineData() {
+            if (!this.opportunitiesData || this.opportunitiesData.length === 0) {
+                this.examineData = [];
+                return;
+            }
+            
+            let filtered = this.opportunitiesData.filter(opp => {
+                const stage = opp.funnel_stage || opp.current_stage;
+                return ['targets', 'opportunities'].includes(stage) &&
+                       this.isOpportunityInScope(opp);
+            });
+            
+            // Apply stage filter if set
+            if (this.examineStageFilter) {
+                filtered = filtered.filter(opp => {
+                    const stage = opp.funnel_stage || opp.current_stage;
+                    return stage === this.examineStageFilter;
+                });
+            }
+            
+            this.examineData = filtered;
+            console.log(`[EXAMINE FILTER] Updated examineData: ${filtered.length} items`);
+        },
+        
+        updateApproachData() {
+            if (!this.opportunitiesData || this.opportunitiesData.length === 0) {
+                this.approachData = [];
+                return;
+            }
+            
+            let filtered = this.opportunitiesData.filter(opp => {
+                const stage = opp.funnel_stage || opp.current_stage;
+                return stage === 'opportunities' && this.isOpportunityInScope(opp);
+            });
+            
+            this.approachData = filtered;
+            console.log(`[APPROACH] Updated approachData: ${filtered.length} items`);
+        },
+        
+        // Initialize all tab data
+        updateAllTabData() {
+            this.updateDiscoverData();
+            this.updatePlanData();
+            this.updateAnalyzeData();
+            this.updateExamineData();
+            this.updateApproachData();
+        },
+
+
         
         // PROFILE SCOPING LOGIC - Filter opportunities based on selected profile
         isOpportunityInScope(opportunity) {
@@ -4791,15 +4792,23 @@ function catalynxApp() {
                 
                 // Clear existing opportunities data to prevent accumulation and duplicates
                 this.opportunitiesData = [];
-                console.log(`Loading real opportunities for profile: ${this.selectedProfile.name} (${this.selectedProfile.profile_id})`);
+                console.log('🌐 API REQUEST [loadRealOpportunities] Starting...');
+                console.log(`   📋 Profile: ${this.selectedProfile.name} (${this.selectedProfile.profile_id})`);
                 
                 // Use the new opportunities API to get stored opportunities for this profile
+                const startTime = performance.now();
                 const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/opportunities`);
                 if (!response.ok) {
                     if (response.status === 404) {
                         console.log('No opportunities found for profile, starting with empty state');
                         this.opportunitiesData = [];
                         this.updateDiscoveryStatsFromData([]);
+                        // Initialize empty data for all tabs independently
+                        this.discoverData = [];
+                        this.planData = [];
+                        this.analyzeData = [];
+                        this.examineData = [];
+                        this.approachData = [];
                         this.showNotification('No Data Found', `No opportunities found for ${this.selectedProfile.name}. Run discovery to find opportunities.`, 'info');
                         return;
                     }
@@ -4807,6 +4816,26 @@ function catalynxApp() {
                 }
                 
                 const data = await response.json();
+                const loadTime = performance.now() - startTime;
+                
+                console.log(`   ⏱️  API Response Time: ${loadTime.toFixed(2)}ms`);
+                console.log('   📥 Raw API Response:', {
+                    total_opportunities: data.total_opportunities,
+                    opportunities_count: data.opportunities?.length || 0,
+                    source: data.source,
+                    filters_applied: data.filters_applied
+                });
+                
+                // Analyze received stage distribution
+                if (data.opportunities) {
+                    const stageBreakdown = {};
+                    data.opportunities.forEach(opp => {
+                        const stage = opp.funnel_stage || opp.current_stage || 'unknown';
+                        stageBreakdown[stage] = (stageBreakdown[stage] || 0) + 1;
+                    });
+                    console.log('   📈 Received Stage Breakdown:', stageBreakdown);
+                }
+                
                 console.log(`Loaded ${data.total_opportunities} stored opportunities for profile ${this.selectedProfile.profile_id}`);
                 
                 // Transform stored opportunity data using unified pipeline
@@ -4836,8 +4865,24 @@ function catalynxApp() {
                 // Always replace data completely to prevent accumulation
                 this.opportunitiesData = deduplicatedOpportunities;
                 
+                // Final stage analysis of loaded data
+                const finalStageBreakdown = {};
+                this.opportunitiesData.forEach(opp => {
+                    const stage = opp.funnel_stage || opp.current_stage || 'unknown';
+                    finalStageBreakdown[stage] = (finalStageBreakdown[stage] || 0) + 1;
+                });
+                console.log('   📊 Final Loaded Stage Breakdown:', finalStageBreakdown);
+                console.log(`   ✅ API REQUEST [loadRealOpportunities] Complete: ${this.opportunitiesData.length} opportunities ready`);
+                
                 // Update discovery stats based on actual data
                 this.updateDiscoveryStatsFromData(this.opportunitiesData);
+                
+                // Initialize each tab's data independently to prevent cross-tab contamination
+                this.updateDiscoverData();
+                this.updatePlanData();
+                this.updateAnalyzeData();
+                this.updateExamineData();
+                this.updateApproachData();
                 
                 // Update profile opportunities count in the UI
                 if (this.selectedProfile) {
@@ -4858,6 +4903,12 @@ function catalynxApp() {
                 this.showNotification('Data Load Error', 'Failed to load profile opportunities. You may need to run discovery first.', 'warning');
                 // Don't fall back to mock data, show empty state instead
                 this.opportunitiesData = [];
+                // Initialize empty data for all tabs independently
+                this.discoverData = [];
+                this.planData = [];
+                this.analyzeData = [];
+                this.examineData = [];
+                this.approachData = [];
             } finally {
                 this.prospectsLoading = false;
             }
@@ -5001,10 +5052,28 @@ function catalynxApp() {
             }
             
             console.log(`Loaded ${this.opportunitiesData.length} mock opportunities for profile: ${profileName}`);
+            // Initialize each tab's data independently to prevent cross-tab contamination
+            this.updateDiscoverData();
+            this.updatePlanData();
+            this.updateAnalyzeData();
+            this.updateExamineData();
+            this.updateApproachData();
         },
         
         prospectsLoading: false,
-        prospectsStageFilter: '', // Filter by funnel stage
+        
+        // Tab-specific stage filters for comprehensive workflow filtering
+        discoveryStageFilter: '', // DISCOVER tab: Filter stages 1,2,3,4,5 (prospects → opportunities)
+        planStageFilter: '', // PLAN tab: Filter stages 2,3,4,5 (qualified → opportunities)
+        analyzeStageFilter: '', // ANALYZE tab: Filter stages 3,4,5 (candidates → opportunities)  
+        examineStageFilter: '', // EXAMINE tab: Filter stages 4,5 (targets → opportunities)
+        
+        // Tab-specific search queries
+        planSearchQuery: '', // Search query for PLAN tab
+        analyzeSearchQuery: '', // Search query for ANALYZE tab
+        examineSearchQuery: '', // Search query for EXAMINE tab
+        
+        
         scoreSortOrder: '', // Sort order for scores
         
         // Discovery track configurations
@@ -5442,9 +5511,9 @@ function catalynxApp() {
                             // Intelligent stage assignment based on compatibility score
                             let funnelStage = 'prospects';
                             if (compatibilityScore >= 0.80) {
-                                funnelStage = 'qualified_prospects';  // High quality matches
+                                funnelStage = 'qualified';  // High quality matches
                             } else if (compatibilityScore >= 0.65) {
-                                funnelStage = 'qualified_prospects';  // Good matches
+                                funnelStage = 'qualified';  // Good matches
                             } // else stays 'prospects' for lower scores
                             
                             const transformed = CatalynxUtils.standardizeOpportunityData({
@@ -5573,9 +5642,9 @@ function catalynxApp() {
                                 // Intelligent stage assignment based on compatibility score
                                 let funnelStage = 'prospects';
                                 if (compatibilityScore >= 0.80) {
-                                    funnelStage = 'qualified_prospects';  // High quality matches
+                                    funnelStage = 'qualified';  // High quality matches
                                 } else if (compatibilityScore >= 0.65) {
-                                    funnelStage = 'qualified_prospects';  // Good matches
+                                    funnelStage = 'qualified';  // Good matches
                                 } // else stays 'prospects' for lower scores
                                 
                                 return CatalynxUtils.standardizeOpportunityData({
@@ -5673,9 +5742,9 @@ function catalynxApp() {
                                 // Intelligent stage assignment based on compatibility score
                                 let funnelStage = 'prospects';
                                 if (compatibilityScore >= 0.80) {
-                                    funnelStage = 'qualified_prospects';  // High quality matches
+                                    funnelStage = 'qualified';  // High quality matches
                                 } else if (compatibilityScore >= 0.65) {
-                                    funnelStage = 'qualified_prospects';  // Good matches
+                                    funnelStage = 'qualified';  // Good matches
                                 } // else stays 'prospects' for lower scores
                                 
                                 return CatalynxUtils.standardizeOpportunityData({
@@ -5775,9 +5844,9 @@ function catalynxApp() {
                                 // Intelligent stage assignment based on compatibility score
                                 let funnelStage = 'prospects';
                                 if (compatibilityScore >= 0.80) {
-                                    funnelStage = 'qualified_prospects';  // High quality matches
+                                    funnelStage = 'qualified';  // High quality matches
                                 } else if (compatibilityScore >= 0.65) {
-                                    funnelStage = 'qualified_prospects';  // Good matches
+                                    funnelStage = 'qualified';  // Good matches
                                 } // else stays 'prospects' for lower scores
                                 
                                 return CatalynxUtils.standardizeOpportunityData({
@@ -6069,9 +6138,9 @@ function catalynxApp() {
                 'pre_scoring': '#2 Qualified',
                 'deep_analysis': '#3 Candidate',
                 'recommendations': '#4 Target',
-                // Legacy support for old stages
+                // Current business stage terms (unified)
                 'prospects': '#1 Prospect',
-                'qualified_prospects': '#2 Qualified',
+                'qualified': '#2 Qualified',
                 'candidates': '#3 Candidate',
                 'targets': '#4 Target', 
                 'opportunities': '#5 Opportunity'
@@ -6080,8 +6149,8 @@ function catalynxApp() {
         },
         
         getActualStage(prospect) {
-            // Priority: pipeline_stage > funnel_stage > stage > default
-            return prospect.pipeline_stage || prospect.funnel_stage || prospect.stage || 'discovery';
+            // FIXED: Priority funnel_stage (corrected by backend) > pipeline_stage > stage > default
+            return prospect.funnel_stage || prospect.pipeline_stage || prospect.stage || 'prospects';
         },
         
         getStageColor(stage) {
@@ -6091,9 +6160,9 @@ function catalynxApp() {
                 'pre_scoring': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
                 'deep_analysis': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
                 'recommendations': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-                // Legacy support for old stages
+                // Current business stage terms (unified)
                 'prospects': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-                'qualified_prospects': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                'qualified': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
                 'candidates': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
                 'targets': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
                 'opportunities': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
@@ -6828,7 +6897,7 @@ function catalynxApp() {
         getStageDisplayName(stage) {
             const stageMapping = {
                 'prospects': '#1 Prospect',
-                'qualified_prospects': '#2 Qualified Prospect',
+                'qualified': '#2 Qualified',
                 'candidates': '#3 Candidate',
                 'targets': '#4 Target',
                 'opportunities': '#5 Opportunity'
@@ -6840,7 +6909,7 @@ function catalynxApp() {
         getProcessingStageColor(stage) {
             const stageColors = {
                 'prospects': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-                'qualified_prospects': 'bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-300',
+                'qualified': 'bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-300',
                 'candidates': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-300',
                 'targets': 'bg-purple-100 text-purple-800 dark:bg-purple-700 dark:text-purple-300',
                 'opportunities': 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-300'
@@ -6851,7 +6920,7 @@ function catalynxApp() {
         getStageProgress(stage) {
             const stageProgress = {
                 'prospects': 20,
-                'qualified_prospects': 40,
+                'qualified': 40,
                 'candidates': 60,
                 'targets': 80,
                 'opportunities': 100
@@ -6908,7 +6977,7 @@ function catalynxApp() {
             const currentDbStage = opportunity.current_stage || 'discovery';
             
             // Define stage progression order
-            const stageOrder = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
+            const stageOrder = ['prospects', 'qualified', 'candidates', 'targets', 'opportunities'];
             const currentStageIndex = stageOrder.indexOf(currentStage);
             
             // Can demote if not at the lowest stage (index > 0)
@@ -7190,8 +7259,8 @@ function catalynxApp() {
             if (!opportunity) return;
             
             const stageProgression = {
-                'prospects': 'qualified_prospects',
-                'qualified_prospects': 'candidates', 
+                'prospects': 'qualified',
+                'qualified': 'candidates', 
                 'candidates': 'targets',
                 'targets': 'opportunities'
             };
@@ -7216,8 +7285,8 @@ function catalynxApp() {
             const stageRegression = {
                 'opportunities': 'targets',
                 'targets': 'candidates',
-                'candidates': 'qualified_prospects',
-                'qualified_prospects': 'prospects'
+                'candidates': 'qualified',
+                'qualified': 'prospects'
             };
             
             const prevStage = stageRegression[opportunity.funnel_stage];
@@ -7289,7 +7358,7 @@ function catalynxApp() {
                     // Determine which tab the opportunity moved to
                     const stageToTab = {
                         'prospects': 'DISCOVER',
-                        'qualified_prospects': 'DISCOVER', 
+                        'qualified': 'DISCOVER', 
                         'candidates': 'PLAN',
                         'targets': 'ANALYZE',
                         'opportunities': 'EXAMINE'
@@ -7361,7 +7430,7 @@ function catalynxApp() {
                     // Determine which tab the opportunity moved to
                     const stageToTab = {
                         'prospects': 'DISCOVER',
-                        'qualified_prospects': 'DISCOVER', 
+                        'qualified': 'DISCOVER', 
                         'candidates': 'PLAN',
                         'targets': 'ANALYZE',
                         'opportunities': 'EXAMINE'
@@ -7523,7 +7592,7 @@ function catalynxApp() {
         getStageClass(stage) {
             const stageClasses = {
                 'prospects': 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100',
-                'qualified_prospects': 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100',
+                'qualified': 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100',
                 'candidates': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100',
                 'targets': 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100',
                 'opportunities': 'bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100'
@@ -7534,7 +7603,7 @@ function catalynxApp() {
         formatStageName(stage) {
             const stageNames = {
                 'prospects': 'Prospects',
-                'qualified_prospects': 'Qualified Prospects',
+                'qualified': 'Qualified',
                 'candidates': 'Candidates',
                 'targets': 'Targets',
                 'opportunities': 'Opportunities'
@@ -9236,10 +9305,8 @@ function catalynxApp() {
         },
         
         filterTargets() {
-            // Filter function for EXAMINE tab search
-            // This function is called by the search input but the actual filtering
-            // is handled by the computed property targetsData
-            console.log('Filtering targets based on selected profile and search query');
+            // Legacy compatibility - redirect to updateExamineData
+            this.updateExamineData();
         },
         
         // ========================================
@@ -15313,8 +15380,8 @@ function catalynxApp() {
                 console.log(`Promoting ${opportunity.organization_name} from ${opportunity.funnel_stage}`);
                 
                 const stageProgression = {
-                    'prospects': 'qualified_prospects',
-                    'qualified_prospects': 'candidates', 
+                    'prospects': 'qualified',
+                    'qualified': 'candidates', 
                     'candidates': 'targets',
                     'targets': 'opportunities'
                 };
@@ -15353,8 +15420,8 @@ function catalynxApp() {
                 const stageRegression = {
                     'opportunities': 'targets',
                     'targets': 'candidates',
-                    'candidates': 'qualified_prospects',
-                    'qualified_prospects': 'prospects'
+                    'candidates': 'qualified',
+                    'qualified': 'prospects'
                 };
                 
                 const prevStage = stageRegression[opportunity.funnel_stage];
@@ -15417,7 +15484,6 @@ function catalynxApp() {
                     
                     // Build query parameters
                     const queryParams = new URLSearchParams();
-                    if (this.prospectsStageFilter) queryParams.set('stage', this.prospectsStageFilter);
                     if (this.foundationTypeFilter) queryParams.set('foundation_type', this.foundationTypeFilter);
                     if (this.applicationStatusFilter) queryParams.set('application_status', this.applicationStatusFilter);
                     
@@ -15455,26 +15521,6 @@ function catalynxApp() {
                 }
             },
             
-            get filteredProspects() {
-                console.log('filteredProspects called, prospectsData:', this.prospectsData);
-                console.log('prospectsStageFilter:', this.prospectsStageFilter);
-                
-                if (!this.prospectsData) {
-                    console.log('No prospectsData, returning empty array');
-                    return [];
-                }
-                
-                if (this.prospectsStageFilter) {
-                    const filtered = this.prospectsData.filter(prospect => 
-                        prospect.funnel_stage === this.prospectsStageFilter
-                    );
-                    console.log('Filtered prospects:', filtered);
-                    return filtered;
-                }
-                
-                console.log('Returning all prospectsData:', this.prospectsData);
-                return this.prospectsData;
-            },
             
             
             // Legacy promote/demote functions - delegate to centralized functions with enhanced logging
@@ -15802,8 +15848,8 @@ function catalynxApp() {
 // - Simplified data flow and maintenance
 //
 // All tabs now use the unified opportunitiesData with computed filtering:
-// - DISCOVER: prospects + qualified_prospects
-// - PLAN: qualified_prospects + candidates  
+// - DISCOVER: prospects + qualified
+// - PLAN: qualified + candidates  
 // - ANALYZE: candidates + targets
 // - EXAMINE: targets + opportunities (ready for implementation)
 //

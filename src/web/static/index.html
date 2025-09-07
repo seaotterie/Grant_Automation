@@ -793,21 +793,21 @@
                             <div>
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Discovery Results</h4>
                                 <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-                                    <span x-text="`${prospectsData?.length || 0} prospects found`">0 prospects found</span>
+                                    <span x-text="`${discoverData?.length || 0} opportunities found`">0 opportunities found</span>
                                     <!-- Score Distribution Summary -->
-                                    <template x-if="prospectsData && prospectsData.length > 0">
+                                    <template x-if="discoverData && discoverData.length > 0">
                                         <div class="flex items-center space-x-3">
                                             <span class="inline-flex items-center">
                                                 <div class="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-                                                <span x-text="`${prospectsData.filter(p => getOpportunityScore(p) >= 0.75).length} Auto-Promote`"></span>
+                                                <span x-text="`${discoverData.filter(p => getOpportunityScore(p) >= 0.75).length} Auto-Promote`"></span>
                                             </span>
                                             <span class="inline-flex items-center">
                                                 <div class="w-2 h-2 bg-yellow-500 rounded-full mr-1"></div>
-                                                <span x-text="`${prospectsData.filter(p => getOpportunityScore(p) >= 0.60 && getOpportunityScore(p) < 0.75).length} Review`"></span>
+                                                <span x-text="`${discoverData.filter(p => getOpportunityScore(p) >= 0.60 && getOpportunityScore(p) < 0.75).length} Review`"></span>
                                             </span>
                                             <span class="inline-flex items-center">
                                                 <div class="w-2 h-2 bg-orange-500 rounded-full mr-1"></div>
-                                                <span x-text="`${prospectsData.filter(p => getOpportunityScore(p) >= 0.45 && getOpportunityScore(p) < 0.60).length} Needs Work`"></span>
+                                                <span x-text="`${discoverData.filter(p => getOpportunityScore(p) >= 0.45 && getOpportunityScore(p) < 0.60).length} Needs Work`"></span>
                                             </span>
                                         </div>
                                     </template>
@@ -822,15 +822,24 @@
                                     <option value="promotion_ready">⬆️ Promotion Ready</option>
                                 </select>
 
-                                <!-- Stage Filter -->
-                                <select class="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" x-model="prospectsStageFilter">
-                                    <option value="">All Stages</option>
-                                    <option value="prospects">#1 Prospect</option>
-                                    <option value="qualified_prospects">#2 Qualified</option>
-                                    <option value="candidates">#3 Candidate</option>
-                                    <option value="targets">#4 Target</option>
-                                    <option value="opportunities">#5 Opportunity</option>
-                                </select>
+                                <!-- Stage Filter - Dynamic based on current tab -->
+                                <div class="flex items-center space-x-2">
+                                    <select class="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" 
+                                           x-model="discoveryStageFilter"
+                                           @change="updateDiscoverData()">
+                                        <option value="">All Stages</option>
+                                        <option value="prospects">#1 Prospects</option>
+                                        <option value="qualified">#2 Qualified</option>
+                                        <option value="candidates">#3 Candidates</option>
+                                        <option value="targets">#4 Targets</option>
+                                        <option value="opportunities">#5 Opportunities</option>
+                                    </select>
+                                    <!-- Filter Status Badge -->
+                                    <span x-show="discoveryStageFilter" 
+                                          x-text="'Filtered: ' + (discoveryStageFilter ? discoverData.length : 0) + ' records'"
+                                          class="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200 px-2 py-1 rounded-full text-xs font-medium">
+                                    </span>
+                                </div>
                                 
                                 <!-- Foundation Type Filter -->
                                 <select class="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white" x-model="foundationTypeFilter">
@@ -882,22 +891,18 @@
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    <!-- Error Boundary: Show message if filteredProspectsData fails -->
-                                    <template x-if="!filteredProspectsData || filteredProspectsData.length === 0">
+                                    <!-- Error Boundary: Show message if discoverData fails -->
+                                    <template x-if="!discoverData || discoverData.length === 0">
                                         <tr>
                                             <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                                 <div class="flex flex-col items-center space-y-2">
-                                                    <div x-show="prospectsData === undefined">
+                                                    <div x-show="discoverData === undefined">
                                                         <span class="text-red-600 dark:text-red-400">⚠️ Error loading opportunities data</span>
                                                         <button @click="location.reload()" class="ml-2 text-blue-600 hover:text-blue-800 underline">Retry</button>
                                                     </div>
-                                                    <div x-show="prospectsData && prospectsData.length === 0">
+                                                    <div x-show="discoverData && discoverData.length === 0">
                                                         <span>No opportunities found for this profile</span>
                                                         <div class="text-sm mt-1">Run discovery to find new opportunities</div>
-                                                    </div>
-                                                    <div x-show="prospectsData && prospectsData.length > 0 && filteredProspectsData && filteredProspectsData.length === 0">
-                                                        <span>No opportunities match the current filters</span>
-                                                        <div class="text-sm mt-1">Try adjusting the filter criteria above</div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -905,7 +910,7 @@
                                     </template>
                                     
                                     <!-- Robust Data Rendering: Use index-based keys and null guards -->
-                                    <template x-for="(prospect, index) in (filteredProspectsData || [])" :key="`prospect_row_${index}`">
+                                    <template x-for="(prospect, index) in (discoverData || [])" :key="`prospect_row_${index}`">
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700" x-show="prospect">
                                             <td class="px-6 py-3 whitespace-nowrap">
                                                 <div class="flex items-center space-x-2">
@@ -1026,7 +1031,7 @@
                         </div>
                         
                         <!-- Empty State -->
-                        <div x-show="!prospectsData || prospectsData.length === 0" class="text-center py-12">
+                        <div x-show="!planData || planData.length === 0" class="text-center py-12">
                             <div class="text-gray-400 dark:text-gray-600">
                                 <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -1433,20 +1438,16 @@
                                     <div class="flex items-center justify-between">
                                         <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Strategic Planning Pipeline</h4>
                                         <div class="flex items-center space-x-3">
-                                            <select x-model="stageFilter" @change="filterProspects()"
-                                                    class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700">
-                                                <option value="qualified_prospects+">Qualified Prospects+ (Default)</option>
-                                                <option value="candidates+">Candidates+</option>
-                                                <option value="targets+">Targets+</option>
+                                            <select x-model="planStageFilter" @change="updatePlanData()"
+                                                    class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                                 <option value="">All Stages</option>
-                                                <option value="prospects">Prospects Only</option>
-                                                <option value="qualified_prospects">Qualified Prospects Only</option>
-                                                <option value="candidates">Candidates Only</option>
-                                                <option value="targets">Targets Only</option>
-                                                <option value="opportunities">Opportunities Only</option>
+                                                <option value="qualified">#2 Qualified</option>
+                                                <option value="candidates">#3 Candidates</option>
+                                                <option value="targets">#4 Targets</option>
+                                                <option value="opportunities">#5 Opportunities</option>
                                             </select>
                                             <input type="text" placeholder="Search prospects..." 
-                                                   x-model="searchQuery" @input="filterProspects()"
+                                                   x-model="planSearchQuery" @input="updatePlanData()"
                                                    class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700">
                                         </div>
                                     </div>
@@ -1484,7 +1485,7 @@
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                            <template x-for="prospect in qualifiedProspects" :key="prospect.opportunity_id">
+                                            <template x-for="prospect in discoverData" :key="prospect.opportunity_id">
                                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer" 
                                                     x-init="addOpportunityContextMenu && addOpportunityContextMenu($el, prospect)"
                                                     :class="{'!bg-blue-100 dark:!bg-blue-900 border-l-4 border-blue-500': isSelected && isSelected(prospect.opportunity_id)}"
@@ -1551,7 +1552,7 @@
                                             </template>
                                             
                                             <!-- Empty State -->
-                                            <tr x-show="qualifiedProspects.length === 0">
+                                            <tr x-show="discoverData.length === 0">
                                                 <td colspan="8" class="px-6 py-12 text-center">
                                                     <div class="text-gray-400 dark:text-gray-600">
                                                         <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1931,14 +1932,15 @@
                             <div class="flex items-center justify-between">
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Candidates Analysis</h4>
                                 <div class="flex items-center space-x-3">
-                                    <select x-model="stageFilter" @change="filterCandidates()"
-                                            class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700">
-                                        <option value="candidates">Candidates Only</option>
-                                        <option value="candidates+">Candidates+ (Default)</option>
+                                    <select x-model="analyzeStageFilter" @change="updateAnalyzeData()"
+                                            class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                                         <option value="">All Stages</option>
+                                        <option value="candidates">#3 Candidates</option>
+                                        <option value="targets">#4 Targets</option>
+                                        <option value="opportunities">#5 Opportunities</option>
                                     </select>
                                     <input type="text" placeholder="Search candidates..." 
-                                           x-model="searchQuery" @input="filterCandidates()"
+                                           x-model="analyzeSearchQuery" @input="updateAnalyzeData()"
                                            class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700">
                                 </div>
                             </div>
@@ -1975,7 +1977,7 @@
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    <template x-for="candidate in candidatesData" :key="candidate.opportunity_id">
+                                    <template x-for="candidate in analyzeData" :key="candidate.opportunity_id">
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                                             x-init="addOpportunityContextMenu && addOpportunityContextMenu($el, candidate)"
                                             :class="{'!bg-blue-100 dark:!bg-blue-900 border-l-4 border-blue-500': isSelected && isSelected(candidate.opportunity_id)}"
@@ -2121,7 +2123,7 @@
                                     </template>
                                     
                                     <!-- Empty State -->
-                                    <tr x-show="candidatesData.length === 0">
+                                    <tr x-show="analyzeData.length === 0">
                                         <td colspan="7" class="px-6 py-12 text-center">
                                             <div class="text-gray-400 dark:text-gray-600">
                                                 <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2184,7 +2186,7 @@
                                 </div>
                                 <div class="bg-white dark:bg-gray-800 p-2 rounded">
                                     <div class="text-xs text-gray-600 dark:text-gray-400">Target Count</div>
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="targetsData.filter(t => t.funnel_stage === 'targets').length || 0">0</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="examineData.filter(t => t.funnel_stage === 'targets').length || 0">0</div>
                                 </div>
                             </div>
                         </div>
@@ -2439,8 +2441,14 @@
                             <div class="flex items-center justify-between">
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Targets Analysis</h4>
                                 <div class="flex items-center space-x-3">
+                                    <select x-model="examineStageFilter" @change="updateExamineData()"
+                                            class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                                        <option value="">All Stages</option>
+                                        <option value="targets">#4 Targets</option>
+                                        <option value="opportunities">#5 Opportunities</option>
+                                    </select>
                                     <input type="text" placeholder="Search targets..." 
-                                           x-model="searchQuery" @input="filterTargets()"
+                                           x-model="examineSearchQuery" @input="updateExamineData()"
                                            class="text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700">
                                 </div>
                             </div>
@@ -2474,7 +2482,7 @@
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    <template x-for="target in targetsData" :key="target.opportunity_id">
+                                    <template x-for="target in examineData" :key="target.opportunity_id">
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                                             x-init="addOpportunityContextMenu && addOpportunityContextMenu($el, target)"
                                             :class="{'!bg-blue-100 dark:!bg-blue-900 border-l-4 border-blue-500': isSelected && isSelected(target.opportunity_id)}"
@@ -2589,7 +2597,7 @@
                                     </template>
                                     
                                     <!-- Empty State -->
-                                    <tr x-show="targetsData.length === 0">
+                                    <tr x-show="examineData.length === 0">
                                         <td colspan="7" class="px-6 py-12 text-center">
                                             <div class="text-gray-400 dark:text-gray-600">
                                                 <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -9140,7 +9148,7 @@
         }, 5000);
     </script>
     
-    <script src="/static/app.js?v=STAGE_MANAGEMENT_FIX_6.0" onerror="console.error('Failed to load app.js')"></script>
+    <script src="/static/app.js?v=CLEAN_UNIFIED_FILTER_SYSTEM" onerror="console.error('Failed to load app.js')"></script>
     
     <!-- INLINE FIX: Override getOrganizationTypeColor for PROFILER and DISCOVER cache issue -->
     <script>
@@ -9205,7 +9213,7 @@
                             
                             // Add research platform functions
                             appData.runIntegratedAnalysis = async function() {
-                                if (!this.selectedProfile || this.candidatesData.length === 0) {
+                                if (!this.selectedProfile || this.analyzeData.length === 0) {
                                     this.showNotification('Analysis', 'No candidates available for analysis', 'warning');
                                     return;
                                 }
@@ -9216,7 +9224,7 @@
                                     const requestData = {
                                         include_research: this.researchPlatform.analysisMode !== 'scoring_only',
                                         report_type: this.researchPlatform.reportType,
-                                        stage_filter: this.stageFilter || 'candidates'
+                                        stage_filter: this.analyzeStageFilter || 'candidates'
                                     };
                                     
                                     const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/research/batch-analyze`, {
