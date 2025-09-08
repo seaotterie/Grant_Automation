@@ -443,7 +443,7 @@
                                      class="w-96 h-96 object-contain"
                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                 <!-- Fallback if logo not found -->
-                                <div class="w-96 h-96 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white" style="display: none; font-size: 12rem;">
+                                <div class="w-96 h-96 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white hidden text-[12rem]">
                                     C
                                 </div>
                             </div>
@@ -454,8 +454,7 @@
                             <!-- Simple Getting Started Actions -->
                             <div class="space-y-6">
                                 <button @click="switchStage('profiler')" 
-                                        class="w-96 text-white hover:opacity-90 px-8 py-4 rounded-lg transition-colors font-medium text-xl"
-                                        style="background-color: #005b95;">
+                                        class="btn-brand-primary w-96 px-8 py-4 rounded-lg transition-colors font-medium text-xl hover:opacity-90">
                                     Get Started
                                 </button>
                                 <div class="text-center">
@@ -582,8 +581,7 @@
                                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                         <template x-for="profile in (filteredProfiles || [])" :key="`main-profile-${profile.profile_id}`">
                                             <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l-4"
-                                                :class="selectedProfile?.profile_id === profile.profile_id ? 'border-l-transparent' : 'border-l-transparent'"
-                                                :style="selectedProfile?.profile_id === profile.profile_id ? 'background-color: #1e3a8a !important; border-left: 4px solid #1e3a8a !important;' : ''"
+                                                :class="selectedProfile?.profile_id === profile.profile_id ? 'profile-row-selected' : 'profile-row-selectable border-l-transparent'"
                                                 x-init="$nextTick(() => { if ($data.addProfileContextMenu && typeof $data.addProfileContextMenu === 'function') $data.addProfileContextMenu($el, profile); })"
                                                 @click="selectedProfile = profile">
                                                 <td class="px-6 py-3 whitespace-nowrap">
@@ -963,10 +961,10 @@
                                                         </div>
                                                         
                                                         <!-- Score Progress Bar -->
-                                                        <div class="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
-                                                            <div class="h-2 rounded-full" 
+                                                        <div class="progress-container w-16 mr-2" style="--progress-height: 0.5rem;">
+                                                            <div class="progress-bar" 
                                                                  :class="getScoreColor(getOpportunityScore(prospect))"
-                                                                 :style="`width: ${(getOpportunityScore(prospect) * 100)}%`"></div>
+                                                                 :style="`--progress-width: ${(getOpportunityScore(prospect) * 100)}%`"></div>
                                                         </div>
                                                         
                                                         <!-- Score Percentage -->
@@ -1534,12 +1532,12 @@
                                                     <td class="px-3 py-4 whitespace-nowrap">
                                                         <div class="text-sm font-bold text-gray-900 dark:text-white" 
                                                              x-text="(prospect.combined_score * 100 || 0).toFixed(1) + '%'"></div>
-                                                        <div class="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-2 mt-1">
-                                                            <div class="h-2 rounded-full" 
-                                                                 :class="(prospect.combined_score || 0) >= 0.9 ? 'bg-green-600' : 
-                                                                         (prospect.combined_score || 0) >= 0.75 ? 'bg-yellow-600' : 
-                                                                         (prospect.combined_score || 0) >= 0.5 ? 'bg-orange-600' : 'bg-red-600'"
-                                                                 :style="`width: ${(prospect.combined_score || 0) * 100}%`"></div>
+                                                        <div class="progress-container w-12 mt-1" style="--progress-height: 0.5rem;">
+                                                            <div class="progress-bar" 
+                                                                 :class="(prospect.combined_score || 0) >= 0.9 ? 'progress-success' : 
+                                                                         (prospect.combined_score || 0) >= 0.75 ? 'progress-warning' : 
+                                                                         (prospect.combined_score || 0) >= 0.5 ? 'progress-warning' : 'progress-danger'"
+                                                                 :style="`--progress-width: ${(prospect.combined_score || 0) * 100}%`"></div>
                                                         </div>
                                                     </td>
                                                     <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -4881,8 +4879,7 @@
                                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                                     <template x-for="profile in (filteredProfiles || [])" :key="`discovery-profile-${profile.profile_id}`">
                                         <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l-4"
-                                            :class="selectedDiscoveryProfile?.profile_id === profile.profile_id ? 'border-l-transparent' : 'border-l-transparent'"
-                                            :style="selectedDiscoveryProfile?.profile_id === profile.profile_id ? 'background-color: #1e3a8a !important; border-left: 4px solid #1e3a8a !important;' : ''"
+                                            :class="selectedDiscoveryProfile?.profile_id === profile.profile_id ? 'profile-row-selected' : 'profile-row-selectable border-l-transparent'"
                                             x-init="$nextTick(() => { if ($data.addProfileContextMenu && typeof $data.addProfileContextMenu === 'function') $data.addProfileContextMenu($el, profile); })"
                                             @click="selectedDiscoveryProfile = profile">
                                             <td class="px-6 py-4 whitespace-nowrap">
@@ -8492,7 +8489,7 @@
                                 <div class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-600">
                                     <h5 class="text-sm font-medium text-gray-900 dark:text-white">Selected Codes</h5>
                                 </div>
-                                <div class="p-4 overflow-y-auto" style="max-height: 432px;">
+                                <div class="p-4 overflow-y-auto max-h-[432px]">
                                     <div x-show="nteeModal.selectedNteeCodes.length === 0" class="text-sm text-gray-500 dark:text-gray-400 text-center">
                                         No NTEE codes selected
                                     </div>
@@ -8533,7 +8530,7 @@
                                 <div class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-600">
                                     <h5 class="text-sm font-medium text-gray-900 dark:text-white">Selected Criteria</h5>
                                 </div>
-                                <div class="p-4 overflow-y-auto" style="max-height: 432px;">
+                                <div class="p-4 overflow-y-auto max-h-[432px]">
                                     <!-- Show message when no criteria selected -->
                                     <div x-show="getSelectedGovernmentCriteriaInfo().length === 0" 
                                          class="text-sm text-gray-500 dark:text-gray-400 text-center">
@@ -9040,7 +9037,7 @@
     <div x-show="showNetworkPopup" x-cloak
          class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
         <div class="relative top-10 mx-auto p-5 border w-11/12 max-w-6xl shadow-lg rounded-md bg-white dark:bg-gray-800"
-             style="height: 80vh;">
+             class="h-[80vh]">
             <div class="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-xl font-semibold text-gray-900 dark:text-white" 
                     x-text="networkPopupType === 'board' ? 'Board Member Network - Enhanced View' : 'Influence Network - Enhanced View'"></h3>

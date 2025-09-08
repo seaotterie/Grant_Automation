@@ -1,5 +1,14 @@
 /* Catalynx Modern Web Interface - Additional Styles */
 
+/* CSS Custom Properties - Brand Colors */
+:root {
+    --brand-primary: #005b95;
+    --brand-primary-hover: #004580;
+    --brand-primary-dark: #1e3a8a;
+    --brand-selection-bg: #1e3a8a;
+    --brand-selection-border: #1e3a8a;
+}
+
 /* Custom animations and transitions */
 .fade-in {
     animation: fadeIn 0.3s ease-in-out;
@@ -10,9 +19,51 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Progress bar animation */
+/* Progress Bar Component System */
+.progress-container {
+    @apply w-full bg-gray-200 rounded-full overflow-hidden;
+    height: var(--progress-height, 0.5rem);
+}
+
 .progress-bar {
-    transition: width 0.5s ease-in-out;
+    @apply h-full rounded-full transition-all duration-500 ease-in-out;
+    width: var(--progress-width, 0%);
+    background: var(--progress-color, #3b82f6);
+}
+
+.progress-bar-animated {
+    background: linear-gradient(90deg, 
+        var(--progress-color, #3b82f6), 
+        var(--progress-color-end, #1d4ed8)
+    );
+    background-size: 200% 100%;
+    animation: progress-shimmer 2s infinite;
+}
+
+@keyframes progress-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Progress Bar Color Variants */
+.progress-success {
+    --progress-color: #10b981;
+    --progress-color-end: #059669;
+}
+
+.progress-warning {
+    --progress-color: #f59e0b;
+    --progress-color-end: #d97706;
+}
+
+.progress-danger {
+    --progress-color: #ef4444;
+    --progress-color-end: #dc2626;
+}
+
+.progress-primary {
+    --progress-color: #3b82f6;
+    --progress-color-end: #1d4ed8;
 }
 
 /* Custom scrollbar for webkit browsers */
@@ -50,6 +101,45 @@
 .table-row-selected {
     background-color: #dbeafe;
     border-left: 4px solid #2563eb;
+}
+
+/* Profile Selection Component */
+.profile-row-selectable {
+    cursor: pointer;
+    border-left: 4px solid transparent;
+    transition: all 0.2s ease-in-out;
+}
+
+.profile-row-selected {
+    background-color: var(--brand-selection-bg) !important;
+    border-left: 4px solid var(--brand-selection-border) !important;
+    color: white;
+}
+
+.profile-row-selected:hover {
+    background-color: var(--brand-selection-bg) !important;
+}
+
+.profile-row-selected .text-gray-600,
+.profile-row-selected .text-gray-700,
+.profile-row-selected .text-gray-800,
+.profile-row-selected .text-gray-900,
+.profile-row-selected .text-gray-500,
+.profile-row-selected .text-gray-400,
+.profile-row-selected .dark\:text-white,
+.profile-row-selected .dark\:text-gray-400 {
+    color: white !important;
+}
+
+/* Brand Button Component */
+.btn-brand-primary {
+    background-color: var(--brand-primary);
+    color: white;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.btn-brand-primary:hover {
+    background-color: var(--brand-primary-hover);
 }
 
 .table-row-selected.dark {
