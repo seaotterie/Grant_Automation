@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en" x-data="catalynxApp()" x-cloak>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catalynx - Grant Research Intelligence Platform</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Configuration and Module Loader (Load First) -->
+    <script src="/static/js/config.js"></script>
+    <script src="/static/js/module-loader.js"></script>
+    
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        /* Loading animation */
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Architecture mode indicator */
+        .mode-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 9999;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .mode-monolithic { background-color: #e74c3c; color: white; }
+        .mode-modular { background-color: #27ae60; color: white; }
+        .mode-hybrid { background-color: #f39c12; color: white; }
+    </style>
+</head>
+
+<body class="bg-gray-100 dark:bg-gray-900 font-sans antialiased transition-colors duration-300 flex flex-col min-h-screen">
+    
+    <!-- Architecture Mode Indicator -->
+    <div id="mode-indicator" class="mode-indicator mode-monolithic">
+        Loading...
+    </div>
+    
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-2">Catalynx Loading</h2>
+            <p id="loading-status" class="text-gray-600">Initializing architecture...</p>
+            <div class="mt-4 max-w-md">
+                <div class="bg-gray-200 rounded-full h-2">
+                    <div id="loading-progress" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Configuration Panel (Hidden by default) -->
+    <div id="config-panel" class="fixed inset-y-0 right-0 w-80 bg-white shadow-lg transform translate-x-full transition-transform duration-300 z-40" x-show="showConfigPanel">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Architecture Configuration</h3>
+                <button @click="showConfigPanel = false" class="text-gray-500 hover:text-gray-700">×</button>
+            </div>
+            
+            <!-- Architecture Mode Selection -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Architecture Mode</label>
+                <select x-model="configMode" @change="changeArchitectureMode()" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                    <option value="monolithic">Monolithic</option>
+                    <option value="hybrid">Hybrid</option>
+                    <option value="modular">Modular</option>
+                </select>
+            </div>
+            
+            <!-- Feature Toggles -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Modular Components</label>
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" x-model="modularPagination" @change="toggleModularComponent('pagination')" class="mr-2">
+                        <span class="text-sm">Pagination</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" x-model="modularProfiles" @change="toggleModularComponent('profiles')" class="mr-2">
+                        <span class="text-sm">Profile Management</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" x-model="modularDiscovery" @change="toggleModularComponent('discovery')" class="mr-2">
+                        <span class="text-sm">Discovery Engine</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Presets -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Configuration Presets</label>
+                <div class="space-y-2">
+                    <button @click="loadPreset('production_safe')" class="w-full px-3 py-2 text-sm bg-green-100 text-green-800 rounded hover:bg-green-200">
+                        Production Safe
+                    </button>
+                    <button @click="loadPreset('hybrid_test')" class="w-full px-3 py-2 text-sm bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200">
+                        Hybrid Test
+                    </button>
+                    <button @click="loadPreset('modular_dev')" class="w-full px-3 py-2 text-sm bg-blue-100 text-blue-800 rounded hover:bg-blue-200">
+                        Modular Dev
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="flex space-x-2">
+                <button @click="reloadApplication()" class="flex-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Apply & Reload
+                </button>
+                <button @click="resetConfiguration()" class="px-3 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
+                    Reset
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Application Container -->
+    <div id="app-container" class="hidden">
+        <!-- Application content will be loaded here dynamically -->
+        <div class="flex-1">
+            <h1 class="text-4xl font-bold text-center py-8 text-gray-800 dark:text-gray-200">
+                Catalynx - Grant Research Intelligence Platform
+            </h1>
+            
+            <div class="max-w-6xl mx-auto px-4">
+                <!-- Configuration Toggle -->
+                <div class="mb-4 flex justify-between items-center">
+                    <div>
+                        <span class="text-sm text-gray-600">Architecture Mode: </span>
+                        <span id="current-mode" class="text-sm font-semibold">Loading...</span>
+                    </div>
+                    <button @click="showConfigPanel = !showConfigPanel" class="px-3 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                        ⚙️ Configure
+                    </button>
+                </div>
+                
+                <!-- Sample Content Area -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-2xl font-semibold mb-4">System Status</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-green-100 p-4 rounded">
+                            <h3 class="font-semibold text-green-800">Architecture</h3>
+                            <p class="text-green-600" x-text="systemInfo.mode">Loading...</p>
+                        </div>
+                        <div class="bg-blue-100 p-4 rounded">
+                            <h3 class="font-semibold text-blue-800">Modules Loaded</h3>
+                            <p class="text-blue-600" x-text="systemInfo.modulesLoaded">Loading...</p>
+                        </div>
+                        <div class="bg-purple-100 p-4 rounded">
+                            <h3 class="font-semibold text-purple-800">Load Time</h3>
+                            <p class="text-purple-600" x-text="systemInfo.loadTime">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Test Pagination (if enabled) -->
+                <div class="bg-white rounded-lg shadow p-6 mt-6" x-show="showPaginationTest">
+                    <h2 class="text-2xl font-semibold mb-4">Pagination Test</h2>
+                    
+                    <!-- Sample data table with pagination -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse border border-gray-200">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="border border-gray-200 px-4 py-2 text-left cursor-pointer hover:bg-gray-100" 
+                                        @click="sortTable('name')">
+                                        Name <span x-text="getSortIndicator('name')"></span>
+                                    </th>
+                                    <th class="border border-gray-200 px-4 py-2 text-left cursor-pointer hover:bg-gray-100"
+                                        @click="sortTable('type')">
+                                        Type <span x-text="getSortIndicator('type')"></span>
+                                    </th>
+                                    <th class="border border-gray-200 px-4 py-2 text-left cursor-pointer hover:bg-gray-100"
+                                        @click="sortTable('score')">
+                                        Score <span x-text="getSortIndicator('score')"></span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(item, index) in getPaginatedData(testData)" :key="index">
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="border border-gray-200 px-4 py-2" x-text="item.name"></td>
+                                        <td class="border border-gray-200 px-4 py-2" x-text="item.type"></td>
+                                        <td class="border border-gray-200 px-4 py-2" x-text="item.score"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination controls -->
+                    <div class="mt-4 flex items-center justify-between">
+                        <div class="text-sm text-gray-600">
+                            Showing <span x-text="((currentPage - 1) * itemsPerPage) + 1"></span> to 
+                            <span x-text="Math.min(currentPage * itemsPerPage, testData.length)"></span> of 
+                            <span x-text="testData.length"></span> results
+                        </div>
+                        
+                        <div class="flex items-center space-x-2">
+                            <button @click="prevPage()" 
+                                    :disabled="currentPage === 1"
+                                    class="px-3 py-1 bg-blue-500 text-white rounded disabled:bg-gray-300">
+                                Previous
+                            </button>
+                            
+                            <template x-for="pageNum in Array.from({length: getTotalPages(testData)}, (_, i) => i + 1)" :key="pageNum">
+                                <button @click="goToPage(pageNum)"
+                                        :class="pageNum === currentPage ? 'bg-blue-600' : 'bg-blue-500'"
+                                        class="px-3 py-1 text-white rounded hover:bg-blue-600"
+                                        x-text="pageNum">
+                                </button>
+                            </template>
+                            
+                            <button @click="nextPage(testData)" 
+                                    :disabled="currentPage === getTotalPages(testData)"
+                                    class="px-3 py-1 bg-blue-500 text-white rounded disabled:bg-gray-300">
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Application Initialization Script -->
+    <script>
+        // Global application state
+        let moduleLoader;
+        let appInitialized = false;
+        
+        // Initialize application
+        async function initializeApplication() {
+            try {
+                updateLoadingStatus('Initializing module loader...', 20);
+                
+                // Create module loader
+                moduleLoader = new window.CatalynxModuleLoader(window.CatalynxConfig);
+                
+                updateLoadingStatus('Loading architecture...', 40);
+                
+                // Load architecture based on configuration
+                const result = await moduleLoader.initialize();
+                
+                updateLoadingStatus('Finalizing setup...', 80);
+                
+                // Update UI based on result
+                updateModeIndicator(result.mode);
+                updateSystemInfo(result);
+                
+                // Initialize Alpine.js application data
+                window.catalynxApp = createAppData(result);
+                
+                updateLoadingStatus('Complete!', 100);
+                
+                // Hide loading screen and show app
+                setTimeout(() => {
+                    document.getElementById('loading-screen').style.display = 'none';
+                    document.getElementById('app-container').classList.remove('hidden');
+                }, 500);
+                
+                appInitialized = true;
+                console.log('✅ Application initialized successfully');
+                
+            } catch (error) {
+                console.error('❌ Application initialization failed:', error);
+                updateLoadingStatus('Initialization failed: ' + error.message, 0);
+                
+                // Show error state
+                setTimeout(() => {
+                    document.getElementById('loading-status').innerHTML = 
+                        '<span class="text-red-600">Failed to load. Please refresh the page.</span>';
+                }, 1000);
+            }
+        }
+        
+        // Create Alpine.js application data
+        function createAppData(loadResult) {
+            return function() {
+                return {
+                    // Configuration panel state
+                    showConfigPanel: false,
+                    configMode: window.CatalynxConfig.getArchitectureMode(),
+                    modularPagination: window.CatalynxConfig.isModularComponentEnabled('pagination'),
+                    modularProfiles: window.CatalynxConfig.isModularComponentEnabled('profiles'),
+                    modularDiscovery: window.CatalynxConfig.isModularComponentEnabled('discovery'),
+                    
+                    // System information
+                    systemInfo: {
+                        mode: loadResult.mode,
+                        modulesLoaded: loadResult.modules ? loadResult.modules.filter(m => m.success).length : 0,
+                        loadTime: loadResult.loadTime ? `${loadResult.loadTime.toFixed(0)}ms` : 'N/A'
+                    },
+                    
+                    // Pagination test data
+                    showPaginationTest: window.CatalynxConfig.isModularComponentEnabled('pagination'),
+                    currentPage: 1,
+                    itemsPerPage: 5,
+                    sortColumn: null,
+                    sortDirection: 'asc',
+                    testData: [
+                        { name: 'Foundation Alpha', type: 'Private Foundation', score: 85 },
+                        { name: 'Community Trust', type: 'Community Foundation', score: 92 },
+                        { name: 'Research Institute', type: 'Research Organization', score: 78 },
+                        { name: 'Education Fund', type: 'Educational Foundation', score: 91 },
+                        { name: 'Health Network', type: 'Health Foundation', score: 88 },
+                        { name: 'Arts Council', type: 'Arts Foundation', score: 76 },
+                        { name: 'Tech Initiative', type: 'Technology Fund', score: 94 },
+                        { name: 'Environment Trust', type: 'Environmental Foundation', score: 82 },
+                        { name: 'Social Services', type: 'Social Foundation', score: 89 },
+                        { name: 'Youth Programs', type: 'Youth Foundation', score: 87 }
+                    ],
+                    
+                    // Pagination methods (will be enhanced based on architecture)
+                    getPaginatedData(data) {
+                        if (!data || !Array.isArray(data)) return [];
+                        
+                        // Apply sorting if column is selected
+                        let sortedData = [...data];
+                        if (this.sortColumn) {
+                            sortedData.sort((a, b) => {
+                                let aVal = a[this.sortColumn];
+                                let bVal = b[this.sortColumn];
+                                
+                                if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+                                if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+                                
+                                if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+                                if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+                                return 0;
+                            });
+                        }
+                        
+                        // Apply pagination
+                        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+                        const endIndex = startIndex + this.itemsPerPage;
+                        return sortedData.slice(startIndex, endIndex);
+                    },
+                    
+                    getTotalPages(data) {
+                        if (!data || !Array.isArray(data)) return 1;
+                        return Math.ceil(data.length / this.itemsPerPage);
+                    },
+                    
+                    sortTable(column) {
+                        if (this.sortColumn === column) {
+                            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+                        } else {
+                            this.sortColumn = column;
+                            this.sortDirection = 'asc';
+                        }
+                        this.currentPage = 1;
+                    },
+                    
+                    getSortIndicator(column) {
+                        if (this.sortColumn !== column) return '';
+                        return this.sortDirection === 'asc' ? '↑' : '↓';
+                    },
+                    
+                    nextPage(data) {
+                        const totalPages = this.getTotalPages(data);
+                        if (this.currentPage < totalPages) {
+                            this.currentPage++;
+                        }
+                    },
+                    
+                    prevPage() {
+                        if (this.currentPage > 1) {
+                            this.currentPage--;
+                        }
+                    },
+                    
+                    goToPage(page) {
+                        this.currentPage = page;
+                    },
+                    
+                    // Configuration methods
+                    changeArchitectureMode() {
+                        window.CatalynxConfig.setArchitectureMode(this.configMode);
+                    },
+                    
+                    toggleModularComponent(component) {
+                        const enabled = window.CatalynxConfig.isModularComponentEnabled(component);
+                        if (enabled) {
+                            window.CatalynxConfig.disableModularComponent(component);
+                        } else {
+                            window.CatalynxConfig.enableModularComponent(component);
+                        }
+                        
+                        // Update local state
+                        this[`modular${component.charAt(0).toUpperCase() + component.slice(1)}`] = !enabled;
+                    },
+                    
+                    loadPreset(presetName) {
+                        if (window.CatalynxConfig.loadPreset(presetName)) {
+                            // Update UI to reflect new configuration
+                            this.configMode = window.CatalynxConfig.getArchitectureMode();
+                            this.modularPagination = window.CatalynxConfig.isModularComponentEnabled('pagination');
+                            this.modularProfiles = window.CatalynxConfig.isModularComponentEnabled('profiles');
+                            this.modularDiscovery = window.CatalynxConfig.isModularComponentEnabled('discovery');
+                        }
+                    },
+                    
+                    reloadApplication() {
+                        window.location.reload();
+                    },
+                    
+                    resetConfiguration() {
+                        window.CatalynxConfig.resetToDefaults();
+                        this.loadPreset('production_safe');
+                    }
+                };
+            };
+        }
+        
+        // Update loading status
+        function updateLoadingStatus(message, progress) {
+            document.getElementById('loading-status').textContent = message;
+            document.getElementById('loading-progress').style.width = progress + '%';
+        }
+        
+        // Update mode indicator
+        function updateModeIndicator(mode) {
+            const indicator = document.getElementById('mode-indicator');
+            indicator.className = `mode-indicator mode-${mode}`;
+            indicator.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+            
+            document.getElementById('current-mode').textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+        }
+        
+        // Update system info
+        function updateSystemInfo(result) {
+            // This will be handled by Alpine.js reactivity
+        }
+        
+        // Start application when DOM is ready
+        document.addEventListener('DOMContentLoaded', initializeApplication);
+    </script>
+    
+    <!-- Fallback Monolithic App (loaded as backup) -->
+    <script src="/static/app.js?v=ALPINE_SCOPE_FIXED" onerror="console.error('Failed to load fallback app.js')"></script>
+</body>
+</html>

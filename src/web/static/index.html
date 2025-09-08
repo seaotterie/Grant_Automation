@@ -914,7 +914,7 @@
                                     </template>
                                     
                                     <!-- Enhanced table with virtual scrolling and pagination -->
-                                    <template x-for="(prospect, index) in (getPaginatedData(discoverData) || [])" :key="`prospect_row_${index}`">
+                                    <template x-for="(prospect, index) in (typeof getPaginatedData === 'function' ? getPaginatedData(discoverData) : discoverData || [])" :key="`prospect_row_${index}`">
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700" x-show="prospect">
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="flex items-center space-x-2">
@@ -1050,14 +1050,14 @@
                                         class="px-3 py-1 text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
                                     Previous
                                 </button>
-                                <template x-for="page in Array.from({length: getTotalPages(discoverData)}, (_, i) => i + 1)" :key="page">
+                                <template x-for="page in Array.from({length: typeof getTotalPages === 'function' ? getTotalPages(discoverData) : 1}, (_, i) => i + 1)" :key="page">
                                     <button @click="goToPage(page)" 
                                             :class="currentPage === page ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                                             class="px-3 py-1 text-sm font-medium border border-gray-300 rounded-md transition-colors">
                                         <span x-text="page"></span>
                                     </button>
                                 </template>
-                                <button @click="nextPage(discoverData)" :disabled="currentPage === getTotalPages(discoverData)" 
+                                <button @click="nextPage(discoverData)" :disabled="currentPage === (typeof getTotalPages === 'function' ? getTotalPages(discoverData) : 1)" 
                                         class="px-3 py-1 text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
                                     Next
                                 </button>
@@ -9184,7 +9184,21 @@
         }, 5000);
     </script>
     
-    <script src="/static/app.js?v=CLEAN_UNIFIED_FILTER_SYSTEM" onerror="console.error('Failed to load app.js')"></script>
+    <!-- Conditionally load modular pagination for hybrid system -->
+    <script>
+        // Try to load modular pagination for hybrid enhancement
+        try {
+            const script = document.createElement('script');
+            script.src = '/static/js/modules/pagination.js';
+            script.async = false; // Ensure it loads before app.js
+            script.onerror = () => console.log('📋 Hybrid pagination: Modular pagination not available, using built-in system');
+            script.onload = () => console.log('✅ Hybrid pagination: Modular pagination enhanced system loaded');
+            document.head.appendChild(script);
+        } catch (error) {
+            console.log('📋 Hybrid pagination: Using built-in pagination system');
+        }
+    </script>
+    <script src="/static/app.js?v=SAFE_PAGINATION_TEMPLATES" onerror="console.error('Failed to load app.js')"></script>
     
     <!-- INLINE FIX: Override getOrganizationTypeColor for PROFILER and DISCOVER cache issue -->
     <script>

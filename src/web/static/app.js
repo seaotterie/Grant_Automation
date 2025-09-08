@@ -622,6 +622,12 @@ function catalynxApp() {
         analysisResults: {},
         candidatesCount: 0,
         
+        // Pagination State
+        currentPage: 1,
+        itemsPerPage: 10,
+        sortColumn: null,
+        sortDirection: 'asc',
+        
         // Research and Filtering
         researchPlatform: {
             name: 'comprehensive',
@@ -15835,6 +15841,140 @@ function catalynxApp() {
                 }
             },
             
+            // ====================================
+            // HYBRID TABLE PAGINATION AND SORTING SYSTEM
+            // ====================================
+            
+            // Initialize modular pagination if available
+            _initModularPagination() {
+                if (window.CatalynxPagination && !this._modularPagination) {
+                    this._modularPagination = new window.CatalynxPagination();
+                    this._paginationState = this._modularPagination.createPaginationState(this.itemsPerPage);
+                    console.log('✅ Hybrid pagination: Using modular pagination system');
+                    return true;
+                }
+                return false;
+            },
+            
+            getPaginatedData(data) {
+                if (!data || !Array.isArray(data)) return [];
+                
+                // Try to use modular pagination if available
+                if (this._initModularPagination()) {
+                    // Update modular pagination state from Alpine.js state
+                    this._paginationState = {
+                        ...this._paginationState,
+                        currentPage: this.currentPage,
+                        itemsPerPage: this.itemsPerPage,
+                        sortColumn: this.sortColumn,
+                        sortDirection: this.sortDirection
+                    };
+                    
+                    return this._modularPagination.getPaginatedData(data, this._paginationState);
+                }
+                
+                // Fall back to built-in pagination
+                // Apply sorting if column is selected
+                let sortedData = [...data];
+                if (this.sortColumn) {
+                    sortedData.sort((a, b) => {
+                        let aVal = a[this.sortColumn];
+                        let bVal = b[this.sortColumn];
+                        
+                        // Handle different data types
+                        if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+                        if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+                        
+                        if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+                        if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+                        return 0;
+                    });
+                }
+                
+                // Apply pagination
+                const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+                const endIndex = startIndex + this.itemsPerPage;
+                return sortedData.slice(startIndex, endIndex);
+            },
+            
+            sortTable(column) {
+                // Try to use modular pagination if available
+                if (this._modularPagination && this._paginationState) {
+                    const newState = this._modularPagination.sortTable(this._paginationState, column);
+                    this.currentPage = newState.currentPage;
+                    this.sortColumn = newState.sortColumn;
+                    this.sortDirection = newState.sortDirection;
+                    this._paginationState = newState;
+                    return;
+                }
+                
+                // Fall back to built-in sorting
+                if (this.sortColumn === column) {
+                    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortColumn = column;
+                    this.sortDirection = 'asc';
+                }
+                // Reset to first page when sorting changes
+                this.currentPage = 1;
+            },
+            
+            getTotalPages(data) {
+                // Try to use modular pagination if available
+                if (this._modularPagination && this._paginationState) {
+                    return this._modularPagination.getTotalPages(data, this._paginationState.itemsPerPage);
+                }
+                
+                // Fall back to built-in calculation
+                if (!data || !Array.isArray(data)) return 1;
+                return Math.ceil(data.length / this.itemsPerPage);
+            },
+            
+            goToPage(page) {
+                // Try to use modular pagination if available
+                if (this._modularPagination && this._paginationState) {
+                    const totalPages = this.getTotalPages();
+                    const newState = this._modularPagination.goToPage(this._paginationState, page, totalPages);
+                    this.currentPage = newState.currentPage;
+                    this._paginationState = newState;
+                    return;
+                }
+                
+                // Fall back to built-in navigation
+                this.currentPage = page;
+            },
+            
+            nextPage(data) {
+                // Try to use modular pagination if available
+                if (this._modularPagination && this._paginationState) {
+                    const newState = this._modularPagination.nextPage(this._paginationState, data);
+                    this.currentPage = newState.currentPage;
+                    this._paginationState = newState;
+                    return;
+                }
+                
+                // Fall back to built-in navigation
+                const totalPages = this.getTotalPages(data);
+                if (this.currentPage < totalPages) {
+                    this.currentPage++;
+                }
+            },
+            
+            prevPage() {
+                // Try to use modular pagination if available
+                if (this._modularPagination && this._paginationState) {
+                    const newState = this._modularPagination.prevPage(this._paginationState);
+                    this.currentPage = newState.currentPage;
+                    this._paginationState = newState;
+                    return;
+                }
+                
+                // Fall back to built-in navigation
+                if (this.currentPage > 1) {
+                    this.currentPage--;
+                }
+            },
+            
             // Utility functions now defined directly in main context above
         }
     }
@@ -17250,71 +17390,7 @@ function addDesktopBulkSelection(appData) {
         this.showTargetDossier = true;
     };
 
-    // ====================================
-    // TABLE PAGINATION AND SORTING SYSTEM
-    // ====================================
-    
-    appData.getPaginatedData = function(data) {
-        if (!data || !Array.isArray(data)) return [];
-        
-        // Apply sorting if column is selected
-        let sortedData = [...data];
-        if (this.sortColumn) {
-            sortedData.sort((a, b) => {
-                let aVal = a[this.sortColumn];
-                let bVal = b[this.sortColumn];
-                
-                // Handle different data types
-                if (typeof aVal === 'string') aVal = aVal.toLowerCase();
-                if (typeof bVal === 'string') bVal = bVal.toLowerCase();
-                
-                if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
-                if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
-                return 0;
-            });
-        }
-        
-        // Apply pagination
-        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-        const endIndex = startIndex + this.itemsPerPage;
-        return sortedData.slice(startIndex, endIndex);
-    };
-    
-    appData.sortTable = function(column) {
-        if (this.sortColumn === column) {
-            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            this.sortColumn = column;
-            this.sortDirection = 'asc';
-        }
-        // Reset to first page when sorting changes
-        this.currentPage = 1;
-    };
-    
-    appData.getTotalPages = function(data) {
-        if (!data || !Array.isArray(data)) return 1;
-        return Math.ceil(data.length / this.itemsPerPage);
-    };
-    
-    appData.goToPage = function(page) {
-        this.currentPage = page;
-    };
-    
-    appData.nextPage = function(data) {
-        const totalPages = this.getTotalPages(data);
-        if (this.currentPage < totalPages) {
-            this.currentPage++;
-        }
-    };
-    
-    appData.prevPage = function() {
-        if (this.currentPage > 1) {
-            this.currentPage--;
-        }
-    };
-
-    // Add keyboard event listener for selection shortcuts
-    document.addEventListener('keydown', (event) => appData.handleSelectionKeyboard(event));
+    // Pagination functions moved to Alpine.js scope - external appData references removed
     
     return appData;
 }
@@ -17355,6 +17431,11 @@ function initializeAlpine() {
                 console.log('DEBUG: getFinancialSummary exists?', typeof testApp.getFinancialSummary);
                 console.log('DEBUG: getRiskLevelColor exists?', typeof testApp.getRiskLevelColor);
                 console.log('DEBUG: active990Tab exists?', typeof testApp.active990Tab);
+                console.log('DEBUG: getPaginatedData exists?', typeof testApp.getPaginatedData);
+                console.log('DEBUG: getTotalPages exists?', typeof testApp.getTotalPages);
+                console.log('DEBUG: sortTable exists?', typeof testApp.sortTable);
+                console.log('DEBUG: nextPage exists?', typeof testApp.nextPage);
+                console.log('DEBUG: prevPage exists?', typeof testApp.prevPage);
             } catch (testError) {
                 console.error('DEBUG: Error testing catalynxApp function:', testError);
             }
