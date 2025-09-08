@@ -4243,6 +4243,12 @@ function catalynxApp() {
             results: 0
         },
         
+        // TABLE PAGINATION AND SORTING SYSTEM
+        currentPage: 1,
+        itemsPerPage: 20,
+        sortColumn: null,
+        sortDirection: 'asc',
+
         // UNIFIED OPPORTUNITIES DATA - Single source of truth for all tabs
         opportunitiesData: [
             // PROSPECTS - Early discovery stage
@@ -17242,6 +17248,69 @@ function addDesktopBulkSelection(appData) {
         // Close intelligence modal and show dossier modal
         this.close4TierIntelligenceModal();
         this.showTargetDossier = true;
+    };
+
+    // ====================================
+    // TABLE PAGINATION AND SORTING SYSTEM
+    // ====================================
+    
+    appData.getPaginatedData = function(data) {
+        if (!data || !Array.isArray(data)) return [];
+        
+        // Apply sorting if column is selected
+        let sortedData = [...data];
+        if (this.sortColumn) {
+            sortedData.sort((a, b) => {
+                let aVal = a[this.sortColumn];
+                let bVal = b[this.sortColumn];
+                
+                // Handle different data types
+                if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+                if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+                
+                if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        
+        // Apply pagination
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        const endIndex = startIndex + this.itemsPerPage;
+        return sortedData.slice(startIndex, endIndex);
+    };
+    
+    appData.sortTable = function(column) {
+        if (this.sortColumn === column) {
+            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            this.sortColumn = column;
+            this.sortDirection = 'asc';
+        }
+        // Reset to first page when sorting changes
+        this.currentPage = 1;
+    };
+    
+    appData.getTotalPages = function(data) {
+        if (!data || !Array.isArray(data)) return 1;
+        return Math.ceil(data.length / this.itemsPerPage);
+    };
+    
+    appData.goToPage = function(page) {
+        this.currentPage = page;
+    };
+    
+    appData.nextPage = function(data) {
+        const totalPages = this.getTotalPages(data);
+        if (this.currentPage < totalPages) {
+            this.currentPage++;
+        }
+    };
+    
+    appData.prevPage = function() {
+        if (this.currentPage > 1) {
+            this.currentPage--;
+        }
     };
 
     // Add keyboard event listener for selection shortcuts

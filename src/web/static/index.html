@@ -570,12 +570,12 @@
                                 <table x-show="!profilesLoading && filteredProfiles.length > 0" class="w-full">
                                     <thead class="bg-gray-50 dark:bg-gray-700">
                                         <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">EIN</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Opportunities</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Discovery</th>
+                                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization Name</th>
+                                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">EIN</th>
+                                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Opportunities</th>
+                                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                            <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Discovery</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -584,26 +584,26 @@
                                                 :class="selectedProfile?.profile_id === profile.profile_id ? 'profile-row-selected' : 'profile-row-selectable border-l-transparent'"
                                                 x-init="$nextTick(() => { if ($data.addProfileContextMenu && typeof $data.addProfileContextMenu === 'function') $data.addProfileContextMenu($el, profile); })"
                                                 @click="selectedProfile = profile">
-                                                <td class="px-6 py-3 whitespace-nowrap">
+                                                <td class="px-6 py-4 whitespace-nowrap">
                                                     <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="profile.name"></div>
                                                 </td>
-                                                <td class="px-6 py-3 whitespace-nowrap">
+                                                <td class="px-6 py-4 whitespace-nowrap">
                                                     <div class="text-sm text-gray-500 dark:text-gray-400" x-text="profile.ein || 'No EIN'"></div>
                                                 </td>
-                                                <td class="px-6 py-3 whitespace-nowrap">
+                                                <td class="px-6 py-4 whitespace-nowrap">
                                                     <span class="px-2 py-1 text-xs font-medium rounded-full"
                                                           :class="getOrganizationTypeColor(profile.organization_type)"
                                                           x-text="profile.organization_type"></span>
                                                 </td>
-                                                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                     <span x-text="profile.opportunities_count || 0"></span> leads
                                                 </td>
-                                                <td class="px-6 py-3 whitespace-nowrap">
+                                                <td class="px-6 py-4 whitespace-nowrap">
                                                     <span class="px-2 py-1 text-xs font-medium rounded-full"
                                                           :class="profile.status === 'active' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200'"
                                                           x-text="profile.status || 'draft'"></span>
                                                 </td>
-                                                <td class="px-6 py-3 whitespace-nowrap">
+                                                <td class="px-6 py-4 whitespace-nowrap">
                                                     <span class="text-sm text-gray-900 dark:text-white"
                                                           x-text="profile.last_discovery_date ? new Date(profile.last_discovery_date).toLocaleDateString() : 'Not run'"></span>
                                                 </td>
@@ -868,10 +868,16 @@
                             <table class="w-full">
                                 <thead class="bg-gray-50 dark:bg-gray-700">
                                     <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stage</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            @click="sortTable('organization_name')">
+                                            <div class="flex items-center justify-between">
+                                                <span>Organization Name</span>
+                                                <span class="ml-1 text-gray-400" x-show="sortColumn === 'organization_name'" x-text="sortDirection === 'asc' ? '↑' : '↓'"></span>
+                                            </div>
+                                        </th>
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stage</th>
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             <div class="flex items-center space-x-1">
                                                 <span>Score</span>
                                                 <button @click="toggleScoreSort()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -881,11 +887,11 @@
                                                 </button>
                                             </div>
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">App Status</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">990 Grantee</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Source</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Funding</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">App Status</th>
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">990 Grantee</th>
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Source</th>
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Funding</th>
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -907,10 +913,10 @@
                                         </tr>
                                     </template>
                                     
-                                    <!-- Robust Data Rendering: Use index-based keys and null guards -->
-                                    <template x-for="(prospect, index) in (discoverData || [])" :key="`prospect_row_${index}`">
+                                    <!-- Enhanced table with virtual scrolling and pagination -->
+                                    <template x-for="(prospect, index) in (getPaginatedData(discoverData) || [])" :key="`prospect_row_${index}`">
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700" x-show="prospect">
-                                            <td class="px-6 py-3 whitespace-nowrap">
+                                            <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="flex items-center space-x-2">
                                                 <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="prospect?.organization_name || '[Organization Name Missing]'"></div>
                                                 <!-- 990-PF Foundation Indicator -->
@@ -927,18 +933,18 @@
                                                 </span>
                                             </div>
                                             </td>
-                                            <td class="px-6 py-3 whitespace-nowrap">
+                                            <td class="px-6 py-4 whitespace-nowrap">
                                                 <span class="px-2 py-1 text-xs font-medium rounded-full" 
                                                       :class="getStageColor(getActualStage(prospect))"
                                                       x-text="formatStageWithNumber(getActualStage(prospect))">
                                                 </span>
                                             </td>
-                                            <td class="px-6 py-3 whitespace-nowrap">
+                                            <td class="px-6 py-4 whitespace-nowrap">
                                                 <span class="px-2 py-1 text-xs font-medium rounded-full" 
                                                       :class="getOrganizationTypeColor(prospect.organization_type || prospect.source_type || 'Nonprofit')"
                                                       x-text="prospect.organization_type || prospect.source_type || 'Nonprofit'"></span>
                                             </td>
-                                            <td class="px-6 py-3 whitespace-nowrap">
+                                            <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="flex flex-col space-y-1">
                                                     <!-- Score Bar and Percentage -->
                                                     <div class="flex items-center">
@@ -999,7 +1005,7 @@
                                                       class="text-gray-400 dark:text-gray-500" 
                                                       title="Status Unknown">Unknown</span>
                                             </td>
-                                            <td class="px-6 py-3 whitespace-nowrap">
+                                            <td class="px-6 py-4 whitespace-nowrap">
                                                 <div x-show="prospect?.is_schedule_i_grantee" class="flex items-center">
                                                     <span class="inline-flex items-center px-1.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200 rounded dark:bg-yellow-800 dark:text-yellow-200 dark:border-yellow-700">
                                                         <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -1010,10 +1016,10 @@
                                                 </div>
                                                 <div x-show="!prospect?.is_schedule_i_grantee" class="text-xs text-gray-400">-</div>
                                             </td>
-                                            <td class="px-6 py-3 whitespace-nowrap">
+                                            <td class="px-6 py-4 whitespace-nowrap">
                                                 <span class="text-sm text-gray-900 dark:text-white" x-text="prospect?.discovery_source || prospect?.source_type || 'Unknown'"></span>
                                             </td>
-                                            <td class="px-6 py-3 whitespace-nowrap">
+                                            <td class="px-6 py-4 whitespace-nowrap">
                                                 <span class="text-sm text-gray-900 dark:text-white" x-text="prospect?.funding_amount ? '$' + prospect.funding_amount.toLocaleString() : 'Unknown'"></span>
                                             </td>
                                             <td class="px-6 py-3 whitespace-nowrap text-sm font-medium space-x-2">
@@ -1026,6 +1032,36 @@
                                     </template>
                                 </tbody>
                             </table>
+                        </div>
+                        
+                        <!-- Enhanced Pagination Controls for DISCOVER -->
+                        <div x-show="discoverData && discoverData.length > itemsPerPage" class="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                                <span>Showing </span>
+                                <span class="font-medium" x-text="((currentPage - 1) * itemsPerPage) + 1"></span>
+                                <span> to </span>
+                                <span class="font-medium" x-text="Math.min(currentPage * itemsPerPage, discoverData.length)"></span>
+                                <span> of </span>
+                                <span class="font-medium" x-text="discoverData.length"></span>
+                                <span> results</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button @click="prevPage()" :disabled="currentPage === 1" 
+                                        class="px-3 py-1 text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Previous
+                                </button>
+                                <template x-for="page in Array.from({length: getTotalPages(discoverData)}, (_, i) => i + 1)" :key="page">
+                                    <button @click="goToPage(page)" 
+                                            :class="currentPage === page ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
+                                            class="px-3 py-1 text-sm font-medium border border-gray-300 rounded-md transition-colors">
+                                        <span x-text="page"></span>
+                                    </button>
+                                </template>
+                                <button @click="nextPage(discoverData)" :disabled="currentPage === getTotalPages(discoverData)" 
+                                        class="px-3 py-1 text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Next
+                                </button>
+                            </div>
                         </div>
                         
                         <!-- Empty State -->
@@ -1446,28 +1482,28 @@
                                     <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                         <thead class="bg-gray-50 dark:bg-gray-700">
                                             <tr>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                                    Organization
+                                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                                    Organization Name
                                                 </th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                                     Stage
                                                 </th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                                     Type
                                                 </th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                                     990 Analysis
                                                 </th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                                     Network Score
                                                 </th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                                     Enhanced Score
                                                 </th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                                     Combined
                                                 </th>
-                                                <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                                     Actions
                                                 </th>
                                             </tr>
@@ -1963,28 +1999,28 @@
                             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead class="bg-gray-50 dark:bg-gray-700">
                                     <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Organization
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Organization Name
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Stage
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Type
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Combined Score
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Network Score
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             AI Analysis
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             AI Status
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Actions
                                         </th>
                                     </tr>
@@ -2466,25 +2502,25 @@
                             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead class="bg-gray-50 dark:bg-gray-700">
                                     <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                            Organization
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Organization Name
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Stage
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Type
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             AI Analysis Score
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Funding Amount
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Deep AI Status
                                         </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                             Actions
                                         </th>
                                     </tr>
