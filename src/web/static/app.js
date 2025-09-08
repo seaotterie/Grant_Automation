@@ -3820,7 +3820,7 @@ function catalynxApp() {
         clearProfileData() {
             // Clear all profile-specific data when switching profiles
             this.opportunitiesData = [];
-            this.planData = {};
+            this.strategicPlanData = {};
             this.discoveryStats = {
                 activeTracks: 4,
                 totalResults: 0,
@@ -3920,14 +3920,14 @@ function catalynxApp() {
                 if (!response.ok) {
                     if (response.status === 404) {
                         console.log('No plan results found for profile, starting with empty state');
-                        this.planData = {};
+                        this.strategicPlanData = {};
                         return;
                     }
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
                 const data = await response.json();
-                this.planData = data.plan_results || {};
+                this.strategicPlanData = data.plan_results || {};
                 
                 // Restore opportunity scores to opportunities data
                 const opportunityScores = data.opportunity_scores || {};
@@ -3961,7 +3961,7 @@ function catalynxApp() {
 
             } catch (error) {
                 console.error('Failed to load plan results:', error);
-                this.planData = {}; // Start with empty state on error
+                this.strategicPlanData = {}; // Start with empty state on error
             }
         },
 
@@ -4023,7 +4023,7 @@ function catalynxApp() {
                 }
 
                 const result = await response.json();
-                this.planData = planResults;
+                this.strategicPlanData = planResults;
                 
                 this.showNotification('Plan Saved', 'Strategic planning results and opportunity scores saved successfully', 'success');
                 return true;
@@ -4589,6 +4589,7 @@ function catalynxApp() {
             console.log(`[DEBUG] OpportunitiesData length: ${this.opportunitiesData.length}`);
             let filtered = this.opportunitiesData.filter(opp => {
                 const stage = opp.funnel_stage || opp.current_stage;
+                // PLAN tab shows #2 Qualified and above (excludes #1 Prospects)
                 return ['qualified', 'candidates', 'targets', 'opportunities'].includes(stage) &&
                        this.isOpportunityInScope(opp);
             });

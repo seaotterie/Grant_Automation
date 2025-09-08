@@ -1485,7 +1485,7 @@
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                            <template x-for="prospect in discoverData" :key="prospect.opportunity_id">
+                                            <template x-for="prospect in planData" :key="prospect.opportunity_id">
                                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer" 
                                                     x-init="addOpportunityContextMenu && addOpportunityContextMenu($el, prospect)"
                                                     :class="{'!bg-blue-100 dark:!bg-blue-900 border-l-4 border-blue-500': isSelected && isSelected(prospect.opportunity_id)}"
@@ -1552,7 +1552,7 @@
                                             </template>
                                             
                                             <!-- Empty State -->
-                                            <tr x-show="discoverData.length === 0">
+                                            <tr x-show="planData.length === 0">
                                                 <td colspan="8" class="px-6 py-12 text-center">
                                                     <div class="text-gray-400 dark:text-gray-600">
                                                         <svg class="mx-auto h-12 w-12 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
