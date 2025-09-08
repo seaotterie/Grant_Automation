@@ -5322,7 +5322,7 @@ function catalynxApp() {
             }
             
             try {
-                this.showNotification('AI-Heavy-2 Deep Analysis', 'Starting comprehensive deep research & strategic intelligence (~$0.08/candidate)...', 'info');
+                this.showNotification('AI-Heavy-2 Deep Analysis', 'Starting comprehensive deep research & strategic intelligence...', 'info');
                 
                 // Use the first target opportunity as the primary research subject
                 const primaryTarget = targetOpportunities[0];
@@ -10413,7 +10413,7 @@ function catalynxApp() {
             if (!this.enhancedDiscoveryProgress[track]) return '';
             
             const progress = this.enhancedDiscoveryProgress[track];
-            const baseClasses = 'text-xs px-2 py-1 rounded transition-colors';
+            const baseClasses = 'text-sm px-4 py-2 rounded-md font-medium transition-colors';
             
             switch (progress.state) {
                 case 'idle':
