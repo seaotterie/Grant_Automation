@@ -605,7 +605,7 @@ class UnifiedOpportunity(BaseModel):
     ein: Optional[str] = Field(default=None, description="EIN if available")
     
     # Pipeline Status - Single Source of Truth
-    current_stage: str = Field(default="discovery", description="Current pipeline stage")
+    current_stage: str = Field(default="prospects", description="Current pipeline stage")
     stage_history: List[StageTransition] = Field(default=[], description="Complete stage history")
     
     # Scoring - Computed Once, Referenced Forever

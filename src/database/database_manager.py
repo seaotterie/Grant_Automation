@@ -62,7 +62,7 @@ class Opportunity:
     profile_id: str
     organization_name: str
     ein: Optional[str] = None
-    current_stage: str = 'discovery'
+    current_stage: str = 'prospects'
     stage_history: Optional[List] = None
     overall_score: float = 0.0
     confidence_level: Optional[float] = None
@@ -388,7 +388,10 @@ class DatabaseManager:
     # =====================================================================================
     
     def create_opportunity(self, opportunity: Opportunity) -> bool:
-        """Create new opportunity in database"""
+        """Create new opportunity in database with performance monitoring"""
+        import time
+        start_time = time.time()
+        
         try:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
@@ -426,7 +429,26 @@ class DatabaseManager:
                 ))
                 
                 conn.commit()
-                logger.info(f"Opportunity created: {opportunity.organization_name} ({opportunity.id})")
+                
+                # Update profile opportunities count
+                try:
+                    cursor.execute("""
+                        UPDATE profiles 
+                        SET opportunities_count = (
+                            SELECT COUNT(*) FROM opportunities 
+                            WHERE profile_id = ? AND status = 'active'
+                        )
+                        WHERE id = ?
+                    """, (opportunity.profile_id, opportunity.profile_id))
+                    conn.commit()
+                    logger.info(f"Updated profile {opportunity.profile_id} opportunities count")
+                except Exception as update_error:
+                    logger.warning(f"Failed to update profile opportunities count: {update_error}")
+                
+                # Log performance metrics
+                duration = time.time() - start_time
+                logger.info(f"Opportunity created: {opportunity.organization_name} ({opportunity.id}) - Duration: {duration:.3f}s")
+                
                 return True
                 
         except Exception as e:
@@ -978,7 +1000,7 @@ def migrate_json_data_to_database(json_data_path: str, db_manager: DatabaseManag
                         profile_id=opp_data.get('profile_id'),
                         organization_name=opp_data.get('organization_name'),
                         ein=opp_data.get('ein'),
-                        current_stage=opp_data.get('current_stage', 'discovery'),
+                        current_stage=opp_data.get('current_stage', 'prospects'),
                         stage_history=opp_data.get('stage_history'),
                         overall_score=opp_data.get('scoring', {}).get('overall_score', 0.0),
                         confidence_level=opp_data.get('scoring', {}).get('confidence_level'),
@@ -1031,7 +1053,7 @@ if __name__ == "__main__":
             profile_id="test_profile_123", 
             organization_name="Test Foundation",
             ein="98-7654321",
-            current_stage="discovery",
+            current_stage="prospects",
             overall_score=0.75,
             analysis_discovery={"test": "data"}
         )

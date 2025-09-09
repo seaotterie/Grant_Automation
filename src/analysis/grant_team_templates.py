@@ -671,9 +671,9 @@ class GrantTeamTemplates:
     def _identify_next_stage_requirements(self, opportunity_data: Dict[str, Any]) -> List[str]:
         """Identify requirements for next stage"""
         current_stage = opportunity_data.get('current_stage', '')
-        if current_stage == 'discovery':
+        if current_stage == 'prospects':
             return ["Complete network analysis", "Gather additional data"]
-        elif current_stage == 'pre_scoring':
+        elif current_stage == 'qualified':
             return ["Finalize scoring", "Conduct risk assessment"]
         else:
             return ["Stage-specific requirements"]

@@ -310,7 +310,7 @@ class TestDataFactory:
             "raw_score": random.uniform(0.3, 0.95),
             "compatibility_score": random.uniform(0.4, 0.9),
             "confidence_level": random.uniform(0.6, 0.95),
-            "funnel_stage": random.choice(["prospects", "qualified_prospects", "candidates"])
+            "funnel_stage": random.choice(["prospects", "qualified", "candidates"])
         }
         
         # Override with provided kwargs

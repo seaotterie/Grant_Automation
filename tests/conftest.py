@@ -167,7 +167,7 @@ def sample_opportunities_batch():
             "raw_score": 0.5 + (i * 0.05),
             "compatibility_score": 0.6 + (i * 0.04),
             "confidence_level": 0.7 + (i * 0.03),
-            "funnel_stage": ["prospects", "qualified_prospects", "candidates"][i % 3]
+            "funnel_stage": ["prospects", "qualified", "candidates"][i % 3]
         }
         opportunities.append(opp)
     

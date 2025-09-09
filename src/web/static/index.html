@@ -9198,7 +9198,7 @@
             console.log('📋 Hybrid pagination: Using built-in pagination system');
         }
     </script>
-    <script src="/static/app.js?v=SAFE_PAGINATION_TEMPLATES" onerror="console.error('Failed to load app.js')"></script>
+    <script src="/static/app.js?v=BACKEND_FIXES_COMPLETE" onerror="console.error('Failed to load app.js')"></script>
     
     <!-- INLINE FIX: Override getOrganizationTypeColor for PROFILER and DISCOVER cache issue -->
     <script>
@@ -9465,7 +9465,7 @@
                                     stage: opportunity.stage,
                                     expected_display: opportunity.funnel_stage ? 
                                         (opportunity.funnel_stage === 'prospects' ? '#1 Prospect' :
-                                         opportunity.funnel_stage === 'qualified_prospects' ? '#2 Qualified Prospect' :
+                                         opportunity.funnel_stage === 'qualified' ? '#2 Qualified Prospect' :
                                          opportunity.funnel_stage === 'candidates' ? '#3 Candidate' :
                                          opportunity.funnel_stage === 'targets' ? '#4 Target' :
                                          opportunity.funnel_stage === 'opportunities' ? '#5 Opportunity' : 

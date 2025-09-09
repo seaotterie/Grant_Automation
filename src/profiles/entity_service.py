@@ -24,6 +24,7 @@ from ..core.entity_cache_manager import get_entity_cache_manager, EntityType, Da
 from ..analytics.financial_analytics import get_financial_analytics, FinancialMetrics
 from ..analytics.network_analytics import get_network_analytics, NetworkMetrics
 from ..analysis.profile_matcher import get_profile_matcher, OpportunityMatch, ProfileMatchResults
+from ..database.database_manager import DatabaseManager, Opportunity
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ class EntityProfileService(ProfileService):
         self.financial_analytics = get_financial_analytics()
         self.network_analytics = get_network_analytics()
         self.profile_matcher = get_profile_matcher()
+        self.database_service = DatabaseManager("data/catalynx.db")
         
         self.logger = logging.getLogger(__name__)
     
@@ -366,8 +368,35 @@ class EntityProfileService(ProfileService):
             if additional_data:
                 lead_data.update(additional_data)
             
-            # Use the base class method to create the lead
-            return self.add_opportunity_lead(profile_id, lead_data)
+            # Create opportunity using DatabaseManager for consistency
+            opportunity_id = f"entity_{uuid.uuid4().hex[:12]}"
+            db_stage = lead_data.get("current_stage", "prospects")
+            
+            opportunity = Opportunity(
+                id=opportunity_id,
+                profile_id=profile_id,
+                organization_name=lead_data.get("organization_name", ""),
+                ein=lead_data.get("external_data", {}).get("ein"),
+                current_stage=db_stage,
+                scoring={"overall_score": lead_data.get("compatibility_score", 0.0)},
+                analysis={"match_factors": lead_data.get("match_factors", {})},
+                source="entity_service",
+                opportunity_type=lead_data.get("opportunity_type", "entity"),
+                description=lead_data.get("description"),
+                funding_amount=lead_data.get("funding_amount"),
+                program_name=lead_data.get("program_name"),
+                discovered_at=datetime.now(),
+                last_updated=datetime.now(),
+                status="active"
+            )
+            
+            success = self.database_service.create_opportunity(opportunity)
+            if success:
+                self.logger.info(f"Entity opportunity created via DatabaseManager: {opportunity_id}")
+                return opportunity_id
+            else:
+                self.logger.error(f"Failed to create entity opportunity: {opportunity_id}")
+                return None
             
         except Exception as e:
             self.logger.error(f"Error adding entity lead: {e}")

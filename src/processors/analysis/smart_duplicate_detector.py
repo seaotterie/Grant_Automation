@@ -23,7 +23,7 @@ from difflib import SequenceMatcher
 from pydantic import BaseModel, Field
 from enum import Enum
 
-from src.core.base_processor import BaseProcessor
+from src.core.base_processor import BaseProcessor, ProcessorMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -97,10 +97,15 @@ class SmartDuplicateDetector(BaseProcessor):
     """Phase 3 Enhanced: Smart duplicate detection with ML-based similarity analysis"""
     
     def __init__(self):
-        super().__init__()
-        self.processor_name = "Smart Duplicate Detector"
-        self.description = "Phase 3 Enhanced: ML-based duplicate detection across all opportunity sources with intelligent clustering"
-        self.version = "2.0.0"
+        metadata = ProcessorMetadata(
+            name="smart_duplicate_detector",
+            description="Phase 3 Enhanced: ML-based duplicate detection across all opportunity sources with intelligent clustering",
+            version="2.0.0",
+            dependencies=[],
+            estimated_duration=30,
+            processor_type="analysis"
+        )
+        super().__init__(metadata)
         
         # Detection thresholds
         self.high_confidence_threshold = 0.9

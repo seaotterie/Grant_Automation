@@ -66,7 +66,7 @@ class UnifiedDiscoveryAdapter:
             profile_id=profile_id,
             organization_name=discovery_result.organization_name,
             ein=discovery_result.external_data.get('ein') if discovery_result.external_data else None,
-            current_stage="discovery",
+            current_stage="prospects",
             stage_history=[],
             scoring=scoring,
             analysis={"discovery": discovery_analysis},
@@ -273,10 +273,10 @@ class UnifiedDiscoveryAdapter:
                     # Auto-promote through discovery -> pre_scoring -> deep_analysis
                     final_stage = "deep_analysis"  # Target stage for high-scoring opportunities
                     
-                    if opportunity.current_stage == "discovery":
-                        final_stage = "deep_analysis"  # Skip intermediate stages for high scores
-                    elif opportunity.current_stage == "pre_scoring":
-                        final_stage = "deep_analysis"
+                    if opportunity.current_stage == "prospects":
+                        final_stage = "candidates"  # Skip intermediate stages for high scores
+                    elif opportunity.current_stage == "qualified":
+                        final_stage = "candidates"
                     
                     # Update opportunity in-memory (before saving)
                     old_stage = opportunity.current_stage

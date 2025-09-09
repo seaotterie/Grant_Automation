@@ -412,7 +412,7 @@ const CatalynxUtils = {
             }
         }
         
-        // Validate funnel stage - UPDATED for business terms
+        // Validate funnel stage - UNIFIED STAGE APPROACH (discovery mapped to prospects)
         const validStages = ['prospects', 'qualified', 'candidates', 'targets', 'opportunities'];
         if (!validStages.includes(opportunity.funnel_stage)) {
             console.warn('Invalid funnel stage:', opportunity.funnel_stage);
@@ -429,9 +429,9 @@ const CatalynxUtils = {
             return null;
         }
         
-        // SIMPLIFIED: Database now stores business terms directly
+        // UNIFIED STAGE APPROACH: Direct stage usage (database aligned with business terms)
         const current_stage = rawOpportunity.current_stage || rawOpportunity.pipeline_stage || rawOpportunity.stage || 'prospects';
-        const funnel_stage = current_stage;  // Direct assignment - no mapping needed
+        const funnel_stage = current_stage;
         
         // Log stage standardization for debugging
         if (rawOpportunity.current_stage || rawOpportunity.pipeline_stage || rawOpportunity.stage) {
@@ -5476,8 +5476,13 @@ function catalynxApp() {
                 if (!skipBMFPreprocessing && !this.unifiedDiscoveryInProgress) {
                     console.log('Auto-running BMF preprocessing for nonprofit track...');
                     const bmfResults = await this.executeBMFFilter();
-                    await this.saveBMFResultsToBackend(bmfResults);
-                    console.log('BMF preprocessing completed for nonprofit track');
+                    try {
+                        await this.saveBMFResultsToBackend(bmfResults);
+                        console.log('BMF preprocessing completed for nonprofit track');
+                    } catch (error) {
+                        console.warn('BMF save failed, continuing without backend persistence:', error.message);
+                        this.showNotification('BMF Save Warning', 'BMF results could not be saved but discovery will continue', 'warning');
+                    }
                 }
                 
                 console.log('Running nonprofit discovery with criteria:', this.nonprofitDiscovery);
@@ -5491,28 +5496,83 @@ function catalynxApp() {
                     profile_context: this.selectedDiscoveryProfile || {}
                 };
                 
-                const response = await fetch(`/api/discovery/nonprofit`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestData)
-                });
+                console.log('[DEBUG] Sending nonprofit discovery request:', requestData);
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                // Circuit breaker pattern with optimized timeout
+                let data;
+                try {
+                    // Add circuit breaker timeout - reduced to 30 seconds due to BMF optimizations
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+                    
+                    console.log('[DEBUG] Calling nonprofit discovery API with 30s timeout...');
+                    const response = await fetch(`/api/discovery/nonprofit`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestData),
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    console.log('[DEBUG] Nonprofit discovery response status:', response.status);
+                    
+                    if (response.ok) {
+                        data = await response.json();
+                        console.log('[DEBUG] Nonprofit discovery succeeded:', data.status);
+                    } else {
+                        const errorText = await response.text();
+                        console.error('[DEBUG] Nonprofit discovery HTTP error:', response.status, errorText);
+                        // Graceful fallback - API returned error but let discovery continue
+                        data = { 
+                            results: [], 
+                            total_found: 0, 
+                            status: 'failed',
+                            error: `API returned ${response.status}` 
+                        };
+                    }
+                } catch (fetchError) {
+                    console.error('[DEBUG] Nonprofit discovery fetch failed:', fetchError);
+                    if (fetchError.name === 'AbortError') {
+                        console.warn('[CIRCUIT BREAKER] Nonprofit API timed out - using fallback');
+                        data = { 
+                            results: [], 
+                            total_found: 0, 
+                            status: 'timeout',
+                            error: 'API timed out after 30 seconds' 
+                        };
+                    } else {
+                        console.warn('[CIRCUIT BREAKER] Nonprofit API failed - using fallback');
+                        data = { 
+                            results: [], 
+                            total_found: 0, 
+                            status: 'error',
+                            error: fetchError.message 
+                        };
+                    }
                 }
                 
-                const data = await response.json();
                 console.log('Nonprofit discovery API response:', data);
                 console.log(`Nonprofit API returned ${data.total_found} total results`);
+                
+                // Check if backend handled deduplication already
+                const totalStored = data.total_stored || 0;
+                const duplicatesSkipped = data.duplicates_skipped || 0;
+                const backendDeduplicationApplied = duplicatesSkipped > 0 && totalStored === 0;
                 
                 // Process and integrate results into opportunity pipeline
                 // The API returns {status, track, total_found, results} format
                 // where results = {bmf_results: [...], propublica_results: [...]}
                 if (data.status === 'completed' && data.results) {
-                    const allResults = [
+                    let allResults = [
                         ...(data.results.propublica_results || []),
                         ...(data.results.bmf_results || [])
                     ];
+                    
+                    // If backend already handled deduplication and stored nothing new, don't process duplicates
+                    if (backendDeduplicationApplied) {
+                        console.log(`Backend deduplication detected: ${duplicatesSkipped} duplicates skipped, ${totalStored} new records. Skipping duplicate processing.`);
+                        allResults = []; // No new results to process since all were duplicates
+                    }
                     
                     console.log(`Processing ${allResults.length} combined nonprofit results`);
                     
@@ -5597,8 +5657,13 @@ function catalynxApp() {
                 
                 console.log(`Nonprofit discovery completed: ${this.nonprofitTrackStatus.results} organizations found`);
                 
-                // Update discovery stats based on actual opportunity data
-                this.updateDiscoveryStatsFromData(this.opportunitiesData);
+                // Only update discovery stats if we actually processed new results
+                // When backend deduplication is applied, don't increment discovery stats
+                if (!backendDeduplicationApplied) {
+                    this.updateDiscoveryStatsFromData(this.opportunitiesData);
+                } else {
+                    console.log(`Skipping discovery stats update - backend deduplication applied (${duplicatesSkipped} duplicates, ${totalStored} new)`);
+                }
                 
             } catch (error) {
                 console.error('Nonprofit discovery failed:', error);
@@ -10318,10 +10383,11 @@ function catalynxApp() {
                 const result = await response.json();
                 console.log('[BMF] BMF discovery completed:', result);
                 
-                // Update nonprofit stats (BMF integrated)
-                const totalBMFResults = (bmfResults.nonprofits?.length || 0) + (bmfResults.foundations?.length || 0);
-                this.discoveryStats.nonprofit += totalBMFResults;
-                console.log(`[BMF] Updated nonprofit stats with BMF integration: ${totalBMFResults} opportunities`);
+                // Update nonprofit stats using actual stored results (not including duplicates)
+                // Use total_stored from backend response instead of frontend bmfResults length
+                const actualStoredResults = result.total_stored || result.opportunities_added || 0;
+                this.discoveryStats.nonprofit += actualStoredResults;
+                console.log(`[BMF] Updated nonprofit stats with actual stored results: ${actualStoredResults} opportunities (duplicates skipped: ${result.duplicates_skipped || 0})`);
                 
                 // Note: Do not call loadRealOpportunities() here to prevent data duplication
                 // Backend handles persistence, let unified discovery flow handle data updates

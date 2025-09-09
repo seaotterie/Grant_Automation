@@ -513,7 +513,7 @@ class ResearchScoringIntegration:
             if opportunity_data.get('funding_amount'):
                 base_score += 0.1
             
-            if opportunity_data.get('current_stage') in ['recommendations', 'deep_analysis']:
+            if opportunity_data.get('current_stage') in ['opportunities', 'candidates']:
                 base_score += 0.05
             
             return {

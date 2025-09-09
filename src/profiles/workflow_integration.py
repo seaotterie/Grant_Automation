@@ -14,6 +14,8 @@ from src.core.workflow_engine import get_workflow_engine
 from src.core.data_models import WorkflowConfig
 from src.discovery.discovery_engine import discovery_engine
 from src.pipeline.pipeline_engine import pipeline_engine, PipelineConfig, ProcessingPriority
+from src.database.database_manager import DatabaseManager, Opportunity
+import uuid
 
 
 class ProfileWorkflowIntegrator:
@@ -25,6 +27,7 @@ class ProfileWorkflowIntegrator:
         self.unified_service = get_unified_profile_service()
         self.discovery_adapter = get_unified_discovery_adapter()
         self.workflow_engine = get_workflow_engine()
+        self.database_service = DatabaseManager("data/catalynx.db")
     
     async def discover_opportunities_for_profile(
         self, 
@@ -614,15 +617,37 @@ class ProfileWorkflowIntegrator:
                     "external_data": recommendation.external_data
                 }
                 
-                # Add lead to profile
-                lead = self.profile_service.add_opportunity_lead(profile_id, lead_data)
-                if lead:
-                    # Update lead stage based on pipeline stage
-                    final_rank = recommendation.external_data.get("final_rank", 999)
-                    if final_rank <= 5:
-                        self.profile_service.update_lead_stage(lead.lead_id, PipelineStage.RECOMMENDATIONS)
-                    else:
-                        self.profile_service.update_lead_stage(lead.lead_id, PipelineStage.DEEP_ANALYSIS)
+                # Create opportunity using database service (migrated from ProfileService)
+                try:
+                    opportunity_id = f"opp_{uuid.uuid4().hex[:12]}"
+                    
+                    # Map pipeline stage to business stage (aligned with filtering system)
+                    db_stage = "opportunities" if recommendation.external_data.get("final_rank", 999) <= 5 else "candidates"
+                    
+                    opportunity = Opportunity(
+                        id=opportunity_id,
+                        profile_id=profile_id,
+                        organization_name=lead_data.get("organization_name", ""),
+                        ein=lead_data.get("external_data", {}).get("ein"),
+                        current_stage=db_stage,
+                        scoring={"overall_score": lead_data.get("compatibility_score", 0.0)},
+                        analysis={"match_factors": lead_data.get("match_factors", {})},
+                        source="workflow_integration",
+                        opportunity_type=lead_data.get("opportunity_type", "grants"),
+                        description=lead_data.get("description"),
+                        funding_amount=lead_data.get("funding_amount"),
+                        program_name=lead_data.get("program_name"),
+                        discovered_at=datetime.now(),
+                        last_updated=datetime.now(),
+                        status="active"
+                    )
+                    
+                    if not self.database_service.create_opportunity(opportunity):
+                        print(f"Warning: Failed to save workflow opportunity {opportunity_id} to database")
+                        
+                except Exception as create_error:
+                    print(f"Error creating workflow opportunity: {create_error}")
+                    # Continue processing other opportunities
         
         return {
             "pipeline_id": pipeline_results["pipeline_id"],
