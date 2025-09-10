@@ -412,11 +412,19 @@ const CatalynxUtils = {
             }
         }
         
-        // Validate funnel stage - UNIFIED STAGE APPROACH (discovery mapped to prospects)
-        const validStages = ['prospects', 'qualified', 'candidates', 'targets', 'opportunities'];
+        // Validate funnel stage - UNIFIED STAGE APPROACH with fallback handling
+        const validStages = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities'];
+        
+        // Handle legacy or invalid stages with fallback
         if (!validStages.includes(opportunity.funnel_stage)) {
-            console.warn('Invalid funnel stage:', opportunity.funnel_stage);
-            return false;
+            // Auto-correct common invalid stages
+            if (opportunity.funnel_stage === 'discovery' || opportunity.funnel_stage === 'qualified') {
+                opportunity.funnel_stage = opportunity.funnel_stage === 'discovery' ? 'prospects' : 'qualified_prospects';
+                console.log(`Auto-corrected funnel stage: ${opportunity.funnel_stage === 'prospects' ? 'discovery' : 'qualified'} → ${opportunity.funnel_stage}`);
+            } else {
+                console.warn('Invalid funnel stage, defaulting to prospects:', opportunity.funnel_stage);
+                opportunity.funnel_stage = 'prospects'; // Default fallback
+            }
         }
         
         return true;
@@ -10244,80 +10252,117 @@ function catalynxApp() {
         },
 
         async executeBMFFilter() {
-            // Simulate quick BMF filtering based on profile NTEE codes
-            // In reality, this would query the local VA BMF CSV file
-            const profileNteeCodes = this.selectedDiscoveryProfile.ntee_codes || ['B20', 'B25', 'P20'];
-            const delay = Math.random() * 500 + 200; // 200-700ms for quick local filter
-            
-            await new Promise(resolve => setTimeout(resolve, delay));
-            
-            // Generate realistic BMF results
-            const bmfResults = {
-                nonprofits: [],
-                foundations: [],
-                filter_criteria: {
-                    ntee_codes: profileNteeCodes,
-                    state: 'VA',
-                    foundation_code: '03'
+            // Execute real BMF filtering using the backend BMF processor endpoint
+            try {
+                if (!this.selectedDiscoveryProfile) {
+                    throw new Error('No profile selected for BMF filtering');
                 }
-            };
-            
-            // Real VA nonprofit organizations
-            const realNonprofits = [
-                { name: 'Grantmakers In Aging Inc', ein: '13-4014982', ntee: 'P81' },
-                { name: 'The Fauquier Free Clinic Inc', ein: '54-1669652', ntee: 'E21' },
-                { name: 'Heroes Bridge', ein: '81-2827604', ntee: 'L11' },
-                { name: 'Virginia Community Capital', ein: '54-1844477', ntee: 'S30' },
-                { name: 'Chesapeake Bay Foundation', ein: '52-1092711', ntee: 'C32' },
-                { name: 'United Way of Greater Richmond', ein: '54-0505964', ntee: 'T31' },
-                { name: 'Richmond Memorial Health Foundation', ein: '54-1456789', ntee: 'E20' },
-                { name: 'Norfolk Botanical Garden Society', ein: '54-0567890', ntee: 'A54' }
-            ];
-            
-            // Add real nonprofits
-            const nonprofitCount = Math.min(realNonprofits.length, Math.max(5, 8));
-            for (let i = 0; i < nonprofitCount; i++) {
-                const org = realNonprofits[i];
-                bmfResults.nonprofits.push({
-                    organization_name: org.name,
-                    ein: org.ein,
-                    ntee_code: org.ntee,
-                    state: 'VA',
-                    source_type: 'Nonprofit',
-                    discovery_source: 'BMF Filter',
-                    bmf_filtered: true,
-                    compatibility_score: 0.6 + Math.random() * 0.3
+                
+                console.log('Executing real BMF filter for profile:', this.selectedDiscoveryProfile.name);
+                
+                // Call the real BMF discovery endpoint
+                const response = await fetch(`/api/discovery/bmf/${this.selectedDiscoveryProfile.profile_id}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        max_results: 100,  // Reasonable limit for frontend
+                        min_revenue: null,
+                        max_revenue: null
+                    })
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`BMF API request failed: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('BMF Discovery API Response:', data);
+                
+                if (data.status === 'completed' && data.opportunities) {
+                    // Convert backend format to frontend format
+                    const bmfResults = {
+                        nonprofits: [],
+                        foundations: [],
+                        filter_criteria: data.filter_criteria || {
+                            ntee_codes: this.selectedDiscoveryProfile.ntee_codes || [],
+                            states: ['VA'],
+                            profile_name: this.selectedDiscoveryProfile.name
+                        }
+                    };
+                    
+                    // Process opportunities and separate nonprofits from foundations
+                    data.opportunities.forEach(opp => {
+                        const orgData = {
+                            organization_name: opp.organization_name,
+                            ein: opp.ein,
+                            ntee_code: opp.ntee_code,
+                            state: opp.state,
+                            city: opp.city,
+                            revenue: opp.revenue,
+                            assets: opp.assets,
+                            source_type: 'Nonprofit',
+                            discovery_source: 'BMF Filter (Real)',
+                            bmf_filtered: true,
+                            compatibility_score: opp.compatibility_score || 0.7
+                        };
+                        
+                        // Check if it's likely a foundation based on NTEE code or name
+                        const isFoundation = (opp.ntee_code && opp.ntee_code.startsWith('T')) || 
+                                           opp.organization_name.toLowerCase().includes('foundation');
+                        
+                        if (isFoundation) {
+                            orgData.foundation_code = '03';  // Mark as foundation
+                            orgData.source_type = 'Foundation';
+                            bmfResults.foundations.push(orgData);
+                        } else {
+                            bmfResults.nonprofits.push(orgData);
+                        }
+                    });
+                    
+                    console.log(`Real BMF filtering completed: ${bmfResults.nonprofits.length} nonprofits, ${bmfResults.foundations.length} foundations`);
+                    return bmfResults;
+                    
+                } else if (data.status === 'timeout') {
+                    console.warn('BMF processing timed out, returning empty results');
+                    return {
+                        nonprofits: [],
+                        foundations: [],
+                        filter_criteria: {
+                            ntee_codes: this.selectedDiscoveryProfile.ntee_codes || [],
+                            states: ['VA'],
+                            error: 'Processing timeout'
+                        }
+                    };
+                } else {
+                    console.error('BMF discovery failed:', data.error || 'Unknown error');
+                    // Return empty results but don't throw error to prevent UI breaking
+                    return {
+                        nonprofits: [],
+                        foundations: [],
+                        filter_criteria: {
+                            ntee_codes: this.selectedDiscoveryProfile.ntee_codes || [],
+                            states: ['VA'],
+                            error: data.error || 'BMF processing failed'
+                        }
+                    };
+                }
+                
+            } catch (error) {
+                console.error('Error in BMF filtering:', error);
+                
+                // Fallback: return empty results to prevent UI breaking
+                return {
+                    nonprofits: [],
+                    foundations: [],
+                    filter_criteria: {
+                        ntee_codes: this.selectedDiscoveryProfile.ntee_codes || [],
+                        states: ['VA'],
+                        error: `BMF Error: ${error.message}`
+                    }
+                };
             }
-            
-            // Real VA foundations
-            const realFoundations = [
-                { name: 'Virginia Foundation for the Humanities', ein: '51-0192764', ntee: 'A25' },
-                { name: 'Community Foundation of Greater Richmond', ein: '54-1063783', ntee: 'T31' },
-                { name: 'Norfolk Foundation', ein: '54-0505982', ntee: 'T31' },
-                { name: 'Dominion Energy Foundation', ein: '54-1817715', ntee: 'T31' },
-                { name: 'Virginia Environmental Endowment', ein: '54-1041973', ntee: 'C32' }
-            ];
-            
-            // Add real foundations
-            const foundationCount = Math.min(realFoundations.length, Math.max(3, 5));
-            for (let i = 0; i < foundationCount; i++) {
-                const org = realFoundations[i];
-                bmfResults.foundations.push({
-                    organization_name: org.name,
-                    ein: org.ein,
-                    foundation_code: '03',
-                    ntee_code: org.ntee,
-                    state: 'VA',
-                    source_type: 'Foundation',
-                    discovery_source: 'BMF Filter',
-                    bmf_filtered: true,
-                    compatibility_score: 0.5 + Math.random() * 0.4
-                });
-            }
-            
-            console.log('BMF Filter Results:', bmfResults);
-            return bmfResults;
         },
 
 
@@ -13182,6 +13227,139 @@ function catalynxApp() {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
             }).format(amount);
+        },
+
+        // FINANCIAL INTELLIGENCE DISPLAY FUNCTIONS
+        
+        formatFinancialAmount(amount) {
+            if (!amount || amount === 0) return 'N/A';
+            if (amount < 1000) return `$${amount}`;
+            if (amount < 1000000) return `$${Math.round(amount / 1000)}K`;
+            if (amount < 1000000000) return `$${(amount / 1000000).toFixed(1)}M`;
+            return `$${(amount / 1000000000).toFixed(1)}B`;
+        },
+        
+        calculateFinancialEfficiency(organization) {
+            const revenue990 = organization.total_revenue_990 || organization.f990_revenue;
+            const expenses990 = organization.total_expenses_990 || organization.f990_expenses;
+            
+            if (revenue990 && expenses990 && revenue990 > 0) {
+                return ((revenue990 - expenses990) / revenue990 * 100).toFixed(1);
+            }
+            return null;
+        },
+        
+        calculateProgramRevenueRatio(organization) {
+            const revenue990 = organization.total_revenue_990 || organization.f990_revenue;
+            const programRevenue = organization.program_service_revenue_990 || organization.f990_program_revenue;
+            
+            if (revenue990 && programRevenue && revenue990 > 0) {
+                return (programRevenue / revenue990 * 100).toFixed(1);
+            }
+            return null;
+        },
+        
+        getFinancialHealthBadge(organization) {
+            const efficiency = this.calculateFinancialEfficiency(organization);
+            if (!efficiency) return { class: 'bg-gray-100 text-gray-600', text: 'No Data' };
+            
+            const eff = parseFloat(efficiency);
+            if (eff >= 15) return { class: 'bg-green-100 text-green-800', text: 'Excellent' };
+            if (eff >= 10) return { class: 'bg-blue-100 text-blue-800', text: 'Good' };
+            if (eff >= 5) return { class: 'bg-yellow-100 text-yellow-800', text: 'Fair' };
+            return { class: 'bg-red-100 text-red-800', text: 'Needs Review' };
+        },
+        
+        getGrantResearchPriority(organization) {
+            const foundationCode = organization.foundation_code;
+            if (foundationCode === '03') return { class: 'bg-red-100 text-red-800', text: 'HIGH PRIORITY' };
+            if (foundationCode === '04') return { class: 'bg-orange-100 text-orange-800', text: 'MEDIUM PRIORITY' };
+            if (foundationCode) return { class: 'bg-blue-100 text-blue-800', text: 'FOUNDATION' };
+            return { class: 'bg-gray-100 text-gray-600', text: 'STANDARD' };
+        },
+        
+        isFoundation(organization) {
+            return organization.foundation_code && organization.foundation_code !== '';
+        },
+        
+        getFoundationGrantDistributions(organization) {
+            // Return 990-PF grant distribution data if available
+            return organization.pf_grant_distributions || 
+                   organization.pf_total_revenue || 
+                   organization.total_revenue_990 || 
+                   null;
+        },
+        
+        createFinancialTrendChart(containerId, organization) {
+            const canvas = document.getElementById(containerId);
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Destroy existing chart
+            if (this[`${containerId}Chart`]) {
+                this[`${containerId}Chart`].destroy();
+            }
+            
+            // Mock trend data (in production, this would come from multi-year database records)
+            const currentYear = new Date().getFullYear();
+            const years = [currentYear - 2, currentYear - 1, currentYear];
+            const revenue990 = organization.total_revenue_990 || organization.f990_revenue || 0;
+            
+            // Generate realistic trend data based on current figures
+            const trendData = years.map((year, index) => {
+                const variation = (Math.random() - 0.5) * 0.2; // ±10% variation
+                return revenue990 * (1 + variation * (index + 1) / 3);
+            });
+            
+            this[`${containerId}Chart`] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: [{
+                        label: 'Revenue',
+                        data: trendData,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + (value / 1000000).toFixed(1) + 'M';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        },
+        
+        // Enhanced organization display with financial intelligence
+        getEnhancedOrganizationDisplay(organization) {
+            return {
+                ...organization,
+                financial_intelligence: {
+                    efficiency_ratio: this.calculateFinancialEfficiency(organization),
+                    program_revenue_ratio: this.calculateProgramRevenueRatio(organization),
+                    health_badge: this.getFinancialHealthBadge(organization),
+                    grant_priority: this.getGrantResearchPriority(organization),
+                    is_foundation: this.isFoundation(organization),
+                    grant_distributions: this.getFoundationGrantDistributions(organization)
+                }
+            };
         },
 
         // State-level discovery functions

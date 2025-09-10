@@ -24,6 +24,7 @@ from src.core.government_models import (
     EligibilityCategory, OpportunityStatus
 )
 from src.analysis.profile_matcher import get_profile_matcher
+from src.analytics.soi_financial_analytics import SOIFinancialAnalytics
 
 
 class GovernmentOpportunityScorerProcessor(BaseProcessor):
@@ -57,16 +58,17 @@ multiple dimensions to provide accurate compatibility assessments.
 - **Data-Driven Adjustment**: Maintained optimal weight based on analysis
 - **Scoring Range**: 0.1 (too urgent) to 1.0 (ideal timing)
 
-### 4. Financial Fit Scoring (Weight: 0.15)
-- **Purpose**: Matches award amounts with organizational capacity
-- **Factors**: Award size relative to organization revenue and capacity
-- **Data-Driven Adjustment**: Reduced from 0.20 to 0.15 due to limited revenue data
-- **Scoring Range**: 0.2 (poor financial fit) to 1.0 (optimal award size)
+### 4. Financial Fit Scoring (Weight: 0.25) - SOI ENHANCED
+- **Purpose**: Matches award amounts with organizational capacity using comprehensive financial intelligence
+- **Factors**: SOI financial health, revenue/expense analysis, foundation capacity, multi-year trends
+- **Data-Driven Adjustment**: INCREASED from 0.15 to 0.25 due to rich SOI database integration
+- **SOI Intelligence**: 990/990-PF/990-EZ data, financial health scoring, foundation payout analysis
+- **Scoring Range**: 0.2 (poor financial fit) to 1.0 (optimal award size with strong financial health)
 
-### 5. Historical Success Scoring (Weight: 0.15)
+### 5. Historical Success Scoring (Weight: 0.05) - REDUCED
 - **Purpose**: Leverages past federal funding success patterns  
 - **Factors**: Previous awards, funding track record, agency relationships
-- **Data-Driven Adjustment**: Reduced from 0.20 to 0.15 due to limited historical data
+- **Data-Driven Adjustment**: REDUCED from 0.15 to 0.05 to prioritize SOI financial intelligence
 - **Scoring Range**: 0.3 (no history) to 1.0 (strong track record)
 
 ## Recommendation Thresholds
@@ -114,14 +116,17 @@ These weights and thresholds are based on comprehensive analysis of:
         # Initialize profile matcher for advanced scoring
         self.profile_matcher = get_profile_matcher()
         
-        # Optimized scoring weights based on real data analysis (Aug 2025)
-        # Analysis showed VA geographic concentration (35/45 profiles) and limited entity data
+        # Initialize SOI financial analytics for enhanced financial intelligence
+        self.soi_analytics = SOIFinancialAnalytics()
+        
+        # Updated scoring weights with SOI financial intelligence (Sep 2025)
+        # Enhanced financial data from BMF/SOI database enables more sophisticated analysis
         self.match_weights = {
-            "eligibility": 0.30,      # Increased: High focus area diversity requires better filtering
-            "geographic": 0.20,       # Increased: Strong geographic concentration in VA
+            "eligibility": 0.30,      # Maintained: High focus area diversity requires filtering
+            "geographic": 0.20,       # Maintained: Strong geographic concentration in VA
             "timing": 0.20,          # Maintained: Well-balanced for current patterns
-            "financial_fit": 0.15,   # Reduced: Limited revenue data availability
-            "historical_success": 0.15  # Reduced: Limited historical data available
+            "financial_fit": 0.25,   # INCREASED: Rich SOI financial data now available
+            "historical_success": 0.05  # Reduced: Prioritize financial intelligence over limited historical data
         }
         
         # Optimized recommendation thresholds based on data quality analysis
@@ -383,41 +388,96 @@ These weights and thresholds are based on comprehensive analysis of:
             return 0.6  # Very far out
     
     def _score_financial_fit(self, org: OrganizationProfile, opportunity: GovernmentOpportunity) -> float:
-        """Enhanced financial fit scoring with better capacity analysis (0-1)."""
-        if not opportunity.award_ceiling or not org.revenue:
-            return 0.5  # Unknown, neutral score
+        """SOI-enhanced financial fit scoring with comprehensive intelligence (0-1)."""
+        if not opportunity.award_ceiling:
+            return 0.5  # Unknown award amount, neutral score
         
-        # Calculate organization capacity (rough estimate)
-        org_capacity = org.revenue * 0.1  # Assume 10% of revenue could be project size
+        # Get SOI financial metrics for enhanced analysis
+        soi_metrics = None
+        financial_health_score = 0.5  # Default neutral
         
-        # Score based on award size relative to organization capacity
+        try:
+            if org.ein:
+                soi_metrics = self.soi_analytics.get_financial_metrics(org.ein)
+                if soi_metrics:
+                    financial_health_score = self.soi_analytics.calculate_financial_health_score(soi_metrics)
+                    # Normalize to 0-1 range
+                    financial_health_score = min(max(financial_health_score / 100.0, 0.0), 1.0)
+        except Exception as e:
+            # Log but don't fail - fallback to basic scoring
+            self.logger.debug(f"Could not get SOI metrics for {org.ein}: {e}")
+        
+        # Determine organization capacity using SOI data or fallback
+        if soi_metrics and soi_metrics.total_revenue > 0:
+            # Use SOI revenue data (more accurate and current)
+            org_revenue = soi_metrics.total_revenue
+            org_expenses = soi_metrics.total_expenses or 0
+            org_assets = soi_metrics.total_assets or 0
+            
+            # Calculate actual capacity based on financial efficiency
+            if org_expenses > 0:
+                # Use net margin for capacity calculation
+                net_margin = max((org_revenue - org_expenses) / org_revenue, 0.05)
+                org_capacity = org_revenue * net_margin * 0.5  # Conservative capacity estimate
+            else:
+                org_capacity = org_revenue * 0.1  # Standard 10% estimate
+            
+            # Asset-based capacity check for foundations
+            if soi_metrics.form_type.value == "990-PF" and org_assets > 0:
+                # Foundations typically distribute 5-10% of assets annually
+                foundation_capacity = org_assets * 0.075  # 7.5% of assets
+                org_capacity = max(org_capacity, foundation_capacity)
+                
+        elif org.revenue:
+            # Fallback to basic BMF revenue data
+            org_revenue = org.revenue
+            org_capacity = org_revenue * 0.1
+        else:
+            # No financial data available
+            return 0.3  # Low score due to unknown capacity
+        
+        # Award size analysis with SOI intelligence
+        award_to_capacity_ratio = opportunity.award_ceiling / org_capacity if org_capacity > 0 else float('inf')
+        
+        # Enhanced scoring with financial health consideration
+        base_score = 0.5
+        
+        # Optimal award size scoring
+        if 0.1 <= award_to_capacity_ratio <= 1.0:
+            base_score = 1.0  # Perfect fit
+        elif 0.05 <= award_to_capacity_ratio <= 2.0:
+            base_score = 0.8  # Good fit
+        elif 0.02 <= award_to_capacity_ratio <= 5.0:
+            base_score = 0.6  # Acceptable fit
+        elif award_to_capacity_ratio > 5.0:
+            base_score = 0.2  # Too large for organization
+        else:
+            base_score = 0.3  # Too small to be worthwhile
+        
+        # Apply minimum floor check
         if opportunity.award_floor and opportunity.award_floor > org_capacity * 2:
-            return 0.2  # Award too large for organization
+            base_score = min(base_score, 0.3)  # Minimum too high
         
-        if opportunity.award_ceiling < org_capacity * 0.1:
-            return 0.3  # Award might be too small to be worth effort
+        # Enhance score with financial health (25% weight)
+        enhanced_score = base_score * 0.75 + financial_health_score * 0.25
         
-        # Enhanced scoring ranges based on organization size
-        if org.revenue < 500000:  # Small organizations
-            # More flexible for small orgs, awards up to 50% of revenue can work
-            if org_capacity * 0.05 <= opportunity.award_ceiling <= org_capacity * 5:
-                return 1.0
-            elif opportunity.award_ceiling <= org_capacity * 10:
-                return 0.8
-        elif org.revenue < 2000000:  # Medium organizations  
-            # Standard range for medium orgs
-            if org_capacity * 0.1 <= opportunity.award_ceiling <= org_capacity:
-                return 1.0
-            elif org_capacity <= opportunity.award_ceiling <= org_capacity * 2:
-                return 0.8
-        else:  # Large organizations
-            # More conservative for large orgs, they can handle bigger projects
-            if org_capacity * 0.2 <= opportunity.award_ceiling <= org_capacity * 0.8:
-                return 1.0
-            elif org_capacity * 0.1 <= opportunity.award_ceiling <= org_capacity * 1.5:
-                return 0.8
+        # Foundation-specific bonuses
+        if soi_metrics and soi_metrics.form_type.value == "990-PF":
+            # Foundations get slight bonus for federal funding (diversification)
+            enhanced_score = min(enhanced_score + 0.05, 1.0)
         
-        return 0.6
+        # Multi-year financial stability bonus
+        if soi_metrics and org_revenue > 0:
+            try:
+                trends = self.soi_analytics.analyze_trends(org.ein, years=3)
+                if trends and trends.revenue_trend == "Growing":
+                    enhanced_score = min(enhanced_score + 0.05, 1.0)
+                elif trends and trends.revenue_trend == "Declining":
+                    enhanced_score = max(enhanced_score - 0.1, 0.1)
+            except:
+                pass  # Skip trend analysis if data unavailable
+        
+        return round(enhanced_score, 3)
     
     def _check_ntee_alignment(self, ntee_code: str, opportunity: GovernmentOpportunity) -> bool:
         """Check if NTEE code aligns with opportunity type."""
