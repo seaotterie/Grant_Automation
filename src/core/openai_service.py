@@ -135,19 +135,42 @@ class OpenAIService:
                 logger.error(f"Unsupported model: {model}. Only GPT-5 models are supported.")
                 raise ValueError(f"Only GPT-5 models are supported. Received: {model}")
             
-            # GPT-5 models have specific parameter requirements
-            if max_tokens is not None:
-                api_params["max_completion_tokens"] = max_tokens
-            # GPT-5 models only support temperature=1 (default)
-            if temperature is not None and temperature != 1.0:
-                logger.info(f"GPT-5 model {model} only supports temperature=1, ignoring temperature={temperature}")
-            # Don't set temperature for GPT-5 models (use default)
+            # Handle model-specific parameter requirements
+            if model.startswith("gpt-5"):
+                # GPT-5 models have specific parameter requirements
+                if max_tokens is not None:
+                    api_params["max_completion_tokens"] = max_tokens
+                # GPT-5 models only support temperature=1 (default)
+                if temperature is not None and temperature != 1.0:
+                    logger.info(f"GPT-5 model {model} only supports temperature=1, ignoring temperature={temperature}")
+                # Don't set temperature for GPT-5 models (use default)
+                
+                # Handle tool parameters for GPT-5 to prevent tool calling interference
+                if "tools" in kwargs:
+                    api_params["tools"] = kwargs["tools"]
+                    logger.info(f"GPT-5 tools parameter: {kwargs['tools']}")
+                if "tool_choice" in kwargs:
+                    api_params["tool_choice"] = kwargs["tool_choice"] 
+                    logger.info(f"GPT-5 tool_choice parameter: {kwargs['tool_choice']}")
+            else:
+                # GPT-4 and other models use standard parameters
+                if max_tokens is not None:
+                    api_params["max_tokens"] = max_tokens
+                if temperature is not None:
+                    api_params["temperature"] = temperature
+                
+                # Handle tool parameters for other models
+                if "tools" in kwargs:
+                    api_params["tools"] = kwargs["tools"]
+                if "tool_choice" in kwargs:
+                    api_params["tool_choice"] = kwargs["tool_choice"]
             
             response = await self.client.chat.completions.create(**api_params)
             end_time = time.time()
             
-            # Extract response data with None check
-            content = response.choices[0].message.content or ""
+            # Extract response data using robust extraction with multiple fallback methods
+            content = self._extract_text_from_response(response)
+            logger.info(f"Final extracted content: '{content[:200]}...'" if len(content) > 200 else f"Final extracted content: '{content}'")
             usage = {
                 "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
                 "completion_tokens": response.usage.completion_tokens if response.usage else 0,
@@ -186,6 +209,120 @@ class OpenAIService:
             # GPT-5 models are available - re-raise the error instead of simulation
             logger.error(f"GPT-5 model API call failed for {model}: {str(e)}")
             raise
+    
+    def _extract_text_from_response(self, response) -> str:
+        """
+        Robust text extraction supporting multiple OpenAI API formats.
+        Handles Chat Completions, Responses API, tool calls, and edge cases.
+        """
+        # Log full response structure for debugging
+        logger.debug(f"Response type: {type(response)}")
+        logger.debug(f"Response finish_reason: {getattr(response.choices[0], 'finish_reason', 'unknown') if hasattr(response, 'choices') and response.choices else 'no_choices'}")
+        
+        # 1) Responses API (non-stream) - check for output_text attribute
+        text = getattr(response, "output_text", None)
+        if text:
+            logger.info("✓ Extracted text from Responses API output_text")
+            return text
+        
+        # 2) Chat Completions API (our current format) 
+        try:
+            choices = getattr(response, "choices", None)
+            if choices and len(choices) > 0:
+                choice = choices[0]
+                message = getattr(choice, "message", None)
+                if message:
+                    # Check for regular content first
+                    content = getattr(message, "content", None)
+                    if content and content.strip():
+                        logger.info("✓ Extracted text from Chat Completions message.content")
+                        return content.strip()
+                    
+                    # GPT-5 REASONING TOKENS: Check if we have reasoning but no content
+                    usage = getattr(response, "usage", None)
+                    if usage:
+                        completion_details = getattr(usage, "completion_tokens_details", None)
+                        if completion_details:
+                            reasoning_tokens = getattr(completion_details, "reasoning_tokens", 0)
+                            if reasoning_tokens > 0 and not content:
+                                logger.warning(f"⚠ GPT-5 used {reasoning_tokens} reasoning tokens but no visible content")
+                                logger.warning("⚠ This may indicate the model needs more output tokens after reasoning")
+                                # Try to prompt for visible output by adjusting parameters
+                                return ""
+                    
+                    # Check for tool calls (model may be trying to use tools instead of returning text)
+                    tool_calls = getattr(message, "tool_calls", None) or []
+                    if tool_calls:
+                        logger.warning(f"⚠ Model returned {len(tool_calls)} tool calls instead of text content")
+                        # Extract any text from tool call arguments
+                        for tool_call in tool_calls:
+                            if hasattr(tool_call, 'function') and hasattr(tool_call.function, 'arguments'):
+                                args = tool_call.function.arguments
+                                if isinstance(args, str) and args.strip():
+                                    logger.info("✓ Extracted text from tool call arguments")
+                                    return args.strip()
+                    
+                    # Check for refusal field (safety refusal)
+                    refusal = getattr(message, "refusal", None)
+                    if refusal:
+                        logger.warning(f"⚠ Model refused request: {refusal}")
+                        return ""
+        except Exception as e:
+            logger.error(f"Error parsing Chat Completions response: {e}")
+        
+        # 3) Responses API (raw structure) - some SDKs use nested output structure  
+        try:
+            output = getattr(response, "output", None)
+            if output and isinstance(output, list) and len(output) > 0:
+                content_parts = output[0].get("content", [])
+                for part in content_parts:
+                    if isinstance(part, dict):
+                        if part.get("type") == "output_text":
+                            text_value = part.get("text", {}).get("value", "")
+                            if text_value:
+                                logger.info("✓ Extracted text from Responses API nested structure")
+                                return text_value
+        except Exception as e:
+            logger.error(f"Error parsing Responses API nested structure: {e}")
+        
+        # 4) Check for dictionary format response (some custom APIs)
+        if isinstance(response, dict):
+            # Direct content field
+            if "content" in response and response["content"]:
+                logger.info("✓ Extracted text from dictionary response content")
+                return response["content"]
+            
+            # Nested in choices
+            choices = response.get("choices", [])
+            if choices and len(choices) > 0:
+                message = choices[0].get("message", {})
+                content = message.get("content", "")
+                if content:
+                    logger.info("✓ Extracted text from dictionary response choices")
+                    return content
+        
+        # 5) Last resort - try to find any text-like content in response
+        try:
+            # Log the complete response structure for analysis
+            logger.warning(f"Raw response object: {response}")
+            logger.warning(f"Response type: {type(response)}")
+            logger.warning(f"Response dir: {dir(response)}")
+            
+            # Check if there are any other attributes that might contain content
+            for attr in dir(response):
+                if not attr.startswith('_'):
+                    try:
+                        value = getattr(response, attr)
+                        if isinstance(value, str) and len(value) > 10:
+                            logger.warning(f"Found text in {attr}: {value[:100]}...")
+                    except:
+                        pass
+                        
+        except Exception as e:
+            logger.error(f"Error in response debugging: {e}")
+        
+        logger.warning("⚠ No text content found in response using any extraction method")
+        return ""
     
     async def _simulate_completion(
         self,

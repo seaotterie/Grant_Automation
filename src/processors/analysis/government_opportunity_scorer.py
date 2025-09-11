@@ -14,8 +14,12 @@ This processor:
 import asyncio
 import time
 import numpy as np
+import sqlite3
+import json
+import logging
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata
 from src.core.data_models import ProcessorConfig, ProcessorResult, OrganizationProfile
@@ -25,6 +29,12 @@ from src.core.government_models import (
 )
 from src.analysis.profile_matcher import get_profile_matcher
 from src.analytics.soi_financial_analytics import SOIFinancialAnalytics
+from src.core.simple_mcp_client import SimpleMCPClient
+
+try:
+    from src.core.gpt_url_discovery_service import get_gpt_url_discovery_service
+except ImportError:
+    get_gpt_url_discovery_service = None
 
 
 class GovernmentOpportunityScorerProcessor(BaseProcessor):
@@ -119,6 +129,13 @@ These weights and thresholds are based on comprehensive analysis of:
         # Initialize SOI financial analytics for enhanced financial intelligence
         self.soi_analytics = SOIFinancialAnalytics()
         
+        # Initialize MCP client for web intelligence enhancement
+        self.mcp_client = SimpleMCPClient(timeout=15)
+        self.database_path = "data/catalynx.db"
+        
+        # Initialize GPT URL discovery service
+        self.gpt_url_service = get_gpt_url_discovery_service() if get_gpt_url_discovery_service else None
+        
         # Updated scoring weights with SOI financial intelligence (Sep 2025)
         # Enhanced financial data from BMF/SOI database enables more sophisticated analysis
         self.match_weights = {
@@ -145,6 +162,10 @@ These weights and thresholds are based on comprehensive analysis of:
             # Get opportunities and organizations
             opportunities = await self._get_government_opportunities(workflow_state)
             organizations = await self._get_organizations(workflow_state)
+            
+            # Enhance opportunities with real-time web intelligence
+            if config.get_config("enable_web_intelligence", True):
+                opportunities = await self._enhance_opportunities_with_web_intelligence(opportunities, config)
             
             if not opportunities:
                 return ProcessorResult(
@@ -675,6 +696,329 @@ These weights and thresholds are based on comprehensive analysis of:
             "organizations_with_matches": len(set(match.organization for match in matches if match.organization)),
             "unique_opportunities_matched": len(set(match.opportunity.opportunity_id for match in matches))
         }
+
+    async def _enhance_opportunities_with_web_intelligence(
+        self, 
+        opportunities: List[GovernmentOpportunity], 
+        config: ProcessorConfig
+    ) -> List[GovernmentOpportunity]:
+        """Enhance opportunities with real-time web intelligence from agency websites."""
+        try:
+            enhanced_opportunities = []
+            max_enhance = config.get_config("max_opportunities_to_enhance", 20)
+            
+            self.logger.info(f"Enhancing up to {max_enhance} opportunities with web intelligence")
+            
+            for i, opportunity in enumerate(opportunities[:max_enhance]):
+                try:
+                    # Check if we already have cached intelligence for this opportunity
+                    cached_intelligence = await self._get_cached_opportunity_intelligence(opportunity.opportunity_id)
+                    
+                    if cached_intelligence and self._is_intelligence_fresh(cached_intelligence):
+                        # Use cached data
+                        enhanced_opp = await self._apply_cached_intelligence(opportunity, cached_intelligence)
+                        enhanced_opportunities.append(enhanced_opp)
+                        self.logger.debug(f"Used cached intelligence for {opportunity.opportunity_id}")
+                        continue
+                    
+                    # Gather fresh web intelligence
+                    web_intelligence = await self._gather_opportunity_web_intelligence(opportunity)
+                    
+                    if web_intelligence:
+                        # Apply web intelligence to enhance opportunity
+                        enhanced_opp = await self._apply_web_intelligence(opportunity, web_intelligence)
+                        enhanced_opportunities.append(enhanced_opp)
+                        
+                        # Cache the intelligence for future use
+                        await self._cache_opportunity_intelligence(opportunity.opportunity_id, web_intelligence)
+                        
+                        self.logger.info(f"Enhanced opportunity {i+1}/{len(opportunities[:max_enhance])}: {opportunity.title[:50]}")
+                    else:
+                        # No web intelligence available, use original
+                        enhanced_opportunities.append(opportunity)
+                    
+                    # Rate limiting between requests
+                    if i < len(opportunities[:max_enhance]) - 1:
+                        await asyncio.sleep(1.5)  # Respectful delay
+                        
+                except Exception as e:
+                    self.logger.warning(f"Failed to enhance opportunity {opportunity.opportunity_id}: {e}")
+                    enhanced_opportunities.append(opportunity)  # Use original on failure
+            
+            # Add remaining opportunities without enhancement
+            enhanced_opportunities.extend(opportunities[max_enhance:])
+            
+            self.logger.info(f"Enhanced {min(max_enhance, len(opportunities))} opportunities with web intelligence")
+            return enhanced_opportunities
+            
+        except Exception as e:
+            self.logger.error(f"Web intelligence enhancement failed: {e}")
+            return opportunities  # Return originals on failure
+
+    async def _gather_opportunity_web_intelligence(self, opportunity: GovernmentOpportunity) -> Optional[Dict[str, Any]]:
+        """Gather web intelligence for a specific opportunity."""
+        try:
+            intelligence = {}
+            
+            # Try to fetch the opportunity's webpage if available
+            if hasattr(opportunity, 'url') and opportunity.url:
+                result = await self.mcp_client.fetch_url(opportunity.url, max_length=10000)
+                
+                if result.success:
+                    intelligence['webpage_content'] = result.content
+                    intelligence['webpage_title'] = result.title
+                    intelligence['last_scraped'] = datetime.now().isoformat()
+                    
+                    # Extract key information from webpage
+                    intelligence['application_guidance'] = self._extract_application_guidance(result.content)
+                    intelligence['contact_updates'] = self._extract_contact_information(result.content)
+                    intelligence['deadline_confirmations'] = self._extract_deadline_info(result.content)
+                    intelligence['eligibility_clarifications'] = self._extract_eligibility_details(result.content)
+                    
+                    return intelligence
+            
+            # Use GPT URL discovery to predict opportunity URL
+            if self.gpt_url_service and hasattr(opportunity, 'agency_name') and opportunity.agency_name:
+                self.logger.debug(f"Using GPT URL discovery for {opportunity.opportunity_id}")
+                
+                url_discovery_result = await self.gpt_url_service.discover_opportunity_url(
+                    opportunity_title=getattr(opportunity, 'opportunity_title', ''),
+                    agency_name=opportunity.agency_name,
+                    opportunity_description=getattr(opportunity, 'description', '')
+                )
+                
+                if url_discovery_result.predicted_url and url_discovery_result.confidence >= 0.6:
+                    # Try to fetch the predicted URL
+                    result = await self.mcp_client.fetch_url(url_discovery_result.predicted_url, max_length=10000)
+                    
+                    if result.success:
+                        intelligence['webpage_content'] = result.content
+                        intelligence['webpage_title'] = result.title
+                        intelligence['predicted_url'] = url_discovery_result.predicted_url
+                        intelligence['url_confidence'] = url_discovery_result.confidence
+                        intelligence['url_prediction_method'] = url_discovery_result.prediction_method
+                        intelligence['last_scraped'] = datetime.now().isoformat()
+                        
+                        # Extract key information from predicted webpage
+                        intelligence['application_guidance'] = self._extract_application_guidance(result.content)
+                        intelligence['contact_updates'] = self._extract_contact_information(result.content)
+                        intelligence['deadline_confirmations'] = self._extract_deadline_info(result.content)
+                        intelligence['eligibility_clarifications'] = self._extract_eligibility_details(result.content)
+                        
+                        self.logger.info(f"Successfully gathered intelligence from predicted URL for {opportunity.opportunity_id}")
+                        return intelligence
+                    else:
+                        self.logger.debug(f"Predicted URL {url_discovery_result.predicted_url} was not accessible")
+                else:
+                    self.logger.debug(f"GPT URL discovery confidence too low: {url_discovery_result.confidence}")
+            
+            # Fallback: Try to find agency program page if no direct URL and GPT discovery failed
+            if hasattr(opportunity, 'agency_name') and opportunity.agency_name:
+                agency_search_results = await self._search_agency_program_page(opportunity)
+                if agency_search_results:
+                    intelligence.update(agency_search_results)
+                    return intelligence
+            
+            return None
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to gather web intelligence for opportunity {opportunity.opportunity_id}: {e}")
+            return None
+
+    def _extract_application_guidance(self, content: str) -> List[str]:
+        """Extract application tips and guidance from webpage content."""
+        guidance = []
+        
+        # Look for common application guidance patterns
+        guidance_patterns = [
+            r'application.*tip[s]?[:\-](.{0,200})',
+            r'how to apply[:\-](.{0,300})',
+            r'application.*process[:\-](.{0,300})',
+            r'submission.*requirement[s]?[:\-](.{0,200})',
+            r'successful.*applicant[s]?(.{0,200})'
+        ]
+        
+        import re
+        for pattern in guidance_patterns:
+            matches = re.finditer(pattern, content.lower())
+            for match in matches:
+                tip = match.group(1).strip()
+                if len(tip) > 20:  # Only meaningful tips
+                    guidance.append(tip[:200])  # Truncate long tips
+        
+        return guidance[:5]  # Max 5 tips
+
+    def _extract_contact_information(self, content: str) -> Dict[str, str]:
+        """Extract updated contact information from webpage."""
+        contacts = {}
+        
+        # Email pattern
+        import re
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        emails = re.findall(email_pattern, content)
+        if emails:
+            contacts['email'] = emails[0]  # First valid email
+        
+        # Phone pattern
+        phone_pattern = r'\(?\b\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b'
+        phones = re.findall(phone_pattern, content)
+        if phones:
+            contacts['phone'] = phones[0]  # First valid phone
+        
+        return contacts
+
+    def _extract_deadline_info(self, content: str) -> List[str]:
+        """Extract deadline-related information."""
+        deadlines = []
+        
+        # Look for deadline mentions
+        import re
+        deadline_patterns = [
+            r'deadline[:\-](.{0,100})',
+            r'due date[:\-](.{0,100})',
+            r'application.*due(.{0,100})',
+            r'submit.*by(.{0,100})'
+        ]
+        
+        for pattern in deadline_patterns:
+            matches = re.finditer(pattern, content.lower())
+            for match in matches:
+                deadline_info = match.group(1).strip()
+                if len(deadline_info) > 5:
+                    deadlines.append(deadline_info[:100])
+        
+        return deadlines[:3]  # Max 3 deadline mentions
+
+    def _extract_eligibility_details(self, content: str) -> List[str]:
+        """Extract eligibility clarifications from content."""
+        eligibility = []
+        
+        import re
+        eligibility_patterns = [
+            r'eligib(?:le|ility)[:\-](.{0,200})',
+            r'qualified.*applicant[s]?[:\-](.{0,200})',
+            r'requirements[:\-](.{0,200})',
+            r'must.*be(.{0,150})'
+        ]
+        
+        for pattern in eligibility_patterns:
+            matches = re.finditer(pattern, content.lower())
+            for match in matches:
+                eligibility_info = match.group(1).strip()
+                if len(eligibility_info) > 10:
+                    eligibility.append(eligibility_info[:200])
+        
+        return eligibility[:4]  # Max 4 eligibility details
+
+    async def _search_agency_program_page(self, opportunity: GovernmentOpportunity) -> Optional[Dict[str, Any]]:
+        """Search for agency program page when direct URL unavailable."""
+        # This could be enhanced with GPT-powered URL discovery similar to organization URLs
+        # For now, return None - can be extended later
+        return None
+
+    async def _get_cached_opportunity_intelligence(self, opportunity_id: str) -> Optional[Dict[str, Any]]:
+        """Get cached web intelligence for an opportunity."""
+        try:
+            with sqlite3.connect(self.database_path) as conn:
+                cursor = conn.execute("""
+                    SELECT intelligence_data_json, last_updated
+                    FROM cross_stage_intelligence 
+                    WHERE workflow_stage = 'opportunity_enhancement' 
+                      AND data_type = 'opportunity'
+                      AND intelligence_id = ?
+                """, (opportunity_id,))
+                result = cursor.fetchone()
+                
+                if result:
+                    return {
+                        'data': json.loads(result[0]),
+                        'last_updated': result[1]
+                    }
+                return None
+        except Exception as e:
+            self.logger.debug(f"No cached intelligence found for {opportunity_id}: {e}")
+            return None
+
+    def _is_intelligence_fresh(self, cached_intelligence: Dict[str, Any], max_age_hours: int = 24) -> bool:
+        """Check if cached intelligence is still fresh."""
+        try:
+            from datetime import datetime
+            last_updated = datetime.fromisoformat(cached_intelligence['last_updated'])
+            age_hours = (datetime.now() - last_updated).total_seconds() / 3600
+            return age_hours < max_age_hours
+        except Exception:
+            return False
+
+    async def _apply_web_intelligence(self, opportunity: GovernmentOpportunity, intelligence: Dict[str, Any]) -> GovernmentOpportunity:
+        """Apply web intelligence to enhance opportunity."""
+        # Create enhanced copy of opportunity
+        enhanced = opportunity.copy() if hasattr(opportunity, 'copy') else opportunity
+        
+        # Add web intelligence as metadata
+        if not hasattr(enhanced, 'metadata'):
+            enhanced.metadata = {}
+            
+        enhanced.metadata.update({
+            'web_intelligence': intelligence,
+            'has_web_enhancement': True,
+            'enhancement_date': datetime.now().isoformat()
+        })
+        
+        # Enhance description with application guidance if available
+        if intelligence.get('application_guidance'):
+            enhanced.metadata['application_tips'] = intelligence['application_guidance']
+        
+        # Update contact information if found
+        if intelligence.get('contact_updates'):
+            enhanced.metadata['updated_contacts'] = intelligence['contact_updates']
+        
+        return enhanced
+
+    async def _apply_cached_intelligence(self, opportunity: GovernmentOpportunity, cached: Dict[str, Any]) -> GovernmentOpportunity:
+        """Apply cached intelligence to opportunity."""
+        return await self._apply_web_intelligence(opportunity, cached['data'])
+
+    async def _cache_opportunity_intelligence(self, opportunity_id: str, intelligence: Dict[str, Any]):
+        """Cache opportunity intelligence for future use."""
+        try:
+            # First, ensure the cross_stage_intelligence table exists
+            await self._ensure_cross_stage_table_exists()
+            
+            with sqlite3.connect(self.database_path) as conn:
+                conn.execute("""
+                    INSERT OR REPLACE INTO cross_stage_intelligence 
+                    (intelligence_id, workflow_stage, data_type, intelligence_data_json, 
+                     quality_score, last_updated)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    opportunity_id,
+                    'opportunity_enhancement',
+                    'opportunity',
+                    json.dumps(intelligence),
+                    len(intelligence.get('application_guidance', [])) * 20 + len(intelligence.get('contact_updates', {})) * 10,
+                    datetime.now().isoformat()
+                ))
+                conn.commit()
+        except Exception as e:
+            self.logger.warning(f"Failed to cache intelligence for {opportunity_id}: {e}")
+
+    async def _ensure_cross_stage_table_exists(self):
+        """Ensure the cross_stage_intelligence table exists."""
+        try:
+            with sqlite3.connect(self.database_path) as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS cross_stage_intelligence (
+                        intelligence_id TEXT PRIMARY KEY,
+                        workflow_stage TEXT,
+                        data_type TEXT,
+                        intelligence_data_json TEXT,
+                        quality_score INTEGER,
+                        last_updated TIMESTAMP
+                    )
+                """)
+                conn.commit()
+        except Exception as e:
+            self.logger.warning(f"Failed to create cross_stage_intelligence table: {e}")
 
 
 # Register processor for auto-discovery

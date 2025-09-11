@@ -23,8 +23,10 @@ have been consolidated in EXAMINE tab AI-Heavy Deep Research processor.
 import json
 import logging
 import asyncio
+import sqlite3
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timedelta
+from pathlib import Path
 import openai
 from pydantic import BaseModel, Field
 from enum import Enum
@@ -34,7 +36,8 @@ from src.core.error_recovery import (
     with_error_recovery, create_ai_retry_policy, error_recovery_manager,
     ErrorCategory, ErrorSeverity, RecoveryAction
 )
-from .grant_package_generator import GrantPackageGenerator, ApplicationPackage
+from src.processors.analysis.grant_package_generator import GrantPackageGenerator, ApplicationPackage
+from src.core.simple_mcp_client import SimpleMCPClient
 
 logger = logging.getLogger(__name__)
 
@@ -328,6 +331,10 @@ class AIHeavyDossierBuilder(BaseProcessor):
         # Grant application intelligence
         self.grant_package_generator = GrantPackageGenerator()
         
+        # Web intelligence integration
+        self.mcp_client = SimpleMCPClient(timeout=20)
+        self.database_path = "data/catalynx.db"
+        
         # Enhanced Intelligence Capabilities (Phase 3)
         self.categorization_confidence_threshold = 0.85
         self.pattern_recognition_enabled = True
@@ -374,6 +381,12 @@ class AIHeavyDossierBuilder(BaseProcessor):
             
             # Phase 3 Enhancement: Intelligent Pre-Research Analysis
             enhanced_request = await self._apply_intelligent_categorization(request_data)
+            
+            # Web Intelligence Enhancement: Gather current web context
+            web_context = await self._gather_web_intelligence_context(enhanced_request)
+            if web_context:
+                enhanced_request = self._enhance_request_with_web_context(enhanced_request, web_context)
+                logger.info(f"Enhanced request with {len(web_context)} web intelligence sources")
             
             # Phase 1 Enhancement: Prepare dossier-focused research prompt
             if self.dossier_builder_mode:
@@ -541,6 +554,12 @@ Recent Grants: {', '.join(context.target_preliminary_data.recent_grants_given) i
             
         if context.target_preliminary_data.annual_revenue:
             context_section += f"\nAnnual Revenue: {context.target_preliminary_data.annual_revenue}"
+
+        # Add web intelligence context if available
+        if hasattr(request_data, 'web_context') and request_data.web_context:
+            web_context_prompt = self._create_web_enhanced_context_prompt(request_data.web_context)
+            if web_context_prompt:
+                context_section += f"\n{web_context_prompt}"
 
         # Build research focus section
         focus_section = f"""
@@ -845,6 +864,12 @@ Recent Grants: {', '.join(context.target_preliminary_data.recent_grants_given) i
             
         if context.target_preliminary_data.annual_revenue:
             context_section += f"\nAnnual Revenue: {context.target_preliminary_data.annual_revenue}"
+
+        # Add web intelligence context if available
+        if hasattr(request_data, 'web_context') and request_data.web_context:
+            web_context_prompt = self._create_web_enhanced_context_prompt(request_data.web_context)
+            if web_context_prompt:
+                context_section += f"\n{web_context_prompt}"
 
         # Build research focus section
         focus_section = f"""
@@ -1696,6 +1721,214 @@ RESPONSE (JSON only):"""
             success_metrics=["Application submission rate", "Response rate", "Funding success rate"],
             risk_mitigation=["Diversify funding sources", "Maintain backup plans"]
         )
+
+    async def _gather_web_intelligence_context(self, request: AIHeavyRequest) -> Optional[Dict[str, Any]]:
+        """Gather current web intelligence to enhance AI analysis context."""
+        try:
+            web_context = {}
+            target_org = request.request_metadata.target_organization
+            
+            # Get organization web intelligence from database
+            org_intelligence = await self._get_organization_web_intelligence(target_org)
+            if org_intelligence:
+                web_context['organization_intelligence'] = org_intelligence
+                logger.debug(f"Retrieved organization intelligence for {target_org}")
+            
+            # Get competitive intelligence if available
+            competitive_intelligence = await self._get_competitive_intelligence_context(target_org)
+            if competitive_intelligence:
+                web_context['competitive_intelligence'] = competitive_intelligence
+                logger.debug(f"Retrieved competitive intelligence for {target_org}")
+            
+            # Get related opportunity intelligence
+            opportunity_intelligence = await self._get_opportunity_intelligence_context(request)
+            if opportunity_intelligence:
+                web_context['opportunity_intelligence'] = opportunity_intelligence
+                logger.debug(f"Retrieved opportunity intelligence")
+            
+            # Get market intelligence
+            market_intelligence = await self._get_market_intelligence_context(request)
+            if market_intelligence:
+                web_context['market_intelligence'] = market_intelligence
+                logger.debug(f"Retrieved market intelligence")
+            
+            return web_context if web_context else None
+            
+        except Exception as e:
+            logger.warning(f"Failed to gather web intelligence context: {e}")
+            return None
+
+    async def _get_organization_web_intelligence(self, target_org: str) -> Optional[Dict[str, Any]]:
+        """Get web intelligence for the target organization."""
+        try:
+            # Try to match organization by name - could be enhanced with EIN matching
+            with sqlite3.connect(self.database_path) as conn:
+                cursor = conn.execute("""
+                    SELECT wi.*, bmi.member_name, bmi.title_position, bmi.biography
+                    FROM web_intelligence wi
+                    LEFT JOIN board_member_intelligence bmi ON wi.ein = bmi.ein
+                    WHERE wi.ein IN (
+                        SELECT ein FROM organization_urls 
+                        WHERE organization_name LIKE ? OR predicted_url LIKE ?
+                    )
+                    ORDER BY wi.intelligence_quality_score DESC
+                    LIMIT 1
+                """, (f"%{target_org}%", f"%{target_org.lower().replace(' ', '')}%"))
+                
+                row = cursor.fetchone()
+                if row:
+                    # Parse the web intelligence data
+                    columns = [desc[0] for desc in cursor.description]
+                    data = dict(zip(columns, row))
+                    
+                    # Parse JSON fields
+                    intelligence = {
+                        'ein': data.get('ein'),
+                        'url': data.get('url'),
+                        'quality_score': data.get('intelligence_quality_score', 0),
+                        'leadership_data': json.loads(data.get('leadership_data', '[]')) if data.get('leadership_data') else [],
+                        'program_data': json.loads(data.get('program_data', '[]')) if data.get('program_data') else [],
+                        'contact_data': json.loads(data.get('contact_data', '{}')) if data.get('contact_data') else {},
+                        'mission_statements': json.loads(data.get('mission_statements', '[]')) if data.get('mission_statements') else [],
+                        'last_updated': data.get('updated_at')
+                    }
+                    
+                    return intelligence
+                
+                return None
+                
+        except Exception as e:
+            logger.debug(f"No web intelligence found for {target_org}: {e}")
+            return None
+
+    async def _get_competitive_intelligence_context(self, target_org: str) -> Optional[Dict[str, Any]]:
+        """Get competitive intelligence context."""
+        # This would be implemented when competitive intelligence processor is added
+        # For now, return None
+        return None
+
+    async def _get_opportunity_intelligence_context(self, request: AIHeavyRequest) -> Optional[Dict[str, Any]]:
+        """Get opportunity-related intelligence context."""
+        try:
+            # Get recent opportunity intelligence from cross-stage table
+            with sqlite3.connect(self.database_path) as conn:
+                cursor = conn.execute("""
+                    SELECT intelligence_data_json, quality_score, last_updated
+                    FROM cross_stage_intelligence
+                    WHERE workflow_stage = 'opportunity_enhancement'
+                      AND data_type = 'opportunity'
+                      AND datetime(last_updated) > datetime('now', '-7 days')
+                    ORDER BY quality_score DESC
+                    LIMIT 5
+                """)
+                
+                opportunities = []
+                for row in cursor.fetchall():
+                    try:
+                        data = json.loads(row[0])
+                        opportunities.append({
+                            'intelligence_data': data,
+                            'quality_score': row[1],
+                            'last_updated': row[2]
+                        })
+                    except json.JSONDecodeError:
+                        continue
+                
+                return {'recent_opportunities': opportunities} if opportunities else None
+                
+        except Exception as e:
+            logger.debug(f"No opportunity intelligence found: {e}")
+            return None
+
+    async def _get_market_intelligence_context(self, request: AIHeavyRequest) -> Optional[Dict[str, Any]]:
+        """Get market and trend intelligence context."""
+        # This would be implemented when market intelligence processor is added
+        # For now, return basic context from request
+        try:
+            if hasattr(request, 'context_data') and hasattr(request.context_data, 'profile_context'):
+                profile = request.context_data.profile_context
+                return {
+                    'sector_focus': getattr(profile, 'strategic_priorities', []),
+                    'geographic_scope': getattr(profile, 'geographic_scope', ''),
+                    'funding_capacity': getattr(profile, 'funding_capacity', '')
+                }
+        except Exception:
+            pass
+        return None
+
+    def _enhance_request_with_web_context(self, request: AIHeavyRequest, web_context: Dict[str, Any]) -> AIHeavyRequest:
+        """Enhance the AI request with web intelligence context."""
+        try:
+            # Add web context to the request metadata
+            if not hasattr(request, 'web_context'):
+                request.web_context = web_context
+            else:
+                request.web_context.update(web_context)
+            
+            # Log the enhancement
+            context_sources = list(web_context.keys())
+            logger.info(f"Enhanced AI request with web context: {context_sources}")
+            
+            return request
+            
+        except Exception as e:
+            logger.warning(f"Failed to enhance request with web context: {e}")
+            return request
+
+    def _create_web_enhanced_context_prompt(self, web_context: Dict[str, Any]) -> str:
+        """Create additional context prompt from web intelligence."""
+        try:
+            context_parts = []
+            
+            # Organization intelligence
+            if 'organization_intelligence' in web_context:
+                org_intel = web_context['organization_intelligence']
+                context_parts.append(f"\n=== CURRENT ORGANIZATION INTELLIGENCE ===")
+                context_parts.append(f"Website Quality Score: {org_intel.get('quality_score', 'N/A')}/100")
+                
+                if org_intel.get('leadership_data'):
+                    context_parts.append(f"Leadership Team: {len(org_intel['leadership_data'])} members identified")
+                    for leader in org_intel['leadership_data'][:3]:  # Top 3 leaders
+                        context_parts.append(f"  - {leader.get('name', 'N/A')}: {leader.get('title', 'N/A')}")
+                
+                if org_intel.get('program_data'):
+                    context_parts.append(f"Current Programs: {len(org_intel['program_data'])} programs active")
+                    for program in org_intel['program_data'][:3]:  # Top 3 programs
+                        context_parts.append(f"  - {program.get('name', 'N/A')}")
+                
+                if org_intel.get('contact_data'):
+                    contact_info = org_intel['contact_data']
+                    if contact_info.get('email'):
+                        context_parts.append(f"Current Contact: {contact_info['email']}")
+            
+            # Opportunity intelligence
+            if 'opportunity_intelligence' in web_context:
+                opp_intel = web_context['opportunity_intelligence']
+                if opp_intel.get('recent_opportunities'):
+                    context_parts.append(f"\n=== RECENT OPPORTUNITY INTELLIGENCE ===")
+                    context_parts.append(f"Recent opportunities analyzed: {len(opp_intel['recent_opportunities'])}")
+                    
+                    for opp in opp_intel['recent_opportunities'][:2]:  # Top 2 opportunities
+                        data = opp.get('intelligence_data', {})
+                        if data.get('application_guidance'):
+                            context_parts.append(f"Application Tips Found: {len(data['application_guidance'])} tips available")
+                        if data.get('contact_updates'):
+                            context_parts.append(f"Updated Contacts: New contact information available")
+            
+            # Market intelligence
+            if 'market_intelligence' in web_context:
+                market_intel = web_context['market_intelligence']
+                context_parts.append(f"\n=== MARKET CONTEXT ===")
+                if market_intel.get('sector_focus'):
+                    context_parts.append(f"Sector Focus: {', '.join(market_intel['sector_focus'])}")
+                if market_intel.get('geographic_scope'):
+                    context_parts.append(f"Geographic Scope: {market_intel['geographic_scope']}")
+            
+            return '\n'.join(context_parts) if context_parts else ""
+            
+        except Exception as e:
+            logger.warning(f"Failed to create web-enhanced context prompt: {e}")
+            return ""
     
     def get_status(self) -> Dict[str, Any]:
         """Get processor status and configuration"""

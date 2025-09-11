@@ -2600,6 +2600,8 @@ function catalynxApp() {
         
         // EIN fetch functionality
         einFetchLoading: false,
+        enableWebScraping: true,
+        webScrapingResults: null,
         pendingDeleteProfileId: null,
         
         // Profile form data - comprehensive structure
@@ -3042,7 +3044,7 @@ function catalynxApp() {
         },
 
         async fetchEINData() {
-            console.log('fetchEINData called');
+            console.log('fetchEINData called with web scraping:', this.enableWebScraping);
             console.log('profileForm.ein:', this.profileForm?.ein);
             
             if (!this.profileForm?.ein) {
@@ -3051,15 +3053,22 @@ function catalynxApp() {
             }
             
             this.einFetchLoading = true;
+            this.webScrapingResults = null;
+            
             try {
+                const requestData = {
+                    ein: this.profileForm.ein,
+                    enable_web_scraping: this.enableWebScraping
+                };
+                
+                console.log('Request data:', requestData);
+                
                 const response = await fetch('/api/profiles/fetch-ein', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        ein: this.profileForm.ein
-                    })
+                    body: JSON.stringify(requestData)
                 });
                 
                 const result = await response.json();
@@ -3067,7 +3076,14 @@ function catalynxApp() {
                 
                 if (result.success && result.data) {
                     console.log('Organization data:', result.data);
-                    // Update profile form with fetched data
+                    
+                    // Store web scraping results for display
+                    if (result.data.web_scraping_data) {
+                        this.webScrapingResults = result.data.web_scraping_data;
+                        console.log('Web scraping results:', this.webScrapingResults);
+                    }
+                    
+                    // Update profile form with fetched data (ProPublica API data)
                     if (result.data.name) {
                         console.log('Setting name:', result.data.name);
                         this.profileForm.name = result.data.name;
@@ -3091,6 +3107,30 @@ function catalynxApp() {
                         console.log('Setting revenue:', result.data.revenue);
                     }
                     
+                    // Enhanced fields from web scraping
+                    if (result.data.enhanced_with_web_data) {
+                        console.log('Enhanced with web scraping data');
+                        
+                        // Add programs if available
+                        if (result.data.programs && result.data.programs.length > 0) {
+                            // Convert programs to keywords if keywords field is empty
+                            if (!this.profileForm.keywords) {
+                                const programKeywords = result.data.programs
+                                    .map(program => program.split(' ').slice(0, 3).join(' '))
+                                    .join(', ');
+                                this.profileForm.keywords = programKeywords;
+                                console.log('Setting keywords from programs:', programKeywords);
+                            }
+                        }
+                        
+                        // Store additional data for later use
+                        this.profileForm.web_enhanced_data = {
+                            programs: result.data.programs || [],
+                            leadership: result.data.leadership || [],
+                            contact_info: result.data.contact_info || []
+                        };
+                    }
+                    
                     // Handle Schedule I data and status
                     if (result.data.schedule_i_grantees && result.data.schedule_i_grantees.length > 0) {
                         this.profileForm.schedule_i_grantees = result.data.schedule_i_grantees;
@@ -3098,18 +3138,32 @@ function catalynxApp() {
                         console.log('Setting Schedule I grantees:', result.data.schedule_i_grantees);
                         
                         const granteeCount = result.data.schedule_i_grantees.length;
-                        this.showNotification(`Organization data fetched: ${result.data.name} (${granteeCount} Schedule I grantee${granteeCount > 1 ? 's' : ''} found)${result.data.city ? ' (' + result.data.city + ', ' + result.data.state + ')' : ''}`, 'success');
+                        const webInfo = result.data.enhanced_with_web_data ? ' + Web Enhanced' : '';
+                        this.showNotification(`Organization data fetched: ${result.data.name} (${granteeCount} Schedule I grantee${granteeCount > 1 ? 's' : ''} found)${webInfo}${result.data.city ? ' (' + result.data.city + ', ' + result.data.state + ')' : ''}`, 'success');
                     } else {
                         this.profileForm.schedule_i_grantees = [];
-                        // Check if we have explicit status information from the API response
                         if (result.data.schedule_i_status) {
                             this.profileForm.schedule_i_status = result.data.schedule_i_status;
                         } else {
-                            // Default to 'no_grantees' if XML was processed but no grantees found
                             this.profileForm.schedule_i_status = 'no_grantees';
                         }
-                        this.showNotification(`Organization data fetched: ${result.data.name} (No Schedule I grantees found)${result.data.city ? ' (' + result.data.city + ', ' + result.data.state + ')' : ''}`, 'success');
+                        
+                        const webInfo = result.data.enhanced_with_web_data ? ' + Web Enhanced' : '';
+                        this.showNotification(`Organization data fetched: ${result.data.name} (No Schedule I grantees found)${webInfo}${result.data.city ? ' (' + result.data.city + ', ' + result.data.state + ')' : ''}`, 'success');
                     }
+                    
+                    // Display enhanced features info
+                    if (result.enhanced_features) {
+                        console.log('Enhanced features:', result.enhanced_features);
+                        
+                        if (result.enhanced_features.web_data_available) {
+                            const scrapedSites = this.webScrapingResults?.successful_scrapes?.length || 0;
+                            if (scrapedSites > 0) {
+                                this.showNotification(`🌐 Web Enhancement: Successfully scraped ${scrapedSites} website${scrapedSites > 1 ? 's' : ''}`, 'info');
+                            }
+                        }
+                    }
+                    
                 } else {
                     console.log('API call failed or no data:', result);
                     this.showNotification(result.message || 'Failed to fetch organization data', 'error');

@@ -6175,20 +6175,91 @@
                                 
                                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <template x-for="opportunity in filterCommercialOpportunities()" :key="opportunity.id">
-                                        <div class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:shadow-md transition-shadow">
+                                        <div class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:shadow-md transition-shadow" 
+                                             x-data="{enhancedOrg: getEnhancedOrganizationDisplay(opportunity)}">
+                                            <!-- Organization Header with Grant Priority -->
                                             <div class="flex items-start justify-between mb-3">
-                                                <h4 class="font-medium text-gray-900 dark:text-white text-sm" x-text="opportunity.organization_name"></h4>
-                                                <span :class="getCompatibilityClass(opportunity.compatibility_score)" 
-                                                      class="px-2 py-1 text-xs font-semibold rounded-full" 
-                                                      x-text="Math.round(opportunity.compatibility_score * 100) + '%'"></span>
+                                                <div class="flex-1">
+                                                    <div class="flex items-center space-x-2 mb-1">
+                                                        <h4 class="font-medium text-gray-900 dark:text-white text-sm" x-text="opportunity.organization_name"></h4>
+                                                        <!-- Grant Research Priority Badge -->
+                                                        <span :class="enhancedOrg.financial_intelligence.grant_priority.class" 
+                                                              class="px-2 py-1 text-xs font-semibold rounded-full" 
+                                                              x-text="enhancedOrg.financial_intelligence.grant_priority.text"></span>
+                                                    </div>
+                                                    <span :class="getCompatibilityClass(opportunity.compatibility_score)" 
+                                                          class="px-2 py-1 text-xs font-semibold rounded-full" 
+                                                          x-text="Math.round(opportunity.compatibility_score * 100) + '% Match'"></span>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Financial Intelligence Section -->
+                                            <div x-show="enhancedOrg.financial_intelligence.is_foundation" class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 mb-3">
+                                                <h5 class="font-medium text-red-800 dark:text-red-200 text-sm mb-2">🎯 Foundation Grant Intelligence</h5>
+                                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                                    <div>
+                                                        <label class="text-red-700 dark:text-red-300 font-medium">Annual Distributions</label>
+                                                        <div class="text-red-900 dark:text-red-100 font-semibold" 
+                                                             x-text="formatFinancialAmount(enhancedOrg.financial_intelligence.grant_distributions)"></div>
+                                                    </div>
+                                                    <div>
+                                                        <label class="text-red-700 dark:text-red-300 font-medium">Foundation Type</label>
+                                                        <div class="text-red-900 dark:text-red-100" x-text="opportunity.foundation_code === '03' ? 'Non-Operating' : 'Operating'"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Financial Performance Metrics -->
+                                            <div x-show="enhancedOrg.financial_intelligence.efficiency_ratio || enhancedOrg.financial_intelligence.program_revenue_ratio" 
+                                                 class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3 mb-3">
+                                                <h5 class="font-medium text-blue-800 dark:text-blue-200 text-sm mb-2">📊 Financial Performance</h5>
+                                                <div class="grid grid-cols-2 gap-2 text-xs">
+                                                    <div x-show="enhancedOrg.financial_intelligence.efficiency_ratio">
+                                                        <label class="text-blue-700 dark:text-blue-300 font-medium">Efficiency Ratio</label>
+                                                        <div class="flex items-center space-x-1">
+                                                            <span class="text-blue-900 dark:text-blue-100 font-semibold" 
+                                                                  x-text="enhancedOrg.financial_intelligence.efficiency_ratio + '%'"></span>
+                                                            <span :class="enhancedOrg.financial_intelligence.health_badge.class"
+                                                                  class="px-1 py-0.5 text-xs rounded" 
+                                                                  x-text="enhancedOrg.financial_intelligence.health_badge.text"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div x-show="enhancedOrg.financial_intelligence.program_revenue_ratio">
+                                                        <label class="text-blue-700 dark:text-blue-300 font-medium">Program Revenue</label>
+                                                        <div class="text-blue-900 dark:text-blue-100 font-semibold" 
+                                                             x-text="enhancedOrg.financial_intelligence.program_revenue_ratio + '%'"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Financial Trend Chart (Compact) -->
+                                            <div x-show="opportunity.total_revenue_990 || opportunity.f990_revenue" 
+                                                 class="bg-gray-50 dark:bg-gray-600 rounded-lg p-2 mb-3">
+                                                <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Revenue Trend</h6>
+                                                <canvas :id="'trend-chart-' + opportunity.opportunity_id" 
+                                                        class="w-full h-16"
+                                                        x-init="$nextTick(() => createFinancialTrendChart('trend-chart-' + opportunity.opportunity_id, opportunity))"></canvas>
                                             </div>
                                             
                                             <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2" x-text="opportunity.program_name"></p>
                                             <p class="text-xs text-gray-600 dark:text-gray-400 mb-3" x-text="opportunity.description"></p>
                                             
+                                            <!-- Enhanced Financial Display -->
+                                            <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+                                                <div>
+                                                    <label class="text-gray-500 dark:text-gray-400">Funding Amount</label>
+                                                    <div class="font-medium text-green-600 dark:text-green-400" x-text="formatFundingAmount(opportunity.funding_amount)"></div>
+                                                </div>
+                                                <div x-show="opportunity.total_revenue_990 || opportunity.revenue">
+                                                    <label class="text-gray-500 dark:text-gray-400">Annual Revenue</label>
+                                                    <div class="font-medium text-gray-700 dark:text-gray-300" 
+                                                         x-text="formatFinancialAmount(opportunity.total_revenue_990 || opportunity.revenue)"></div>
+                                                </div>
+                                            </div>
+                                            
                                             <div class="flex items-center justify-between text-xs">
-                                                <span class="font-medium text-green-600 dark:text-green-400" x-text="formatFundingAmount(opportunity.funding_amount)"></span>
                                                 <span class="text-gray-500 dark:text-gray-400" x-text="opportunity.application_deadline"></span>
+                                                <span class="text-gray-500 dark:text-gray-400" x-text="opportunity.state || 'Multi-State'"></span>
                                             </div>
                                             
                                             <div class="mt-3 flex items-center space-x-2">
@@ -8407,18 +8478,62 @@
                         
                         <!-- Column 1: Basic Information -->
                         <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col">
-                            <div class="flex justify-between items-center mb-4">
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h4>
-                                <button type="button" @click="fetchEINData()" 
-                                        :disabled="!profileForm.ein || einFetchLoading"
-                                        :class="!profileForm.ein || einFetchLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
-                                        class="px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium transition-colors flex items-center">
-                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                    </svg>
-                                    <span x-show="!einFetchLoading">Fetch EIN</span>
-                                    <span x-show="einFetchLoading">...</span>
-                                </button>
+                            <div class="space-y-3 mb-4">
+                                <div class="flex justify-between items-center">
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h4>
+                                    <button type="button" @click="fetchEINData()" 
+                                            :disabled="!profileForm.ein || einFetchLoading"
+                                            :class="!profileForm.ein || einFetchLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
+                                            class="px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium transition-colors flex items-center">
+                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                        </svg>
+                                        <span x-show="!einFetchLoading">🌐 Enhanced Fetch</span>
+                                        <span x-show="einFetchLoading">Fetching...</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Web Scraping Options -->
+                                <div class="flex items-center space-x-4 text-xs">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" x-model="enableWebScraping" 
+                                               class="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <span class="ml-2 text-gray-600 dark:text-gray-400">Web Enhancement</span>
+                                    </label>
+                                    <div x-show="enableWebScraping" class="flex items-center text-green-600 dark:text-green-400">
+                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span class="text-xs">AI-powered web scraping enabled</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Web Scraping Results -->
+                                <div x-show="webScrapingResults && webScrapingResults.successful_scrapes && webScrapingResults.successful_scrapes.length > 0" 
+                                     class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-md p-3">
+                                    <div class="flex items-center mb-2">
+                                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path>
+                                        </svg>
+                                        <span class="text-sm font-medium text-green-800 dark:text-green-200">
+                                            Web Enhancement Complete
+                                        </span>
+                                    </div>
+                                    <div class="text-xs text-green-700 dark:text-green-300 space-y-1">
+                                        <div>
+                                            <span x-text="webScrapingResults.successful_scrapes.length"></span> websites successfully scraped
+                                        </div>
+                                        <div x-show="webScrapingResults.extracted_info.mission_statements.length > 0">
+                                            <span x-text="webScrapingResults.extracted_info.mission_statements.length"></span> mission statements found
+                                        </div>
+                                        <div x-show="webScrapingResults.extracted_info.programs.length > 0">
+                                            <span x-text="webScrapingResults.extracted_info.programs.length"></span> programs identified
+                                        </div>
+                                        <div x-show="webScrapingResults.extracted_info.leadership.length > 0">
+                                            <span x-text="webScrapingResults.extracted_info.leadership.length"></span> leadership entries found
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             
                             <!-- Fields stacked vertically -->

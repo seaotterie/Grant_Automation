@@ -393,6 +393,19 @@ class DatabaseManager:
         start_time = time.time()
         
         try:
+            # Validate opportunity stage before database insert
+            valid_stages = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities']
+            if opportunity.current_stage not in valid_stages:
+                logger.warning(f"Invalid opportunity stage '{opportunity.current_stage}', defaulting to 'prospects'")
+                opportunity.current_stage = 'prospects'
+                
+                # Update stage history if it exists
+                if opportunity.stage_history:
+                    for stage_entry in opportunity.stage_history:
+                        if stage_entry.get('stage') == 'discovery':
+                            stage_entry['stage'] = 'prospects'
+                            logger.info(f"Corrected stage history: discovery → prospects for {opportunity.id}")
+            
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 
@@ -528,6 +541,12 @@ class DatabaseManager:
                                reason: str, promoted_by: str = 'system') -> bool:
         """Update opportunity stage with audit trail"""
         try:
+            # Validate stage before update
+            valid_stages = ['prospects', 'qualified_prospects', 'candidates', 'targets', 'opportunities']
+            if new_stage not in valid_stages:
+                logger.error(f"Invalid stage '{new_stage}' for opportunity {opportunity_id}. Valid stages: {valid_stages}")
+                return False
+            
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 

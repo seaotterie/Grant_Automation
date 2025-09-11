@@ -1,12 +1,13 @@
 """
-BMF Filter Processor - Step 1
-Filters IRS Business Master File data based on NTEE codes, state, and financial criteria.
+BMF Filter Processor - Enhanced with Web Validation
+Filters IRS Business Master File data and validates organizations with web presence.
 """
 import asyncio
 import logging
 import sqlite3
+import json
 from typing import Dict, Any, List, Optional, Set
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata, SyncProcessorMixin, BatchProcessorMixin
@@ -14,6 +15,7 @@ from src.core.data_models import ProcessorConfig, ProcessorResult, OrganizationP
 from src.profiles.models import FormType, FoundationType, ApplicationAcceptanceStatus
 from src.utils.decorators import retry_on_failure, cache_result
 from src.utils.validators import validate_ein, validate_state_code, validate_ntee_code, normalize_ein
+from src.core.simple_mcp_client import SimpleMCPClient
 
 
 class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin):
@@ -47,12 +49,22 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
         
         # Database configuration
         self.db_path = Path("data/nonprofit_intelligence.db")
+        self.catalynx_db_path = "data/catalynx.db"
+        
+        # Web validation configuration
+        self.mcp_client = SimpleMCPClient(timeout=10)  # Shorter timeout for bulk validation
+        self.enable_web_validation = True  # Can be disabled via config
         
         # Performance optimization settings
         self.max_processing_time = 30  # seconds
         self.batch_size = 1000  # Process in batches for better performance
         self.early_exit_threshold = 500  # Exit early if we have enough results
         self.progress_update_interval = 1000  # Update progress every N records
+        
+        # Web validation settings
+        self.web_validation_batch_size = 20  # Validate URLs in smaller batches
+        self.web_validation_delay = 0.5  # Delay between web validation requests
+        self.max_web_validations_per_run = 100  # Limit validations to avoid overwhelming
     
     def validate_processor_inputs(self, config: ProcessorConfig) -> List[str]:
         """Validate BMF filter specific inputs."""
@@ -507,8 +519,14 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
                 self.logger.error(f"Database query timed out after {self.max_processing_time} seconds")
                 raise ValueError(f"Database query timed out after {self.max_processing_time} seconds")
             
-            # Step 3: Store results
-            self._update_progress(3, 4, f"Found {len(matching_orgs)} matching organizations")
+            # Step 3: Web validation (if enabled)
+            if config.get_config("enable_web_validation", self.enable_web_validation):
+                self._update_progress(3, 5, f"Validating web presence for {len(matching_orgs)} organizations")
+                matching_orgs = await self._validate_web_presence(matching_orgs, config)
+                self.logger.info(f"Web validation completed: {len(matching_orgs)} organizations with validated presence")
+            
+            # Step 4: Store results
+            self._update_progress(4, 5, f"Found {len(matching_orgs)} matching organizations")
             
             # Convert to dictionaries for storage
             org_dicts = [org.dict() for org in matching_orgs]
@@ -535,7 +553,7 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
                 f"(States: {states_str}, NTEE: {ntee_str})"
             )
             
-            self._update_progress(4, 4, f"BMF filtering completed - {len(matching_orgs)} organizations")
+            self._update_progress(5, 5, f"BMF filtering completed - {len(matching_orgs)} organizations")
             
             result.success = True
         
@@ -549,6 +567,252 @@ class BMFFilterProcessor(BaseProcessor, SyncProcessorMixin, BatchProcessorMixin)
                 result.execution_time = (result.end_time - result.start_time).total_seconds()
         
         return result
+
+    async def _validate_web_presence(
+        self, 
+        organizations: List[OrganizationProfile], 
+        config: ProcessorConfig
+    ) -> List[OrganizationProfile]:
+        """Validate web presence for organizations and filter out inactive ones."""
+        try:
+            validated_orgs = []
+            max_validations = config.get_config("max_web_validations", self.max_web_validations_per_run)
+            
+            # Limit validations to avoid overwhelming the system
+            orgs_to_validate = organizations[:max_validations]
+            remaining_orgs = organizations[max_validations:]
+            
+            self.logger.info(f"Web validating {len(orgs_to_validate)} organizations, {len(remaining_orgs)} will be included without validation")
+            
+            # Process in batches to avoid overwhelming servers
+            for i in range(0, len(orgs_to_validate), self.web_validation_batch_size):
+                batch = orgs_to_validate[i:i + self.web_validation_batch_size]
+                batch_results = await self._validate_batch_web_presence(batch)
+                validated_orgs.extend(batch_results)
+                
+                # Rate limiting between batches
+                if i + self.web_validation_batch_size < len(orgs_to_validate):
+                    await asyncio.sleep(self.web_validation_delay)
+            
+            # Add remaining organizations without validation
+            validated_orgs.extend(remaining_orgs)
+            
+            # Log validation statistics
+            validated_count = len([org for org in validated_orgs if hasattr(org, 'web_validation_status')])
+            active_count = len([org for org in validated_orgs 
+                              if getattr(org, 'web_validation_status', None) == 'active'])
+            
+            self.logger.info(f"Web validation: {validated_count} checked, {active_count} active, {len(validated_orgs)} total organizations")
+            
+            return validated_orgs
+            
+        except Exception as e:
+            self.logger.warning(f"Web validation failed: {e}. Returning original organizations.")
+            return organizations
+
+    async def _validate_batch_web_presence(self, batch: List[OrganizationProfile]) -> List[OrganizationProfile]:
+        """Validate web presence for a batch of organizations."""
+        validated_batch = []
+        
+        # Get or predict URLs for organizations
+        url_tasks = []
+        for org in batch:
+            url_tasks.append(self._get_or_predict_organization_url(org))
+        
+        try:
+            urls = await asyncio.gather(*url_tasks, return_exceptions=True)
+            
+            # Validate each URL
+            validation_tasks = []
+            for i, org in enumerate(batch):
+                url = urls[i] if not isinstance(urls[i], Exception) else None
+                if url:
+                    validation_tasks.append(self._validate_single_url(org, url))
+                else:
+                    # No URL available, mark as unknown
+                    org.web_validation_status = 'no_url'
+                    org.web_validation_date = datetime.now()
+                    validation_tasks.append(asyncio.create_task(self._return_org_unchanged(org)))
+            
+            validated_results = await asyncio.gather(*validation_tasks, return_exceptions=True)
+            
+            for result in validated_results:
+                if not isinstance(result, Exception) and result:
+                    validated_batch.append(result)
+            
+            return validated_batch
+            
+        except Exception as e:
+            self.logger.warning(f"Batch validation error: {e}")
+            return batch
+
+    async def _get_or_predict_organization_url(self, org: OrganizationProfile) -> Optional[str]:
+        """Get cached URL or predict one for the organization."""
+        try:
+            # Check if URL is already cached
+            with sqlite3.connect(self.catalynx_db_path) as conn:
+                cursor = conn.execute("""
+                    SELECT predicted_url, url_status, last_verified
+                    FROM organization_urls 
+                    WHERE ein = ? OR organization_name LIKE ?
+                """, (org.ein, f"%{org.name}%"))
+                
+                result = cursor.fetchone()
+                if result:
+                    predicted_url, url_status, last_verified = result
+                    
+                    # Use cached URL if it's verified or recent
+                    if url_status == 'verified':
+                        return predicted_url
+                    elif url_status == 'pending' and last_verified:
+                        # Check if cache is recent (within 7 days)
+                        last_verified_date = datetime.fromisoformat(last_verified)
+                        if (datetime.now() - last_verified_date).days < 7:
+                            return predicted_url
+            
+            # Predict URL using simple heuristics (could be enhanced with GPT integration)
+            predicted_url = self._predict_organization_url(org)
+            
+            # Cache the prediction
+            if predicted_url:
+                await self._cache_predicted_url(org, predicted_url)
+            
+            return predicted_url
+            
+        except Exception as e:
+            self.logger.debug(f"URL prediction failed for {org.name}: {e}")
+            return None
+
+    def _predict_organization_url(self, org: OrganizationProfile) -> Optional[str]:
+        """Predict organization URL using simple heuristics."""
+        try:
+            if not org.name:
+                return None
+            
+            # Clean organization name for URL prediction
+            clean_name = org.name.lower()
+            clean_name = clean_name.replace(' ', '').replace('-', '').replace('_', '')
+            clean_name = ''.join(c for c in clean_name if c.isalnum())
+            
+            # Remove common nonprofit suffixes
+            suffixes_to_remove = ['inc', 'org', 'foundation', 'fund', 'trust', 'corp', 'ltd']
+            for suffix in suffixes_to_remove:
+                if clean_name.endswith(suffix):
+                    clean_name = clean_name[:-len(suffix)]
+            
+            # Common URL patterns for nonprofits
+            url_patterns = [
+                f"https://www.{clean_name}.org",
+                f"https://{clean_name}.org",
+                f"https://www.{clean_name}.com", 
+                f"https://{clean_name}.com"
+            ]
+            
+            return url_patterns[0]  # Return most likely pattern
+            
+        except Exception:
+            return None
+
+    async def _cache_predicted_url(self, org: OrganizationProfile, url: str):
+        """Cache predicted URL for future use."""
+        try:
+            with sqlite3.connect(self.catalynx_db_path) as conn:
+                # Ensure organization_urls table exists with compatible schema
+                conn.execute("""
+                    INSERT OR REPLACE INTO organization_urls 
+                    (ein, organization_name, predicted_url, url_status, discovery_method, 
+                     discovery_date, verification_attempts, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(ein) DO UPDATE SET
+                        predicted_url = excluded.predicted_url,
+                        url_status = excluded.url_status,
+                        updated_at = excluded.updated_at
+                """, (
+                    org.ein,
+                    org.name,
+                    url,
+                    'pending',
+                    'heuristic_prediction',
+                    datetime.now().isoformat(),
+                    0,
+                    datetime.now().isoformat(),
+                    datetime.now().isoformat()
+                ))
+                conn.commit()
+        except Exception as e:
+            self.logger.debug(f"Failed to cache predicted URL for {org.name}: {e}")
+
+    async def _validate_single_url(self, org: OrganizationProfile, url: str) -> OrganizationProfile:
+        """Validate a single organization URL."""
+        try:
+            # Try to fetch the URL with a short timeout
+            result = await self.mcp_client.fetch_url(url, max_length=2000)
+            
+            if result.success and result.status_code and 200 <= result.status_code < 400:
+                # URL is active
+                org.web_validation_status = 'active'
+                org.web_validation_url = url
+                org.web_validation_date = datetime.now()
+                org.web_validation_details = {
+                    'status_code': result.status_code,
+                    'title': result.title[:100] if result.title else None,
+                    'content_length': len(result.content) if result.content else 0
+                }
+                
+                # Update cache with verification
+                await self._update_url_verification(org.ein, url, 'verified', result.status_code)
+                
+            else:
+                # URL is not accessible
+                org.web_validation_status = 'inactive'
+                org.web_validation_url = url
+                org.web_validation_date = datetime.now()
+                org.web_validation_details = {
+                    'status_code': result.status_code if result.status_code else 'timeout',
+                    'error': 'URL not accessible'
+                }
+                
+                # Update cache with failed verification
+                await self._update_url_verification(org.ein, url, 'failed', 
+                                                  result.status_code if result.status_code else 0)
+            
+            return org
+            
+        except Exception as e:
+            # Validation error - keep organization but mark as unknown
+            org.web_validation_status = 'error'
+            org.web_validation_url = url
+            org.web_validation_date = datetime.now()
+            org.web_validation_details = {'error': str(e)}
+            
+            return org
+
+    async def _update_url_verification(self, ein: str, url: str, status: str, status_code: int):
+        """Update URL verification status in cache."""
+        try:
+            with sqlite3.connect(self.catalynx_db_path) as conn:
+                conn.execute("""
+                    UPDATE organization_urls 
+                    SET url_status = ?, 
+                        http_status_code = ?, 
+                        last_verified = ?,
+                        verification_attempts = verification_attempts + 1,
+                        updated_at = ?
+                    WHERE ein = ?
+                """, (
+                    status,
+                    status_code,
+                    datetime.now().isoformat(),
+                    datetime.now().isoformat(),
+                    ein
+                ))
+                conn.commit()
+        except Exception as e:
+            self.logger.debug(f"Failed to update URL verification for {ein}: {e}")
+
+    async def _return_org_unchanged(self, org: OrganizationProfile) -> OrganizationProfile:
+        """Helper method to return organization unchanged (for async compatibility)."""
+        return org
     
     async def cleanup(self, config: ProcessorConfig) -> None:
         """Clean up temporary files if needed."""

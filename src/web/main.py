@@ -1524,15 +1524,175 @@ async def export_workflow(workflow_id: str, format: str = "csv"):
         logger.error(f"Failed to export workflow: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Helper methods for enhanced web scraping
+async def _scrape_predicted_urls(predicted_urls: List[str], organization_data: Dict, url_discovery_processor) -> Dict:
+    """
+    Scrape predicted URLs and cache successful ones
+    
+    Args:
+        predicted_urls: List of URLs predicted by GPT
+        organization_data: Organization information
+        url_discovery_processor: URL discovery processor instance for caching
+        
+    Returns:
+        Scraped data in the expected format
+    """
+    try:
+        from src.core.simple_mcp_client import SimpleMCPClient
+        
+        client = SimpleMCPClient(timeout=15)
+        results = await client.fetch_multiple_urls(predicted_urls, max_length=3000)
+        
+        # Process results and find the best URL
+        successful_urls = []
+        best_url = None
+        best_content_score = 0
+        
+        for result in results:
+            if result.success and result.content and len(result.content) > 200:
+                content_score = _score_scraped_content(result.content, organization_data)
+                
+                successful_urls.append({
+                    "url": result.url,
+                    "title": result.title,
+                    "content_length": len(result.content),
+                    "content_score": content_score,
+                    "timestamp": result.timestamp.isoformat()
+                })
+                
+                # Track the best URL for caching
+                if content_score > best_content_score:
+                    best_content_score = content_score
+                    best_url = result.url
+        
+        # Cache the best URL if we found one
+        if best_url and best_content_score > 0.3:  # Minimum quality threshold
+            await url_discovery_processor.cache_successful_url(
+                organization_data['ein'], 
+                best_url, 
+                best_content_score
+            )
+            logger.info(f"Cached successful URL for EIN {organization_data['ein']}: {best_url}")
+        
+        # Extract information from all successful scrapes
+        extracted_info = {
+            "mission_statements": [],
+            "contact_info": [],
+            "programs": [],
+            "leadership": [],
+            "financial_info": []
+        }
+        
+        for url_data in successful_urls:
+            # Get the actual content for extraction
+            matching_result = next((r for r in results if r.url == url_data["url"]), None)
+            if matching_result and matching_result.content:
+                _extract_organization_info_simple(matching_result.content, extracted_info)
+        
+        return {
+            "organization_name": organization_data['organization_name'],
+            "ein": organization_data['ein'],
+            "successful_scrapes": successful_urls,
+            "failed_scrapes": [
+                {"url": r.url, "error": r.error or "No content"} 
+                for r in results if not r.success or not r.content or len(r.content) < 200
+            ],
+            "extracted_info": extracted_info,
+            "url_source": "gpt_prediction"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error scraping predicted URLs: {e}")
+        return {
+            "organization_name": organization_data['organization_name'],
+            "ein": organization_data['ein'],
+            "successful_scrapes": [],
+            "failed_scrapes": [{"url": url, "error": str(e)} for url in predicted_urls],
+            "extracted_info": {"mission_statements": [], "contact_info": [], "programs": [], "leadership": [], "financial_info": []},
+            "url_source": "gpt_prediction"
+        }
+
+def _score_scraped_content(content: str, organization_data: Dict) -> float:
+    """
+    Score scraped content for relevance to the organization
+    
+    Returns score between 0.0 and 1.0
+    """
+    score = 0.0
+    content_lower = content.lower()
+    org_name_lower = organization_data.get('organization_name', '').lower()
+    
+    # Check for organization name mentions
+    if org_name_lower and org_name_lower in content_lower:
+        score += 0.4
+    
+    # Check for nonprofit indicators
+    nonprofit_indicators = ['nonprofit', 'non-profit', 'charity', 'foundation', 'mission', 'donate', 'volunteer']
+    indicator_count = sum(1 for indicator in nonprofit_indicators if indicator in content_lower)
+    score += min(indicator_count * 0.1, 0.3)
+    
+    # Check for address mentions
+    city = organization_data.get('city', '').lower()
+    state = organization_data.get('state', '').lower()
+    if city and city in content_lower:
+        score += 0.2
+    if state and state in content_lower:
+        score += 0.1
+    
+    return min(score, 1.0)
+
+def _extract_organization_info_simple(content: str, extracted_info: Dict):
+    """Simple extraction of organization information from content"""
+    content_lower = content.lower()
+    lines = [line.strip() for line in content.split('\n') if line.strip()]
+    
+    mission_keywords = ["mission", "purpose", "vision", "goal", "about"]
+    contact_keywords = ["contact", "email", "phone", "address"]
+    program_keywords = ["program", "service", "initiative", "project"]
+    leadership_keywords = ["board", "director", "ceo", "president", "staff"]
+    
+    for line in lines:
+        line_lower = line.lower()
+        
+        if len(line) < 20 or len(line) > 300:
+            continue
+            
+        if any(keyword in line_lower for keyword in mission_keywords):
+            if line not in extracted_info["mission_statements"]:
+                extracted_info["mission_statements"].append(line)
+                
+        elif any(keyword in line_lower for keyword in contact_keywords):
+            if "@" in line or "phone" in line_lower:
+                if line not in extracted_info["contact_info"]:
+                    extracted_info["contact_info"].append(line)
+                    
+        elif any(keyword in line_lower for keyword in program_keywords):
+            if line not in extracted_info["programs"]:
+                extracted_info["programs"].append(line)
+                
+        elif any(keyword in line_lower for keyword in leadership_keywords):
+            if line not in extracted_info["leadership"]:
+                extracted_info["leadership"].append(line)
+    
+    # Limit results
+    for key in extracted_info:
+        extracted_info[key] = extracted_info[key][:5]
+
 # Profile Management API endpoints
 @app.post("/api/profiles/fetch-ein")
 async def fetch_ein_data(request: dict):
     """
-    Fetch organization data by EIN using ProPublica API (both JSON and XML data).
-    Enhanced to extract Schedule I grantees for discovery fast-tracking.
+    Enhanced organization data fetching with web scraping capabilities.
+    
+    Combines ProPublica API data with web scraping for comprehensive profiles:
+    - ProPublica API for official 990 data and Schedule I grantees
+    - Web scraping for mission statements, current programs, leadership info
+    - GuideStar and organization websites for additional context
     """
     try:
         ein = request.get('ein', '').strip()
+        enable_web_scraping = request.get('enable_web_scraping', True)
+        
         if not ein:
             raise HTTPException(status_code=400, detail="EIN is required")
         
@@ -1580,8 +1740,116 @@ async def fetch_ein_data(request: dict):
                 "most_recent_filing_year": org_data.get('most_recent_filing_year', ''),
                 "filing_years": org_data.get('filing_years', []),
                 "schedule_i_grantees": [],  # Initialize empty list
-                "schedule_i_status": "not_checked"  # Default status
+                "schedule_i_status": "not_checked",  # Default status
+                "web_scraping_data": {},  # New field for scraped data
+                "enhanced_with_web_data": False  # Flag to indicate if web enhancement was successful
             }
+            
+            # Enhanced web scraping integration with GPT URL discovery
+            if enable_web_scraping:
+                try:
+                    logger.info(f"Starting intelligent web scraping for {org_data.get('name', 'Unknown')} (EIN: {ein})")
+                    
+                    # Step 1: Use GPT URL Discovery to find likely URLs
+                    try:
+                        from src.processors.analysis.gpt_url_discovery import GPTURLDiscoveryProcessor
+                        from src.core.data_models import ProcessorConfig, WorkflowConfig
+                        
+                        # Create processor config for URL discovery
+                        url_discovery_processor = GPTURLDiscoveryProcessor()
+                        
+                        # Prepare organization data for GPT URL discovery
+                        organization_data = {
+                            'organization_name': org_data.get('name', ''),
+                            'ein': ein,
+                            'address': f"{org_data.get('city', '')}, {org_data.get('state', '')}",
+                            'city': org_data.get('city', ''),
+                            'state': org_data.get('state', ''),
+                            'organization_type': 'nonprofit'
+                        }
+                        
+                        url_config = ProcessorConfig(
+                            workflow_id=str(uuid.uuid4()),
+                            processor_name="gpt_url_discovery",
+                            workflow_config=WorkflowConfig(target_ein=ein),
+                            processor_specific_config={'organization_data': organization_data}
+                        )
+                        
+                        # Get URL predictions from GPT
+                        url_result = await url_discovery_processor.execute(url_config)
+                        predicted_urls = []
+                        
+                        if url_result.success and url_result.data.get('urls'):
+                            predicted_urls = url_result.data['urls']
+                            logger.info(f"GPT predicted {len(predicted_urls)} URLs for {org_data.get('name', '')}")
+                        else:
+                            logger.warning(f"GPT URL discovery failed for EIN {ein}: {url_result.error_message}")
+                            
+                    except Exception as gpt_error:
+                        logger.warning(f"GPT URL discovery failed for EIN {ein}: {gpt_error}")
+                        predicted_urls = []
+                    
+                    # Step 2: Use predicted URLs or fall back to pattern-based discovery
+                    if predicted_urls:
+                        # Use GPT-predicted URLs for scraping
+                        logger.info(f"Using GPT-predicted URLs: {predicted_urls}")
+                        scraped_data = await _scrape_predicted_urls(
+                            predicted_urls, organization_data, url_discovery_processor
+                        )
+                    else:
+                        # Fallback to original pattern-based approach
+                        logger.info("Falling back to pattern-based URL discovery")
+                        try:
+                            from src.core.mcp_client import web_scraping_service
+                            scraped_data = await web_scraping_service.scrape_organization_websites(
+                                organization_name=org_data.get('name', ''),
+                                ein=ein
+                            )
+                        except Exception as mcp_error:
+                            logger.warning(f"MCP client failed for EIN {ein}: {mcp_error}, trying simple client")
+                            from src.core.simple_mcp_client import simple_web_scraping_service
+                            scraped_data = await simple_web_scraping_service.scrape_organization_websites(
+                                organization_name=org_data.get('name', ''),
+                                ein=ein
+                            )
+                    
+                    if scraped_data and scraped_data.get('successful_scrapes'):
+                        logger.info(f"Successfully scraped {len(scraped_data['successful_scrapes'])} websites for EIN {ein}")
+                        
+                        response_data["web_scraping_data"] = scraped_data
+                        response_data["enhanced_with_web_data"] = True
+                        
+                        # Enhance existing fields with scraped data
+                        extracted_info = scraped_data.get('extracted_info', {})
+                        
+                        # Enhance mission statement if current one is lacking
+                        if extracted_info.get('mission_statements') and (
+                            not response_data["mission_statement"] or 
+                            len(response_data["mission_statement"]) < 50
+                        ):
+                            # Use the longest, most descriptive mission statement found
+                            best_mission = max(
+                                extracted_info['mission_statements'], 
+                                key=len,
+                                default=""
+                            )
+                            if len(best_mission) > len(response_data["mission_statement"]):
+                                response_data["mission_statement"] = best_mission
+                                logger.info(f"Enhanced mission statement from web scraping for EIN {ein}")
+                        
+                        # Add additional fields from scraped data
+                        response_data["programs"] = extracted_info.get('programs', [])[:5]  # Top 5 programs
+                        response_data["leadership"] = extracted_info.get('leadership', [])[:5]  # Top 5 leadership entries
+                        response_data["contact_info"] = extracted_info.get('contact_info', [])[:3]  # Top 3 contact entries
+                        
+                    else:
+                        logger.warning(f"No successful web scraping results for EIN {ein}")
+                        response_data["web_scraping_data"] = {"message": "No websites successfully scraped"}
+                        
+                except Exception as web_error:
+                    logger.error(f"Web scraping error for EIN {ein}: {web_error}")
+                    response_data["web_scraping_data"] = {"error": str(web_error)}
+                    # Don't fail the entire request if web scraping fails
             
             # Attempt to fetch XML data and extract Schedule I grantees
             try:
@@ -1621,7 +1889,16 @@ async def fetch_ein_data(request: dict):
             
             return {
                 "success": True,
-                "data": response_data
+                "data": response_data,
+                "enhanced_features": {
+                    "web_scraping_enabled": enable_web_scraping,
+                    "web_data_available": response_data["enhanced_with_web_data"],
+                    "data_sources": [
+                        "ProPublica API",
+                        "IRS XML Filings",
+                        "Web Scraping" if response_data["enhanced_with_web_data"] else "Web Scraping (Failed)"
+                    ]
+                }
             }
         else:
             return {
@@ -3645,6 +3922,130 @@ async def discover_opportunities_unified(profile_id: str, discovery_params: Dict
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Unified discovery failed: {str(e)}")
 
+@app.post("/api/profiles/{profile_id}/run-bmf-filter")
+async def run_bmf_filter_for_profile(profile_id: str):
+    """
+    Execute BMF filter processor for a profile to find matching organizations.
+    This endpoint runs the actual BMF processor against local source data.
+    """
+    try:
+        logger.info(f"Running BMF filter for profile {profile_id}")
+        
+        # Get profile to extract criteria
+        profile_obj = database_service.get_profile(profile_id)
+        if not profile_obj:
+            raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+        
+        # Extract profile criteria for BMF filtering
+        if hasattr(profile_obj, 'ntee_codes'):
+            ntee_codes = getattr(profile_obj, 'ntee_codes', [])
+            geographic_scope = getattr(profile_obj, 'geographic_scope', {})
+        else:
+            ntee_codes = profile_obj.get('ntee_codes', [])
+            geographic_scope = profile_obj.get('geographic_scope', {})
+        
+        states = geographic_scope.get('states', ['VA']) if geographic_scope else ['VA']
+        
+        logger.info(f"BMF Filter criteria - NTEE codes: {ntee_codes}, States: {states}")
+        
+        # Import BMF processor
+        from src.processors.filtering.bmf_filter import BMFFilterProcessor
+        from src.core.data_models import WorkflowConfig, ProcessorConfig
+        
+        # Create BMF processor instance
+        bmf_processor = BMFFilterProcessor()
+        
+        # Configure workflow and processor
+        workflow_config = WorkflowConfig(
+            workflow_id=f"bmf_filter_{profile_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            ntee_codes=ntee_codes or ["L11", "L20", "L99", "L82", "L81", "L80", "L41", "L24", "F40"],  # Default to profile or healthcare codes
+            states=states,
+            max_results=100
+        )
+        
+        processor_config = ProcessorConfig(
+            workflow_id=workflow_config.workflow_id,
+            processor_name="bmf_filter",
+            workflow_config=workflow_config,
+            processor_specific_config={
+                "profile_id": profile_id,
+                "source_data_path": "data/source_data"
+            }
+        )
+        
+        # Execute BMF processor with timeout
+        logger.info("Executing BMF processor with real source data")
+        try:
+            bmf_result = await asyncio.wait_for(
+                bmf_processor.execute(processor_config),
+                timeout=30.0  # 30 second timeout
+            )
+            
+            if bmf_result.success and bmf_result.data:
+                organizations = bmf_result.data.get("organizations", [])
+                
+                # Format results for frontend
+                nonprofits = []
+                foundations = []
+                
+                for org in organizations:
+                    org_data = {
+                        "organization_name": org.get("organization_name", ""),
+                        "ein": org.get("ein", ""),
+                        "ntee_code": org.get("ntee_code", ""),
+                        "state": org.get("state", ""),
+                        "source_type": org.get("source_type", "Nonprofit"),
+                        "bmf_filtered": True
+                    }
+                    
+                    if org.get("foundation_code") == "03" or org.get("source_type") == "Foundation":
+                        foundations.append(org_data)
+                    else:
+                        nonprofits.append(org_data)
+                
+                bmf_results = {
+                    "nonprofits": nonprofits,
+                    "foundations": foundations
+                }
+                
+                logger.info(f"BMF Filter found {len(nonprofits)} nonprofits and {len(foundations)} foundations")
+                
+                return {
+                    "status": "success",
+                    "bmf_results": bmf_results,
+                    "total_organizations": len(organizations),
+                    "nonprofits_found": len(nonprofits),
+                    "foundations_found": len(foundations),
+                    "filter_criteria": {
+                        "ntee_codes": ntee_codes,
+                        "states": states
+                    },
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                logger.warning("BMF processor returned no results")
+                return {
+                    "status": "success", 
+                    "bmf_results": {"nonprofits": [], "foundations": []},
+                    "total_organizations": 0,
+                    "nonprofits_found": 0,
+                    "foundations_found": 0,
+                    "message": "No organizations found matching criteria"
+                }
+                
+        except asyncio.TimeoutError:
+            logger.error("BMF processor timed out after 30 seconds")
+            raise HTTPException(status_code=408, detail="BMF filter processing timed out")
+        except Exception as bmf_error:
+            logger.error(f"BMF processor failed: {bmf_error}")
+            raise HTTPException(status_code=500, detail=f"BMF filter execution failed: {str(bmf_error)}")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"BMF filter endpoint failed: {e}")
+        raise HTTPException(status_code=500, detail=f"BMF filter failed: {str(e)}")
+
 @app.post("/api/profiles/{profile_id}/discover/bmf")
 async def discover_bmf_opportunities(profile_id: str, bmf_data: Dict[str, Any]):
     """
@@ -4866,6 +5267,158 @@ async def discover_commercial_enhanced(request: Dict[str, Any]):
         
     except Exception as e:
         logger.error(f"Commercial discovery failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/discovery/bmf/{profile_id}")
+async def discover_bmf_filtered(profile_id: str, request: Dict[str, Any] = None):
+    """Execute BMF filtering with profile NTEE codes and geographic criteria."""
+    try:
+        logger.info(f"Starting BMF discovery for profile {profile_id}")
+        
+        # Get profile from database to extract NTEE codes and geographic scope
+        database_manager = DatabaseManager("data/catalynx.db")
+        profile_data = database_manager.get_profile(profile_id)
+        
+        if not profile_data:
+            raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+        
+        # Extract NTEE codes from profile
+        ntee_codes = []
+        if profile_data.ntee_codes:
+            try:
+                import json
+                ntee_codes = json.loads(profile_data.ntee_codes) if isinstance(profile_data.ntee_codes, str) else profile_data.ntee_codes
+            except (json.JSONDecodeError, TypeError):
+                ntee_codes = []
+        
+        if not ntee_codes:
+            logger.warning(f"Profile {profile_id} has no NTEE codes, using healthcare defaults")
+            ntee_codes = ["L11", "L20", "L99"]  # Healthcare defaults
+        
+        # Extract geographic scope
+        states = ["VA"]  # Default
+        if profile_data.geographic_scope:
+            try:
+                geographic_scope = json.loads(profile_data.geographic_scope) if isinstance(profile_data.geographic_scope, str) else profile_data.geographic_scope
+                if geographic_scope and geographic_scope.get("states"):
+                    states = geographic_scope["states"]
+            except (json.JSONDecodeError, TypeError):
+                pass
+        
+        # Get additional parameters from request
+        max_results = request.get("max_results", 100) if request else 100
+        min_revenue = request.get("min_revenue") if request else None
+        max_revenue = request.get("max_revenue") if request else None
+        
+        logger.info(f"BMF discovery parameters - Profile: {profile_data.name}, NTEE: {ntee_codes}, States: {states}")
+        
+        # Execute BMF processor
+        engine = get_workflow_engine()
+        bmf_instance = engine.registry.get_processor("bmf_filter")
+        
+        if not bmf_instance:
+            raise HTTPException(status_code=500, detail="BMF processor not available")
+        
+        from src.core.data_models import WorkflowConfig, ProcessorConfig
+        
+        # Create workflow config with profile data
+        workflow_config = WorkflowConfig(
+            workflow_id=f"bmf_discovery_{profile_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            states=states,
+            ntee_codes=ntee_codes,
+            min_revenue=min_revenue,
+            max_revenue=max_revenue,
+            max_results=max_results
+        )
+        
+        processor_config = ProcessorConfig(
+            workflow_id=workflow_config.workflow_id,
+            processor_name="bmf_filter",
+            workflow_config=workflow_config,
+            processor_specific_config={
+                "profile_id": profile_id,
+                "profile_name": profile_data.name
+            }
+        )
+        
+        # Execute with timeout for performance
+        try:
+            logger.info("Executing BMF processor with real backend filtering")
+            bmf_result = await asyncio.wait_for(
+                bmf_instance.execute(processor_config),
+                timeout=45.0  # 45 second timeout for thorough filtering
+            )
+            
+            if bmf_result.success and bmf_result.data:
+                organizations = bmf_result.data.get("organizations", [])
+                logger.info(f"BMF discovery completed - found {len(organizations)} organizations")
+                
+                # Convert to opportunity format for frontend consistency
+                opportunities = []
+                for org in organizations:
+                    opportunity = {
+                        "opportunity_id": f"bmf_{org.get('ein', 'unknown')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                        "organization_name": org.get('name', 'Unknown Organization'),
+                        "ein": org.get('ein'),
+                        "ntee_code": org.get('ntee_code'),
+                        "state": org.get('state'),
+                        "city": org.get('city'),
+                        "revenue": org.get('revenue'),
+                        "assets": org.get('assets'),
+                        "discovery_source": "bmf_filter",
+                        "source_type": "nonprofit",
+                        "compatibility_score": 0.7,  # BMF filtered organizations get good base score
+                        "confidence_level": 0.8,
+                        "discovered_at": datetime.now().isoformat(),
+                        "match_factors": {
+                            "ntee_match": org.get('ntee_code') in ntee_codes,
+                            "geographic_match": org.get('state') in states,
+                            "bmf_filtered": True
+                        }
+                    }
+                    opportunities.append(opportunity)
+                
+                return {
+                    "status": "completed",
+                    "profile_id": profile_id,
+                    "profile_name": profile_data.name,
+                    "total_found": len(opportunities),
+                    "opportunities": opportunities,
+                    "filter_criteria": {
+                        "ntee_codes": ntee_codes,
+                        "states": states,
+                        "min_revenue": min_revenue,
+                        "max_revenue": max_revenue
+                    },
+                    "execution_time": bmf_result.execution_time,
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                logger.error(f"BMF processor failed or returned no data: {bmf_result.error_message if hasattr(bmf_result, 'error_message') else 'Unknown error'}")
+                return {
+                    "status": "completed",
+                    "profile_id": profile_id,
+                    "total_found": 0,
+                    "opportunities": [],
+                    "error": "BMF processor returned no results",
+                    "timestamp": datetime.now().isoformat()
+                }
+                
+        except asyncio.TimeoutError:
+            logger.error(f"BMF discovery timed out after 45 seconds for profile {profile_id}")
+            return {
+                "status": "timeout",
+                "profile_id": profile_id,
+                "total_found": 0,
+                "opportunities": [],
+                "error": "BMF processing timed out - please try with smaller max_results",
+                "timestamp": datetime.now().isoformat()
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"BMF discovery failed for profile {profile_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # AMPLINATOR Track Endpoints

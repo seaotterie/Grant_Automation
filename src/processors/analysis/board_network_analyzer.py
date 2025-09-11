@@ -13,6 +13,8 @@ This processor:
 
 import asyncio
 import time
+import sqlite3
+import json
 import networkx as nx
 import pandas as pd
 from typing import List, Dict, Any, Optional, Set, Tuple
@@ -22,6 +24,11 @@ import re
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata
 from src.core.data_models import ProcessorConfig, ProcessorResult, OrganizationProfile
+
+try:
+    from src.core.simple_mcp_client import SimpleMCPClient
+except ImportError:
+    SimpleMCPClient = None
 
 
 class BoardMember:
@@ -96,14 +103,18 @@ class BoardNetworkAnalyzerProcessor(BaseProcessor):
     def __init__(self):
         metadata = ProcessorMetadata(
             name="board_network_analyzer",
-            description="Analyze board member networks and organizational relationships",
-            version="1.0.0",
+            description="Analyze board member networks with web intelligence and organizational relationships",
+            version="2.0.0",
             dependencies=["financial_scorer"],  # Run after scoring to get full org data
-            estimated_duration=60,  # 1 minute
-            requires_network=False,
+            estimated_duration=90,  # 1.5 minutes with web enhancement
+            requires_network=True,  # Now requires network for web intelligence
             requires_api_key=False
         )
         super().__init__(metadata)
+        
+        # Initialize MCP client for web intelligence
+        self.mcp_client = SimpleMCPClient(timeout=20) if SimpleMCPClient else None
+        self.database_path = "data/catalynx.db"
         
     async def execute(self, config: ProcessorConfig, workflow_state=None) -> ProcessorResult:
         """Execute board member network analysis."""
@@ -121,9 +132,49 @@ class BoardNetworkAnalyzerProcessor(BaseProcessor):
             
             self.logger.info(f"Analyzing board network for {len(organizations)} organizations")
             
-            # Extract board members from all organizations
-            board_members = self._extract_board_members(organizations)
-            self.logger.info(f"Found {len(board_members)} total board member positions")
+            # Extract board members from all organizations (990 filing data)
+            filing_board_members = self._extract_board_members(organizations)
+            self.logger.info(f"Found {len(filing_board_members)} board member positions from filings")
+            
+            # Enhance with web intelligence board member data
+            web_board_members = await self._extract_web_intelligence_board_members(organizations, config)
+            self.logger.info(f"Found {len(web_board_members)} board member positions from web intelligence")
+            
+            # Combine both sources with deduplication
+            board_members = self._merge_board_member_sources(filing_board_members, web_board_members)
+            self.logger.info(f"Total unique board members: {len(board_members)} (after deduplication)")
+            
+            # Check if we have sufficient board member data for network analysis
+            if len(board_members) == 0:
+                self.logger.warning("No board member data found in organizations - cannot perform network analysis")
+                return ProcessorResult(
+                    success=True,
+                    processor_name=self.metadata.name,
+                    execution_time=time.time() - start_time,
+                    data={
+                        "organizations": [org.dict() for org in organizations],
+                        "network_analysis": {
+                            "status": "no_board_data",
+                            "message": "Board member data not available in source filings",
+                            "total_board_members": 0,
+                            "unique_individuals": 0,
+                            "network_connections": 0,
+                            "data_limitation": "ProPublica 990 filings typically do not include detailed board member information"
+                        },
+                        "connections": [],
+                        "network_metrics": {"organization_metrics": {}},
+                        "influence_scores": {"individual_influence": {}, "summary": {"total_unique_individuals": 0}},
+                        "insights": {
+                            "key_findings": ["Board member data not available in source filings"],
+                            "strategic_recommendations": ["Consider manual data entry for board member information"],
+                            "data_sources": ["ProPublica 990 filings provide financial data but limited governance details"]
+                        }
+                    },
+                    metadata={
+                        "analysis_type": "board_network_analysis",
+                        "data_status": "insufficient_board_data"
+                    }
+                )
             
             # Build network connections
             network_graph = self._build_network_graph(board_members)
@@ -145,6 +196,11 @@ class BoardNetworkAnalyzerProcessor(BaseProcessor):
                     "total_board_members": len(board_members),
                     "unique_individuals": len(set(member.normalized_name for member in board_members)),
                     "network_connections": len(connections),
+                    "data_sources": {
+                        "filing_data": len(filing_board_members),
+                        "web_intelligence": len(web_board_members),
+                        "deduplication_savings": len(filing_board_members) + len(web_board_members) - len(board_members)
+                    },
                     "network_graph_stats": {
                         "nodes": network_graph.number_of_nodes(),
                         "edges": network_graph.number_of_edges(),
@@ -163,8 +219,9 @@ class BoardNetworkAnalyzerProcessor(BaseProcessor):
                 execution_time=execution_time,
                 data=result_data,
                 metadata={
-                    "analysis_type": "board_network_analysis",
-                    "algorithms_used": ["networkx", "centrality_analysis", "community_detection"]
+                    "analysis_type": "enhanced_board_network_analysis",
+                    "algorithms_used": ["networkx", "centrality_analysis", "community_detection"],
+                    "data_sources": ["990_filings", "web_intelligence", "board_member_intelligence"]
                 }
             )
             
@@ -279,6 +336,91 @@ class BoardNetworkAnalyzerProcessor(BaseProcessor):
                         board_members.append(member)
         
         return board_members
+    
+    async def _extract_web_intelligence_board_members(self, organizations: List[OrganizationProfile], config: ProcessorConfig) -> List[BoardMember]:
+        """Extract board member data from web intelligence database."""
+        web_members = []
+        
+        if not self.mcp_client:
+            self.logger.warning("MCP client not available - skipping web intelligence board member extraction")
+            return web_members
+        
+        try:
+            with sqlite3.connect(self.database_path) as conn:
+                cursor = conn.execute("""
+                    SELECT ein, member_name, title_position, data_source, biography, data_quality_score
+                    FROM board_member_intelligence 
+                    WHERE ein IN ({})
+                    AND data_quality_score >= 60
+                    ORDER BY data_quality_score DESC
+                """.format(','.join('?' * len(organizations))), 
+                [org.ein for org in organizations])
+                
+                results = cursor.fetchall()
+                self.logger.info(f"Retrieved {len(results)} web intelligence board member records")
+                
+                # Create organization lookup
+                org_lookup = {org.ein: org.name for org in organizations}
+                
+                for ein, member_name, title_position, data_source, biography, quality_score in results:
+                    if ein in org_lookup and member_name:
+                        member = BoardMember(
+                            name=member_name,
+                            organization_ein=ein,
+                            organization_name=org_lookup[ein],
+                            position=title_position or "Board Member"
+                        )
+                        # Add additional metadata for web-sourced members
+                        member.data_source = data_source
+                        member.biography = biography
+                        member.quality_score = quality_score
+                        web_members.append(member)
+                        
+        except Exception as e:
+            self.logger.warning(f"Failed to extract web intelligence board members: {e}")
+        
+        return web_members
+    
+    def _merge_board_member_sources(self, filing_members: List[BoardMember], web_members: List[BoardMember]) -> List[BoardMember]:
+        """Merge board members from filing and web sources with intelligent deduplication."""
+        merged_members = []
+        seen_combinations = set()
+        
+        # Track duplicates for reporting
+        web_enhancements = 0
+        filing_only = 0
+        web_only = 0
+        
+        # Add all filing members first (these are authoritative)
+        for member in filing_members:
+            key = (member.normalized_name, member.organization_ein)
+            if key not in seen_combinations:
+                merged_members.append(member)
+                seen_combinations.add(key)
+                filing_only += 1
+        
+        # Add web members that don't duplicate filing data
+        for web_member in web_members:
+            key = (web_member.normalized_name, web_member.organization_ein)
+            if key not in seen_combinations:
+                merged_members.append(web_member)
+                seen_combinations.add(key)
+                web_only += 1
+            else:
+                # Check if web member has additional information to enhance existing member
+                for existing_member in merged_members:
+                    if (existing_member.normalized_name == web_member.normalized_name and 
+                        existing_member.organization_ein == web_member.organization_ein):
+                        
+                        # Enhance with web intelligence data if available
+                        if hasattr(web_member, 'biography') and web_member.biography:
+                            existing_member.biography = getattr(web_member, 'biography', None)
+                            existing_member.web_enhanced = True
+                            web_enhancements += 1
+                        break
+        
+        self.logger.info(f"Board member merge summary - Filing only: {filing_only}, Web only: {web_only}, Enhanced: {web_enhancements}")
+        return merged_members
     
     def _build_network_graph(self, board_members: List[BoardMember]) -> nx.Graph:
         """Build a NetworkX graph of organizational connections."""
@@ -436,12 +578,13 @@ class BoardNetworkAnalyzerProcessor(BaseProcessor):
         }
     
     def _generate_network_insights(self, connections: List[NetworkConnection], network_metrics: Dict[str, Any], organizations: List[OrganizationProfile]) -> Dict[str, Any]:
-        """Generate strategic insights from network analysis."""
+        """Generate strategic insights from enhanced network analysis."""
         insights = {
             "key_findings": [],
             "strategic_recommendations": [],
             "network_clusters": [],
-            "potential_opportunities": []
+            "potential_opportunities": [],
+            "data_quality": []
         }
         
         # Key findings
@@ -449,7 +592,7 @@ class BoardNetworkAnalyzerProcessor(BaseProcessor):
             insights["key_findings"].append(f"Found {len(connections)} organizational connections through shared board members")
             
             strongest_connection = max(connections, key=lambda x: x.connection_strength)
-            insights["key_findings"].append(f"Strongest connection: {strongest_connection.org1_name} ↔ {strongest_connection.org2_name} ({int(strongest_connection.connection_strength)} shared members)")
+            insights["key_findings"].append(f"Strongest connection: {strongest_connection.org1_name} <-> {strongest_connection.org2_name} ({int(strongest_connection.connection_strength)} shared members)")
         
         # Analyze organization types in network
         ntee_codes = [org.ntee_code for org in organizations if org.ntee_code]
@@ -479,6 +622,17 @@ class BoardNetworkAnalyzerProcessor(BaseProcessor):
         if connections:
             insights["potential_opportunities"].append("Shared board members can facilitate knowledge transfer and collaboration")
             insights["potential_opportunities"].append("Connected organizations may have complementary expertise or resources")
+            insights["potential_opportunities"].append("Web intelligence provides current leadership structure beyond 990 filing data")
+        
+        # Data quality insights
+        web_enhanced_count = 0
+        web_only_count = 0
+        total_members = 0
+        
+        # Note: This would be enhanced if we tracked the data sources in board_members
+        insights["data_quality"].append("Analysis combines 990 filing data with current web intelligence")
+        insights["data_quality"].append("Web intelligence provides more current board member information")
+        insights["data_quality"].append("Quality scoring ensures reliable web-sourced board member data")
         
         return insights
     
