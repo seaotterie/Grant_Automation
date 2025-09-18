@@ -1,0 +1,4 @@
+⚡ Testing performance...
+✅ Page loaded in 1503ms
+📊 DOM Content Loaded: 13.900000095367432ms
+📊 Load Complete: 0ms
