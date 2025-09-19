@@ -320,6 +320,389 @@ class BasePage {
       };
     });
   }
+
+  /**
+   * Enhanced performance metrics including Core Web Vitals
+   */
+  async getDetailedPerformanceMetrics() {
+    return await this.page.evaluate(() => {
+      const navigation = performance.getEntriesByType('navigation')[0];
+      const paintEntries = performance.getEntriesByType('paint');
+      const lcpEntries = performance.getEntriesByType('largest-contentful-paint');
+
+      return {
+        navigation: {
+          pageLoadTime: navigation ? navigation.loadEventEnd - navigation.loadEventStart : null,
+          domContentLoaded: navigation ? navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart : null,
+          timeToFirstByte: navigation ? navigation.responseStart - navigation.requestStart : null,
+          resourceLoadTime: navigation ? navigation.loadEventEnd - navigation.fetchStart : null
+        },
+        coreWebVitals: {
+          firstPaint: paintEntries.find(entry => entry.name === 'first-paint')?.startTime || null,
+          firstContentfulPaint: paintEntries.find(entry => entry.name === 'first-contentful-paint')?.startTime || null,
+          largestContentfulPaint: lcpEntries.length > 0 ? lcpEntries[lcpEntries.length - 1].startTime : null
+        },
+        memory: 'memory' in performance ? {
+          usedJSHeapSize: performance.memory.usedJSHeapSize,
+          totalJSHeapSize: performance.memory.totalJSHeapSize,
+          jsHeapSizeLimit: performance.memory.jsHeapSizeLimit
+        } : null,
+        timing: {
+          timestamp: Date.now(),
+          performanceNow: performance.now()
+        }
+      };
+    });
+  }
+
+  /**
+   * Wait for Core Web Vitals measurement
+   */
+  async measureCoreWebVitals(timeout = 10000) {
+    return await this.page.evaluate((timeout) => {
+      return new Promise((resolve) => {
+        const vitals = {
+          lcp: null,
+          fid: null,
+          cls: null
+        };
+
+        // Largest Contentful Paint
+        const lcpObserver = new PerformanceObserver((list) => {
+          const entries = list.getEntries();
+          vitals.lcp = entries[entries.length - 1]?.startTime || null;
+        });
+        lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
+
+        // Cumulative Layout Shift
+        let clsValue = 0;
+        const clsObserver = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (!entry.hadRecentInput) {
+              clsValue += entry.value;
+            }
+          }
+          vitals.cls = clsValue;
+        });
+        clsObserver.observe({ type: 'layout-shift', buffered: true });
+
+        // First Input Delay would be measured on actual user interaction
+        // For testing purposes, we'll simulate it
+        const startTime = performance.now();
+        document.addEventListener('click', () => {
+          vitals.fid = performance.now() - startTime;
+        }, { once: true });
+
+        // Resolve after timeout or when we have measurements
+        setTimeout(() => {
+          lcpObserver.disconnect();
+          clsObserver.disconnect();
+          resolve(vitals);
+        }, timeout);
+      });
+    }, timeout);
+  }
+
+  /**
+   * Enhanced error handling and recovery
+   */
+  async handleError(error, retryAction = null, maxRetries = 3) {
+    console.error(`Error encountered: ${error.message}`);
+
+    if (retryAction && maxRetries > 0) {
+      console.log(`Attempting retry (${maxRetries} attempts remaining)...`);
+      await this.page.waitForTimeout(1000);
+
+      try {
+        await retryAction();
+        console.log('✅ Retry successful');
+        return true;
+      } catch (retryError) {
+        return await this.handleError(retryError, retryAction, maxRetries - 1);
+      }
+    }
+
+    // Take screenshot for debugging
+    await this.takeScreenshot(`error-${Date.now()}`);
+    return false;
+  }
+
+  /**
+   * Advanced element interaction with retry and error handling
+   */
+  async interactWithElement(selector, action = 'click', options = {}) {
+    const maxRetries = options.maxRetries || 3;
+    const retryDelay = options.retryDelay || 1000;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.page.waitForSelector(selector, {
+          state: 'visible',
+          timeout: 5000
+        });
+
+        switch (action) {
+          case 'click':
+            await this.page.click(selector, options);
+            break;
+          case 'fill':
+            await this.page.fill(selector, options.value || '');
+            break;
+          case 'hover':
+            await this.page.hover(selector);
+            break;
+          case 'focus':
+            await this.page.focus(selector);
+            break;
+          default:
+            throw new Error(`Unknown action: ${action}`);
+        }
+
+        return true;
+      } catch (error) {
+        console.log(`Attempt ${attempt}/${maxRetries} failed for ${action} on ${selector}: ${error.message}`);
+
+        if (attempt < maxRetries) {
+          await this.page.waitForTimeout(retryDelay);
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
+  /**
+   * Network request monitoring and analysis
+   */
+  async monitorNetworkRequests(duration = 30000) {
+    const networkMetrics = {
+      requests: [],
+      responses: [],
+      failures: [],
+      totalRequests: 0,
+      totalSize: 0,
+      averageResponseTime: 0
+    };
+
+    const requestListener = (request) => {
+      networkMetrics.totalRequests++;
+      networkMetrics.requests.push({
+        url: request.url(),
+        method: request.method(),
+        timestamp: Date.now(),
+        resourceType: request.resourceType()
+      });
+    };
+
+    const responseListener = (response) => {
+      const request = response.request();
+      const responseTime = Date.now() - networkMetrics.requests.find(r => r.url === request.url())?.timestamp || 0;
+
+      networkMetrics.responses.push({
+        url: response.url(),
+        status: response.status(),
+        responseTime: responseTime,
+        size: response.request().postDataBuffer()?.length || 0,
+        fromCache: response.fromCache()
+      });
+
+      networkMetrics.totalSize += response.request().postDataBuffer()?.length || 0;
+    };
+
+    const failureListener = (request) => {
+      networkMetrics.failures.push({
+        url: request.url(),
+        failure: request.failure()?.errorText || 'Unknown error',
+        timestamp: Date.now()
+      });
+    };
+
+    this.page.on('request', requestListener);
+    this.page.on('response', responseListener);
+    this.page.on('requestfailed', failureListener);
+
+    await this.page.waitForTimeout(duration);
+
+    this.page.off('request', requestListener);
+    this.page.off('response', responseListener);
+    this.page.off('requestfailed', failureListener);
+
+    // Calculate average response time
+    const responseTimes = networkMetrics.responses.map(r => r.responseTime).filter(t => t > 0);
+    networkMetrics.averageResponseTime = responseTimes.length > 0
+      ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
+      : 0;
+
+    return networkMetrics;
+  }
+
+  /**
+   * Accessibility testing utilities
+   */
+  async checkAccessibility() {
+    return await this.page.evaluate(() => {
+      const issues = [];
+
+      // Check for images without alt text
+      const images = document.querySelectorAll('img');
+      images.forEach((img, index) => {
+        if (!img.getAttribute('alt')) {
+          issues.push(`Image ${index} missing alt attribute`);
+        }
+      });
+
+      // Check for buttons without accessible names
+      const buttons = document.querySelectorAll('button');
+      buttons.forEach((button, index) => {
+        const hasLabel = button.getAttribute('aria-label') ||
+                        button.getAttribute('aria-labelledby') ||
+                        button.textContent?.trim();
+        if (!hasLabel) {
+          issues.push(`Button ${index} missing accessible name`);
+        }
+      });
+
+      // Check for form inputs without labels
+      const inputs = document.querySelectorAll('input[type="text"], input[type="email"], textarea');
+      inputs.forEach((input, index) => {
+        const hasLabel = input.getAttribute('aria-label') ||
+                        input.getAttribute('aria-labelledby') ||
+                        document.querySelector(`label[for="${input.id}"]`);
+        if (!hasLabel) {
+          issues.push(`Input ${index} missing label`);
+        }
+      });
+
+      // Check color contrast (basic check)
+      const elements = document.querySelectorAll('*');
+      let contrastIssues = 0;
+      for (const element of elements) {
+        const style = window.getComputedStyle(element);
+        const color = style.color;
+        const backgroundColor = style.backgroundColor;
+
+        if (color === 'rgb(255, 255, 255)' && backgroundColor === 'rgb(255, 255, 255)') {
+          contrastIssues++;
+        }
+      }
+
+      return {
+        issues: issues,
+        contrastIssues: contrastIssues,
+        totalElements: elements.length,
+        focusableElements: document.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])').length
+      };
+    });
+  }
+
+  /**
+   * Advanced modal management
+   */
+  async waitForModal(modalSelector, options = {}) {
+    const {
+      timeout = this.timeouts.modal_animation,
+      expectVisible = true,
+      trapFocus = true
+    } = options;
+
+    if (expectVisible) {
+      await this.page.waitForSelector(modalSelector, {
+        state: 'visible',
+        timeout: timeout
+      });
+
+      // Verify focus is trapped in modal if expected
+      if (trapFocus) {
+        const focusInModal = await this.page.evaluate((selector) => {
+          return document.activeElement.closest(selector) !== null;
+        }, modalSelector);
+
+        if (!focusInModal) {
+          console.warn('Focus may not be properly trapped in modal');
+        }
+      }
+    } else {
+      await this.page.waitForSelector(modalSelector, {
+        state: 'hidden',
+        timeout: timeout
+      });
+    }
+
+    return this.page.locator(modalSelector);
+  }
+
+  /**
+   * Smart waiting that adapts to content type
+   */
+  async smartWait(contentType = 'default', customTimeout = null) {
+    const waitStrategies = {
+      'charts': async () => {
+        await this.waitForChartsToRender();
+      },
+      'api': async () => {
+        await this.page.waitForTimeout(2000);
+        await this.waitForLoadingComplete();
+      },
+      'animation': async () => {
+        await this.page.waitForTimeout(1500);
+      },
+      'modal': async () => {
+        await this.page.waitForTimeout(500);
+      },
+      'default': async () => {
+        await this.page.waitForTimeout(1000);
+      }
+    };
+
+    const waitStrategy = waitStrategies[contentType] || waitStrategies['default'];
+    await waitStrategy();
+
+    if (customTimeout) {
+      await this.page.waitForTimeout(customTimeout);
+    }
+  }
+
+  /**
+   * Browser feature detection
+   */
+  async detectBrowserFeatures() {
+    return await this.page.evaluate(() => {
+      return {
+        browser: {
+          userAgent: navigator.userAgent,
+          vendor: navigator.vendor,
+          platform: navigator.platform,
+          cookieEnabled: navigator.cookieEnabled,
+          onLine: navigator.onLine
+        },
+        features: {
+          webGL: !!window.WebGLRenderingContext,
+          webRTC: !!window.RTCPeerConnection,
+          serviceWorker: 'serviceWorker' in navigator,
+          webAssembly: typeof WebAssembly !== 'undefined',
+          fetch: typeof fetch !== 'undefined',
+          promises: typeof Promise !== 'undefined',
+          asyncAwait: (async () => {}).constructor.name === 'AsyncFunction',
+          intersectionObserver: 'IntersectionObserver' in window,
+          resizeObserver: 'ResizeObserver' in window,
+          customElements: 'customElements' in window
+        },
+        css: {
+          grid: CSS.supports('display', 'grid'),
+          flexbox: CSS.supports('display', 'flex'),
+          customProperties: CSS.supports('color', 'var(--test)'),
+          transforms: CSS.supports('transform', 'translateX(10px)'),
+          animations: CSS.supports('animation-duration', '1s')
+        },
+        storage: {
+          localStorage: typeof localStorage !== 'undefined',
+          sessionStorage: typeof sessionStorage !== 'undefined',
+          indexedDB: 'indexedDB' in window,
+          webSQL: 'openDatabase' in window
+        }
+      };
+    });
+  }
 }
 
 module.exports = BasePage;
