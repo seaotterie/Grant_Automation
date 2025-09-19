@@ -2567,6 +2567,9 @@ function catalynxApp() {
         showAIIntelligenceConfirmation: false,
         showDeepResearchConfirmation: false,
         
+        // Profile Modal Tab System
+        profileModalActiveTab: 'basic',
+        
         // Opportunity Modal System
         showOpportunityModal: false,
         selectedOpportunity: {
@@ -2602,6 +2605,7 @@ function catalynxApp() {
         einFetchLoading: false,
         enableWebScraping: true,
         webScrapingResults: null,
+        verificationDetails: {}, // Store tax-data-first verification details
         pendingDeleteProfileId: null,
         
         // Profile form data - comprehensive structure
@@ -2960,11 +2964,13 @@ function catalynxApp() {
         },
 
         resetProfileForm() {
+            this.profileModalActiveTab = 'basic'; // Reset tab to basic information
             this.profileForm = {
                 profile_id: '',
                 name: '',
                 organization_type: '',
                 ein: '',
+                website_url: '',
                 mission_statement: '',
                 keywords: '',
                 focus_areas_text: '',
@@ -3001,6 +3007,7 @@ function catalynxApp() {
             this.profileForm.name = profile.name || '';
             this.profileForm.organization_type = profile.organization_type || '';
             this.profileForm.ein = profile.ein || '';
+            this.profileForm.website_url = profile.website_url || '';
             this.profileForm.mission_statement = profile.mission_statement || '';
             this.profileForm.keywords = profile.keywords || '';
             this.profileForm.focus_areas_text = (profile.focus_areas || []).join('\n');
@@ -3040,7 +3047,123 @@ function catalynxApp() {
                 loaded_govt: this.profileForm.government_criteria
             });
             
+            // Load verified intelligence data using tax-data-first approach
+            this.loadVerifiedIntelligenceData(profile);
+            
             this.showProfileModal = true;
+        },
+
+        async loadVerifiedIntelligenceData(profile) {
+            // Load verified intelligence data using tax-data-first approach for Enhanced Data tab
+            console.log('[VERIFIED INTELLIGENCE] Loading tax-data-first verified intelligence');
+            console.log('[DEBUG] loadVerifiedIntelligenceData called with profile:', profile.profile_id);
+            console.log('[DEBUG] Current webScrapingResults before:', this.webScrapingResults);
+            
+            if (!profile || !profile.profile_id) {
+                console.log('[ERROR] DEBUG: No profile or profile_id provided for intelligence lookup');
+                this.webScrapingResults = null;
+                return;
+            }
+            
+            const profileId = profile.profile_id;
+            console.log('[DEBUG] Processing profile_id:', profileId, 'EIN:', profile.ein, 'Name:', profile.name);
+            
+            try {
+                console.log(`[VERIFIED INTELLIGENCE] Loading tax-data-first intelligence for profile: ${profileId}`);
+                
+                // Call new verified intelligence API endpoint
+                const response = await fetch(`/api/profiles/${profileId}/verified-intelligence`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('[DEBUG] Verified Intelligence API response:', data);
+                    
+                    if (data.success && data.data?.web_scraping_data) {
+                        // Use verified intelligence data with source attribution
+                        this.webScrapingResults = data.data.web_scraping_data;
+                        
+                        console.log('[SUCCESS] Loaded verified intelligence data with tax baseline verification:', {
+                            programs: this.webScrapingResults.extracted_info?.programs?.length || 0,
+                            leadership: this.webScrapingResults.extracted_info?.leadership?.length || 0,
+                            missions: this.webScrapingResults.extracted_info?.mission_statements?.length || 0,
+                            overall_confidence: data.data.verified_intelligence?.overall_confidence || 0,
+                            has_990_baseline: data.data.verified_intelligence?.has_990_baseline || false,
+                            data_sources_used: data.data.verified_intelligence?.data_sources_used || [],
+                            source: 'tax_data_first_verified'
+                        });
+                        
+                        // Store verification details for display
+                        this.verificationDetails = data.data.web_scraping_data.verification_details || {};
+                        this.enableWebScraping = true;
+                        
+                        // Show notification about verification quality
+                        const confidence = data.data.verified_intelligence?.overall_confidence || 0;
+                        const has990 = data.data.verified_intelligence?.has_990_baseline || false;
+                        
+                        if (has990 && confidence > 0.8) {
+                            this.showNotification('Verified Intelligence', 
+                                `High-confidence data loaded with 990 tax filing verification (${(confidence * 100).toFixed(0)}% confidence)`, 
+                                'success');
+                        } else if (has990) {
+                            this.showNotification('Verified Intelligence', 
+                                `Data loaded with 990 tax filing baseline (${(confidence * 100).toFixed(0)}% confidence)`, 
+                                'info');
+                        } else {
+                            this.showNotification('Verified Intelligence', 
+                                'Data loaded without 990 verification - web scraping only', 
+                                'warning');
+                        }
+                        
+                    } else {
+                        console.log('No verified intelligence data found for profile:', profileId);
+                        this.webScrapingResults = null;
+                        this.enableWebScraping = false;
+                        this.verificationDetails = {};
+                        
+                        this.showNotification('Enhanced Data', 
+                            'No verified intelligence data available - may need to run analysis first', 
+                            'info');
+                    }
+                } else {
+                    console.warn('Failed to load verified intelligence:', response.status);
+                    
+                    // Fallback to EIN-based legacy endpoint if profile-based fails
+                    if (profile.ein) {
+                        console.log('[FALLBACK] Trying legacy EIN-based endpoint');
+                        const legacyResponse = await fetch(`/api/profiles/${profile.ein}/json-intelligence`);
+                        if (legacyResponse.ok) {
+                            const legacyData = await legacyResponse.json();
+                            if (legacyData.success && legacyData.data?.web_scraping_data) {
+                                this.webScrapingResults = legacyData.data.web_scraping_data;
+                                this.enableWebScraping = true;
+                                this.verificationDetails = {};
+                                
+                                this.showNotification('Enhanced Data', 
+                                    'Loaded legacy data - consider refreshing for verified intelligence', 
+                                    'warning');
+                                return;
+                            }
+                        }
+                    }
+                    
+                    this.webScrapingResults = null;
+                    this.enableWebScraping = false;
+                    this.verificationDetails = {};
+                }
+                
+            } catch (error) {
+                console.error('Error loading verified intelligence data:', error);
+                this.webScrapingResults = null;
+                this.enableWebScraping = false;
+                this.verificationDetails = {};
+                
+                this.showNotification('Enhanced Data', 
+                    `Error loading verified intelligence: ${error.message}`, 
+                    'error');
+            }
+            
+            console.log('[DEBUG] webScrapingResults after processing:', this.webScrapingResults);
+            console.log('[DEBUG] verificationDetails:', this.verificationDetails);
         },
 
         async fetchEINData() {
@@ -3081,6 +3204,9 @@ function catalynxApp() {
                     if (result.data.web_scraping_data) {
                         this.webScrapingResults = result.data.web_scraping_data;
                         console.log('Web scraping results:', this.webScrapingResults);
+                        
+                        // Auto-populate fields from scraped data if available
+                        this.autoPopulateFromScrapedData();
                     }
                     
                     // Update profile form with fetched data (ProPublica API data)
@@ -3178,6 +3304,50 @@ function catalynxApp() {
             }
         },
 
+        // Auto-populate form fields from scraped web data
+        autoPopulateFromScrapedData() {
+            if (!this.webScrapingResults || !this.webScrapingResults.extracted_info) {
+                return;
+            }
+            
+            const extractedInfo = this.webScrapingResults.extracted_info;
+            const populatedFields = [];
+            
+            // Auto-populate mission statement if empty and scraped data available
+            if (!this.profileForm.mission_statement && extractedInfo.mission_statements && extractedInfo.mission_statements.length > 0) {
+                // Handle both old format (strings) and new format (objects with source)
+                const firstMission = extractedInfo.mission_statements[0];
+                const missionText = typeof firstMission === 'object' ? firstMission.content : firstMission;
+                const source = typeof firstMission === 'object' ? firstMission.source : 'Unknown';
+
+                if (missionText) {
+                    this.profileForm.mission_statement = missionText;
+                    populatedFields.push(`mission statement (from ${source})`);
+                    console.log(`Auto-populated mission statement from ${source} scraped data`);
+                }
+            }
+
+            // Auto-populate keywords from programs if empty
+            if (!this.profileForm.keywords && extractedInfo.programs && extractedInfo.programs.length > 0) {
+                // Handle both old format (strings) and new format (objects with source)
+                const programTexts = extractedInfo.programs.map(program => {
+                    return typeof program === 'object' ? program.content : program;
+                }).filter(text => text); // Remove empty values
+
+                if (programTexts.length > 0) {
+                    const keywords = programTexts.join(', ');
+                    this.profileForm.keywords = keywords;
+                    populatedFields.push('keywords (from programs)');
+                    console.log('Auto-populated keywords from scraped programs');
+                }
+            }
+            
+            // Show notification about auto-populated fields
+            if (populatedFields.length > 0) {
+                this.showNotification(`Auto-populated: ${populatedFields.join(', ')}`, 'info');
+            }
+        },
+
         async saveProfile() {
             this.profileSaving = true;
             try {
@@ -3193,6 +3363,7 @@ function catalynxApp() {
                     name: this.profileForm.name,
                     organization_type: this.profileForm.organization_type,
                     ein: this.profileForm.ein || null,
+                    website_url: this.profileForm.website_url ? this.profileForm.website_url.trim() : null,
                     mission_statement: this.profileForm.mission_statement ? this.profileForm.mission_statement.trim() : null,
                     keywords: this.profileForm.keywords || '',
                     focus_areas: ['general'], // Default focus area to satisfy backend validation

@@ -119,9 +119,9 @@ class DiscoveryPage extends BasePage {
    * @returns {Array} Array of discovery result objects
    */
   async getDiscoveryResults() {
-    await this.page.waitForSelector(this.selectors.discovery.results_table, { 
-      state: 'visible', 
-      timeout: 5000 
+    await this.page.waitForSelector(this.selectors.discovery.results_table, {
+      state: 'visible',
+      timeout: this.timeouts.discovery_execution || 30000
     });
     
     const results = await this.page.evaluate(() => {
@@ -202,7 +202,10 @@ class DiscoveryPage extends BasePage {
    */
   async navigateToPage(pageNumber) {
     const pagination = this.selectors.discovery.pagination_controls;
-    await this.page.waitForSelector(pagination, { state: 'visible' });
+    await this.page.waitForSelector(pagination, {
+      state: 'visible',
+      timeout: this.timeouts.navigation || 10000
+    });
     
     const pageButton = `[data-testid="page-${pageNumber}"]`;
     if (await this.isElementVisible(pageButton)) {

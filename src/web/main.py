@@ -20,6 +20,7 @@ import uuid
 import random
 import shutil
 import re
+import sqlite3
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional, Any
@@ -30,6 +31,7 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.core.workflow_engine import get_workflow_engine
 from src.core.data_models import WorkflowConfig
+from src.core.data_validation_pipeline import DataValidationPipeline
 from src.web.services.workflow_service import WorkflowService
 from src.web.services.progress_service import ProgressService
 from src.web.models.requests import ClassificationRequest, WorkflowRequest
@@ -65,6 +67,14 @@ from src.auth.jwt_auth import get_current_user_dependency, User
 from src.web.auth_routes import router as auth_router
 from src.web.routers.ai_processing import router as ai_processing_router
 from src.web.routers.intelligence import router as intelligence_router
+# Optional enhanced scraping router (requires scrapy)
+try:
+    from src.web.routers.enhanced_scraping import router as enhanced_scraping_router
+    enhanced_scraping_available = True
+except ImportError as e:
+    print(f"Enhanced scraping not available: {e}")
+    enhanced_scraping_router = None
+    enhanced_scraping_available = False
 
 # Error Handling imports
 from src.web.middleware.error_handling import (
@@ -378,6 +388,14 @@ app.include_router(ai_processing_router)
 
 # Include Intelligence (Tiered Analysis) routes
 app.include_router(intelligence_router)
+
+# Include Enhanced Scraping routes
+# Include enhanced scraping router only if available
+if enhanced_scraping_available and enhanced_scraping_router:
+    app.include_router(enhanced_scraping_router)
+    print("Enhanced scraping router enabled")
+else:
+    print("Enhanced scraping router disabled (scrapy not available)")
 
 # TEST ENDPOINT TO VERIFY SERVER IS UPDATED
 @app.get("/api/test-fix")
@@ -1525,6 +1543,184 @@ async def export_workflow(workflow_id: str, format: str = "csv"):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Helper methods for enhanced web scraping
+async def _consolidate_scraping_results(mcp_results: Dict, scrapy_results: Dict, organization_data: Dict) -> Dict:
+    """
+    Consolidate results from both MCP and Scrapy sources into unified structure
+
+    Args:
+        mcp_results: Results from MCP web scraping service
+        scrapy_results: Results from Scrapy web scraping service
+        organization_data: Organization information for context
+
+    Returns:
+        Consolidated scraping data with source attribution
+    """
+    try:
+        logger.info(f"Consolidating MCP and Scrapy results for {organization_data.get('organization_name', 'Unknown')}")
+
+        # Initialize consolidated structure
+        consolidated = {
+            "successful_scrapes": [],
+            "failed_scrapes": [],
+            "extracted_info": {
+                "mission_statements": [],
+                "programs": [],
+                "leadership": []
+            },
+            "source_breakdown": {
+                "mcp_success_count": 0,
+                "scrapy_success_count": 0,
+                "total_sources_tried": 0
+            }
+        }
+
+        # Process MCP results
+        if mcp_results and mcp_results.get('successful_scrapes'):
+            mcp_scrapes = mcp_results.get('successful_scrapes', [])
+            consolidated["source_breakdown"]["mcp_success_count"] = len(mcp_scrapes)
+
+            for scrape in mcp_scrapes:
+                scrape_copy = scrape.copy()
+                scrape_copy['source'] = 'MCP'
+                consolidated["successful_scrapes"].append(scrape_copy)
+
+            # Merge extracted info from MCP
+            mcp_extracted = mcp_results.get('extracted_info', {})
+            if mcp_extracted.get('mission_statements'):
+                for mission in mcp_extracted['mission_statements']:
+                    consolidated["extracted_info"]["mission_statements"].append({
+                        "content": mission,
+                        "source": "MCP"
+                    })
+
+            if mcp_extracted.get('programs'):
+                for program in mcp_extracted['programs']:
+                    consolidated["extracted_info"]["programs"].append({
+                        "content": program,
+                        "source": "MCP"
+                    })
+
+            if mcp_extracted.get('leadership'):
+                for leader in mcp_extracted['leadership']:
+                    consolidated["extracted_info"]["leadership"].append({
+                        "content": leader,
+                        "source": "MCP"
+                    })
+
+        # Process Scrapy results
+        if scrapy_results and scrapy_results.get('successful_scrapes'):
+            scrapy_scrapes = scrapy_results.get('successful_scrapes', [])
+            consolidated["source_breakdown"]["scrapy_success_count"] = len(scrapy_scrapes)
+
+            for scrape in scrapy_scrapes:
+                scrape_copy = scrape.copy()
+                scrape_copy['source'] = 'Scrapy'
+                consolidated["successful_scrapes"].append(scrape_copy)
+
+            # Merge extracted info from Scrapy
+            scrapy_extracted = scrapy_results.get('extracted_info', {})
+            if scrapy_extracted.get('mission_statements'):
+                for mission in scrapy_extracted['mission_statements']:
+                    consolidated["extracted_info"]["mission_statements"].append({
+                        "content": mission,
+                        "source": "Scrapy"
+                    })
+
+            if scrapy_extracted.get('programs'):
+                for program in scrapy_extracted['programs']:
+                    consolidated["extracted_info"]["programs"].append({
+                        "content": program,
+                        "source": "Scrapy"
+                    })
+
+            if scrapy_extracted.get('leadership'):
+                for leader in scrapy_extracted['leadership']:
+                    consolidated["extracted_info"]["leadership"].append({
+                        "content": leader,
+                        "source": "Scrapy"
+                    })
+
+        # Combine failed scrapes
+        if mcp_results and mcp_results.get('failed_scrapes'):
+            for failed in mcp_results['failed_scrapes']:
+                failed_copy = failed.copy()
+                failed_copy['source'] = 'MCP'
+                consolidated["failed_scrapes"].append(failed_copy)
+
+        if scrapy_results and scrapy_results.get('failed_scrapes'):
+            for failed in scrapy_results['failed_scrapes']:
+                failed_copy = failed.copy()
+                failed_copy['source'] = 'Scrapy'
+                consolidated["failed_scrapes"].append(failed_copy)
+
+        # Calculate totals
+        consolidated["source_breakdown"]["total_sources_tried"] = (
+            consolidated["source_breakdown"]["mcp_success_count"] +
+            consolidated["source_breakdown"]["scrapy_success_count"] +
+            len(consolidated["failed_scrapes"])
+        )
+
+        # Deduplicate similar content (basic deduplication by content similarity)
+        consolidated = _deduplicate_extracted_content(consolidated)
+
+        logger.info(f"Consolidation complete: {consolidated['source_breakdown']['mcp_success_count']} MCP + "
+                   f"{consolidated['source_breakdown']['scrapy_success_count']} Scrapy successful scrapes")
+
+        return consolidated
+
+    except Exception as e:
+        logger.error(f"Error consolidating scraping results: {e}")
+        # Return basic structure with error info
+        return {
+            "successful_scrapes": [],
+            "failed_scrapes": [{"error": str(e), "source": "consolidation"}],
+            "extracted_info": {"mission_statements": [], "programs": [], "leadership": []},
+            "source_breakdown": {"mcp_success_count": 0, "scrapy_success_count": 0, "total_sources_tried": 0}
+        }
+
+
+def _deduplicate_extracted_content(consolidated: Dict) -> Dict:
+    """
+    Remove duplicate content from extracted information
+    """
+    try:
+        # Deduplicate mission statements
+        seen_missions = set()
+        unique_missions = []
+        for mission_obj in consolidated["extracted_info"]["mission_statements"]:
+            mission_content = mission_obj.get("content", "").strip().lower()
+            if mission_content and mission_content not in seen_missions:
+                seen_missions.add(mission_content)
+                unique_missions.append(mission_obj)
+        consolidated["extracted_info"]["mission_statements"] = unique_missions
+
+        # Deduplicate programs (basic similarity check)
+        seen_programs = set()
+        unique_programs = []
+        for program_obj in consolidated["extracted_info"]["programs"]:
+            program_content = program_obj.get("content", "").strip().lower()
+            if program_content and program_content not in seen_programs:
+                seen_programs.add(program_content)
+                unique_programs.append(program_obj)
+        consolidated["extracted_info"]["programs"] = unique_programs
+
+        # Deduplicate leadership (basic similarity check)
+        seen_leaders = set()
+        unique_leaders = []
+        for leader_obj in consolidated["extracted_info"]["leadership"]:
+            leader_content = str(leader_obj.get("content", "")).strip().lower()
+            if leader_content and leader_content not in seen_leaders:
+                seen_leaders.add(leader_content)
+                unique_leaders.append(leader_obj)
+        consolidated["extracted_info"]["leadership"] = unique_leaders
+
+        return consolidated
+
+    except Exception as e:
+        logger.error(f"Error during deduplication: {e}")
+        return consolidated
+
+
 async def _scrape_predicted_urls(predicted_urls: List[str], organization_data: Dict, url_discovery_processor) -> Dict:
     """
     Scrape predicted URLs and cache successful ones
@@ -1541,7 +1737,23 @@ async def _scrape_predicted_urls(predicted_urls: List[str], organization_data: D
         from src.core.simple_mcp_client import SimpleMCPClient
         
         client = SimpleMCPClient(timeout=15)
-        results = await client.fetch_multiple_urls(predicted_urls, max_length=3000)
+        
+        # Use the best URL for deep intelligence gathering (which saves to database)
+        best_url = predicted_urls[0] if predicted_urls else None
+        if not best_url:
+            raise Exception("No URLs provided for scraping")
+        
+        # Perform enhanced deep intelligence gathering with dynamic URL discovery
+        additional_urls = []  # Let the system discover URLs dynamically
+        
+        # Enhanced deep intelligence with dynamic URL discovery
+        deep_intelligence_result = await client.fetch_enhanced_intelligence(best_url, additional_urls, max_pages=5, ein=ein)
+        
+        # Convert deep intelligence result to expected format
+        if deep_intelligence_result.success:
+            results = deep_intelligence_result.pages_scraped
+        else:
+            results = []
         
         # Process results and find the best URL
         successful_urls = []
@@ -1574,20 +1786,23 @@ async def _scrape_predicted_urls(predicted_urls: List[str], organization_data: D
             )
             logger.info(f"Cached successful URL for EIN {organization_data['ein']}: {best_url}")
         
-        # Extract information from all successful scrapes
+        # Extract information from deep intelligence result
         extracted_info = {
-            "mission_statements": [],
-            "contact_info": [],
-            "programs": [],
-            "leadership": [],
+            "mission_statements": deep_intelligence_result.mission_data if deep_intelligence_result.success else [],
+            "contact_info": [str(contact) for contact in deep_intelligence_result.contact_data] if deep_intelligence_result.success else [],
+            "programs": [p.get('name', str(p)) for p in deep_intelligence_result.program_data] if deep_intelligence_result.success else [],
+            "leadership": [f"{l.get('name', '')} - {l.get('title', '')}" for l in deep_intelligence_result.leadership_data] if deep_intelligence_result.success else [],
             "financial_info": []
         }
         
-        for url_data in successful_urls:
-            # Get the actual content for extraction
-            matching_result = next((r for r in results if r.url == url_data["url"]), None)
-            if matching_result and matching_result.content:
-                _extract_organization_info_simple(matching_result.content, extracted_info)
+        # Save intelligence data to database (clean approach with EIN from API)
+        if deep_intelligence_result.success:
+            await _save_web_intelligence_data(
+                ein=organization_data['ein'],
+                url=best_url,
+                intelligence_data=deep_intelligence_result,
+                organization_name=organization_data.get('organization_name', '')
+            )
         
         return {
             "organization_name": organization_data['organization_name'],
@@ -1611,6 +1826,62 @@ async def _scrape_predicted_urls(predicted_urls: List[str], organization_data: D
             "extracted_info": {"mission_statements": [], "contact_info": [], "programs": [], "leadership": [], "financial_info": []},
             "url_source": "gpt_prediction"
         }
+
+async def _save_web_intelligence_data(ein: str, url: str, intelligence_data, organization_name: str = "") -> bool:
+    """
+    Save web intelligence data directly to database.
+    Clean approach - no EIN extraction from URL needed.
+    """
+    try:
+        import sqlite3
+        import json
+        from datetime import datetime
+        
+        # Extract intelligence information
+        programs = intelligence_data.program_data if hasattr(intelligence_data, 'program_data') else []
+        leadership = intelligence_data.leadership_data if hasattr(intelligence_data, 'leadership_data') else []
+        contact_data = intelligence_data.contact_data if hasattr(intelligence_data, 'contact_data') else []
+        mission_data = intelligence_data.mission_data if hasattr(intelligence_data, 'mission_data') else []
+        intelligence_score = intelligence_data.intelligence_score if hasattr(intelligence_data, 'intelligence_score') else 0
+        pages_scraped = len(intelligence_data.pages_scraped) if hasattr(intelligence_data, 'pages_scraped') else 0
+        total_content_length = intelligence_data.total_content_length if hasattr(intelligence_data, 'total_content_length') else 0
+        
+        # Save to database
+        with sqlite3.connect("data/catalynx.db") as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO web_intelligence (
+                    ein, url, scrape_date, intelligence_quality_score, 
+                    content_richness_score, pages_scraped, total_content_length,
+                    leadership_data, leadership_count, program_data, program_count,
+                    contact_data, mission_statements, mission_count,
+                    processing_duration_ms, website_structure_quality
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                ein,
+                url,
+                datetime.now().isoformat(),
+                intelligence_score,
+                min(intelligence_score / 100.0 * 0.9, 1.0),  # Content richness score
+                pages_scraped,
+                total_content_length,
+                json.dumps(leadership),
+                len(leadership),
+                json.dumps(programs),
+                len(programs),
+                json.dumps(contact_data),
+                json.dumps(mission_data),
+                len(mission_data),
+                int((intelligence_data.processing_time if hasattr(intelligence_data, 'processing_time') else 1.0) * 1000),
+                "Good" if intelligence_score > 50 else "Fair"
+            ))
+            conn.commit()
+            
+        logger.info(f"Successfully saved web intelligence for EIN {ein}: {len(programs)} programs, {len(leadership)} leadership")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to save web intelligence data for EIN {ein}: {e}")
+        return False
 
 def _score_scraped_content(content: str, organization_data: Dict) -> float:
     """
@@ -1677,6 +1948,164 @@ def _extract_organization_info_simple(content: str, extracted_info: Dict):
     # Limit results
     for key in extracted_info:
         extracted_info[key] = extracted_info[key][:5]
+
+def _validate_cached_intelligence_quality(stored_intelligence: Dict[str, Any]) -> Dict[str, Any]:
+    """Validate the quality of cached intelligence data to prevent serving fake data"""
+    validation_result = {
+        'is_high_quality': True,
+        'quality_score': 1.0,
+        'issues': []
+    }
+    
+    extracted_info = stored_intelligence.get("extracted_info", {})
+    
+    # Check leadership data for fake indicators
+    leadership_data = extracted_info.get("leadership", [])
+    if leadership_data:
+        fake_patterns = [
+            'board of', 'serving as', 'was appointed', 'executive vice', 
+            'been the', 'serves as', 'on the', 'at colliers', 'ramps to'
+        ]
+        
+        fake_count = 0
+        for leader_info in leadership_data:
+            if isinstance(leader_info, str):
+                # Old format: "Board of - Director"
+                leader_text = leader_info.lower()
+                if any(pattern in leader_text for pattern in fake_patterns):
+                    fake_count += 1
+            elif isinstance(leader_info, dict):
+                # New format: {"name": "Board of", "title": "Director"}
+                name = leader_info.get('name', '').lower()
+                if any(pattern in name for pattern in fake_patterns):
+                    fake_count += 1
+        
+        fake_percentage = fake_count / len(leadership_data) if leadership_data else 0
+        if fake_percentage > 0.5:  # More than 50% fake data
+            validation_result['is_high_quality'] = False
+            validation_result['quality_score'] *= 0.3
+            validation_result['issues'].append(f"High fake leadership data: {fake_percentage:.1%}")
+    
+    # Check for generic contact info
+    contact_info = extracted_info.get("contact_info", [])
+    if contact_info:
+        generic_patterns = ['email', 'phone', 'address', 'contact']
+        generic_count = sum(1 for item in contact_info if isinstance(item, str) and item.lower() in generic_patterns)
+        if generic_count == len(contact_info):  # All generic
+            validation_result['quality_score'] *= 0.7
+            validation_result['issues'].append("All contact info is generic labels")
+    
+    # Check data freshness (prefer recent data)
+    scrape_date = stored_intelligence.get("scrape_date", "")
+    if scrape_date:
+        from datetime import datetime, timedelta
+        try:
+            cached_date = datetime.fromisoformat(scrape_date.replace('Z', '+00:00'))
+            age_days = (datetime.now() - cached_date).days
+            if age_days > 7:  # Older than a week
+                validation_result['quality_score'] *= 0.9
+                validation_result['issues'].append(f"Data is {age_days} days old")
+        except:
+            pass  # Invalid date format
+    
+    # Overall quality assessment
+    if validation_result['quality_score'] < 0.6:
+        validation_result['is_high_quality'] = False
+    
+    return validation_result
+
+async def _get_stored_intelligence_data(ein: str) -> Optional[Dict[str, Any]]:
+    """Retrieve stored intelligence data from the database by EIN"""
+    try:
+        database_path = "data/catalynx.db"  # Use correct database
+        if not Path(database_path).exists():
+            logger.warning(f"Intelligence database not found at {database_path}")
+            return None
+            
+        with sqlite3.connect(database_path) as conn:
+            # Try both EIN formats - with and without dash for compatibility
+            ein_with_dash = f"{ein[:2]}-{ein[2:]}" if len(ein) >= 9 and '-' not in ein else ein
+            cursor = conn.execute("""
+                SELECT wi.leadership_data, wi.program_data, wi.contact_data, 
+                       wi.mission_statements, wi.intelligence_quality_score,
+                       wi.leadership_count, wi.program_count, wi.mission_count,
+                       wi.url, wi.updated_at
+                FROM web_intelligence wi
+                WHERE wi.ein = ? OR wi.ein = ? 
+                ORDER BY wi.updated_at DESC 
+                LIMIT 1
+            """, (ein, ein_with_dash))
+            
+            row = cursor.fetchone()
+            if not row:
+                logger.info(f"DEBUG: No stored intelligence found for EIN {ein} in web_intelligence table")
+                return None
+            
+            logger.info(f"DEBUG: Found stored intelligence record for EIN {ein}")
+            leadership_data, program_data, contact_data, mission_data, quality_score, leadership_count, program_count, mission_count, url, last_updated = row
+            logger.info(f"DEBUG: Raw programs data: {program_data} (count: {program_count})")
+            logger.info(f"DEBUG: Raw leadership data: {leadership_data} (count: {leadership_count})")
+            logger.info(f"DEBUG: Raw mission data: {mission_data} (count: {mission_count})")
+            
+            # Parse actual JSON data from database - NO MOCK DATA
+            extracted_info = {}
+            
+            try:
+                # Parse leadership data
+                if leadership_data:
+                    import json
+                    extracted_info["leadership"] = json.loads(leadership_data)
+                    logger.info(f"DEBUG: Parsed {len(extracted_info['leadership'])} real leadership entries")
+                else:
+                    extracted_info["leadership"] = []
+                    
+                # Parse program data 
+                if program_data:
+                    import json
+                    extracted_info["programs"] = json.loads(program_data)
+                    logger.info(f"DEBUG: Parsed {len(extracted_info['programs'])} real program entries")
+                else:
+                    extracted_info["programs"] = []
+                    
+                # Parse mission statements
+                if mission_data:
+                    import json
+                    extracted_info["mission_statements"] = json.loads(mission_data)
+                    logger.info(f"DEBUG: Parsed {len(extracted_info['mission_statements'])} real mission statements")
+                else:
+                    extracted_info["mission_statements"] = []
+                    
+                # Parse contact data if available
+                if contact_data:
+                    import json
+                    extracted_info["contact_info"] = json.loads(contact_data)
+                else:
+                    extracted_info["contact_info"] = []
+                    
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse JSON data for EIN {ein}: {e}")
+                # If JSON parsing fails, return None - no mock data fallback
+                return None
+                
+            # Only return data if we have actual content - no empty mock data
+            if not any([extracted_info["leadership"], extracted_info["programs"], extracted_info["mission_statements"]]):
+                logger.info(f"DEBUG: No real extracted info found for EIN {ein} - returning None")
+                return None
+            
+            intelligence_data = {
+                "successful_scrapes": [{"url": url, "status": "success"}] if url else [],
+                "extracted_info": extracted_info,
+                "intelligence_quality_score": quality_score,
+                "last_updated": last_updated,
+                "data_source": "database"
+            }
+            
+            logger.info(f"Retrieved stored intelligence for EIN {ein} with {len(intelligence_data['extracted_info']['programs'])} programs, {len(intelligence_data['extracted_info']['leadership'])} leadership entries")
+            return intelligence_data
+            
+    except Exception as e:
+        logger.error(f"Error retrieving stored intelligence for EIN {ein}: {e}")
+        return None
 
 # Profile Management API endpoints
 @app.post("/api/profiles/fetch-ein")
@@ -1789,34 +2218,99 @@ async def fetch_ein_data(request: dict):
                         logger.warning(f"GPT URL discovery failed for EIN {ein}: {gpt_error}")
                         predicted_urls = []
                     
-                    # Step 2: Use predicted URLs or fall back to pattern-based discovery
-                    if predicted_urls:
-                        # Use GPT-predicted URLs for scraping
-                        logger.info(f"Using GPT-predicted URLs: {predicted_urls}")
-                        scraped_data = await _scrape_predicted_urls(
-                            predicted_urls, organization_data, url_discovery_processor
-                        )
-                    else:
-                        # Fallback to original pattern-based approach
-                        logger.info("Falling back to pattern-based URL discovery")
+                    # Step 2: Dual Primary Architecture - Run both MCP and Scrapy in parallel
+                    logger.info("Executing dual primary scraping with both MCP and Scrapy sources")
+
+                    # Prepare for parallel execution
+                    import asyncio
+                    mcp_results = None
+                    scrapy_results = None
+
+                    async def run_mcp_scraping():
                         try:
-                            from src.core.mcp_client import web_scraping_service
-                            scraped_data = await web_scraping_service.scrape_organization_websites(
-                                organization_name=org_data.get('name', ''),
-                                ein=ein
-                            )
-                        except Exception as mcp_error:
-                            logger.warning(f"MCP client failed for EIN {ein}: {mcp_error}, trying simple client")
+                            if predicted_urls:
+                                # Use GPT-predicted URLs for MCP scraping
+                                logger.info(f"MCP: Using GPT-predicted URLs: {predicted_urls}")
+                                return await _scrape_predicted_urls(
+                                    predicted_urls, organization_data, url_discovery_processor
+                                )
+                            else:
+                                # Pattern-based MCP scraping
+                                logger.info("MCP: Using pattern-based URL discovery")
+                                from src.core.mcp_client import web_scraping_service
+                                return await web_scraping_service.scrape_organization_websites(
+                                    organization_name=org_data.get('name', ''),
+                                    ein=ein
+                                )
+                        except Exception as e:
+                            logger.warning(f"MCP scraping failed: {e}")
+                            return None
+
+                    async def run_scrapy_scraping():
+                        try:
+                            logger.info("Scrapy: Starting primary scraping service")
                             from src.core.simple_mcp_client import simple_web_scraping_service
-                            scraped_data = await simple_web_scraping_service.scrape_organization_websites(
+                            return await simple_web_scraping_service.scrape_organization_websites(
                                 organization_name=org_data.get('name', ''),
                                 ein=ein
                             )
+                        except Exception as e:
+                            logger.warning(f"Scrapy scraping failed: {e}")
+                            return None
+
+                    # Execute both scraping sources in parallel
+                    try:
+                        logger.info("Starting parallel execution of MCP and Scrapy scraping...")
+                        mcp_task = run_mcp_scraping()
+                        scrapy_task = run_scrapy_scraping()
+
+                        # Wait for both with timeout
+                        mcp_results, scrapy_results = await asyncio.gather(
+                            mcp_task, scrapy_task, return_exceptions=True
+                        )
+
+                        # Handle exceptions from gather
+                        if isinstance(mcp_results, Exception):
+                            logger.error(f"MCP scraping exception: {mcp_results}")
+                            mcp_results = None
+
+                        if isinstance(scrapy_results, Exception):
+                            logger.error(f"Scrapy scraping exception: {scrapy_results}")
+                            scrapy_results = None
+
+                        logger.info(f"Parallel scraping completed - MCP: {'success' if mcp_results else 'failed'}, "
+                                   f"Scrapy: {'success' if scrapy_results else 'failed'}")
+
+                    except Exception as parallel_error:
+                        logger.error(f"Parallel scraping failed: {parallel_error}")
+                        mcp_results = None
+                        scrapy_results = None
+
+                    # Consolidate results from both sources
+                    if mcp_results or scrapy_results:
+                        scraped_data = await _consolidate_scraping_results(
+                            mcp_results, scrapy_results, organization_data
+                        )
+                        logger.info(f"Successfully consolidated results from {scraped_data.get('source_breakdown', {}).get('total_sources_tried', 0)} total sources")
+                    else:
+                        logger.warning("Both MCP and Scrapy scraping failed - no data available")
+                        scraped_data = None
                     
                     if scraped_data and scraped_data.get('successful_scrapes'):
                         logger.info(f"Successfully scraped {len(scraped_data['successful_scrapes'])} websites for EIN {ein}")
                         
-                        response_data["web_scraping_data"] = scraped_data
+                        # Structure web scraping data with source attribution and extracted_info
+                        web_scraping_data = {
+                            "successful_scrapes": scraped_data.get('successful_scrapes', []),
+                            "failed_scrapes": scraped_data.get('failed_scrapes', []),
+                            "extracted_info": scraped_data.get('extracted_info', {}),
+                            "source_breakdown": scraped_data.get('source_breakdown', {
+                                "mcp_success_count": 0,
+                                "scrapy_success_count": 0,
+                                "total_sources_tried": 0
+                            })
+                        }
+                        response_data["web_scraping_data"] = web_scraping_data
                         response_data["enhanced_with_web_data"] = True
                         
                         # Enhance existing fields with scraped data
@@ -1824,32 +2318,83 @@ async def fetch_ein_data(request: dict):
                         
                         # Enhance mission statement if current one is lacking
                         if extracted_info.get('mission_statements') and (
-                            not response_data["mission_statement"] or 
+                            not response_data["mission_statement"] or
                             len(response_data["mission_statement"]) < 50
                         ):
-                            # Use the longest, most descriptive mission statement found
-                            best_mission = max(
-                                extracted_info['mission_statements'], 
-                                key=len,
-                                default=""
-                            )
+                            # Handle both old format (strings) and new format (objects with source)
+                            mission_statements = extracted_info['mission_statements']
+                            best_mission = ""
+                            source = "Unknown"
+
+                            for mission_obj in mission_statements:
+                                if isinstance(mission_obj, dict):
+                                    mission_content = mission_obj.get("content", "")
+                                    mission_source = mission_obj.get("source", "Unknown")
+                                else:
+                                    mission_content = str(mission_obj)
+                                    mission_source = "Legacy"
+
+                                if len(mission_content) > len(best_mission):
+                                    best_mission = mission_content
+                                    source = mission_source
+
                             if len(best_mission) > len(response_data["mission_statement"]):
                                 response_data["mission_statement"] = best_mission
-                                logger.info(f"Enhanced mission statement from web scraping for EIN {ein}")
+                                logger.info(f"Enhanced mission statement from {source} web scraping for EIN {ein}")
                         
-                        # Add additional fields from scraped data
+                        # Add additional fields from scraped data for backward compatibility
                         response_data["programs"] = extracted_info.get('programs', [])[:5]  # Top 5 programs
                         response_data["leadership"] = extracted_info.get('leadership', [])[:5]  # Top 5 leadership entries
                         response_data["contact_info"] = extracted_info.get('contact_info', [])[:3]  # Top 3 contact entries
                         
                     else:
                         logger.warning(f"No successful web scraping results for EIN {ein}")
-                        response_data["web_scraping_data"] = {"message": "No websites successfully scraped"}
+                        response_data["web_scraping_data"] = {"message": "Web data unavailable - no websites successfully scraped"}
                         
                 except Exception as web_error:
                     logger.error(f"Web scraping error for EIN {ein}: {web_error}")
                     response_data["web_scraping_data"] = {"error": str(web_error)}
                     # Don't fail the entire request if web scraping fails
+            
+            # Always check for stored intelligence data (regardless of web scraping setting)
+            web_scraping_data = response_data.get("web_scraping_data")
+            extracted_info = web_scraping_data.get("extracted_info", {}) if web_scraping_data else {}
+            programs_count = len(extracted_info.get("programs", []))
+            
+            logger.info(f"DEBUG: Checking intelligence conditions for EIN {ein}")
+            logger.info(f"DEBUG: Has web_scraping_data: {web_scraping_data is not None}")
+            logger.info(f"DEBUG: Has extracted_info: {extracted_info is not None}")
+            logger.info(f"DEBUG: Programs count: {programs_count}")
+            
+            # REMOVED: Fallback to cached database data to prevent fake data contamination
+            # Only use fresh scraping or validated JSON data from now on
+            logger.info(f"Skipping cached database intelligence to avoid fake data for EIN {ein}")
+            
+            # Check for validated JSON data if no high-quality database data
+            if not response_data.get("web_scraping_data") or not response_data["web_scraping_data"].get("extracted_info"):
+                try:
+                    logger.info(f"Attempting to process JSON validation pipeline for EIN {ein}")
+                    validation_pipeline = DataValidationPipeline()
+                    validated_data = validation_pipeline.process_ein_data(ein)
+                    
+                    if validated_data:
+                        # Convert to database format for consistency
+                        db_format = validation_pipeline.get_database_ready_format(validated_data)
+                        if db_format:
+                            response_data["web_scraping_data"] = {
+                                "successful_scrapes": [{"url": "JSON processing", "status": "validated"}],
+                                "failed_scrapes": [],
+                                "extracted_info": db_format["extracted_info"]
+                            }
+                            response_data["enhanced_with_web_data"] = True
+                            logger.info(f"Enhanced response with validated JSON data for EIN {ein}")
+                        else:
+                            logger.info(f"JSON data validation failed for EIN {ein}")
+                    else:
+                        logger.info(f"No validated JSON data available for EIN {ein}")
+                        
+                except Exception as e:
+                    logger.warning(f"Error processing JSON validation pipeline for EIN {ein}: {e}")
             
             # Attempt to fetch XML data and extract Schedule I grantees
             try:
@@ -2078,6 +2623,204 @@ async def get_profile_analytics(profile_id: str):
     except Exception as e:
         logger.error(f"Failed to get profile analytics {profile_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/profiles/{ein}/json-intelligence")
+async def get_json_intelligence_data(ein: str):
+    """Get web intelligence data directly from JSON files (bypass database)"""
+    try:
+        validation_pipeline = DataValidationPipeline()
+        validated_data = validation_pipeline.process_ein_data(ein)
+        
+        if validated_data:
+            return {
+                "success": True,
+                "data": {
+                    "web_scraping_data": {
+                        "successful_scrapes": [{"url": "JSON processing", "status": "validated"}],
+                        "failed_scrapes": [],
+                        "extracted_info": {
+                            "leadership": validated_data["leadership"],
+                            "programs": validated_data["programs"],
+                            "contact_info": validated_data["contact_info"],
+                            "mission_statements": validated_data["mission_statements"]
+                        }
+                    },
+                    "metadata": validated_data["metadata"]
+                },
+                "message": f"JSON intelligence data retrieved for EIN {ein}"
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"No validated JSON intelligence data found for EIN {ein}",
+                "data": None
+            }
+            
+    except Exception as e:
+        logger.error(f"Error retrieving JSON intelligence data for EIN {ein}: {e}")
+        return {
+            "success": False,
+            "message": f"Error retrieving JSON intelligence data: {str(e)}",
+            "data": None
+        }
+
+@app.get("/api/profiles/{ein}/web-intelligence")
+async def get_web_intelligence(ein: str):
+    """Get web intelligence data for Enhanced Data tab."""
+    try:
+        import sqlite3
+        import json
+        
+        with sqlite3.connect("data/catalynx.db") as conn:
+            cursor = conn.execute("""
+                SELECT ein, url, scrape_date, intelligence_quality_score,
+                       leadership_data, leadership_count, program_data, program_count,
+                       contact_data, mission_statements, pages_scraped, total_content_length
+                FROM web_intelligence 
+                WHERE ein = ? 
+                ORDER BY scrape_date DESC 
+                LIMIT 1
+            """, (ein,))
+            
+            result = cursor.fetchone()
+            
+            if not result:
+                return {
+                    "success": False,
+                    "message": f"No web intelligence data found for EIN {ein}",
+                    "data": None
+                }
+            
+            # Parse the database result
+            (db_ein, url, scrape_date, quality_score, leadership_json, leadership_count, 
+             program_json, program_count, contact_json, mission_json, pages_scraped, content_length) = result
+            
+            # Parse JSON fields safely
+            try:
+                leadership_data = json.loads(leadership_json) if leadership_json else []
+                program_data = json.loads(program_json) if program_json else []
+                contact_data = json.loads(contact_json) if contact_json else []
+                mission_data = json.loads(mission_json) if mission_json else []
+            except json.JSONDecodeError as e:
+                logger.warning(f"JSON decode error for EIN {ein}: {e}")
+                leadership_data, program_data, contact_data, mission_data = [], [], [], []
+            
+            # Format response for Enhanced Tab
+            web_intelligence = {
+                "successful_scrapes": [{
+                    "url": url,
+                    "content_length": content_length or 0,
+                    "content_score": quality_score / 100.0 if quality_score else 0,
+                    "timestamp": scrape_date
+                }],
+                "failed_scrapes": [],
+                "extracted_info": {
+                    "programs": [p.get('name', str(p)) if isinstance(p, dict) else str(p) for p in program_data],
+                    "leadership": [f"{l.get('name', '')} - {l.get('title', '')}" if isinstance(l, dict) else str(l) for l in leadership_data],
+                    "mission_statements": mission_data,
+                    "contact_info": [str(c) for c in contact_data],
+                    "financial_info": []
+                },
+                "intelligence_quality_score": quality_score or 0,
+                "data_source": "database",
+                "pages_scraped": pages_scraped or 0
+            }
+            
+            return {
+                "success": True,
+                "data": {
+                    "web_scraping_data": web_intelligence
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"Failed to get web intelligence for EIN {ein}: {e}")
+        return {
+            "success": False,
+            "message": f"Error retrieving web intelligence: {str(e)}",
+            "data": None
+        }
+
+@app.get("/api/profiles/{profile_id}/verified-intelligence")
+async def get_verified_intelligence(profile_id: str):
+    """Get verified intelligence data using tax-data-first approach for Enhanced Data tab."""
+    try:
+        from src.web.services.verified_intelligence_service import get_verified_intelligence_service
+        
+        # Get profile to extract organization data
+        profile = profile_service.get_profile(profile_id)
+        if not profile:
+            return {
+                "success": False,
+                "message": f"Profile not found: {profile_id}",
+                "data": None
+            }
+        
+        # Extract organization details
+        organization_name = profile.name
+        ein = getattr(profile, 'ein', None) or profile.external_data.get('ein') if hasattr(profile, 'external_data') else None
+        user_provided_url = getattr(profile, 'website_url', None)
+        
+        logger.info(f"Getting verified intelligence for {organization_name} (EIN: {ein})")
+        
+        # Get verified intelligence using tax-data-first approach
+        verified_service = get_verified_intelligence_service()
+        verified_result = await verified_service.get_verified_intelligence(
+            profile_id=profile_id,
+            organization_name=organization_name,
+            ein=ein,
+            user_provided_url=user_provided_url
+        )
+        
+        # Format response compatible with Enhanced Data tab
+        web_intelligence = {
+            "successful_scrapes": [
+                {
+                    "url": verified_result.verified_website or "No website available",
+                    "content_length": 0,
+                    "content_score": verified_result.data_quality_score,
+                    "timestamp": verified_result.fetched_at.isoformat()
+                }
+            ] if verified_result.verified_website else [],
+            "failed_scrapes": [],
+            "extracted_info": {
+                "leadership": [
+                    f"{leader['name']} - {leader['title']} ({leader['source']}, {leader['confidence_score']:.1%} confidence)"
+                    for leader in verified_result.verified_leadership
+                ],
+                "programs": verified_result.verified_programs,
+                "mission_statements": [verified_result.verified_mission] if verified_result.verified_mission else [],
+                "contact_info": [],
+                "financial_info": []
+            },
+            "intelligence_quality_score": verified_result.intelligence_quality_score,
+            "data_source": "verified_tax_data_first",
+            "pages_scraped": verified_result.pages_scraped,
+            "verification_details": {
+                "overall_confidence": verified_result.overall_confidence,
+                "has_990_baseline": verified_result.has_990_baseline,
+                "source_attribution": verified_result.source_attribution,
+                "data_sources_used": verified_result.data_sources_used,
+                "verification_notes": verified_result.verification_notes,
+                "processing_time": verified_result.processing_time
+            }
+        }
+        
+        return {
+            "success": True,
+            "data": {
+                "web_scraping_data": web_intelligence,
+                "verified_intelligence": verified_result.to_dict()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get verified intelligence for profile {profile_id}: {e}")
+        return {
+            "success": False,
+            "message": f"Error retrieving verified intelligence: {str(e)}",
+            "data": None
+        }
 
 @app.get("/api/profiles/{profile_id}/metrics")
 async def get_profile_metrics(profile_id: str):
