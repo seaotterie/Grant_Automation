@@ -1,0 +1,103 @@
+{
+  "profile_id": "profile_f3adef3b653c",
+  "name": "Heroes Bridge",
+  "organization_type": "nonprofit",
+  "ein": "81-2827604",
+  "mission_statement": "Testing - dont make it required",
+  "keywords": "",
+  "focus_areas": [
+    "general"
+  ],
+  "program_areas": [],
+  "target_populations": [],
+  "ntee_codes": [
+    "E01",
+    "E11",
+    "E21",
+    "E65",
+    "E86",
+    "E30",
+    "E31",
+    "E32"
+  ],
+  "ntee_description": null,
+  "government_criteria": [
+    "grant",
+    "contract",
+    "other",
+    "state_specific"
+  ],
+  "geographic_scope": {
+    "states": [
+      "VA"
+    ],
+    "regions": [],
+    "nationwide": false,
+    "international": false
+  },
+  "service_areas": [],
+  "funding_preferences": {
+    "min_amount": null,
+    "max_amount": null,
+    "funding_types": [
+      "grants"
+    ],
+    "recurring": false,
+    "multi_year": false,
+    "grants_gov_categories": []
+  },
+  "current_funders": [],
+  "past_grants": [],
+  "schedule_i_grantees": [],
+  "schedule_i_status": null,
+  "form_type": "unknown",
+  "foundation_type": "unknown",
+  "foundation_code": null,
+  "foundation_grants": [],
+  "application_process": null,
+  "accepts_unsolicited_applications": false,
+  "foundation_board_members": [],
+  "foundation_financial_data": null,
+  "foundation_program_areas": null,
+  "annual_revenue": 502611,
+  "staff_size": null,
+  "volunteer_count": null,
+  "board_size": null,
+  "strategic_priorities": [],
+  "growth_goals": [],
+  "partnership_interests": [],
+  "certifications": [],
+  "compliance_requirements": [],
+  "reporting_capabilities": [],
+  "status": "active",
+  "created_at": "2025-08-11 15:44:41.790634",
+  "updated_at": "2025-09-09 08:45:58.979319",
+  "created_by": null,
+  "tags": [],
+  "notes": null,
+  "last_discovery_date": "2025-09-09 08:45:58.978840",
+  "discovery_count": 0,
+  "discovery_status": "completed",
+  "next_recommended_discovery": null,
+  "opportunities_count": 12,
+  "associated_opportunities": [
+    "opp_58fb3ec1a00a",
+    "opp_cbc9bb57d4ca",
+    "opp_32366be8d3f6",
+    "opp_834708909ebb",
+    "opp_e475320f1bc5",
+    "opp_8afdcbd2556f",
+    "opp_00522ebf32e0",
+    "opp_3941d6caff29",
+    "opp_d9f6428007f1",
+    "opp_05fd61c458fd",
+    "opp_1b43527ae089",
+    "opp_737b1644714c"
+  ],
+  "processing_history": {},
+  "ai_analysis_count": 0,
+  "last_ai_analysis_date": null,
+  "cache_usage_stats": {},
+  "cost_tracking": {},
+  "metrics": null
+}

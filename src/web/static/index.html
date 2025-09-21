@@ -4635,6 +4635,7 @@
                                             Organization Name *
                                         </label>
                                         <input type="text" x-model="profileForm.name" required
+                                               @input="markFieldAsUserEdited('name')"
                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
                                                placeholder="Enter organization name">
                                     </div>
@@ -4643,6 +4644,7 @@
                                             Organization Type
                                         </label>
                                         <select x-model="profileForm.organization_type"
+                                                @change="markFieldAsUserEdited('organization_type')"
                                                 class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white">
                                             <option value="">Select type</option>
                                             <option value="nonprofit">Nonprofit</option>
@@ -4660,6 +4662,7 @@
                                         EIN (Tax ID)
                                     </label>
                                     <input type="text" x-model="profileForm.ein"
+                                           @input="markFieldAsUserEdited('ein')"
                                            class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
                                            placeholder="XX-XXXXXXX (optional)">
                                 </div>
@@ -4670,6 +4673,7 @@
                                         <span class="text-xs text-gray-500 dark:text-gray-400">(Primary URL source)</span>
                                     </label>
                                     <input type="url" x-model="profileForm.website_url"
+                                           @input="markFieldAsUserEdited('website_url')"
                                            class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
                                            placeholder="https://www.organization.org">
                                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -4711,6 +4715,7 @@
                                         Mission Statement
                                     </label>
                                     <textarea x-model="profileForm.mission_statement" rows="3"
+                                              @input="markFieldAsUserEdited('mission_statement')"
                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
                                               placeholder="Describe your organization's mission and purpose"></textarea>
                                     <div class="mt-1 flex justify-end">
@@ -8480,7 +8485,7 @@
                     <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
                         <span x-text="isEditingProfile ? 'Edit Organization Profile' : 'Create Organization Profile'"></span>
                     </h3>
-                    <button @click="showProfileModal = false" 
+                    <button @click="saveModalData(); showProfileModal = false"
                             class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
                         <span class="text-2xl">&times;</span>
                     </button>
@@ -8490,32 +8495,32 @@
                 <form @submit.prevent="saveProfile()" class="flex flex-col max-h-[85vh] overflow-hidden">
                     
                     <!-- Tab Navigation -->
-                    <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
-                        <nav class="-mb-px flex space-x-8">
-                            <button type="button" 
+                    <div class="border-b-2 border-gray-300 dark:border-gray-600 mb-6">
+                        <nav class="-mb-0.5 flex space-x-1">
+                            <button type="button"
                                     @click="profileModalActiveTab = 'basic'"
-                                    :class="profileModalActiveTab === 'basic' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'"
-                                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors">
+                                    :class="profileModalActiveTab === 'basic' ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900 dark:border-purple-400 dark:text-purple-300' : 'bg-gray-100 border-gray-300 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-200'"
+                                    class="px-4 py-3 border-2 border-b-0 rounded-t-lg font-semibold text-sm transition-all shadow-sm">
                                 Basic Information
                             </button>
-                            <button type="button" 
+                            <button type="button"
                                     @click="profileModalActiveTab = 'ntee'"
-                                    :class="profileModalActiveTab === 'ntee' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'"
-                                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors">
+                                    :class="profileModalActiveTab === 'ntee' ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900 dark:border-purple-400 dark:text-purple-300' : 'bg-gray-100 border-gray-300 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-200'"
+                                    class="px-4 py-3 border-2 border-b-0 rounded-t-lg font-semibold text-sm transition-all shadow-sm">
                                 NTEE Codes
                             </button>
-                            <button type="button" 
+                            <button type="button"
                                     @click="profileModalActiveTab = 'government'"
-                                    :class="profileModalActiveTab === 'government' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'"
-                                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors">
+                                    :class="profileModalActiveTab === 'government' ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900 dark:border-purple-400 dark:text-purple-300' : 'bg-gray-100 border-gray-300 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-200'"
+                                    class="px-4 py-3 border-2 border-b-0 rounded-t-lg font-semibold text-sm transition-all shadow-sm">
                                 Government Criteria
                             </button>
-                            <button type="button" 
+                            <button type="button"
                                     @click="profileModalActiveTab = 'enhanced'"
-                                    :class="profileModalActiveTab === 'enhanced' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'"
-                                    class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors">
+                                    :class="profileModalActiveTab === 'enhanced' ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900 dark:border-purple-400 dark:text-purple-300' : 'bg-gray-100 border-gray-300 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-200'"
+                                    class="px-4 py-3 border-2 border-b-0 rounded-t-lg font-semibold text-sm transition-all shadow-sm">
                                 Enhanced Data
-                                <span x-show="webScrapingResults && webScrapingResults.successful_scrapes && webScrapingResults.successful_scrapes.length > 0" 
+                                <span x-show="webScrapingResults && webScrapingResults.successful_scrapes && webScrapingResults.successful_scrapes.length > 0"
                                       class="ml-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-green-500 rounded-full">
                                     <span x-text="webScrapingResults?.successful_scrapes?.length || 0"></span>
                                 </span>
@@ -8539,38 +8544,11 @@
                                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                         </svg>
-                                        <span x-show="!einFetchLoading">🌐 Enhanced Fetch (MCP + Scrapy)</span>
-                                        <span x-show="einFetchLoading">Fetching from dual sources...</span>
+                                        <span x-show="!einFetchLoading" class="text-base font-bold">🌐 Fetch</span>
+                                        <span x-show="einFetchLoading" class="text-base font-bold">Fetching...</span>
                                     </button>
                                 </div>
                                 
-                                <!-- Web Scraping Options -->
-                                <div class="flex items-center space-x-4 text-xs">
-                                    <label class="flex items-center">
-                                        <input type="checkbox" x-model="enableWebScraping" 
-                                               class="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                                        <span class="ml-2 text-gray-600 dark:text-gray-400">Web Enhancement</span>
-                                    </label>
-                                    <div x-show="enableWebScraping" class="flex items-center text-green-600 dark:text-green-400">
-                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-                                        </svg>
-                                        <span class="text-xs">AI-powered web scraping enabled</span>
-                                    </div>
-                                </div>
-                                
-                                <!-- Web Scraping Results -->
-                                <div x-show="webScrapingResults && webScrapingResults.successful_scrapes && webScrapingResults.successful_scrapes.length > 0" 
-                                     class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-md p-3">
-                                    <div class="flex items-center mb-2">
-                                        <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path>
-                                        </svg>
-                                        <span class="text-sm font-medium text-green-800 dark:text-green-200">
-                                            Enhanced Data Available
-                                        </span>
-                                    </div>
-                                </div>
                             </div>
                             
                             <!-- Fields stacked vertically -->
@@ -8669,7 +8647,8 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Keywords</label>
-                                    <textarea x-model="profileForm.keywords" 
+                                    <textarea x-model="profileForm.keywords"
+                                              @input="markFieldAsUserEdited('keywords')"
                                               rows="4"
                                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
                                               placeholder="Key terms and phrases that describe your work"></textarea>
@@ -8683,7 +8662,6 @@
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col h-full">
                                 <div class="flex justify-between items-center mb-4">
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white">NTEE Codes</h4>
-                                <span class="text-xs text-gray-500 dark:text-gray-400">Phase 2</span>
                             </div>
                             
                             <button type="button" @click="openNteeModal()"
@@ -8726,7 +8704,6 @@
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col h-full">
                                 <div class="flex justify-between items-center mb-4">
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Government Criteria</h4>
-                                <span class="text-xs text-gray-500 dark:text-gray-400">Phase 3</span>
                             </div>
                             
                             <button type="button" @click="openGovernmentCriteriaModal()"
@@ -8788,12 +8765,12 @@
                                         <!-- Source Breakdown Display -->
                                         <div x-show="webScrapingResults?.source_breakdown" class="text-xs text-gray-500 dark:text-gray-400 mb-1">
                                             <div class="flex items-center gap-2">
-                                                <span x-show="webScrapingResults?.source_breakdown?.mcp_success_count > 0"
-                                                      class="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded"
-                                                      x-text="'MCP: ' + (webScrapingResults?.source_breakdown?.mcp_success_count || 0)"></span>
                                                 <span x-show="webScrapingResults?.source_breakdown?.scrapy_success_count > 0"
                                                       class="px-2 py-1 bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 rounded"
-                                                      x-text="'Scrapy: ' + (webScrapingResults?.source_breakdown?.scrapy_success_count || 0)"></span>
+                                                      x-text="'Sources Scraped: ' + (webScrapingResults?.source_breakdown?.scrapy_success_count || 0)"></span>
+                                                <span x-show="webScrapingResults?.source_breakdown?.total_sources_tried > 0"
+                                                      class="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded"
+                                                      x-text="'Total Tried: ' + (webScrapingResults?.source_breakdown?.total_sources_tried || 0)"></span>
                                             </div>
                                         </div>
                                         <div x-show="webScrapingResults?.intelligence_quality_score" class="text-xs text-gray-500 dark:text-gray-400">
@@ -8803,11 +8780,12 @@
                                             <span x-text="webScrapingResults?.data_source"></span>
                                         </div>
                                         <div x-show="!webScrapingResults" class="text-xs text-gray-500 dark:text-gray-400">
-                                            Dual-Source Intelligence (MCP + Scrapy)
+                                            Enhanced Scrapy Intelligence
                                         </div>
                                     </div>
                                 </div>
                                 
+
                                 <div x-show="!webScrapingResults" class="text-center py-12">
                                     <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
@@ -8910,10 +8888,258 @@
                                             </template>
                                         </div>
                                     </div>
+
+                                    <!-- Contacts Section -->
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
+                                        <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+                                            <svg class="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21L6.8 10.907a1.932 1.932 0 00-.6 2.627c.88 1.73 2.44 3.29 4.17 4.17a1.932 1.932 0 002.627-.6l1.52-3.424a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                                            </svg>
+                                            Contacts
+                                        </h5>
+
+                                        <!-- Contact Information -->
+                                        <div x-show="webScrapingResults?.extracted_info?.contact_info?.length > 0" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Contact Information</h6>
+                                            <template x-for="(contact, index) in webScrapingResults?.extracted_info?.contact_info || []" :key="index">
+                                                <div class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded px-3 py-2 mb-2">
+                                                    <div x-text="typeof contact === 'object' ? (contact.content || contact.phone || contact.email || contact.address || contact) : contact"></div>
+                                                    <div x-show="typeof contact === 'object' && contact.source"
+                                                         class="text-xs text-blue-600 dark:text-blue-400 mt-1"
+                                                         x-text="'Source: ' + (contact.source || 'Unknown')"></div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div x-show="!webScrapingResults?.extracted_info?.contact_info?.length" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Contact Information</h6>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">No contact information found</p>
+                                        </div>
+
+                                        <!-- Board Members/Officers -->
+                                        <div x-show="webScrapingResults?.extracted_info?.officers?.length > 0" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Board Members/Officers</h6>
+                                            <template x-for="(officer, index) in webScrapingResults?.extracted_info?.officers || []" :key="index">
+                                                <div class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded px-3 py-2 mb-2">
+                                                    <div>
+                                                        <span x-text="typeof officer === 'object' ?
+                                                            (officer.name ? (officer.name + (officer.title ? ' - ' + officer.title : '')) : officer.content || officer)
+                                                            : officer"></span>
+                                                        <span x-show="typeof officer === 'object' && officer.compensation"
+                                                              class="text-xs text-gray-500 ml-2"
+                                                              x-text="'($' + officer.compensation.toLocaleString() + ')'"></span>
+                                                    </div>
+                                                    <div x-show="typeof officer === 'object' && officer.source"
+                                                         class="text-xs text-blue-600 dark:text-blue-400 mt-1"
+                                                         x-text="'Source: ' + (officer.source || '990 Filing')"></div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div x-show="!webScrapingResults?.extracted_info?.officers?.length" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Board Members/Officers</h6>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">No board information found</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Services Section -->
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
+                                        <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+                                            <svg class="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            </svg>
+                                            Services
+                                        </h5>
+
+                                        <!-- Primary Program Areas -->
+                                        <div x-show="webScrapingResults?.extracted_info?.programs?.length > 0" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Primary Program Areas</h6>
+                                            <div class="flex flex-wrap gap-1">
+                                                <template x-for="(program, index) in (webScrapingResults?.extracted_info?.programs || []).slice(0, 5)" :key="index">
+                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200"
+                                                          x-text="typeof program === 'object' ? (program.content || program) : program"></span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <div x-show="!webScrapingResults?.extracted_info?.programs?.length" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Primary Program Areas</h6>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">No program areas identified</p>
+                                        </div>
+
+                                        <!-- Service Areas/Geographic Coverage -->
+                                        <div x-show="webScrapingResults?.extracted_info?.service_areas?.length > 0" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Service Areas</h6>
+                                            <template x-for="(area, index) in webScrapingResults?.extracted_info?.service_areas || []" :key="index">
+                                                <div class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded px-3 py-2 mb-2">
+                                                    <div x-text="typeof area === 'object' ? (area.content || area) : area"></div>
+                                                    <div x-show="typeof area === 'object' && area.source"
+                                                         class="text-xs text-blue-600 dark:text-blue-400 mt-1"
+                                                         x-text="'Source: ' + (area.source || 'Unknown')"></div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div x-show="!webScrapingResults?.extracted_info?.service_areas?.length" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Service Areas</h6>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">No service areas specified</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Financial Section -->
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
+                                        <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+                                            <svg class="w-4 h-4 mr-2 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                            </svg>
+                                            Financial
+                                        </h5>
+
+                                        <!-- 990 Financial Data -->
+                                        <div x-show="webScrapingResults?.extracted_info?.financial_data || profileForm.annual_revenue" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">990 Financial Data</h6>
+                                            <div class="space-y-2">
+                                                <div x-show="profileForm.annual_revenue" class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded px-3 py-2">
+                                                    <span class="font-medium">Annual Revenue:</span>
+                                                    <span x-text="'$' + (profileForm.annual_revenue || 0).toLocaleString()"></span>
+                                                    <div class="text-xs text-blue-600 dark:text-blue-400 mt-1">Source: IRS 990 Filing</div>
+                                                </div>
+                                                <template x-for="(financial, index) in webScrapingResults?.extracted_info?.financial_data || []" :key="index">
+                                                    <div class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded px-3 py-2">
+                                                        <div x-text="typeof financial === 'object' ? (financial.content || financial) : financial"></div>
+                                                        <div x-show="typeof financial === 'object' && financial.source"
+                                                             class="text-xs text-blue-600 dark:text-blue-400 mt-1"
+                                                             x-text="'Source: ' + (financial.source || 'Unknown')"></div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <div x-show="!webScrapingResults?.extracted_info?.financial_data && !profileForm.annual_revenue" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">990 Financial Data</h6>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">No financial data available</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- News Section -->
+                                    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-4">
+                                        <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+                                            <svg class="w-4 h-4 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+                                            </svg>
+                                            News & Media
+                                        </h5>
+
+                                        <!-- Social Media Links -->
+                                        <div x-show="webScrapingResults?.extracted_info?.social_media?.length > 0" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Social Media</h6>
+                                            <div class="flex flex-wrap gap-2">
+                                                <template x-for="(social, index) in webScrapingResults?.extracted_info?.social_media || []" :key="index">
+                                                    <a x-bind:href="typeof social === 'object' ? (social.url || social.content || social) : social"
+                                                       target="_blank"
+                                                       class="inline-flex items-center px-2.5 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-700">
+                                                        <span x-text="typeof social === 'object' ? (social.platform || 'Social Media') : 'Link'"></span>
+                                                    </a>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <div x-show="!webScrapingResults?.extracted_info?.social_media?.length" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Social Media</h6>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">No social media links found</p>
+                                        </div>
+
+                                        <!-- Partnerships/Affiliations -->
+                                        <div x-show="webScrapingResults?.extracted_info?.partnerships?.length > 0" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Partnerships</h6>
+                                            <template x-for="(partnership, index) in webScrapingResults?.extracted_info?.partnerships || []" :key="index">
+                                                <div class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded px-3 py-2 mb-2">
+                                                    <div x-text="typeof partnership === 'object' ? (partnership.content || partnership) : partnership"></div>
+                                                    <div x-show="typeof partnership === 'object' && partnership.source"
+                                                         class="text-xs text-blue-600 dark:text-blue-400 mt-1"
+                                                         x-text="'Source: ' + (partnership.source || 'Unknown')"></div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div x-show="!webScrapingResults?.extracted_info?.partnerships?.length" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Partnerships</h6>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">No partnerships found</p>
+                                        </div>
+
+                                        <!-- Recent News/Press -->
+                                        <div x-show="webScrapingResults?.extracted_info?.news?.length > 0" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Recent News</h6>
+                                            <template x-for="(news, index) in webScrapingResults?.extracted_info?.news || []" :key="index">
+                                                <div class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded px-3 py-2 mb-2">
+                                                    <div x-text="typeof news === 'object' ? (news.title || news.content || news) : news"></div>
+                                                    <div x-show="typeof news === 'object' && news.date"
+                                                         class="text-xs text-gray-500 mt-1"
+                                                         x-text="news.date"></div>
+                                                    <div x-show="typeof news === 'object' && news.source"
+                                                         class="text-xs text-blue-600 dark:text-blue-400 mt-1"
+                                                         x-text="'Source: ' + (news.source || 'Unknown')"></div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div x-show="!webScrapingResults?.extracted_info?.news?.length" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Recent News</h6>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">No recent news found</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Foundation Intelligence Section (990-PF only) -->
+                                    <div x-show="webScrapingResults?.foundation_intelligence?.is_foundation" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-4 mt-4">
+                                        <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+                                            <svg class="w-4 h-4 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                            </svg>
+                                            Foundation Intelligence (990-PF)
+                                        </h5>
+
+                                        <!-- Foundation Grant Making -->
+                                        <div x-show="webScrapingResults?.foundation_grants?.length > 0" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Recent Grants Awarded</h6>
+                                            <template x-for="(grant, index) in webScrapingResults?.foundation_grants || []" :key="index">
+                                                <div class="text-sm text-gray-700 dark:text-gray-300 bg-orange-50 dark:bg-orange-900/20 rounded px-3 py-2 mb-2 border-l-4 border-orange-400">
+                                                    <div class="font-medium" x-text="grant.recipient_name || grant.name || 'Grant Recipient'"></div>
+                                                    <div x-show="grant.amount" class="text-green-600 dark:text-green-400 font-medium" x-text="'$' + (grant.amount || 0).toLocaleString()"></div>
+                                                    <div x-show="grant.purpose" class="text-xs text-gray-600 dark:text-gray-400 mt-1" x-text="grant.purpose"></div>
+                                                    <div class="text-xs text-orange-600 dark:text-orange-400 mt-1">Source: IRS 990-PF Filing</div>
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        <!-- Foundation Capacity -->
+                                        <div x-show="webScrapingResults?.foundation_intelligence?.grant_making_capacity" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Grant Making Capacity</h6>
+                                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                                <div x-show="webScrapingResults?.foundation_intelligence?.grant_making_capacity?.annual_distribution" class="bg-gray-50 dark:bg-gray-700 rounded px-3 py-2">
+                                                    <div class="text-xs text-gray-500 dark:text-gray-400">Annual Distribution</div>
+                                                    <div class="font-medium" x-text="'$' + (webScrapingResults?.foundation_intelligence?.grant_making_capacity?.annual_distribution || 0).toLocaleString()"></div>
+                                                </div>
+                                                <div x-show="webScrapingResults?.foundation_intelligence?.grant_making_capacity?.total_assets" class="bg-gray-50 dark:bg-gray-700 rounded px-3 py-2">
+                                                    <div class="text-xs text-gray-500 dark:text-gray-400">Total Assets</div>
+                                                    <div class="font-medium" x-text="'$' + (webScrapingResults?.foundation_intelligence?.grant_making_capacity?.total_assets || 0).toLocaleString()"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Application Process -->
+                                        <div x-show="webScrapingResults?.foundation_intelligence?.application_process" class="mb-4">
+                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Application Information</h6>
+                                            <div class="text-sm text-gray-700 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 rounded px-3 py-2">
+                                                <div x-show="webScrapingResults?.foundation_intelligence?.application_process?.contact_info" x-text="webScrapingResults?.foundation_intelligence?.application_process?.contact_info"></div>
+                                                <div x-show="webScrapingResults?.foundation_intelligence?.application_process?.deadlines" x-text="'Deadlines: ' + webScrapingResults?.foundation_intelligence?.application_process?.deadlines" class="text-xs text-blue-600 dark:text-blue-400 mt-1"></div>
+                                                <div class="text-xs text-blue-600 dark:text-blue-400 mt-1">Source: 990-PF Part XIV</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- No Foundation Data -->
+                                        <div x-show="!webScrapingResults?.foundation_grants?.length && !webScrapingResults?.foundation_intelligence?.grant_making_capacity" class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                                            <div x-show="webScrapingResults?.foundation_intelligence?.processing_failed">990-PF processing failed - limited foundation data available</div>
+                                            <div x-show="!webScrapingResults?.foundation_intelligence?.processing_failed">Foundation intelligence data not available</div>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
                         </div>
-                        
+
                     </div>
                     
                     <!-- Form Actions -->
@@ -9507,26 +9733,6 @@
     <script src="/static/app.js?v=REAL_DATA_ONLY_20250911" onerror="console.error('Failed to load app.js')"></script>
     
     <!-- DEBUGGING: Visual indicator that our code is active -->
-    <script>
-        console.log('[DEBUG] ENHANCED DATA TAB DEBUG VERSION V3 - LOADING...');
-        
-        // Add visual debug indicator
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('[DEBUG] DOM Content Loaded - Adding debug indicator');
-            const debugIndicator = document.createElement('div');
-            debugIndicator.id = 'enhanced-data-debug-indicator';
-            debugIndicator.style.cssText = 'position:fixed; top:10px; right:10px; background:red; color:white; padding:5px; z-index:9999; font-size:12px;';
-            debugIndicator.innerHTML = 'DEBUG: Enhanced Data Fix V3 Active';
-            document.body.appendChild(debugIndicator);
-            
-            // Auto-remove after 10 seconds
-            setTimeout(() => {
-                if (debugIndicator.parentNode) {
-                    debugIndicator.parentNode.removeChild(debugIndicator);
-                }
-            }, 10000);
-        });
-    </script>
     
     <!-- Real data only - no mock/test data injection -->
 

@@ -18,9 +18,9 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-from .ai_lite_unified_processor import ComprehensiveAnalysis
-from .ai_heavy_researcher import AILiteResults, TargetPreliminaryData
-from .ai_heavy_deep_researcher import (
+from src.processors.analysis.ai_lite_unified_processor import ComprehensiveAnalysis
+from src.processors.analysis.ai_heavy_researcher import AILiteResults, TargetPreliminaryData
+from src.processors.analysis.ai_heavy_deep_researcher import (
     DeepResearchIntelligenceReport, RelationshipIntelligence, CompetitiveIntelligence,
     FinancialIntelligence, StrategicPartnershipIntelligence, MarketIntelligence, RiskIntelligence
 )

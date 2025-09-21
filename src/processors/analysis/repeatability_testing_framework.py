@@ -22,9 +22,9 @@ from dataclasses import dataclass, field
 from pydantic import BaseModel
 import hashlib
 
-from .enhanced_ai_lite_processor import EnhancedAILiteProcessor, ProcessingMode
-from .fact_extraction_integration_service import ProcessorMigrationConfig
-from .opportunity_type_detector import OpportunityType
+from src.processors.analysis.enhanced_ai_lite_processor import EnhancedAILiteProcessor, ProcessingMode
+from src.processors.analysis.fact_extraction_integration_service import ProcessorMigrationConfig
+from src.processors.analysis.opportunity_type_detector import OpportunityType
 
 logger = logging.getLogger(__name__)
 

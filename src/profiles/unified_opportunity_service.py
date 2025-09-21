@@ -358,10 +358,36 @@ class UnifiedOpportunityService:
     
     def _save_opportunity(self, opportunity: UnifiedOpportunity):
         """Save opportunity to file"""
-        opp_file = self.opportunities_dir / f"profile_{opportunity.profile_id}_opportunity_{opportunity.opportunity_id.replace('opp_', '')}.json"
-        
-        with open(opp_file, 'w', encoding='utf-8') as f:
-            json.dump(opportunity.model_dump(), f, indent=2, ensure_ascii=False)
+        try:
+            opp_file = self.opportunities_dir / f"profile_{opportunity.profile_id}_opportunity_{opportunity.opportunity_id.replace('opp_', '')}.json"
+            logger.info(f"Attempting to save opportunity to: {opp_file}")
+            
+            # Ensure directory exists
+            self.opportunities_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Opportunities directory confirmed: {self.opportunities_dir}")
+            
+            # Serialize opportunity data
+            opportunity_data = opportunity.model_dump()
+            logger.info(f"Successfully serialized opportunity data for {opportunity.organization_name}")
+            
+            # Write to file
+            with open(opp_file, 'w', encoding='utf-8') as f:
+                json.dump(opportunity_data, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"Successfully saved opportunity file: {opp_file}")
+            
+            # Verify file was created
+            if opp_file.exists():
+                file_size = opp_file.stat().st_size
+                logger.info(f"Opportunity file verified: {file_size} bytes")
+            else:
+                logger.error(f"Opportunity file was not created: {opp_file}")
+                
+        except Exception as save_error:
+            logger.error(f"Failed to save opportunity {opportunity.opportunity_id}: {save_error}")
+            import traceback
+            logger.error(f"Save opportunity traceback: {traceback.format_exc()}")
+            raise
     
     def _update_opportunity_score(self, existing: UnifiedOpportunity, new_data: Dict[str, Any]) -> UnifiedOpportunity:
         """Update existing opportunity with better scoring data"""

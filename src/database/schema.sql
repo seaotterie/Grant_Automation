@@ -42,6 +42,10 @@ CREATE TABLE IF NOT EXISTS profiles (
     last_discovery_date TIMESTAMP,        -- Last discovery run date
     performance_metrics TEXT,              -- JSON object with analytics
     
+    -- Enhanced Intelligence Data
+    verification_data TEXT,               -- JSON object: tax filing verification data
+    web_enhanced_data TEXT,              -- JSON object: web scraping and enhanced intelligence
+
     -- Audit Fields
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

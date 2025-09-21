@@ -55,7 +55,17 @@
       "Read(/C:\\Users\\cotte\\Documents\\Home\\03_Dad\\_Projects\\2025\\ClaudeCode\\Grant_Automation\\src/**)",
       "Read(/C:\\Users\\cotte\\Documents\\Home\\03_Dad\\_Projects\\2025\\ClaudeCode\\Grant_Automation/**)",
       "Read(/C:\\Users\\cotte\\Documents\\Home\\03_Dad\\_Projects\\2025\\ClaudeCode\\Grant_Automation\\src\\intelligence/**)",
-      "Read(/C:\\Users\\cotte\\Documents\\Home\\03_Dad\\_Projects\\2025\\ClaudeCode\\Grant_Automation/**)"
+      "Read(/C:\\Users\\cotte\\Documents\\Home\\03_Dad\\_Projects\\2025\\ClaudeCode\\Grant_Automation/**)",
+      "Bash(npm i:*)",
+      "Bash(dir \"C:\\Users\\cotte\\Documents\\Home\\03_Dad\\_Projects\\2025\\ClaudeCode\\Grant_Automation\\data\\profiles\\profiles\")",
+      "Bash(dir \"C:\\Users\\cotte\\Documents\\Home\\03_Dad\\_Projects\\2025\\ClaudeCode\\Grant_Automation\\data\\profiles\\opportunities\")",
+      "Bash(dir \"tests\\integrated\")",
+      "Bash(dir:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout 5 curl -s http://localhost:8000/api/profiles)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": [],

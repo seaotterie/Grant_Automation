@@ -29,7 +29,7 @@ from src.core.government_models import (
 )
 from src.analysis.profile_matcher import get_profile_matcher
 from src.analytics.soi_financial_analytics import SOIFinancialAnalytics
-from src.core.simple_mcp_client import SimpleMCPClient
+# SimpleMCPClient removed - using simplified approach
 
 try:
     from src.core.gpt_url_discovery_service import get_gpt_url_discovery_service
@@ -130,7 +130,7 @@ These weights and thresholds are based on comprehensive analysis of:
         self.soi_analytics = SOIFinancialAnalytics()
         
         # Initialize MCP client for web intelligence enhancement
-        self.mcp_client = SimpleMCPClient(timeout=15)
+        # MCP client removed - simplified opportunity scoring
         self.database_path = "data/catalynx.db"
         
         # Initialize GPT URL discovery service

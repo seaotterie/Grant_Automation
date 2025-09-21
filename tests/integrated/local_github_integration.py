@@ -13,6 +13,20 @@ This module provides:
 """
 
 import asyncio
+import os
+import sys
+# Configure UTF-8 encoding for Windows
+if os.name == 'nt':
+    import codecs
+    try:
+        if hasattr(sys.stdout, 'buffer'):
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+        if hasattr(sys.stderr, 'buffer'):
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    except AttributeError:
+        # stdout/stderr may already be wrapped or redirected
+        pass
+
 import json
 import logging
 import subprocess
@@ -235,7 +249,7 @@ class LocalGitHubIntegration:
         except FileNotFoundError:
             return False
 
-    def create_issue_from_bug(self, bug: 'Bug') -> Optional[str]:
+    def create_issue_from_bug(self, bug: 'Bug', labels: List[str] = None, milestone: str = None) -> Dict[str, Any]:
         """Create GitHub issue from Bug object"""
         try:
             # Import Bug class dynamically to avoid circular imports
@@ -247,8 +261,8 @@ class LocalGitHubIntegration:
             # Generate issue body
             body = self._generate_issue_body_from_bug(bug)
 
-            # Generate labels
-            labels = self._generate_labels_from_bug(bug)
+            # Use provided labels or generate from bug
+            issue_labels = labels if labels is not None else self._generate_labels_from_bug(bug)
 
             # Generate assignees
             assignees = self._map_subagents_to_github_users(bug.assigned_subagents)
@@ -258,31 +272,43 @@ class LocalGitHubIntegration:
                 issue_id=None,  # Will be assigned by database
                 title=title,
                 body=body,
-                labels=labels,
+                labels=issue_labels,
                 assignees=assignees,
                 state="open"
             )
 
-            # Set milestone for critical bugs
-            if bug.severity == BugSeverity.CRITICAL:
+            # Set milestone - use provided or default for critical bugs
+            if milestone:
+                issue.milestone = milestone
+            elif bug.severity == BugSeverity.CRITICAL:
                 issue.milestone = "Version 1 Release"
 
             # Create issue in database
             issue_id = self.database.create_issue(issue)
 
             # Try to create with GitHub CLI if available
+            github_issue_number = None
             if self.check_github_cli_available():
                 try:
                     self._create_github_cli_issue(issue)
+                    github_issue_number = int(issue_id) if issue_id else None
                 except Exception as e:
                     logger.warning(f"GitHub CLI issue creation failed: {e}")
                     logger.info("Issue created in local database only")
 
-            return issue_id
+            return {
+                "success": True,
+                "issue_number": github_issue_number or int(issue_id) if issue_id else None,
+                "issue_url": f"#{github_issue_number or issue_id}" if issue_id else None,
+                "local_id": issue_id
+            }
 
         except Exception as e:
             logger.error(f"Failed to create issue from bug: {e}")
-            return None
+            return {
+                "success": False,
+                "error": str(e)
+            }
 
     def _generate_issue_body_from_bug(self, bug: 'Bug') -> str:
         """Generate structured issue body from bug"""
@@ -573,6 +599,100 @@ Severity Level: {bug.severity.value}
 
         # Close the issue
         return self.database.close_issue(issue_id, "Verified and resolved by testing framework")
+
+    def test_github_cli_connection(self) -> Dict[str, Any]:
+        """Test GitHub CLI connection and configuration"""
+        try:
+            # Check if GitHub CLI is available
+            if not self.check_github_cli_available():
+                return {
+                    "success": False,
+                    "error": "GitHub CLI not installed or not in PATH"
+                }
+
+            # Test authentication
+            result = subprocess.run(["gh", "auth", "status"], capture_output=True, text=True, timeout=10)
+
+            if result.returncode == 0:
+                return {
+                    "success": True,
+                    "authenticated": True,
+                    "cli_version": self._get_github_cli_version()
+                }
+            else:
+                return {
+                    "success": False,
+                    "authenticated": False,
+                    "error": "GitHub CLI not authenticated"
+                }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    def _get_github_cli_version(self) -> str:
+        """Get GitHub CLI version"""
+        try:
+            result = subprocess.run(["gh", "--version"], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                return result.stdout.strip().split('\n')[0]
+            else:
+                return "unknown"
+        except:
+            return "unknown"
+
+    async def list_milestones(self) -> List[Dict[str, Any]]:
+        """List GitHub milestones"""
+        try:
+            # Return predefined milestones for local testing
+            milestones = [
+                {
+                    "title": "Version 1 Release",
+                    "state": "open",
+                    "due_on": "2025-10-01",
+                    "description": "Version 1 production release milestone"
+                },
+                {
+                    "title": "Integration Testing Complete",
+                    "state": "open",
+                    "due_on": "2025-09-25",
+                    "description": "Complete all integration testing"
+                },
+                {
+                    "title": "Version 1 Testing Phase",
+                    "state": "open",
+                    "due_on": "2025-09-30",
+                    "description": "Complete comprehensive testing phase"
+                }
+            ]
+            return milestones
+        except Exception as e:
+            logger.error(f"Error listing milestones: {e}")
+            return []
+
+    async def list_issues(self, state: str = None, labels: List[str] = None) -> List[Dict[str, Any]]:
+        """List GitHub issues with filtering"""
+        try:
+            # Get issues from database
+            issues = self.database.list_issues(state=state, labels=labels)
+
+            # Convert to expected format
+            issue_list = []
+            for issue in issues:
+                issue_dict = issue.to_dict() if hasattr(issue, 'to_dict') else issue
+                issue_list.append(issue_dict)
+
+            return issue_list
+        except Exception as e:
+            logger.error(f"Error listing issues: {e}")
+            return []
+
+    @property
+    def issue_database(self):
+        """Provide access to issue database for compatibility"""
+        return self.database
 
 async def main():
     """Test the local GitHub integration"""

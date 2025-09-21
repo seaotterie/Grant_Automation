@@ -7,6 +7,7 @@ Multi-dimensional analysis to identify promising grant candidates.
 import re
 import asyncio
 import logging
+import sqlite3
 from typing import Dict, List, Set, Optional, Tuple, Any
 from datetime import datetime
 from pathlib import Path
@@ -378,54 +379,68 @@ class IntelligentClassifier(BaseProcessor):
         }
     
     async def _load_unclassified_organizations(self) -> List[Dict[str, Any]]:
-        """Load organizations without NTEE codes from BMF file."""
-        bmf_file = Path("cache/bmf/eo_va.csv")
+        """Load organizations without NTEE codes from BMF database."""
+        db_path = Path("data/nonprofit_intelligence.db")
         
-        if not bmf_file.exists():
-            raise FileNotFoundError(f"BMF file not found: {bmf_file}")
+        if not db_path.exists():
+            raise FileNotFoundError(f"BMF database not found: {db_path}")
         
         unclassified_orgs = []
         
-        with open(bmf_file, 'r', encoding='utf-8', errors='ignore') as f:
-            reader = csv.DictReader(f)
+        try:
+            conn = sqlite3.connect(str(db_path))
+            cursor = conn.cursor()
             
-            for row in reader:
-                # Skip records with NTEE codes
-                if row.get('NTEE_CD', '').strip():
-                    continue
+            # Query for organizations without NTEE codes
+            query = """
+            SELECT DISTINCT
+                ein, organization_name, city, state, zip_code,
+                income_amount, asset_amount, classification,
+                foundation_code, activity_codes, subsection_code
+            FROM bmf_organizations 
+            WHERE (ntee_code IS NULL OR ntee_code = '' OR TRIM(ntee_code) = '')
+            AND ein IS NOT NULL 
+            AND organization_name IS NOT NULL
+            AND TRIM(ein) != ''
+            AND TRIM(organization_name) != ''
+            LIMIT 10000
+            """
+            
+            cursor.execute(query)
+            rows = cursor.fetchall()
+            
+            for row in rows:
+                ein, name, city, state, zip_code, income_amt, asset_amt, classification, foundation_code, activity_codes, subsection_code = row
                 
-                # Parse basic data
-                ein = row.get('EIN', '').strip()
-                name = row.get('NAME', '').strip()
-                
-                if not ein or not name:
-                    continue
-                
-                # Extract financial data
+                # Convert financial data
                 revenue = None
                 assets = None
                 
-                revenue_str = row.get('INCOME_AMT', '').strip()
-                if revenue_str and revenue_str.isdigit():
-                    revenue = float(revenue_str)
+                if income_amt and str(income_amt).replace('.', '').isdigit():
+                    revenue = float(income_amt)
                 
-                assets_str = row.get('ASSET_AMT', '').strip()
-                if assets_str and assets_str.isdigit():
-                    assets = float(assets_str)
+                if asset_amt and str(asset_amt).replace('.', '').isdigit():
+                    assets = float(asset_amt)
                 
                 unclassified_orgs.append({
-                    'ein': ein,
-                    'name': name,
-                    'city': row.get('CITY', '').strip(),
-                    'state': row.get('STATE', '').strip(),
-                    'zip': row.get('ZIP', '').strip(),
+                    'ein': ein or '',
+                    'name': name or '',
+                    'city': city or '',
+                    'state': state or '',
+                    'zip': zip_code or '',
                     'revenue': revenue,
                     'assets': assets,
-                    'classification': row.get('CLASSIFICATION', '').strip(),
-                    'foundation_code': row.get('FOUNDATION', '').strip(),
-                    'activity_code': row.get('ACTIVITY', '').strip(),
-                    'subsection_code': row.get('SUBSECTION', '').strip()
+                    'classification': classification or '',
+                    'foundation_code': foundation_code or '',
+                    'activity_code': activity_codes or '',
+                    'subsection_code': subsection_code or ''
                 })
+            
+            conn.close()
+            
+        except Exception as e:
+            self.logger.error(f"Error loading unclassified organizations from database: {e}")
+            raise
         
         self.logger.info(f"Loaded {len(unclassified_orgs)} unclassified organizations")
         return unclassified_orgs

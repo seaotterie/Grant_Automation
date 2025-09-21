@@ -22,8 +22,8 @@ class USASpendingClient(PaginatedAPIClient):
     
     def __init__(self):
         http_config = HTTPConfig(
-            timeout=60,  # USASpending can be slow with large datasets
-            max_retries=3,
+            timeout=30,  # Reduced timeout to prevent long waits
+            max_retries=2,  # Reduced retries for faster failure
             user_agent="Catalynx/2.0 Grant Research Platform"
         )
         
@@ -35,16 +35,16 @@ class USASpendingClient(PaginatedAPIClient):
         )
         
         self.rate_limit_config = {
-            'calls_per_hour': 2000,
-            'delay_between_calls': 0.05
+            'calls_per_hour': 1000,  # Reduced from 2000 to be more conservative
+            'delay_between_calls': 0.1  # Increased from 0.05 to avoid rate limiting
         }
     
     def _configure_rate_limits(self):
         """Configure USASpending specific rate limits"""
         self.http_client.set_api_rate_limit(
             self.api_name,
-            calls_per_hour=2000,
-            delay_between_calls=0.05
+            calls_per_hour=1000,  # Reduced from 2000 to be more conservative  
+            delay_between_calls=0.1  # Increased from 0.05 to avoid rate limiting
         )
     
     def _format_auth_headers(self, api_key: str) -> Dict[str, str]:
@@ -108,8 +108,8 @@ class USASpendingClient(PaginatedAPIClient):
         if award_types:
             filters['award_type_codes'] = award_types
         else:
-            # Default to grants and cooperative agreements
-            filters['award_type_codes'] = ['A', 'B', 'C', 'D']  # Grant types
+            # Default to grants and cooperative agreements (numeric codes)
+            filters['award_type_codes'] = ['02', '03', '04', '05']  # Block Grant, Formula Grant, Project Grant, Cooperative Agreement
         
         if agencies:
             filters['agencies'] = [{'type': 'awarding', 'tier': 'toptier', 'name': agency} for agency in agencies]

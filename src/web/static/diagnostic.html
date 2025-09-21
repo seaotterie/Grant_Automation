@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stage Filtering Diagnostic</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .stage-group { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+        .prospects { background-color: #e3f2fd; }
+        .qualified { background-color: #f3e5f5; }
+        .candidates { background-color: #fff3e0; }
+        .targets { background-color: #e8f5e8; }
+        .opportunities { background-color: #fce4ec; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Stage Filtering Diagnostic Tool</h1>
+    <p><strong>Purpose:</strong> Test what the frontend JavaScript is actually receiving from the backend API.</p>
+    
+    <div id="results">Loading...</div>
+    
+    <script>
+    async function testStageFiltering() {
+        const resultsDiv = document.getElementById('results');
+        
+        try {
+            console.log('🚀 Fetching API data...');
+            const response = await fetch('/api/profiles/profile_f3adef3b653c/opportunities');
+            const data = await response.json();
+            
+            console.log('📊 Raw API Response:', data);
+            
+            // Group by funnel_stage
+            const stageGroups = {};
+            data.opportunities.forEach(opp => {
+                const stage = opp.funnel_stage || opp.current_stage || 'unknown';
+                if (!stageGroups[stage]) stageGroups[stage] = [];
+                stageGroups[stage].push(opp);
+            });
+            
+            console.log('🎯 Grouped by stage:', stageGroups);
+            
+            // Display results
+            let html = '<h2>🎯 Stage Distribution Analysis</h2>';
+            html += `<p><strong>Total Records:</strong> ${data.opportunities.length}</p>`;
+            
+            // Stage breakdown
+            html += '<h3>Stage Groups:</h3>';
+            for (const [stage, opportunities] of Object.entries(stageGroups)) {
+                html += `<div class="stage-group ${stage}">`;
+                html += `<h4>${stage.toUpperCase()} (${opportunities.length} records)</h4>`;
+                opportunities.slice(0, 3).forEach(opp => {
+                    html += `<div style="margin: 5px 0; padding: 5px; background: rgba(255,255,255,0.7);">`;
+                    html += `<strong>${opp.organization_name}</strong><br>`;
+                    html += `funnel_stage: "${opp.funnel_stage}" | current_stage: "${opp.current_stage}"`;
+                    html += `</div>`;
+                });
+                if (opportunities.length > 3) {
+                    html += `<p><em>... and ${opportunities.length - 3} more</em></p>`;
+                }
+                html += '</div>';
+            }
+            
+            // Test dropdown filtering logic
+            html += '<h3>🧪 Test Dropdown Filtering:</h3>';
+            html += '<label>Select Stage: <select id="stageFilter" onchange="testFilter()">';
+            html += '<option value="">All Stages</option>';
+            html += '<option value="prospects">#1 Prospect</option>';
+            html += '<option value="qualified">#2 Qualified</option>';
+            html += '<option value="candidates">#3 Candidate</option>';
+            html += '<option value="targets">#4 Target</option>';
+            html += '<option value="opportunities">#5 Opportunity</option>';
+            html += '</select></label>';
+            html += '<div id="filterResults" style="margin-top: 10px;"></div>';
+            
+            resultsDiv.innerHTML = html;
+            
+            // Make data available globally for testing
+            window.testData = data.opportunities;
+            
+        } catch (error) {
+            console.error('❌ Error:', error);
+            resultsDiv.innerHTML = `<div style="color: red;">Error: ${error.message}</div>`;
+        }
+    }
+    
+    function testFilter() {
+        const selectedStage = document.getElementById('stageFilter').value;
+        const resultsDiv = document.getElementById('filterResults');
+        
+        if (!window.testData) {
+            resultsDiv.innerHTML = 'No data available';
+            return;
+        }
+        
+        console.log(`🎯 Testing filter for stage: "${selectedStage}"`);
+        
+        let filteredData;
+        if (selectedStage === '') {
+            filteredData = window.testData;
+        } else {
+            filteredData = window.testData.filter(opp => {
+                const stage = opp.funnel_stage || opp.current_stage;
+                return stage === selectedStage;
+            });
+        }
+        
+        console.log(`📋 Filtered results: ${filteredData.length} records`);
+        
+        resultsDiv.innerHTML = `
+            <h4>Filter Results for "${selectedStage || 'All Stages'}":</h4>
+            <p><strong>${filteredData.length} records found</strong></p>
+            ${filteredData.slice(0, 5).map(opp => 
+                `<div style="margin: 5px 0; padding: 5px; border: 1px solid #ccc;">
+                    ${opp.organization_name} - Stage: ${opp.funnel_stage || opp.current_stage}
+                </div>`
+            ).join('')}
+            ${filteredData.length > 5 ? `<p><em>... and ${filteredData.length - 5} more</em></p>` : ''}
+        `;
+    }
+    
+    // Auto-run on page load
+    testStageFiltering();
+    </script>
+</body>
+</html>

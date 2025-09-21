@@ -16,7 +16,7 @@ from src.discovery.unified_discovery_adapter import get_unified_discovery_adapte
 from src.discovery.entity_discovery_service import get_entity_discovery_service
 from src.core.entity_cache_manager import get_entity_cache_manager
 from src.processors.registry import get_processor_summary
-from src.processors.bmf.bmf_filter import BMFFilter
+from src.processors.filtering.bmf_filter import BMFFilterProcessor
 from src.profiles.unified_service import get_unified_profile_service
 
 # Configure logging
@@ -136,7 +136,7 @@ async def update_entity_data(
 async def search_bmf(search_params: Dict[str, Any]) -> Dict[str, Any]:
     """Search the IRS Business Master File."""
     try:
-        bmf_filter = BMFFilter()
+        bmf_filter = BMFFilterProcessor()
         
         # Create configuration for BMF search
         config = {

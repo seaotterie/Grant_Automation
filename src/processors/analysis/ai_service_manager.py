@@ -17,11 +17,11 @@ from typing import Dict, List, Optional, Any, Union
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-from .ai_lite_unified_processor import (
+from src.processors.analysis.ai_lite_unified_processor import (
     AILiteUnifiedProcessor, UnifiedRequest, ComprehensiveAnalysis, UnifiedBatchResult,
     ValidationResult, StrategicValue, ActionPriority
 )
-from .ai_heavy_researcher import (
+from src.processors.analysis.ai_heavy_researcher import (
     AIHeavyDossierBuilder, AIHeavyRequest, AIHeavyResult,
     ResearchMetadata, ContextData, ContextProfileData, AILiteResults,
     TargetPreliminaryData, ResearchFocus, AnalysisDepth, Priority

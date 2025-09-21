@@ -6,6 +6,19 @@ This will consume significant tokens for comprehensive analysis
 
 import sys
 import os
+# Configure UTF-8 encoding for Windows
+if os.name == 'nt':
+    import codecs
+    try:
+        if hasattr(sys.stdout, 'buffer'):
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+        if hasattr(sys.stderr, 'buffer'):
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    except AttributeError:
+        # stdout/stderr may already be wrapped or redirected
+        pass
+
+import os
 import json
 import asyncio
 from pathlib import Path

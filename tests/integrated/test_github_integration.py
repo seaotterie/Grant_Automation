@@ -7,6 +7,20 @@ and local GitHub CLI for issue tracking and project management.
 """
 
 import asyncio
+import os
+import sys
+# Configure UTF-8 encoding for Windows
+if os.name == 'nt':
+    import codecs
+    try:
+        if hasattr(sys.stdout, 'buffer'):
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+        if hasattr(sys.stderr, 'buffer'):
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    except AttributeError:
+        # stdout/stderr may already be wrapped or redirected
+        pass
+
 import json
 import logging
 from datetime import datetime
@@ -100,7 +114,7 @@ class GitHubIntegrationTester:
                 return False
 
             # Test basic GitHub CLI functionality
-            test_result = await self.workflow.github_integration.test_github_cli_connection()
+            test_result = self.workflow.github_integration.test_github_cli_connection()
 
             if test_result.get("success"):
                 logger.info("GitHub CLI integration available and working")

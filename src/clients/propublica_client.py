@@ -34,16 +34,16 @@ class ProPublicaClient(BaseAPIClient):
         )
         
         self.rate_limit_config = {
-            'calls_per_hour': 1000,
-            'delay_between_calls': 0.1
+            'calls_per_hour': 500,  # Reduced from 1000 to be conservative
+            'delay_between_calls': 0.2  # Increased from 0.1 to avoid rate limiting
         }
     
     def _configure_rate_limits(self):
         """Configure ProPublica specific rate limits"""
         self.http_client.set_api_rate_limit(
             self.api_name,
-            calls_per_hour=1000,
-            delay_between_calls=0.1
+            calls_per_hour=500,  # Reduced from 1000 to be conservative
+            delay_between_calls=0.2  # Increased from 0.1 to avoid rate limiting
         )
     
     def _format_auth_headers(self, api_key: str) -> Dict[str, str]:
@@ -86,7 +86,7 @@ class ProPublicaClient(BaseAPIClient):
         """
         params = {
             'q': query,
-            'limit': min(limit, 100)  # API limit
+            'limit': min(limit, 25)  # API limit reduced to 25 as of Sept 2023
         }
         
         if state:

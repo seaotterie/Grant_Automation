@@ -21,8 +21,21 @@ Key Testing Features:
 import asyncio
 import logging
 import sys
+import os
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+
+# Configure UTF-8 encoding for Windows
+if os.name == 'nt':
+    import codecs
+    try:
+        if hasattr(sys.stdout, 'buffer'):
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+        if hasattr(sys.stderr, 'buffer'):
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    except AttributeError:
+        # stdout/stderr may already be wrapped or redirected
+        pass
 
 # Add test framework to path
 sys.path.append(str(Path(__file__).parent.parent))

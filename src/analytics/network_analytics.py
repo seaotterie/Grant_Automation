@@ -128,27 +128,39 @@ class NetworkAnalytics:
     def _find_board_data(self, filing_data: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
         """Find board member data in various filing formats"""
         
-        # Common paths for board member data
+        # Common paths for board member data (ProPublica 990 formats)
         board_paths = [
             'board_members',
-            'officers',
+            'officers', 
             'key_employees',
             'compensation',
             'form_990_part_vii_section_a',
-            'part_vii_section_a'
+            'part_vii_section_a',
+            'part_vii_comp_officers',  # Added ProPublica specific paths
+            'officer_compensation',
+            'governance',
+            'board_governance'
         ]
         
         for path in board_paths:
             if path in filing_data and filing_data[path]:
                 return filing_data[path]
         
-        # Try nested structures
+        # Try nested structures in filings_with_data
         if 'filings_with_data' in filing_data:
             for filing in filing_data['filings_with_data']:
                 for path in board_paths:
                     if path in filing and filing[path]:
                         return filing[path]
         
+        # Check for organization-level data structure
+        if 'organization' in filing_data:
+            org_data = filing_data['organization']
+            for path in board_paths:
+                if path in org_data and org_data[path]:
+                    return org_data[path]
+        
+        # No board member data found in any expected locations
         return None
     
     def _parse_member_info(self, member_info: Dict[str, Any], 

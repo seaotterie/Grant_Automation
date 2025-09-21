@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pydantic import BaseModel
 from datetime import datetime, date
 
-from .opportunity_type_detector import OpportunityType
+from src.processors.analysis.opportunity_type_detector import OpportunityType
 
 logger = logging.getLogger(__name__)
 

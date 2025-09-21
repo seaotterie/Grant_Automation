@@ -17,13 +17,13 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 from src.core.base_processor import BaseProcessor, ProcessorMetadata
-from .fact_extraction_integration_service import (
+from src.processors.analysis.fact_extraction_integration_service import (
     FactExtractionIntegrationService, 
     ProcessorMigrationConfig,
     ProcessorIntegrationResult
 )
-from .opportunity_type_detector import OpportunityType
-from .deterministic_scoring_engine import ScoreConfidenceLevel
+from src.processors.analysis.opportunity_type_detector import OpportunityType
+from src.processors.analysis.deterministic_scoring_engine import ScoreConfidenceLevel
 
 logger = logging.getLogger(__name__)
 

@@ -80,7 +80,9 @@ class ProfileService:
                 try:
                     # Try to create lock file atomically
                     file_lock = open(lock_file, 'x')  # 'x' mode fails if file exists
-                    file_lock.write(f"locked_by_pid:{os.getpid()}_time:{datetime.now().isoformat()}\n")
+                    # Replace colons with underscores for Windows filename compatibility
+                    timestamp = datetime.now().isoformat().replace(':', '_')
+                    file_lock.write(f"locked_by_pid:{os.getpid()}_time:{timestamp}\n")
                     file_lock.flush()
                     logger.info(f"Acquired discovery lock for profile {profile_id}")
                     break
@@ -330,7 +332,10 @@ class ProfileService:
     # Opportunity Lead Management
     
     def add_opportunity_lead(self, profile_id: str, lead_data: Dict[str, Any]) -> Optional[OpportunityLead]:
-        """Add opportunity lead to profile with deduplication (uses unified opportunity service)"""
+        """
+        Add opportunity lead to profile with deduplication (uses unified opportunity service)
+        DEPRECATED: Main endpoints now use DatabaseManager directly. Consider migrating legacy code.
+        """
         # Verify profile exists
         profile = self.get_profile(profile_id)
         if not profile:

@@ -1,0 +1,50 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e5]:
+        - heading "Catalynx CATALYNX" [level=1] [ref=e7]:
+          - img "Catalynx" [ref=e8]
+          - generic [ref=e9]: CATALYNX
+        - button [ref=e10] [cursor=pointer]
+      - navigation [ref=e11]:
+        - link "WELCOME" [ref=e13] [cursor=pointer]:
+          - /url: "#"
+        - link "PROFILER" [ref=e15] [cursor=pointer]:
+          - /url: "#"
+        - link "DISCOVER" [ref=e17] [cursor=pointer]:
+          - /url: "#"
+        - link "PLAN" [ref=e19] [cursor=pointer]:
+          - /url: "#"
+        - link "ANALYZE" [ref=e21] [cursor=pointer]:
+          - /url: "#"
+        - link "EXAMINE" [ref=e23] [cursor=pointer]:
+          - /url: "#"
+        - link "APPROACH" [ref=e25] [cursor=pointer]:
+          - /url: "#"
+        - link "SETTINGS" [ref=e27] [cursor=pointer]:
+          - /url: "#"
+        - generic [ref=e29]:
+          - generic [ref=e30]: Catalynx
+          - generic [ref=e31]: Opportunity Intelligence Platform
+    - main [ref=e32]:
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - generic:
+            - heading [level=2]
+            - paragraph
+        - generic [ref=e37]:
+          - textbox "Search profiles, organizations, workflows..." [ref=e38]
+          - generic:
+            - img
+          - button [ref=e39] [cursor=pointer]:
+            - img [ref=e40] [cursor=pointer]
+        - generic [ref=e42]:
+          - generic [ref=e48]: API
+          - button [ref=e50] [cursor=pointer]:
+            - img [ref=e51] [cursor=pointer]
+  - contentinfo
+```

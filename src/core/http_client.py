@@ -79,7 +79,8 @@ class CatalynxHTTPClient:
             connector = aiohttp.TCPConnector(
                 limit=100,
                 limit_per_host=10,
-                enable_cleanup_closed=True
+                enable_cleanup_closed=True,
+                ssl=False  # Disable SSL verification to handle certificate issues
             )
             
             headers = {

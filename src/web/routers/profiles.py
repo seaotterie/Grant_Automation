@@ -12,19 +12,12 @@ from typing import List, Dict, Optional, Any
 
 # Import essential services only
 from src.database.query_interface import DatabaseQueryInterface, QueryFilter
+from src.database.database_manager import DatabaseManager, Profile
 
-# Try to import optional services (with fallbacks)
-try:
-    from src.profiles.service import ProfileService
-    PROFILE_SERVICE_AVAILABLE = True
-except ImportError:
-    PROFILE_SERVICE_AVAILABLE = False
+# ProfileService removed - now using DatabaseManager exclusively
 
-try:
-    from src.auth.jwt_auth import get_current_user_dependency, User
-    AUTH_AVAILABLE = True
-except ImportError:
-    AUTH_AVAILABLE = False
+# Authentication removed - single-user desktop application
+AUTH_AVAILABLE = False
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -34,15 +27,9 @@ router = APIRouter(prefix="/api/profiles", tags=["profiles"])
 
 # Initialize essential services
 db_query_interface = DatabaseQueryInterface()
+db_manager = DatabaseManager()
 
-# Initialize optional services with fallbacks
-profile_service = None
-if PROFILE_SERVICE_AVAILABLE:
-    try:
-        profile_service = ProfileService()
-    except Exception as e:
-        logger.warning(f"Could not initialize ProfileService: {e}")
-        PROFILE_SERVICE_AVAILABLE = False
+# ProfileService initialization removed - using DatabaseManager only
 
 
 # Core Profile CRUD Operations
@@ -103,43 +90,85 @@ async def list_profiles(
         
     except Exception as e:
         logger.error(f"Failed to list profiles from database: {e}")
-        # Fallback to old method if database fails and service is available
-        if PROFILE_SERVICE_AVAILABLE and profile_service:
-            try:
-                old_profiles = profile_service.list_profiles(status=status, limit=limit)
-                profile_dicts = []
-                for profile in old_profiles:
-                    profile_dict = profile.model_dump()
-                    profile_dict["opportunities_count"] = len(profile.associated_opportunities)
-                    profile_dicts.append(profile_dict)
-                
-                logger.info(f"Fallback: Returned {len(profile_dicts)} profiles from file system")
-                return {"profiles": profile_dicts}
-            except Exception as fallback_error:
-                logger.error(f"Fallback also failed: {fallback_error}")
-        
-        # Return empty result if all methods fail
-        logger.error("All profile retrieval methods failed, returning empty result")
-        return {"profiles": [], "error": "Unable to retrieve profiles"}
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("")
 async def create_profile(
-    profile_data: Dict[str, Any],
-    current_user: User = Depends(get_current_user_dependency)
+    profile_data: Dict[str, Any]
+    # Removed authentication: single-user desktop application
 ) -> Dict[str, Any]:
     """Create a new organization profile."""
     try:
         # Debug: Log the profile data received
         logger.info(f"Creating profile with data: ntee_codes={profile_data.get('ntee_codes')}, government_criteria={profile_data.get('government_criteria')}, keywords={profile_data.get('keywords')}")
-        
-        profile = profile_service.create_profile(profile_data)
-        
+
+        # Generate unique profile ID
+        import uuid
+        profile_id = f"profile_{uuid.uuid4().hex[:12]}"
+
+        # Create Profile object for DatabaseManager
+        profile = Profile(
+            id=profile_id,
+            name=profile_data.get('name'),
+            organization_type=profile_data.get('organization_type', 'nonprofit'),
+            ein=profile_data.get('ein'),
+            mission_statement=profile_data.get('mission_statement'),
+            keywords=profile_data.get('keywords'),
+            focus_areas=profile_data.get('focus_areas', []),
+            program_areas=profile_data.get('program_areas', []),
+            target_populations=profile_data.get('target_populations', []),
+            ntee_codes=profile_data.get('ntee_codes', []),
+            government_criteria=profile_data.get('government_criteria', []),
+            geographic_scope=profile_data.get('geographic_scope', {}),
+            service_areas=profile_data.get('service_areas', []),
+            funding_preferences=profile_data.get('funding_preferences', {}),
+            annual_revenue=profile_data.get('annual_revenue'),
+            form_type=profile_data.get('form_type'),
+            foundation_grants=profile_data.get('foundation_grants', []),
+            board_members=profile_data.get('board_members', []),
+            verification_data=profile_data.get('verification_data'),
+            web_enhanced_data=profile_data.get('web_enhanced_data'),
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+
+        # Save to database
+        success = db_manager.create_profile(profile)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to save profile to database")
+
         # Debug: Log the profile after creation
-        logger.info(f"Profile after creation: ntee_codes={profile.ntee_codes}, government_criteria={profile.government_criteria}, keywords={profile.keywords}")
-        
-        return {"profile": profile.model_dump(), "message": "Profile created successfully"}
-        
+        logger.info(f"Profile created in database: ntee_codes={profile.ntee_codes}, government_criteria={profile.government_criteria}, keywords={profile.keywords}")
+
+        # Convert Profile object to dict for response
+        profile_dict = {
+            'profile_id': profile.id,
+            'name': profile.name,
+            'organization_type': profile.organization_type,
+            'ein': profile.ein,
+            'mission_statement': profile.mission_statement,
+            'keywords': profile.keywords,
+            'focus_areas': profile.focus_areas,
+            'program_areas': profile.program_areas,
+            'target_populations': profile.target_populations,
+            'ntee_codes': profile.ntee_codes,
+            'government_criteria': profile.government_criteria,
+            'geographic_scope': profile.geographic_scope,
+            'service_areas': profile.service_areas,
+            'funding_preferences': profile.funding_preferences,
+            'annual_revenue': profile.annual_revenue,
+            'form_type': profile.form_type,
+            'foundation_grants': profile.foundation_grants,
+            'board_members': profile.board_members,
+            'verification_data': profile.verification_data,
+            'web_enhanced_data': profile.web_enhanced_data,
+            'created_at': profile.created_at.isoformat() if profile.created_at else None,
+            'updated_at': profile.updated_at.isoformat() if profile.updated_at else None
+        }
+
+        return {"profile": profile_dict, "message": "Profile created successfully"}
+
     except Exception as e:
         logger.error(f"Failed to create profile: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -147,23 +176,34 @@ async def create_profile(
 
 @router.get("/{profile_id}")
 async def get_profile(
-    profile_id: str,
-    current_user: User = Depends(get_current_user_dependency)
+    profile_id: str
+    # Temporarily removed authentication: current_user: User = Depends(get_current_user_dependency)
 ) -> Dict[str, Any]:
-    """Get a specific organization profile with unified analytics."""
+    """Get a specific organization profile from database."""
     try:
-        # Try unified service first for enhanced analytics
-        unified_profile = unified_service.get_profile(profile_id)
-        if unified_profile:
-            return {"profile": unified_profile.model_dump()}
-        
-        # Fallback to old service
-        profile = profile_service.get_profile(profile_id)
-        if not profile:
+        print(f"*** PROFILES ROUTER: GET profile {profile_id} ***")
+        logger.critical(f"*** PROFILES ROUTER: GET profile {profile_id} ***")
+
+        # Get profile from database
+        profile_dict = db_manager.get_profile_by_id(profile_id)
+        if not profile_dict:
             raise HTTPException(status_code=404, detail="Profile not found")
-        
-        return {"profile": profile.model_dump()}
-        
+
+        # Add profile_id field for frontend compatibility
+        profile_dict["profile_id"] = profile_dict.get("id", profile_id)
+
+        # Debug: Check persistence fields without printing content that might have encoding issues
+        fields_exist = {
+            'website_url': bool(profile_dict.get('website_url')),
+            'annual_revenue': bool(profile_dict.get('annual_revenue')),
+            'location': bool(profile_dict.get('location')),
+            'mission_statement': bool(profile_dict.get('mission_statement'))
+        }
+        logger.critical(f"*** PROFILES ROUTER: Fields exist: {fields_exist} ***")
+
+        logger.info(f"Retrieved profile {profile_id} from database")
+        return {"profile": profile_dict}
+
     except HTTPException:
         raise
     except Exception as e:
@@ -173,23 +213,90 @@ async def get_profile(
 
 @router.put("/{profile_id}")
 async def update_profile(
-    profile_id: str, 
+    profile_id: str,
     update_data: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Update an existing organization profile."""
     try:
         # Debug: Log the update data received
         logger.info(f"Updating profile {profile_id} with data: ntee_codes={update_data.get('ntee_codes')}, government_criteria={update_data.get('government_criteria')}, keywords={update_data.get('keywords')}")
-        
-        profile = profile_service.update_profile(profile_id, update_data)
-        if not profile:
+
+        # Get existing profile from database
+        existing_profile_dict = db_manager.get_profile_by_id(profile_id)
+        if not existing_profile_dict:
             raise HTTPException(status_code=404, detail="Profile not found")
-        
+
+        # Create updated Profile object by merging existing data with updates
+        updated_profile = Profile(
+            id=profile_id,
+            name=update_data.get('name', existing_profile_dict.get('name')),
+            organization_type=update_data.get('organization_type', existing_profile_dict.get('organization_type')),
+            ein=update_data.get('ein', existing_profile_dict.get('ein')),
+            mission_statement=update_data.get('mission_statement', existing_profile_dict.get('mission_statement')),
+            keywords=update_data.get('keywords', existing_profile_dict.get('keywords')),
+            focus_areas=update_data.get('focus_areas', existing_profile_dict.get('focus_areas', [])),
+            program_areas=update_data.get('program_areas', existing_profile_dict.get('program_areas', [])),
+            target_populations=update_data.get('target_populations', existing_profile_dict.get('target_populations', [])),
+            ntee_codes=update_data.get('ntee_codes', existing_profile_dict.get('ntee_codes', [])),
+            government_criteria=update_data.get('government_criteria', existing_profile_dict.get('government_criteria', [])),
+            geographic_scope=update_data.get('geographic_scope', existing_profile_dict.get('geographic_scope', {})),
+            service_areas=update_data.get('service_areas', existing_profile_dict.get('service_areas', [])),
+            funding_preferences=update_data.get('funding_preferences', existing_profile_dict.get('funding_preferences', {})),
+            annual_revenue=update_data.get('annual_revenue', existing_profile_dict.get('annual_revenue')),
+            form_type=update_data.get('form_type', existing_profile_dict.get('form_type')),
+            foundation_grants=update_data.get('foundation_grants', existing_profile_dict.get('foundation_grants', [])),
+            board_members=update_data.get('board_members', existing_profile_dict.get('board_members', [])),
+            verification_data=update_data.get('verification_data', existing_profile_dict.get('verification_data')),
+            web_enhanced_data=update_data.get('web_enhanced_data', existing_profile_dict.get('web_enhanced_data')),
+            discovery_count=existing_profile_dict.get('discovery_count', 0),
+            opportunities_count=existing_profile_dict.get('opportunities_count', 0),
+            last_discovery_date=existing_profile_dict.get('last_discovery_date'),
+            performance_metrics=existing_profile_dict.get('performance_metrics'),
+            created_at=existing_profile_dict.get('created_at'),
+            updated_at=datetime.now(),
+            processing_history=existing_profile_dict.get('processing_history', [])
+        )
+
+        # Save updated profile to database
+        success = db_manager.update_profile(updated_profile)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update profile in database")
+
         # Debug: Log the profile after update
-        logger.info(f"Profile after update: ntee_codes={profile.ntee_codes}, government_criteria={profile.government_criteria}, keywords={profile.keywords}")
-        
-        return {"profile": profile.model_dump(), "message": "Profile updated successfully"}
-        
+        logger.info(f"Profile updated in database: ntee_codes={updated_profile.ntee_codes}, government_criteria={updated_profile.government_criteria}, keywords={updated_profile.keywords}")
+
+        # Convert Profile object to dict for response
+        profile_dict = {
+            'profile_id': updated_profile.id,
+            'id': updated_profile.id,  # For database compatibility
+            'name': updated_profile.name,
+            'organization_type': updated_profile.organization_type,
+            'ein': updated_profile.ein,
+            'mission_statement': updated_profile.mission_statement,
+            'keywords': updated_profile.keywords,
+            'focus_areas': updated_profile.focus_areas,
+            'program_areas': updated_profile.program_areas,
+            'target_populations': updated_profile.target_populations,
+            'ntee_codes': updated_profile.ntee_codes,
+            'government_criteria': updated_profile.government_criteria,
+            'geographic_scope': updated_profile.geographic_scope,
+            'service_areas': updated_profile.service_areas,
+            'funding_preferences': updated_profile.funding_preferences,
+            'annual_revenue': updated_profile.annual_revenue,
+            'form_type': updated_profile.form_type,
+            'foundation_grants': updated_profile.foundation_grants,
+            'board_members': updated_profile.board_members,
+            'verification_data': updated_profile.verification_data,
+            'web_enhanced_data': updated_profile.web_enhanced_data,
+            'discovery_count': updated_profile.discovery_count,
+            'opportunities_count': updated_profile.opportunities_count,
+            'last_discovery_date': updated_profile.last_discovery_date.isoformat() if updated_profile.last_discovery_date else None,
+            'created_at': updated_profile.created_at.isoformat() if updated_profile.created_at else None,
+            'updated_at': updated_profile.updated_at.isoformat() if updated_profile.updated_at else None
+        }
+
+        return {"profile": profile_dict, "message": "Profile updated successfully"}
+
     except HTTPException:
         raise
     except Exception as e:
@@ -199,22 +306,16 @@ async def update_profile(
 
 @router.delete("/{profile_id}")
 async def delete_profile(
-    profile_id: str,
-    current_user: User = Depends(get_current_user_dependency)
+    profile_id: str
+    # Removed authentication: single-user desktop application
 ) -> Dict[str, Any]:
     """Delete an organization profile."""
     try:
-        success = profile_service.delete_profile(profile_id)
+        success = db_manager.delete_profile(profile_id)
         if not success:
             raise HTTPException(status_code=404, detail="Profile not found")
-        
-        # Also clean up from unified service
-        try:
-            unified_service.delete_profile(profile_id)
-        except Exception as e:
-            logger.warning(f"Failed to delete from unified service: {e}")
-        
-        logger.info(f"Profile {profile_id} deleted by user {current_user.username}")
+
+        logger.info(f"Profile {profile_id} deleted from database")
         return {"message": "Profile deleted successfully"}
         
     except HTTPException:
@@ -230,22 +331,20 @@ async def delete_profile(
 async def get_profile_analytics(profile_id: str) -> Dict[str, Any]:
     """Get comprehensive analytics for a profile."""
     try:
-        # Try unified service first
-        unified_profile = unified_service.get_profile(profile_id)
-        if unified_profile and unified_profile.analytics:
-            return {"analytics": unified_profile.analytics.model_dump()}
-        
-        # Fallback to basic analytics
-        profile = profile_service.get_profile(profile_id)
-        if not profile:
+        # Get profile from database
+        profile_dict = db_manager.get_profile_by_id(profile_id)
+        if not profile_dict:
             raise HTTPException(status_code=404, detail="Profile not found")
-        
+
+        # Get opportunities count from database
+        opportunities = db_manager.get_opportunities_by_profile(profile_id)
+
         # Basic analytics
         analytics = {
-            "opportunities_count": len(profile.associated_opportunities),
-            "created_date": profile.created_at.isoformat() if profile.created_at else None,
-            "last_updated": profile.updated_at.isoformat() if profile.updated_at else None,
-            "focus_areas_count": len(profile.focus_areas) if profile.focus_areas else 0
+            "opportunities_count": len(opportunities),
+            "created_date": profile_dict.get('created_at'),
+            "last_updated": profile_dict.get('updated_at'),
+            "focus_areas_count": len(profile_dict.get('focus_areas', []))
         }
         
         return {"analytics": analytics}
@@ -335,25 +434,13 @@ async def get_profile_opportunities(
 ) -> Dict[str, Any]:
     """Get opportunities associated with a profile."""
     try:
-        # Try unified service first
-        unified_profile = unified_service.get_profile(profile_id)
-        if unified_profile:
-            opportunities = unified_profile.associated_opportunities[:limit] if limit else unified_profile.associated_opportunities
-            return {
-                "opportunities": opportunities,
-                "total_count": len(unified_profile.associated_opportunities),
-                "profile_id": profile_id
-            }
-        
-        # Fallback to old service
-        profile = profile_service.get_profile(profile_id)
-        if not profile:
-            raise HTTPException(status_code=404, detail="Profile not found")
-        
-        opportunities = profile.associated_opportunities[:limit] if limit else profile.associated_opportunities
+        # Get opportunities from database
+        opportunities = db_manager.get_opportunities_by_profile(profile_id, limit=limit)
+        total_count = len(db_manager.get_opportunities_by_profile(profile_id))  # Get total without limit
+
         return {
             "opportunities": opportunities,
-            "total_count": len(profile.associated_opportunities),
+            "total_count": total_count,
             "profile_id": profile_id
         }
         

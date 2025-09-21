@@ -331,6 +331,8 @@ class OrganizationProfile(BaseModel):
     name: str = Field(..., min_length=1, max_length=200, description="Organization name")
     organization_type: OrganizationType = Field(..., description="Organization type")
     ein: Optional[str] = Field(default=None, pattern=r'^\d{2}-?\d{7}$', description="EIN (if applicable)")
+    website_url: Optional[str] = Field(default=None, max_length=500, description="Official organization website URL (primary source for web intelligence)")
+    location: Optional[str] = Field(default=None, max_length=200, description="Organization location (city, state or address)")
     
     # Mission and Focus
     mission_statement: Optional[str] = Field(default=None, max_length=1000, description="Organization mission")

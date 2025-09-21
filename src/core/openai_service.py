@@ -130,10 +130,10 @@ class OpenAIService:
                 **kwargs
             }
             
-            # GPT-5 models only - validate model
+            # MANDATORY: Only GPT-5 models allowed (no fallback)
             if not model.startswith("gpt-5"):
-                logger.error(f"Unsupported model: {model}. Only GPT-5 models are supported.")
-                raise ValueError(f"Only GPT-5 models are supported. Received: {model}")
+                raise ValueError(f"Only GPT-5 models allowed. Attempted to use: {model}")
+                # System configured for GPT-5 exclusive use
             
             # Handle model-specific parameter requirements
             if model.startswith("gpt-5"):
@@ -144,21 +144,21 @@ class OpenAIService:
                 if temperature is not None and temperature != 1.0:
                     logger.info(f"GPT-5 model {model} only supports temperature=1, ignoring temperature={temperature}")
                 # Don't set temperature for GPT-5 models (use default)
-                
+
                 # Handle tool parameters for GPT-5 to prevent tool calling interference
                 if "tools" in kwargs:
                     api_params["tools"] = kwargs["tools"]
                     logger.info(f"GPT-5 tools parameter: {kwargs['tools']}")
                 if "tool_choice" in kwargs:
-                    api_params["tool_choice"] = kwargs["tool_choice"] 
+                    api_params["tool_choice"] = kwargs["tool_choice"]
                     logger.info(f"GPT-5 tool_choice parameter: {kwargs['tool_choice']}")
             else:
-                # GPT-4 and other models use standard parameters
+                # For non-GPT-5 models (fallback), use standard parameters
                 if max_tokens is not None:
                     api_params["max_tokens"] = max_tokens
                 if temperature is not None:
                     api_params["temperature"] = temperature
-                
+
                 # Handle tool parameters for other models
                 if "tools" in kwargs:
                     api_params["tools"] = kwargs["tools"]

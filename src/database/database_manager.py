@@ -31,6 +31,8 @@ class Profile:
     name: str
     organization_type: str
     ein: Optional[str] = None
+    website_url: Optional[str] = None
+    location: Optional[str] = None
     mission_statement: Optional[str] = None
     status: str = 'active'
     keywords: Optional[str] = None
@@ -53,6 +55,9 @@ class Profile:
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     processing_history: Optional[List] = None
+    # Enhanced data fields for verified intelligence
+    verification_data: Optional[Dict[str, Any]] = None
+    web_enhanced_data: Optional[Dict[str, Any]] = None
 
 
 @dataclass  
@@ -98,7 +103,10 @@ class DatabaseManager:
     
     def __init__(self, database_path: Optional[str] = None):
         self.database_path = database_path or "data/catalynx.db"
-        self.schema_path = "src/database/schema.sql"
+        # Use absolute path for schema file
+        import os
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        self.schema_path = os.path.join(project_root, "src", "database", "schema.sql")
         self._connection = None
         
         # Ensure database directory exists
@@ -141,7 +149,32 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Failed to create database schema: {e}")
             raise
-            
+
+    def apply_migration(self, migration_file: str) -> bool:
+        """Apply a database migration from SQL file"""
+        try:
+            migration_path = Path(migration_file)
+            if not migration_path.exists():
+                # Try relative to migrations directory
+                migrations_dir = Path(self.schema_path).parent / "migrations"
+                migration_path = migrations_dir / migration_file
+
+            if not migration_path.exists():
+                logger.error(f"Migration file not found: {migration_file}")
+                return False
+
+            with self.get_connection() as conn:
+                with open(migration_path, 'r') as f:
+                    migration_sql = f.read()
+                conn.executescript(migration_sql)
+                conn.commit()
+                logger.info(f"Successfully applied migration: {migration_path.name}")
+                return True
+
+        except Exception as e:
+            logger.error(f"Failed to apply migration {migration_file}: {e}")
+            return False
+
     def _verify_schema(self, conn: sqlite3.Connection):
         """Verify database schema version and structure"""
         try:
@@ -205,16 +238,20 @@ class DatabaseManager:
                 board_members_json = json.dumps(profile.board_members) if profile.board_members else None
                 performance_metrics_json = json.dumps(profile.performance_metrics) if profile.performance_metrics else None
                 processing_history_json = json.dumps(profile.processing_history) if profile.processing_history else None
-                
+                # Enhanced data fields
+                verification_data_json = json.dumps(profile.verification_data) if profile.verification_data else None
+                web_enhanced_data_json = json.dumps(profile.web_enhanced_data) if profile.web_enhanced_data else None
+
                 cursor.execute("""
                     INSERT INTO profiles (
                         id, name, organization_type, ein, mission_statement, status,
                         keywords, focus_areas, program_areas, target_populations, 
                         ntee_codes, government_criteria, geographic_scope, service_areas,
                         funding_preferences, annual_revenue, form_type, foundation_grants,
-                        board_members, discovery_count, opportunities_count, 
-                        last_discovery_date, performance_metrics, processing_history
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        board_members, discovery_count, opportunities_count,
+                        last_discovery_date, performance_metrics, processing_history,
+                        verification_data, web_enhanced_data
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     profile.id, profile.name, profile.organization_type, profile.ein,
                     profile.mission_statement, profile.status, profile.keywords,
@@ -223,7 +260,8 @@ class DatabaseManager:
                     service_areas_json, funding_preferences_json, profile.annual_revenue,
                     profile.form_type, foundation_grants_json, board_members_json,
                     profile.discovery_count, profile.opportunities_count,
-                    profile.last_discovery_date, performance_metrics_json, processing_history_json
+                    profile.last_discovery_date, performance_metrics_json, processing_history_json,
+                    verification_data_json, web_enhanced_data_json
                 ))
                 
                 conn.commit()
@@ -291,33 +329,54 @@ class DatabaseManager:
                 board_members_json = json.dumps(profile.board_members) if profile.board_members else None
                 performance_metrics_json = json.dumps(profile.performance_metrics) if profile.performance_metrics else None
                 processing_history_json = json.dumps(profile.processing_history) if profile.processing_history else None
-                
+                # Enhanced data fields
+                verification_data_json = json.dumps(profile.verification_data) if profile.verification_data else None
+                web_enhanced_data_json = json.dumps(profile.web_enhanced_data) if profile.web_enhanced_data else None
+
+                # CRITICAL DEBUG: Log the exact values being passed to SQL
+                logger.critical(f"DATABASE UPDATE DEBUG: profile.website_url='{profile.website_url}', profile.location='{profile.location}', profile.annual_revenue='{profile.annual_revenue}'")
+                logger.critical(f"DATABASE UPDATE DEBUG: SQL params - website_url='{profile.website_url}', location='{profile.location}'")
+
                 cursor.execute("""
                     UPDATE profiles SET
-                        name = ?, organization_type = ?, ein = ?, mission_statement = ?, 
-                        status = ?, keywords = ?, focus_areas = ?, program_areas = ?,
-                        target_populations = ?, ntee_codes = ?, government_criteria = ?,
-                        geographic_scope = ?, service_areas = ?, funding_preferences = ?,
-                        annual_revenue = ?, form_type = ?, foundation_grants = ?,
-                        board_members = ?, discovery_count = ?, opportunities_count = ?,
-                        last_discovery_date = ?, performance_metrics = ?, 
-                        processing_history = ?, updated_at = CURRENT_TIMESTAMP
+                        name = ?, organization_type = ?, ein = ?, website_url = ?, location = ?,
+                        mission_statement = ?, status = ?, keywords = ?, focus_areas = ?,
+                        program_areas = ?, target_populations = ?, ntee_codes = ?,
+                        government_criteria = ?, geographic_scope = ?, service_areas = ?,
+                        funding_preferences = ?, annual_revenue = ?, form_type = ?,
+                        foundation_grants = ?, board_members = ?, discovery_count = ?,
+                        opportunities_count = ?, last_discovery_date = ?, performance_metrics = ?,
+                        processing_history = ?, verification_data = ?, web_enhanced_data = ?,
+                        updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 """, (
-                    profile.name, profile.organization_type, profile.ein, profile.mission_statement,
-                    profile.status, profile.keywords, focus_areas_json, program_areas_json,
-                    target_populations_json, ntee_codes_json, government_criteria_json,
+                    profile.name, profile.organization_type, profile.ein, profile.website_url, profile.location,
+                    profile.mission_statement, profile.status, profile.keywords, focus_areas_json,
+                    program_areas_json, target_populations_json, ntee_codes_json, government_criteria_json,
                     geographic_scope_json, service_areas_json, funding_preferences_json,
                     profile.annual_revenue, profile.form_type, foundation_grants_json,
                     board_members_json, profile.discovery_count, profile.opportunities_count,
                     profile.last_discovery_date, performance_metrics_json, processing_history_json,
-                    profile.id
+                    verification_data_json, web_enhanced_data_json, profile.id
                 ))
-                
+
                 conn.commit()
-                
-                if cursor.rowcount > 0:
-                    logger.info(f"Profile updated: {profile.name} ({profile.id})")
+
+                # CRITICAL DEBUG: Verify the update was applied
+                cursor.execute("SELECT website_url, location, annual_revenue FROM profiles WHERE id = ?", (profile.id,))
+                row = cursor.fetchone()
+                if row:
+                    logger.critical(f"DATABASE VERIFICATION AFTER UPDATE: website_url='{row[0]}', location='{row[1]}', annual_revenue='{row[2]}'")
+                else:
+                    logger.critical(f"DATABASE VERIFICATION: No profile found with id {profile.id}")
+
+                # Check if profile exists instead of relying on rowcount
+                # SQLite rowcount can be 0 even if update succeeded when no values actually changed
+                cursor.execute("SELECT COUNT(*) FROM profiles WHERE id = ?", (profile.id,))
+                profile_exists = cursor.fetchone()[0] > 0
+
+                if profile_exists:
+                    logger.info(f"Profile updated: {profile.name} ({profile.id}) - rowcount: {cursor.rowcount}")
                     return True
                 else:
                     logger.warning(f"Profile not found for update: {profile.id}")
@@ -380,7 +439,12 @@ class DatabaseManager:
             performance_metrics=json.loads(row['performance_metrics']) if row['performance_metrics'] else None,
             created_at=row['created_at'] if row['created_at'] else None,
             updated_at=row['updated_at'] if row['updated_at'] else None,
-            processing_history=json.loads(row['processing_history']) if row['processing_history'] else None
+            processing_history=json.loads(row['processing_history']) if row['processing_history'] else None,
+            website_url=row['website_url'],
+            location=row['location'],
+            # Enhanced data fields
+            verification_data=json.loads(row['verification_data']) if row.get('verification_data') else None,
+            web_enhanced_data=json.loads(row['web_enhanced_data']) if row.get('web_enhanced_data') else None
         )
 
     # =====================================================================================

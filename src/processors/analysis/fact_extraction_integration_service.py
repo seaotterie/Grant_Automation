@@ -17,9 +17,9 @@ from dataclasses import dataclass
 from pydantic import BaseModel
 
 from src.core.openai_service import get_openai_service
-from .opportunity_type_detector import OpportunityTypeDetector, OpportunityType, OpportunityTypeDetectionResult
-from .fact_extraction_prompts import FactExtractionPromptGenerator, FactExtractionTemplate, PromptContext
-from .deterministic_scoring_engine import (
+from src.processors.analysis.opportunity_type_detector import OpportunityTypeDetector, OpportunityType, OpportunityTypeDetectionResult
+from src.processors.analysis.fact_extraction_prompts import FactExtractionPromptGenerator, FactExtractionTemplate, PromptContext
+from src.processors.analysis.deterministic_scoring_engine import (
     DeterministicScoringEngine, 
     ExtractedFacts, 
     ProfileData, 

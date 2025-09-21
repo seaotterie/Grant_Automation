@@ -14,6 +14,20 @@ This system provides:
 """
 
 import asyncio
+import os
+import sys
+# Configure UTF-8 encoding for Windows
+if os.name == 'nt':
+    import codecs
+    try:
+        if hasattr(sys.stdout, 'buffer'):
+            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+        if hasattr(sys.stderr, 'buffer'):
+            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    except AttributeError:
+        # stdout/stderr may already be wrapped or redirected
+        pass
+
 import json
 import logging
 from datetime import datetime, timedelta
@@ -915,7 +929,7 @@ class BugResolutionWorkflow:
                 milestone = "Version 1 Release" if bug.severity in [BugSeverity.CRITICAL, BugSeverity.HIGH] else None
 
                 # Create GitHub issue using LocalGitHubIntegration
-                result = await self.github_integration.create_issue_from_bug(bug, labels=github_labels, milestone=milestone)
+                result = self.github_integration.create_issue_from_bug(bug, labels=github_labels, milestone=milestone)
 
                 if result.get("success"):
                     # Update bug with GitHub issue information

@@ -90,9 +90,12 @@ class HistoricalFundingAnalyzer:
             fiscal_years = list(range(current_year - 4, current_year + 1))
         
         try:
-            # Collect historical awards using existing client
-            historical_awards = await self._collect_historical_awards(
-                agency_name, program_keywords, fiscal_years, max_awards
+            # Collect historical awards using existing client with timeout
+            historical_awards = await asyncio.wait_for(
+                self._collect_historical_awards(
+                    agency_name, program_keywords, fiscal_years, max_awards
+                ),
+                timeout=30.0  # 30 second timeout to prevent hanging
             )
             
             if not historical_awards:
@@ -140,6 +143,9 @@ class HistoricalFundingAnalyzer:
             
             return funding_intelligence
             
+        except asyncio.TimeoutError:
+            logger.warning(f"Funding pattern analysis timed out for {agency_name} - using fallback data")
+            return self._generate_timeout_report(agency_name, program_keywords)
         except Exception as e:
             logger.error(f"Funding pattern analysis failed: {e}", exc_info=True)
             return self._generate_error_report(agency_name, program_keywords, str(e))
@@ -744,6 +750,31 @@ class HistoricalFundingAnalyzer:
             timing_recommendation="unknown",
             recommendations=[f"Analysis failed: {error}", "Please retry or contact support"],
             confidence_score=0.0
+        )
+
+    def _generate_timeout_report(self, agency_name: str, keywords: List[str]) -> FundingIntelligence:
+        """Generate report when analysis times out"""
+        return FundingIntelligence(
+            agency_name=agency_name,
+            program_keywords=keywords or [],
+            analysis_date=datetime.now().isoformat(),
+            total_awards=0,
+            total_funding=0.0,
+            fiscal_years_analyzed=[],
+            data_completeness_score=0.0,
+            award_size_patterns={},
+            geographic_patterns={},
+            recipient_patterns={},
+            temporal_patterns={},
+            success_factors={},
+            competitive_landscape="unknown",
+            market_size="unknown",
+            funding_stability=0.0,
+            optimal_award_range={"min": 0, "optimal": 0, "max": 0},
+            geographic_advantages=[],
+            timing_recommendation="unknown",
+            recommendations=["Analysis timed out due to API delays", "Proceeding with basic analysis"],
+            confidence_score=0.3  # Partial confidence for timeout case
         )
 
 # Export main class

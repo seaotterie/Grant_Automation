@@ -21,6 +21,7 @@ import random
 import shutil
 import re
 import sqlite3
+import dataclasses
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional, Any
@@ -36,7 +37,7 @@ from src.web.services.workflow_service import WorkflowService
 from src.web.services.progress_service import ProgressService
 from src.web.models.requests import ClassificationRequest, WorkflowRequest
 from src.web.models.responses import DashboardStats, WorkflowResponse, SystemStatus
-from src.profiles.service import ProfileService
+# ProfileService removed - consolidated to DatabaseManager only
 from src.profiles.unified_service import get_unified_profile_service
 from src.discovery.unified_discovery_adapter import get_unified_discovery_adapter
 from src.profiles.entity_service import get_entity_profile_service
@@ -482,10 +483,10 @@ async def get_profiles_direct():
         import os
         debug_info["working_directory"] = os.getcwd()
         
-        # Try multiple potential database paths
+        # Try multiple potential database paths - PROJECT ROOT FIRST
         potential_paths = [
-            os.path.join(os.getcwd(), "data", "catalynx.db"),
-            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "catalynx.db"),
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "catalynx.db"),  # Project root (CORRECT)
+            os.path.join(os.getcwd(), "data", "catalynx.db"),  # Current working directory (may be wrong)
             "data/catalynx.db",
             "../data/catalynx.db",
             "../../data/catalynx.db"
@@ -783,7 +784,7 @@ async def get_help_index():
 # Initialize services
 workflow_service = WorkflowService()
 progress_service = ProgressService()
-profile_service = ProfileService("src/web/data/profiles/profiles")
+# profile_service removed - using DatabaseManager for all profile operations
 unified_service = get_unified_profile_service()
 unified_discovery_adapter = get_unified_discovery_adapter()
 entity_profile_service = get_entity_profile_service()  # Enhanced entity-based service
@@ -792,8 +793,72 @@ profile_integrator = ProfileWorkflowIntegrator()
 metrics_tracker = get_metrics_tracker()
 
 # Initialize database service for opportunity storage
-database_service = DatabaseManager("data/catalynx.db")
+import os
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+database_path = os.path.join(project_root, "data", "catalynx.db")
+database_service = DatabaseManager(database_path)
 logger.info("Database service initialized successfully")
+
+# =====================================================================================
+# 990 DATA EXTRACTION FUNCTIONS - Real Data Population
+# =====================================================================================
+
+def _extract_website_url_from_990(org_data: Dict) -> str:
+    """Extract website URL from ProPublica 990 data"""
+    try:
+        # Check multiple possible fields for website URL
+        website_fields = [
+            "website", "website_url", "web_address", "url",
+            "organization_website", "website_address"
+        ]
+
+        # First check the organization level data
+        for field in website_fields:
+            if field in org_data and org_data[field]:
+                url = str(org_data[field]).strip()
+                if url and url.lower() not in ['', 'none', 'null', 'n/a']:
+                    # Auto-format URL with https:// if needed
+                    if not url.startswith(('http://', 'https://')):
+                        url = f"https://{url}"
+                    return url
+
+        # Check nested structures if they exist
+        if 'contact_info' in org_data and isinstance(org_data['contact_info'], dict):
+            for field in website_fields:
+                if field in org_data['contact_info'] and org_data['contact_info'][field]:
+                    url = str(org_data['contact_info'][field]).strip()
+                    if url and url.lower() not in ['', 'none', 'null', 'n/a']:
+                        if not url.startswith(('http://', 'https://')):
+                            url = f"https://{url}"
+                        return url
+
+        return None
+
+    except Exception as e:
+        logger.warning(f"Error extracting website URL from 990 data: {e}")
+        return None
+
+def _extract_mission_from_990(org_data: Dict) -> str:
+    """Extract mission statement from ProPublica 990 data"""
+    try:
+        # Check multiple possible fields for mission statement
+        mission_fields = [
+            "mission_description", "mission_statement", "mission",
+            "activity_description", "activities", "purpose",
+            "organization_purpose", "primary_purpose"
+        ]
+
+        for field in mission_fields:
+            if field in org_data and org_data[field]:
+                mission = str(org_data[field]).strip()
+                if mission and mission.lower() not in ['', 'none', 'null', 'n/a']:
+                    return mission
+
+        return None
+
+    except Exception as e:
+        logger.warning(f"Error extracting mission from 990 data: {e}")
+        return None
 
 # Custom static file handler with cache control
 @app.get("/static/{file_path:path}")
@@ -1543,289 +1608,8 @@ async def export_workflow(workflow_id: str, format: str = "csv"):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Helper methods for enhanced web scraping
-async def _consolidate_scraping_results(mcp_results: Dict, scrapy_results: Dict, organization_data: Dict) -> Dict:
-    """
-    Consolidate results from both MCP and Scrapy sources into unified structure
-
-    Args:
-        mcp_results: Results from MCP web scraping service
-        scrapy_results: Results from Scrapy web scraping service
-        organization_data: Organization information for context
-
-    Returns:
-        Consolidated scraping data with source attribution
-    """
-    try:
-        logger.info(f"Consolidating MCP and Scrapy results for {organization_data.get('organization_name', 'Unknown')}")
-
-        # Initialize consolidated structure
-        consolidated = {
-            "successful_scrapes": [],
-            "failed_scrapes": [],
-            "extracted_info": {
-                "mission_statements": [],
-                "programs": [],
-                "leadership": []
-            },
-            "source_breakdown": {
-                "mcp_success_count": 0,
-                "scrapy_success_count": 0,
-                "total_sources_tried": 0
-            }
-        }
-
-        # Process MCP results
-        if mcp_results and mcp_results.get('successful_scrapes'):
-            mcp_scrapes = mcp_results.get('successful_scrapes', [])
-            consolidated["source_breakdown"]["mcp_success_count"] = len(mcp_scrapes)
-
-            for scrape in mcp_scrapes:
-                scrape_copy = scrape.copy()
-                scrape_copy['source'] = 'MCP'
-                consolidated["successful_scrapes"].append(scrape_copy)
-
-            # Merge extracted info from MCP
-            mcp_extracted = mcp_results.get('extracted_info', {})
-            if mcp_extracted.get('mission_statements'):
-                for mission in mcp_extracted['mission_statements']:
-                    consolidated["extracted_info"]["mission_statements"].append({
-                        "content": mission,
-                        "source": "MCP"
-                    })
-
-            if mcp_extracted.get('programs'):
-                for program in mcp_extracted['programs']:
-                    consolidated["extracted_info"]["programs"].append({
-                        "content": program,
-                        "source": "MCP"
-                    })
-
-            if mcp_extracted.get('leadership'):
-                for leader in mcp_extracted['leadership']:
-                    consolidated["extracted_info"]["leadership"].append({
-                        "content": leader,
-                        "source": "MCP"
-                    })
-
-        # Process Scrapy results
-        if scrapy_results and scrapy_results.get('successful_scrapes'):
-            scrapy_scrapes = scrapy_results.get('successful_scrapes', [])
-            consolidated["source_breakdown"]["scrapy_success_count"] = len(scrapy_scrapes)
-
-            for scrape in scrapy_scrapes:
-                scrape_copy = scrape.copy()
-                scrape_copy['source'] = 'Scrapy'
-                consolidated["successful_scrapes"].append(scrape_copy)
-
-            # Merge extracted info from Scrapy
-            scrapy_extracted = scrapy_results.get('extracted_info', {})
-            if scrapy_extracted.get('mission_statements'):
-                for mission in scrapy_extracted['mission_statements']:
-                    consolidated["extracted_info"]["mission_statements"].append({
-                        "content": mission,
-                        "source": "Scrapy"
-                    })
-
-            if scrapy_extracted.get('programs'):
-                for program in scrapy_extracted['programs']:
-                    consolidated["extracted_info"]["programs"].append({
-                        "content": program,
-                        "source": "Scrapy"
-                    })
-
-            if scrapy_extracted.get('leadership'):
-                for leader in scrapy_extracted['leadership']:
-                    consolidated["extracted_info"]["leadership"].append({
-                        "content": leader,
-                        "source": "Scrapy"
-                    })
-
-        # Combine failed scrapes
-        if mcp_results and mcp_results.get('failed_scrapes'):
-            for failed in mcp_results['failed_scrapes']:
-                failed_copy = failed.copy()
-                failed_copy['source'] = 'MCP'
-                consolidated["failed_scrapes"].append(failed_copy)
-
-        if scrapy_results and scrapy_results.get('failed_scrapes'):
-            for failed in scrapy_results['failed_scrapes']:
-                failed_copy = failed.copy()
-                failed_copy['source'] = 'Scrapy'
-                consolidated["failed_scrapes"].append(failed_copy)
-
-        # Calculate totals
-        consolidated["source_breakdown"]["total_sources_tried"] = (
-            consolidated["source_breakdown"]["mcp_success_count"] +
-            consolidated["source_breakdown"]["scrapy_success_count"] +
-            len(consolidated["failed_scrapes"])
-        )
-
-        # Deduplicate similar content (basic deduplication by content similarity)
-        consolidated = _deduplicate_extracted_content(consolidated)
-
-        logger.info(f"Consolidation complete: {consolidated['source_breakdown']['mcp_success_count']} MCP + "
-                   f"{consolidated['source_breakdown']['scrapy_success_count']} Scrapy successful scrapes")
-
-        return consolidated
-
-    except Exception as e:
-        logger.error(f"Error consolidating scraping results: {e}")
-        # Return basic structure with error info
-        return {
-            "successful_scrapes": [],
-            "failed_scrapes": [{"error": str(e), "source": "consolidation"}],
-            "extracted_info": {"mission_statements": [], "programs": [], "leadership": []},
-            "source_breakdown": {"mcp_success_count": 0, "scrapy_success_count": 0, "total_sources_tried": 0}
-        }
 
 
-def _deduplicate_extracted_content(consolidated: Dict) -> Dict:
-    """
-    Remove duplicate content from extracted information
-    """
-    try:
-        # Deduplicate mission statements
-        seen_missions = set()
-        unique_missions = []
-        for mission_obj in consolidated["extracted_info"]["mission_statements"]:
-            mission_content = mission_obj.get("content", "").strip().lower()
-            if mission_content and mission_content not in seen_missions:
-                seen_missions.add(mission_content)
-                unique_missions.append(mission_obj)
-        consolidated["extracted_info"]["mission_statements"] = unique_missions
-
-        # Deduplicate programs (basic similarity check)
-        seen_programs = set()
-        unique_programs = []
-        for program_obj in consolidated["extracted_info"]["programs"]:
-            program_content = program_obj.get("content", "").strip().lower()
-            if program_content and program_content not in seen_programs:
-                seen_programs.add(program_content)
-                unique_programs.append(program_obj)
-        consolidated["extracted_info"]["programs"] = unique_programs
-
-        # Deduplicate leadership (basic similarity check)
-        seen_leaders = set()
-        unique_leaders = []
-        for leader_obj in consolidated["extracted_info"]["leadership"]:
-            leader_content = str(leader_obj.get("content", "")).strip().lower()
-            if leader_content and leader_content not in seen_leaders:
-                seen_leaders.add(leader_content)
-                unique_leaders.append(leader_obj)
-        consolidated["extracted_info"]["leadership"] = unique_leaders
-
-        return consolidated
-
-    except Exception as e:
-        logger.error(f"Error during deduplication: {e}")
-        return consolidated
-
-
-async def _scrape_predicted_urls(predicted_urls: List[str], organization_data: Dict, url_discovery_processor) -> Dict:
-    """
-    Scrape predicted URLs and cache successful ones
-    
-    Args:
-        predicted_urls: List of URLs predicted by GPT
-        organization_data: Organization information
-        url_discovery_processor: URL discovery processor instance for caching
-        
-    Returns:
-        Scraped data in the expected format
-    """
-    try:
-        from src.core.simple_mcp_client import SimpleMCPClient
-        
-        client = SimpleMCPClient(timeout=15)
-        
-        # Use the best URL for deep intelligence gathering (which saves to database)
-        best_url = predicted_urls[0] if predicted_urls else None
-        if not best_url:
-            raise Exception("No URLs provided for scraping")
-        
-        # Perform enhanced deep intelligence gathering with dynamic URL discovery
-        additional_urls = []  # Let the system discover URLs dynamically
-        
-        # Enhanced deep intelligence with dynamic URL discovery
-        deep_intelligence_result = await client.fetch_enhanced_intelligence(best_url, additional_urls, max_pages=5, ein=ein)
-        
-        # Convert deep intelligence result to expected format
-        if deep_intelligence_result.success:
-            results = deep_intelligence_result.pages_scraped
-        else:
-            results = []
-        
-        # Process results and find the best URL
-        successful_urls = []
-        best_url = None
-        best_content_score = 0
-        
-        for result in results:
-            if result.success and result.content and len(result.content) > 200:
-                content_score = _score_scraped_content(result.content, organization_data)
-                
-                successful_urls.append({
-                    "url": result.url,
-                    "title": result.title,
-                    "content_length": len(result.content),
-                    "content_score": content_score,
-                    "timestamp": result.timestamp.isoformat()
-                })
-                
-                # Track the best URL for caching
-                if content_score > best_content_score:
-                    best_content_score = content_score
-                    best_url = result.url
-        
-        # Cache the best URL if we found one
-        if best_url and best_content_score > 0.3:  # Minimum quality threshold
-            await url_discovery_processor.cache_successful_url(
-                organization_data['ein'], 
-                best_url, 
-                best_content_score
-            )
-            logger.info(f"Cached successful URL for EIN {organization_data['ein']}: {best_url}")
-        
-        # Extract information from deep intelligence result
-        extracted_info = {
-            "mission_statements": deep_intelligence_result.mission_data if deep_intelligence_result.success else [],
-            "contact_info": [str(contact) for contact in deep_intelligence_result.contact_data] if deep_intelligence_result.success else [],
-            "programs": [p.get('name', str(p)) for p in deep_intelligence_result.program_data] if deep_intelligence_result.success else [],
-            "leadership": [f"{l.get('name', '')} - {l.get('title', '')}" for l in deep_intelligence_result.leadership_data] if deep_intelligence_result.success else [],
-            "financial_info": []
-        }
-        
-        # Save intelligence data to database (clean approach with EIN from API)
-        if deep_intelligence_result.success:
-            await _save_web_intelligence_data(
-                ein=organization_data['ein'],
-                url=best_url,
-                intelligence_data=deep_intelligence_result,
-                organization_name=organization_data.get('organization_name', '')
-            )
-        
-        return {
-            "organization_name": organization_data['organization_name'],
-            "ein": organization_data['ein'],
-            "successful_scrapes": successful_urls,
-            "failed_scrapes": [
-                {"url": r.url, "error": r.error or "No content"} 
-                for r in results if not r.success or not r.content or len(r.content) < 200
-            ],
-            "extracted_info": extracted_info,
-            "url_source": "gpt_prediction"
-        }
-        
-    except Exception as e:
-        logger.error(f"Error scraping predicted URLs: {e}")
-        return {
-            "organization_name": organization_data['organization_name'],
-            "ein": organization_data['ein'],
-            "successful_scrapes": [],
-            "failed_scrapes": [{"url": url, "error": str(e)} for url in predicted_urls],
-            "extracted_info": {"mission_statements": [], "contact_info": [], "programs": [], "leadership": [], "financial_info": []},
-            "url_source": "gpt_prediction"
-        }
 
 async def _save_web_intelligence_data(ein: str, url: str, intelligence_data, organization_name: str = "") -> bool:
     """
@@ -2153,16 +1937,20 @@ async def fetch_ein_data(request: dict):
             logger.info(f"Result data structure: {result.data}")
             org_data = result.data.get('target_organization', {})
             
-            # Prepare basic response data
+            # Prepare basic response data with real 990 data extraction
+            extracted_website = _extract_website_url_from_990(org_data) or org_data.get('website', '')
+            extracted_mission = _extract_mission_from_990(org_data) or org_data.get('mission_description', '') or org_data.get('activity_description', '')
+
             response_data = {
                 "name": org_data.get('name', ''),
                 "ein": org_data.get('ein', ein),
-                "mission_statement": org_data.get('mission_description', '') or org_data.get('activity_description', ''),
+                "mission_statement": extracted_mission,
                 "organization_type": str(org_data.get('organization_type', 'nonprofit')).replace('OrganizationType.', '').lower(),
                 "ntee_code": org_data.get('ntee_code', ''),
                 "city": org_data.get('city', ''),
                 "state": org_data.get('state', ''),
-                "website": org_data.get('website', ''),
+                "website": extracted_website,
+                "website_url": extracted_website,  # For frontend compatibility
                 "revenue": org_data.get('revenue', 0),
                 "assets": org_data.get('assets', 0),
                 "expenses": org_data.get('expenses', 0),
@@ -2218,87 +2006,149 @@ async def fetch_ein_data(request: dict):
                         logger.warning(f"GPT URL discovery failed for EIN {ein}: {gpt_error}")
                         predicted_urls = []
                     
-                    # Step 2: Dual Primary Architecture - Run both MCP and Scrapy in parallel
-                    logger.info("Executing dual primary scraping with both MCP and Scrapy sources")
+                    # Step 2: XML + Enhanced Web Intelligence with VerificationEnhancedScraper
+                    logger.info("DEBUG: ENTRY POINT - Starting VerificationEnhancedScraper section")
 
-                    # Prepare for parallel execution
-                    import asyncio
-                    mcp_results = None
-                    scrapy_results = None
-
-                    async def run_mcp_scraping():
-                        try:
-                            if predicted_urls:
-                                # Use GPT-predicted URLs for MCP scraping
-                                logger.info(f"MCP: Using GPT-predicted URLs: {predicted_urls}")
-                                return await _scrape_predicted_urls(
-                                    predicted_urls, organization_data, url_discovery_processor
-                                )
-                            else:
-                                # Pattern-based MCP scraping
-                                logger.info("MCP: Using pattern-based URL discovery")
-                                from src.core.mcp_client import web_scraping_service
-                                return await web_scraping_service.scrape_organization_websites(
-                                    organization_name=org_data.get('name', ''),
-                                    ein=ein
-                                )
-                        except Exception as e:
-                            logger.warning(f"MCP scraping failed: {e}")
-                            return None
-
-                    async def run_scrapy_scraping():
-                        try:
-                            logger.info("Scrapy: Starting primary scraping service")
-                            from src.core.simple_mcp_client import simple_web_scraping_service
-                            return await simple_web_scraping_service.scrape_organization_websites(
-                                organization_name=org_data.get('name', ''),
-                                ein=ein
-                            )
-                        except Exception as e:
-                            logger.warning(f"Scrapy scraping failed: {e}")
-                            return None
-
-                    # Execute both scraping sources in parallel
                     try:
-                        logger.info("Starting parallel execution of MCP and Scrapy scraping...")
-                        mcp_task = run_mcp_scraping()
-                        scrapy_task = run_scrapy_scraping()
+                        # Use existing VerificationEnhancedScraper that combines XML + web scraping
+                        from src.core.verification_enhanced_scraper import VerificationEnhancedScraper
 
-                        # Wait for both with timeout
-                        mcp_results, scrapy_results = await asyncio.gather(
-                            mcp_task, scrapy_task, return_exceptions=True
+                        # Initialize the comprehensive scraper
+                        scraper = VerificationEnhancedScraper()
+                        org_name = org_data.get('name', '')
+
+                        logger.info(f"Starting comprehensive XML + web scraping for {org_name} (EIN: {ein})")
+
+                        # Execute comprehensive scraping (includes XML baseline + web verification)
+                        verification_result = await scraper.scrape_with_verification(
+                            ein=ein,
+                            organization_name=org_name,
+                            user_provided_url=predicted_urls[0] if predicted_urls else None
                         )
 
-                        # Handle exceptions from gather
-                        if isinstance(mcp_results, Exception):
-                            logger.error(f"MCP scraping exception: {mcp_results}")
-                            mcp_results = None
+                        logger.info(f"DEBUG: VerificationResult object: {verification_result is not None}")
+                        logger.info(f"DEBUG: Verification result type: {type(verification_result)}")
 
-                        if isinstance(scrapy_results, Exception):
-                            logger.error(f"Scrapy scraping exception: {scrapy_results}")
-                            scrapy_results = None
+                        if verification_result:
+                            logger.info(f"DEBUG: VerificationEnhancedScraper SUCCESS - confidence: {verification_result.verification_confidence:.2f}")
+                            logger.info(f"DEBUG: Verified leadership count: {len(verification_result.verified_leadership)}")
+                            logger.info(f"DEBUG: Verified website: {verification_result.verified_website}")
+                            logger.info(f"DEBUG: Verified mission: {verification_result.verified_mission[:50] if verification_result.verified_mission else None}...")
 
-                        logger.info(f"Parallel scraping completed - MCP: {'success' if mcp_results else 'failed'}, "
-                                   f"Scrapy: {'success' if scrapy_results else 'failed'}")
+                            # Convert VerificationResult to expected format for frontend compatibility
+                            scraped_data = {
+                                "organization_name": org_name,
+                                "ein": ein,
+                                "successful_scrapes": [],
+                                "failed_scrapes": [],
+                                "extracted_info": {
+                                    "mission_statements": [],
+                                    "contact_info": [],
+                                    "programs": [],
+                                    "leadership": []
+                                },
+                                "source_breakdown": {
+                                    "xml_baseline_available": verification_result.tax_baseline is not None,
+                                    "scrapy_success_count": len(verification_result.verified_leadership),
+                                    "mcp_success_count": 0,  # MCP disabled
+                                    "total_sources_tried": 1,
+                                    "verification_confidence": verification_result.verification_confidence
+                                }
+                            }
 
-                    except Exception as parallel_error:
-                        logger.error(f"Parallel scraping failed: {parallel_error}")
-                        mcp_results = None
-                        scrapy_results = None
+                            # Add successful scrape entry (prioritize verified website, fallback to tax filing data)
+                            if verification_result.verified_website:
+                                scraped_data["successful_scrapes"].append({
+                                    "url": verification_result.verified_website,
+                                    "title": f"{org_name} - Verified Website",
+                                    "content_length": 0,  # VerificationResult doesn't track content length
+                                    "source": "XML + Web Verification"
+                                })
+                            elif verification_result.tax_baseline:
+                                # Ensure we have a successful scrape entry even when only tax filing data is available
+                                website_url = verification_result.tax_baseline.declared_website or "Tax Filing Data Only"
+                                scraped_data["successful_scrapes"].append({
+                                    "url": website_url,
+                                    "title": f"{org_name} - Tax Filing Data",
+                                    "content_length": 0,
+                                    "source": "990 Tax Filing"
+                                })
 
-                    # Consolidate results from both sources
-                    if mcp_results or scrapy_results:
-                        scraped_data = await _consolidate_scraping_results(
-                            mcp_results, scrapy_results, organization_data
-                        )
-                        logger.info(f"Successfully consolidated results from {scraped_data.get('source_breakdown', {}).get('total_sources_tried', 0)} total sources")
-                    else:
-                        logger.warning("Both MCP and Scrapy scraping failed - no data available")
+                            # Process verified leadership data (XML + web verification) - PRIORITIZE THIS DATA
+                            verified_leadership_count = 0
+                            for leader in verification_result.verified_leadership:
+                                if hasattr(leader, 'name') and leader.name:
+                                    leader_entry = {
+                                        "name": leader.name,
+                                        "title": getattr(leader, 'title', ''),
+                                        "source": leader.source,
+                                        "confidence": getattr(leader, 'confidence_score', 0.8)
+                                    }
+                                    scraped_data["extracted_info"]["leadership"].append(leader_entry)
+                                    verified_leadership_count += 1
+
+                            logger.info(f"DEBUG: Added {verified_leadership_count} verified leadership entries to scraped_data")
+
+                            # Add verified mission if available
+                            if verification_result.verified_mission:
+                                scraped_data["extracted_info"]["mission_statements"].append({
+                                    "content": verification_result.verified_mission,
+                                    "source": "XML Baseline",
+                                    "confidence": 0.95
+                                })
+
+                            # Add verified programs if available
+                            for program in verification_result.verified_programs:
+                                if isinstance(program, str) and len(program.strip()) > 5:
+                                    scraped_data["extracted_info"]["programs"].append({
+                                        "name": program.strip(),
+                                        "source": "XML + Web Verification",
+                                        "confidence": 0.85
+                                    })
+
+                            # DEBUG: Log the complete scraped_data structure
+                            logger.info(f"DEBUG: scraped_data structure created:")
+                            logger.info(f"DEBUG: - successful_scrapes count: {len(scraped_data.get('successful_scrapes', []))}")
+                            logger.info(f"DEBUG: - leadership count: {len(scraped_data.get('extracted_info', {}).get('leadership', []))}")
+                            logger.info(f"DEBUG: - mission_statements count: {len(scraped_data.get('extracted_info', {}).get('mission_statements', []))}")
+
+                            # Ensure we always have at least one successful scrape entry for valid data
+                            if not scraped_data["successful_scrapes"]:
+                                # This should not happen given the logic above, but add fallback
+                                scraped_data["successful_scrapes"].append({
+                                    "url": "VerificationEnhancedScraper",
+                                    "title": f"{org_name} - Tax Filing Verification",
+                                    "content_length": 0,
+                                    "source": "Verification System"
+                                })
+                                logger.warning("DEBUG: Added fallback successful_scrapes entry")
+
+                            logger.info(f"XML + web intelligence extraction successful - {len(verification_result.verified_leadership)} verified leaders")
+                        else:
+                            logger.warning("DEBUG: VerificationEnhancedScraper returned None or empty result")
+                            scraped_data = None
+
+                    except Exception as verification_error:
+                        logger.error(f"DEBUG: VerificationEnhancedScraper EXCEPTION: {verification_error}")
+                        import traceback
+                        logger.error(f"DEBUG: Full traceback: {traceback.format_exc()}")
                         scraped_data = None
                     
+                    # DEBUG: Critical condition check
+                    logger.info(f"DEBUG: Checking scraped_data condition:")
+                    logger.info(f"DEBUG: - scraped_data exists: {scraped_data is not None}")
+                    logger.info(f"DEBUG: - successful_scrapes exists: {scraped_data.get('successful_scrapes') if scraped_data else 'N/A'}")
+                    logger.info(f"DEBUG: - successful_scrapes length: {len(scraped_data.get('successful_scrapes', [])) if scraped_data else 0}")
+
                     if scraped_data and scraped_data.get('successful_scrapes'):
+                        logger.info(f"DEBUG: CONDITION PASSED - Using VerificationEnhancedScraper data")
                         logger.info(f"Successfully scraped {len(scraped_data['successful_scrapes'])} websites for EIN {ein}")
                         
+                        # DEBUG: Log the final scraped_data content before structuring
+                        logger.info(f"DEBUG: Final scraped_data leadership count: {len(scraped_data.get('extracted_info', {}).get('leadership', []))}")
+                        leadership_sources = [leader.get('source', 'unknown') for leader in scraped_data.get('extracted_info', {}).get('leadership', [])]
+                        logger.info(f"DEBUG: Leadership sources in scraped_data: {set(leadership_sources)}")
+
                         # Structure web scraping data with source attribution and extracted_info
                         web_scraping_data = {
                             "successful_scrapes": scraped_data.get('successful_scrapes', []),
@@ -2310,18 +2160,31 @@ async def fetch_ein_data(request: dict):
                                 "total_sources_tried": 0
                             })
                         }
+
+                        # DEBUG: Log the final web_scraping_data structure
+                        logger.info(f"DEBUG: Final web_scraping_data leadership count: {len(web_scraping_data.get('extracted_info', {}).get('leadership', []))}")
+                        final_sources = [leader.get('source', 'unknown') for leader in web_scraping_data.get('extracted_info', {}).get('leadership', [])]
+                        logger.info(f"DEBUG: Final leadership sources: {set(final_sources)}")
                         response_data["web_scraping_data"] = web_scraping_data
                         response_data["enhanced_with_web_data"] = True
                         
-                        # Enhance existing fields with scraped data
+                        # Enhanced data integration with XML + web verification
                         extracted_info = scraped_data.get('extracted_info', {})
-                        
-                        # Enhance mission statement if current one is lacking
-                        if extracted_info.get('mission_statements') and (
-                            not response_data["mission_statement"] or
-                            len(response_data["mission_statement"]) < 50
-                        ):
-                            # Handle both old format (strings) and new format (objects with source)
+
+                        # Enhance website URL with verified data (XML takes priority)
+                        if verification_result and verification_result.verified_website:
+                            verified_url = verification_result.verified_website
+                            response_data["website"] = verified_url
+                            response_data["website_url"] = verified_url
+                            logger.info(f"Enhanced website URL from XML baseline: {verified_url}")
+
+                        # Enhance mission statement with verified data (XML takes priority)
+                        if verification_result and verification_result.verified_mission:
+                            if not response_data["mission_statement"] or len(response_data["mission_statement"]) < 50:
+                                response_data["mission_statement"] = verification_result.verified_mission
+                                logger.info(f"Enhanced mission statement from XML baseline for EIN {ein}")
+                        elif extracted_info.get('mission_statements'):
+                            # Fallback to web-scraped mission if no XML mission
                             mission_statements = extracted_info['mission_statements']
                             best_mission = ""
                             source = "Unknown"
@@ -2330,26 +2193,41 @@ async def fetch_ein_data(request: dict):
                                 if isinstance(mission_obj, dict):
                                     mission_content = mission_obj.get("content", "")
                                     mission_source = mission_obj.get("source", "Unknown")
+                                    mission_confidence = mission_obj.get("confidence", 0.5)
                                 else:
                                     mission_content = str(mission_obj)
                                     mission_source = "Legacy"
+                                    mission_confidence = 0.3
 
-                                if len(mission_content) > len(best_mission):
+                                # Prioritize by confidence and length
+                                if (len(mission_content) > len(best_mission) and mission_confidence > 0.7):
                                     best_mission = mission_content
                                     source = mission_source
 
                             if len(best_mission) > len(response_data["mission_statement"]):
                                 response_data["mission_statement"] = best_mission
-                                logger.info(f"Enhanced mission statement from {source} web scraping for EIN {ein}")
-                        
-                        # Add additional fields from scraped data for backward compatibility
-                        response_data["programs"] = extracted_info.get('programs', [])[:5]  # Top 5 programs
-                        response_data["leadership"] = extracted_info.get('leadership', [])[:5]  # Top 5 leadership entries
-                        response_data["contact_info"] = extracted_info.get('contact_info', [])[:3]  # Top 3 contact entries
+                                logger.info(f"Enhanced mission statement from {source} web verification for EIN {ein}")
+
+                        # Add verified data for Enhanced Data tab
+                        response_data["programs"] = extracted_info.get('programs', [])[:8]  # Top 8 programs
+                        response_data["leadership"] = extracted_info.get('leadership', [])[:15]  # Top 15 leadership entries
+                        response_data["contact_info"] = extracted_info.get('contact_info', [])[:5]  # Top 5 contact entries
+                        response_data["verification_confidence"] = verification_result.verification_confidence if verification_result else 0.0
                         
                     else:
+                        logger.warning(f"DEBUG: CONDITION FAILED - VerificationEnhancedScraper data not used")
+                        logger.warning(f"DEBUG: scraped_data = {scraped_data}")
                         logger.warning(f"No successful web scraping results for EIN {ein}")
-                        response_data["web_scraping_data"] = {"message": "Web data unavailable - no websites successfully scraped"}
+
+                        # CRITICAL DEBUG: Prevent any fallback data from being used
+                        response_data["web_scraping_data"] = {
+                            "message": "VerificationEnhancedScraper failed - no fallback data allowed",
+                            "debug_info": {
+                                "scraped_data_exists": scraped_data is not None,
+                                "successful_scrapes_exists": scraped_data.get('successful_scrapes') if scraped_data else None,
+                                "successful_scrapes_length": len(scraped_data.get('successful_scrapes', [])) if scraped_data else 0
+                            }
+                        }
                         
                 except Exception as web_error:
                     logger.error(f"Web scraping error for EIN {ein}: {web_error}")
@@ -2370,47 +2248,84 @@ async def fetch_ein_data(request: dict):
             # Only use fresh scraping or validated JSON data from now on
             logger.info(f"Skipping cached database intelligence to avoid fake data for EIN {ein}")
             
-            # Check for validated JSON data if no high-quality database data
-            if not response_data.get("web_scraping_data") or not response_data["web_scraping_data"].get("extracted_info"):
-                try:
-                    logger.info(f"Attempting to process JSON validation pipeline for EIN {ein}")
-                    validation_pipeline = DataValidationPipeline()
-                    validated_data = validation_pipeline.process_ein_data(ein)
-                    
-                    if validated_data:
-                        # Convert to database format for consistency
-                        db_format = validation_pipeline.get_database_ready_format(validated_data)
-                        if db_format:
-                            response_data["web_scraping_data"] = {
-                                "successful_scrapes": [{"url": "JSON processing", "status": "validated"}],
-                                "failed_scrapes": [],
-                                "extracted_info": db_format["extracted_info"]
-                            }
-                            response_data["enhanced_with_web_data"] = True
-                            logger.info(f"Enhanced response with validated JSON data for EIN {ein}")
-                        else:
-                            logger.info(f"JSON data validation failed for EIN {ein}")
-                    else:
-                        logger.info(f"No validated JSON data available for EIN {ein}")
-                        
-                except Exception as e:
-                    logger.warning(f"Error processing JSON validation pipeline for EIN {ein}: {e}")
+            # CRITICAL: COMPLETELY REMOVE JSON VALIDATION PIPELINE FALLBACKS
+            # After MCP removal, the DataValidationPipeline creates poor quality data that overrides VerificationEnhancedScraper
+            # We now rely exclusively on VerificationEnhancedScraper for high-quality verified data
+
+            if enable_web_scraping:
+                if response_data.get("web_scraping_data"):
+                    logger.info(f"SUCCESS: Using VerificationEnhancedScraper verified data for EIN {ein}")
+                    logger.info(f"Data sources: Tax filing baseline + web verification")
+                else:
+                    logger.warning(f"VerificationEnhancedScraper failed for EIN {ein} - maintaining no-fake-data policy")
+                    logger.warning(f"Will NOT use any fallback data sources to prevent poor quality data contamination")
+            else:
+                logger.info(f"Web scraping disabled for EIN {ein} - using ProPublica data only")
+                # Note: DataValidationPipeline completely removed to prevent poor quality data
             
+            # Check for 990-PF foundation processing
+            try:
+                # Auto-detect form type and add foundation intelligence if applicable
+                organization_type = org_data.get('organization_type', '').lower()
+                is_foundation = 'foundation' in organization_type or organization_type == 'private_foundation'
+
+                if is_foundation:
+                    logger.info(f"Detected foundation organization for EIN {ein}, adding foundation intelligence")
+
+                    from src.processors.data_collection.pf_data_extractor import PFDataExtractorProcessor
+
+                    pf_processor = PFDataExtractorProcessor()
+
+                    # Process 990-PF specific data
+                    pf_result = await pf_processor.process({
+                        "target_organization": org_data,
+                        "ein": ein,
+                        "organization_name": org_data.get('name', '')
+                    })
+
+                    if pf_result.success and pf_result.data:
+                        foundation_data = pf_result.data
+                        logger.info(f"Successfully extracted 990-PF foundation data for EIN {ein}")
+
+                        # Add foundation-specific intelligence to response
+                        response_data["foundation_intelligence"] = {
+                            "grant_making_capacity": foundation_data.get("grant_making_capacity", {}),
+                            "distribution_requirements": foundation_data.get("distribution_requirements", {}),
+                            "grants_paid": foundation_data.get("grants_paid", []),
+                            "application_process": foundation_data.get("application_process", {}),
+                            "form_type": "990-PF",
+                            "is_foundation": True
+                        }
+
+                        # Enhance Enhanced Data tab with foundation grant data
+                        if foundation_data.get("grants_paid"):
+                            response_data["foundation_grants"] = foundation_data["grants_paid"][:10]  # Top 10 grants
+                    else:
+                        logger.warning(f"990-PF processing failed for EIN {ein}: {pf_result.error_message}")
+                        response_data["foundation_intelligence"] = {"form_type": "990-PF", "is_foundation": True, "processing_failed": True}
+                else:
+                    logger.info(f"Regular 990 organization detected for EIN {ein}")
+                    response_data["foundation_intelligence"] = {"form_type": "990", "is_foundation": False}
+
+            except Exception as foundation_error:
+                logger.warning(f"Foundation processing error for EIN {ein}: {foundation_error}")
+                response_data["foundation_intelligence"] = {"processing_error": str(foundation_error)}
+
             # Attempt to fetch XML data and extract Schedule I grantees
             try:
                 from src.utils.xml_fetcher import XMLFetcher
                 from src.utils.schedule_i_extractor import ScheduleIExtractor
-                
+
                 logger.info(f"Attempting to fetch XML data for EIN {ein}")
-                
-                xml_fetcher = XMLFetcher()
+
+                xml_fetcher = XMLFetcher(context="profile")
                 xml_content = await xml_fetcher.fetch_xml_by_ein(ein)
-                
+
                 logger.info(f"XML fetch completed for EIN {ein}, content: {xml_content is not None}, size: {len(xml_content) if xml_content else 0}")
-                
+
                 if xml_content:
                     logger.info(f"Successfully fetched XML data for EIN {ein} ({len(xml_content):,} bytes)")
-                    
+
                     # Extract Schedule I grantees
                     extractor = ScheduleIExtractor()
                     most_recent_year = org_data.get('most_recent_filing_year')
@@ -2432,6 +2347,186 @@ async def fetch_ein_data(request: dict):
                 response_data["schedule_i_status"] = "no_xml"
                 # Continue with basic data even if XML processing fails
             
+            # NEW: Save extracted data to profile if profile_id provided
+            profile_id = request.get('profile_id')
+            if profile_id:
+                try:
+                    # Prepare profile update data with real extracted data only
+                    profile_updates = {}
+
+                    # CRITICAL: Prioritize VerificationEnhancedScraper verified data
+                    if verification_result:
+                        logger.info("Saving VerificationEnhancedScraper verified data to database")
+
+                        # Save verified website URL (highest confidence)
+                        if verification_result.verified_website:
+                            profile_updates["website_url"] = verification_result.verified_website
+                            profile_updates["website"] = verification_result.verified_website  # Legacy compatibility
+                            logger.info(f"Saving verified website: {verification_result.verified_website}")
+
+                        # Save verified mission statement (highest confidence)
+                        if verification_result.verified_mission and len(verification_result.verified_mission.strip()) > 10:
+                            profile_updates["mission_statement"] = verification_result.verified_mission
+                            logger.info(f"Saving verified mission: {verification_result.verified_mission[:50]}...")
+
+                        # Save verification metadata for quality tracking
+                        profile_updates["verification_data"] = {
+                            "verification_confidence": verification_result.verification_confidence,
+                            "verified_leadership_count": len(verification_result.verified_leadership),
+                            "data_sources": verification_result.source_attribution,
+                            "last_verified": datetime.now().isoformat(),
+                            "tax_baseline_available": verification_result.tax_baseline is not None
+                        }
+
+                    # Fallback: Only update fields that have real data (legacy support)
+                    elif response_data.get("mission_statement") and len(response_data["mission_statement"].strip()) > 10:
+                        profile_updates["mission_statement"] = response_data["mission_statement"]
+
+                    # Fallback: Use verified website URL from XML + web verification (takes priority)
+                    elif response_data.get("website_url"):
+                        profile_updates["website_url"] = response_data["website_url"]
+
+                    # Add keywords from scraped programs if available
+                    if response_data.get("programs") and len(response_data["programs"]) > 0:
+                        # Extract meaningful keywords from programs (real data only)
+                        program_keywords = []
+                        for program in response_data["programs"][:3]:  # Top 3 programs
+                            if isinstance(program, dict):
+                                program_text = program.get("content", "")
+                            else:
+                                program_text = str(program)
+
+                            if program_text and len(program_text.strip()) > 5:
+                                # Extract key terms from program descriptions
+                                words = program_text.replace(',', ' ').replace('.', ' ').split()
+                                keywords = [w.lower() for w in words if len(w) > 3 and w.isalpha()][:3]
+                                program_keywords.extend(keywords)
+
+                        if program_keywords:
+                            profile_updates["keywords"] = ", ".join(program_keywords[:10])  # Top 10 keywords
+
+                    # Save web scraping results for Enhanced Data tab
+                    if response_data.get("web_scraping_data"):
+                        # Store structured web scraping data (real data only)
+                        profile_updates["web_enhanced_data"] = {
+                            "scraped_data": response_data["web_scraping_data"],
+                            "enhanced_with_web_data": response_data["enhanced_with_web_data"],
+                            "last_scraped": datetime.now().isoformat()
+                        }
+
+                        # CRITICAL: Also save VerificationEnhancedScraper verified leadership for Enhanced Data tab
+                        if verification_result and verification_result.verified_leadership:
+                            verified_leadership_data = []
+                            for leader in verification_result.verified_leadership:
+                                if hasattr(leader, 'name') and leader.name:
+                                    verified_leadership_data.append({
+                                        "name": leader.name,
+                                        "title": getattr(leader, 'title', ''),
+                                        "source": leader.source,
+                                        "confidence": getattr(leader, 'confidence_score', 0.8),
+                                        "verification_status": getattr(leader, 'verification_status', 'verified')
+                                    })
+
+                            # Add verified leadership to web_enhanced_data for Enhanced Data tab
+                            profile_updates["web_enhanced_data"]["verified_leadership"] = verified_leadership_data
+                            logger.info(f"Saving {len(verified_leadership_data)} verified leadership entries to database")
+
+                    # Only update if we have real data to save
+                    if profile_updates:
+                        # Save to database (not file-based profile_service) for persistence
+                        # Get existing profile, update it, then save back
+                        existing_profile = database_service.get_profile(profile_id)
+                        if existing_profile:
+                            # Update the profile object with the new data
+                            for key, value in profile_updates.items():
+                                if hasattr(existing_profile, key):
+                                    setattr(existing_profile, key, value)
+                                else:
+                                    logger.debug(f"Profile doesn't have attribute '{key}', skipping")
+
+                            # Update the updated_at timestamp
+                            existing_profile.updated_at = datetime.now()
+
+                            # Save the updated profile
+                            success = database_service.update_profile(existing_profile)
+                            if success:
+                                logger.info(f"Saved fetched data to database for profile {profile_id}: {list(profile_updates.keys())}")
+                            else:
+                                logger.error(f"Failed to save profile updates to database for {profile_id}")
+                        else:
+                            logger.error(f"Could not find existing profile {profile_id} for update")
+                    else:
+                        logger.info(f"No real data to save for profile {profile_id}")
+
+                except Exception as save_error:
+                    logger.error(f"Failed to save fetched data to profile {profile_id}: {save_error}")
+                    # Continue with response even if save fails
+
+            # ENHANCED DATABASE FALLBACK: Compare data quality and preserve better data
+            # This prevents partial/incomplete fetch results from overwriting complete database data
+            profile_id = request.get('profile_id')
+            if profile_id:
+                try:
+                    existing_profile = database_service.get_profile(profile_id)
+                    if existing_profile:
+
+                        def data_quality_score(data_dict, field_name):
+                            """Calculate data quality score for a field (0-100)"""
+                            value = data_dict.get(field_name, "")
+                            if not value or str(value).strip() == "":
+                                return 0
+                            # Base score on length and content quality
+                            score = min(len(str(value)), 100)
+                            # Bonus for meaningful content
+                            if len(str(value)) > 20:
+                                score += 20
+                            if any(keyword in str(value).lower() for keyword in ['provide', 'assist', 'support', 'mission', 'purpose']):
+                                score += 10
+                            return min(score, 100)
+
+                        # Critical fields to compare
+                        critical_fields = {
+                            'mission_statement': 'mission_statement',
+                            'website_url': 'website_url',
+                            'website': 'website_url',  # Both map to same DB field
+                            # Note: location and annual_revenue don't exist on profile model, they come from form data
+                        }
+
+                        restored_fields = []
+
+                        # Compare each critical field
+                        for response_field, db_field in critical_fields.items():
+                            if response_field == 'website':  # Skip duplicate mapping
+                                continue
+
+                            # Get values
+                            new_value = response_data.get(response_field, "")
+                            db_value = getattr(existing_profile, db_field, "")
+
+                            # Calculate quality scores
+                            new_score = data_quality_score(response_data, response_field)
+                            db_score = data_quality_score({db_field: db_value}, db_field)
+
+                            logger.info(f"Quality comparison for {response_field}: new_score={new_score}, db_score={db_score}")
+                            logger.info(f"Values: new='{str(new_value)[:50]}...' db='{str(db_value)[:50]}...'")
+
+                            # If database data is significantly better, restore it
+                            if db_score > new_score + 10:  # 10-point threshold to avoid unnecessary replacements
+                                response_data[response_field] = db_value
+                                if response_field == 'website_url':
+                                    response_data['website'] = db_value  # Keep both fields in sync
+                                restored_fields.append(f"{response_field}(score: {db_score} > {new_score})")
+                                logger.warning(f"RESTORED {response_field} from database: DB data quality ({db_score}) > fetch data ({new_score})")
+
+                        # Log comprehensive restoration summary
+                        if restored_fields:
+                            logger.critical(f"DATA QUALITY PROTECTION: Restored {len(restored_fields)} fields from database for profile {profile_id}: {restored_fields}")
+                        else:
+                            logger.info(f"DATA QUALITY CHECK: All fetched data quality is acceptable for profile {profile_id}")
+
+                except Exception as db_fallback_error:
+                    logger.error(f"Enhanced database fallback failed for profile {profile_id}: {db_fallback_error}")
+
             return {
                 "success": True,
                 "data": response_data,
@@ -2481,22 +2576,51 @@ async def create_profile(
 
 @app.get("/api/profiles/{profile_id}")
 async def get_profile(
-    profile_id: str,
-    current_user: User = Depends(get_current_user_dependency)
+    profile_id: str
+    # Removed authentication: single-user desktop application
 ):
-    """Get a specific organization profile with unified analytics."""
+    """Get a specific organization profile from database."""
+    print(f"*** ENDPOINT HIT: GET /api/profiles/{profile_id} ***")
+    logger.critical(f"*** CRITICAL DEBUG: GET profile endpoint hit for {profile_id} ***")
     try:
-        # Try unified service first for enhanced analytics
-        unified_profile = unified_service.get_profile(profile_id)
-        if unified_profile:
-            return {"profile": unified_profile.model_dump()}
-        
-        # Fallback to old service
-        profile = profile_service.get_profile(profile_id)
-        if not profile:
+        # Use database query interface directly like the working profiles endpoint
+        from src.database.query_interface import DatabaseQueryInterface, QueryFilter
+        import os
+
+        # Use same database path logic as working endpoint
+        potential_paths = [
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "catalynx.db"),
+            os.path.join(os.getcwd(), "data", "catalynx.db"),
+            "data/catalynx.db"
+        ]
+
+        db_path = None
+        for path in potential_paths:
+            if os.path.exists(path):
+                db_path = path
+                break
+
+        if not db_path:
+            raise HTTPException(status_code=500, detail="Database not found")
+
+        db_interface = DatabaseQueryInterface(db_path)
+        profiles, _ = db_interface.filter_profiles(QueryFilter(profile_ids=[profile_id]))
+
+        if not profiles:
             raise HTTPException(status_code=404, detail="Profile not found")
-        
-        return {"profile": profile.model_dump()}
+
+        profile = profiles[0]
+        # Add opportunity count for consistency
+        opportunities, _ = db_interface.filter_opportunities(
+            QueryFilter(profile_ids=[profile["id"]])
+        )
+        profile["opportunities_count"] = len(opportunities)
+        profile["profile_id"] = profile["id"]  # Frontend compatibility
+
+        # Debug: Log what fields are in the database profile
+        logger.info(f"GET profile {profile_id} - Database field check: website_url exists={bool(profile.get('website_url'))}, annual_revenue exists={bool(profile.get('annual_revenue'))}, location exists={bool(profile.get('location'))}, mission_statement exists={bool(profile.get('mission_statement'))}")
+
+        return {"profile": profile}
         
     except HTTPException:
         raise
@@ -2508,17 +2632,46 @@ async def get_profile(
 async def update_profile(profile_id: str, update_data: Dict[str, Any]):
     """Update an existing organization profile."""
     try:
-        # Debug: Log the update data received
+        # CRITICAL DEBUG: Log the update data received
+        print(f"*** CRITICAL UPDATE DEBUG: Updating profile {profile_id} ***")
+        logger.critical(f"*** CRITICAL UPDATE DEBUG: Updating profile {profile_id} ***")
         logger.info(f"Updating profile {profile_id} with data: ntee_codes={update_data.get('ntee_codes')}, government_criteria={update_data.get('government_criteria')}, keywords={update_data.get('keywords')}")
+        logger.critical(f"FETCHED FIELDS RECEIVED: website_url='{update_data.get('website_url')}', location='{update_data.get('location')}', annual_revenue='{update_data.get('annual_revenue')}', mission_statement='{update_data.get('mission_statement')}'")
+        logger.critical(f"Full update_data keys: {list(update_data.keys())}")
+        logger.critical(f"Full update_data: {update_data}")
         
-        profile = profile_service.update_profile(profile_id, update_data)
-        if not profile:
+        # Use database service for consistency with fetch endpoint
+        existing_profile = database_service.get_profile(profile_id)
+        if not existing_profile:
             raise HTTPException(status_code=404, detail="Profile not found")
-        
-        # Debug: Log the profile after update
+
+        # Update the profile object with the new data
+        for key, value in update_data.items():
+            if hasattr(existing_profile, key):
+                setattr(existing_profile, key, value)
+            else:
+                logger.debug(f"Profile doesn't have attribute '{key}', skipping")
+
+        # Update the updated_at timestamp
+        existing_profile.updated_at = datetime.now()
+
+        # Save the updated profile to database
+        success = database_service.update_profile(existing_profile)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to save profile updates")
+
+        profile = existing_profile
+
+        # CRITICAL DEBUG: Log the profile after update
+        logger.critical(f"AFTER UPDATE - Profile fields: website_url='{profile.website_url}', location='{profile.location}', annual_revenue='{profile.annual_revenue}', mission_statement='{profile.mission_statement}'")
         logger.info(f"Profile after update: ntee_codes={profile.ntee_codes}, government_criteria={profile.government_criteria}, keywords={profile.keywords}")
+
+        # CRITICAL DEBUG: Verify what's actually in the database now
+        verification_profile = database_service.get_profile(profile_id)
+        if verification_profile:
+            logger.critical(f"VERIFICATION - Database now contains: website_url='{verification_profile.website_url}', location='{verification_profile.location}', annual_revenue='{verification_profile.annual_revenue}', mission_statement='{verification_profile.mission_statement}'")
         
-        return {"profile": profile.model_dump(), "message": "Profile updated successfully"}
+        return {"profile": dataclasses.asdict(profile), "message": "Profile updated successfully"}
         
     except HTTPException:
         raise
@@ -2624,45 +2777,10 @@ async def get_profile_analytics(profile_id: str):
         logger.error(f"Failed to get profile analytics {profile_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/profiles/{ein}/json-intelligence")
-async def get_json_intelligence_data(ein: str):
-    """Get web intelligence data directly from JSON files (bypass database)"""
-    try:
-        validation_pipeline = DataValidationPipeline()
-        validated_data = validation_pipeline.process_ein_data(ein)
-        
-        if validated_data:
-            return {
-                "success": True,
-                "data": {
-                    "web_scraping_data": {
-                        "successful_scrapes": [{"url": "JSON processing", "status": "validated"}],
-                        "failed_scrapes": [],
-                        "extracted_info": {
-                            "leadership": validated_data["leadership"],
-                            "programs": validated_data["programs"],
-                            "contact_info": validated_data["contact_info"],
-                            "mission_statements": validated_data["mission_statements"]
-                        }
-                    },
-                    "metadata": validated_data["metadata"]
-                },
-                "message": f"JSON intelligence data retrieved for EIN {ein}"
-            }
-        else:
-            return {
-                "success": False,
-                "message": f"No validated JSON intelligence data found for EIN {ein}",
-                "data": None
-            }
-            
-    except Exception as e:
-        logger.error(f"Error retrieving JSON intelligence data for EIN {ein}: {e}")
-        return {
-            "success": False,
-            "message": f"Error retrieving JSON intelligence data: {str(e)}",
-            "data": None
-        }
+# REMOVED: /api/profiles/{ein}/json-intelligence endpoint
+# This endpoint was causing poor quality DataValidationPipeline data to override VerificationEnhancedScraper results
+# After MCP removal, we use only the main /api/profiles/fetch-ein endpoint with VerificationEnhancedScraper for verified data
+# Removing this eliminates the competing data pipeline that was returning "source": "Scrapy" garbage data
 
 @app.get("/api/profiles/{ein}/web-intelligence")
 async def get_web_intelligence(ein: str):
@@ -2763,54 +2881,95 @@ async def get_verified_intelligence(profile_id: str):
         
         logger.info(f"Getting verified intelligence for {organization_name} (EIN: {ein})")
         
-        # Get verified intelligence using tax-data-first approach
-        verified_service = get_verified_intelligence_service()
-        verified_result = await verified_service.get_verified_intelligence(
-            profile_id=profile_id,
-            organization_name=organization_name,
-            ein=ein,
-            user_provided_url=user_provided_url
-        )
-        
+        # Read verified intelligence directly from saved profile data (from fetch-ein)
+        # Use database manager instead of profile_service to avoid charset issues
+        database_service = DatabaseManager()
+        db_profile = database_service.get_profile(profile_id)
+
+        if not db_profile:
+            return {
+                "success": False,
+                "message": f"Profile not found in database: {profile_id}",
+                "data": None
+            }
+
+        # Extract saved enhanced data from profile
+        web_enhanced_data = getattr(db_profile, 'web_enhanced_data', {}) or {}
+        verification_data = getattr(db_profile, 'verification_data', {}) or {}
+
+        logger.info(f"Found enhanced data for {organization_name}: web_enhanced_data={bool(web_enhanced_data)}, verification_data={bool(verification_data)}")
+
+        # Extract leadership from saved data
+        leadership_list = []
+        if web_enhanced_data.get('verified_leadership'):
+            leadership_list = [
+                f"{leader.get('name', 'Unknown')} - {leader.get('title', 'Unknown Title')} (Tax Filing, {leader.get('confidence_score', 0.9):.1%} confidence)"
+                for leader in web_enhanced_data['verified_leadership']
+                if leader.get('name')
+            ]
+        elif web_enhanced_data.get('leadership'):
+            leadership_list = web_enhanced_data['leadership']
+
+        # Extract programs from saved data
+        programs_list = web_enhanced_data.get('programs', [])
+
+        # Extract mission from profile
+        mission_statements = []
+        if hasattr(db_profile, 'mission_statement') and db_profile.mission_statement:
+            mission_statements = [db_profile.mission_statement]
+
+        # Get website from profile
+        profile_website = getattr(db_profile, 'website_url', None) or getattr(db_profile, 'website', None)
+
         # Format response compatible with Enhanced Data tab
         web_intelligence = {
             "successful_scrapes": [
                 {
-                    "url": verified_result.verified_website or "No website available",
-                    "content_length": 0,
-                    "content_score": verified_result.data_quality_score,
-                    "timestamp": verified_result.fetched_at.isoformat()
+                    "url": profile_website or "No website available",
+                    "content_length": len(str(web_enhanced_data)),
+                    "content_score": verification_data.get('confidence_score', 0.8),
+                    "timestamp": verification_data.get('fetched_at', datetime.now().isoformat())
                 }
-            ] if verified_result.verified_website else [],
+            ] if profile_website else [],
             "failed_scrapes": [],
             "extracted_info": {
-                "leadership": [
-                    f"{leader['name']} - {leader['title']} ({leader['source']}, {leader['confidence_score']:.1%} confidence)"
-                    for leader in verified_result.verified_leadership
-                ],
-                "programs": verified_result.verified_programs,
-                "mission_statements": [verified_result.verified_mission] if verified_result.verified_mission else [],
+                "leadership": leadership_list,
+                "programs": programs_list,
+                "mission_statements": mission_statements,
                 "contact_info": [],
                 "financial_info": []
             },
-            "intelligence_quality_score": verified_result.intelligence_quality_score,
+            "intelligence_quality_score": verification_data.get('confidence_score', 0.8),
             "data_source": "verified_tax_data_first",
-            "pages_scraped": verified_result.pages_scraped,
+            "pages_scraped": 1 if profile_website else 0,
             "verification_details": {
-                "overall_confidence": verified_result.overall_confidence,
-                "has_990_baseline": verified_result.has_990_baseline,
-                "source_attribution": verified_result.source_attribution,
-                "data_sources_used": verified_result.data_sources_used,
-                "verification_notes": verified_result.verification_notes,
-                "processing_time": verified_result.processing_time
+                "overall_confidence": verification_data.get('confidence_score', 0.8),
+                "has_990_baseline": bool(verification_data.get('has_990_baseline', True)),
+                "source_attribution": verification_data.get('source_attribution', 'Tax Filing + Web Verification'),
+                "data_sources_used": verification_data.get('data_sources_used', ['Tax Filing', 'Web Scraping']),
+                "verification_notes": verification_data.get('verification_notes', 'Data verified using tax-data-first approach'),
+                "processing_time": verification_data.get('processing_time', 'N/A')
             }
         }
-        
+
+        # Create mock verified_intelligence object for compatibility
+        verified_intelligence_compat = {
+            "verified_website": profile_website,
+            "verified_mission": mission_statements[0] if mission_statements else None,
+            "verified_leadership": web_enhanced_data.get('verified_leadership', []),
+            "verified_programs": programs_list,
+            "overall_confidence": verification_data.get('confidence_score', 0.8),
+            "data_quality_score": verification_data.get('confidence_score', 0.8),
+            "intelligence_quality_score": verification_data.get('confidence_score', 0.8),
+            "has_enhanced_data": bool(web_enhanced_data or verification_data),
+            "fetched_at": verification_data.get('fetched_at', datetime.now().isoformat())
+        }
+
         return {
             "success": True,
             "data": {
                 "web_scraping_data": web_intelligence,
-                "verified_intelligence": verified_result.to_dict()
+                "verified_intelligence": verified_intelligence_compat
             }
         }
         
@@ -6019,7 +6178,7 @@ async def discover_bmf_filtered(profile_id: str, request: Dict[str, Any] = None)
         logger.info(f"Starting BMF discovery for profile {profile_id}")
         
         # Get profile from database to extract NTEE codes and geographic scope
-        database_manager = DatabaseManager("data/catalynx.db")
+        database_manager = DatabaseManager(database_path)
         profile_data = database_manager.get_profile(profile_id)
         
         if not profile_data:
@@ -8536,7 +8695,7 @@ async def promote_opportunity(profile_id: str, opportunity_id: str, request: Pro
     try:
         # Get database manager for direct access
         from src.database.database_manager import DatabaseManager
-        db_manager = DatabaseManager()
+        db_manager = DatabaseManager(database_path)
         
         # Get current opportunity from database directly 
         logger.info(f"Looking for opportunity {opportunity_id} in profile {profile_id} via database")

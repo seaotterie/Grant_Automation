@@ -12,10 +12,11 @@ logger = logging.getLogger(__name__)
 
 class XMLFetcher:
     """Utility class to fetch XML data from ProPublica"""
-    
-    def __init__(self):
+
+    def __init__(self, context: str = "opportunity"):
         self.propublica_base = "https://projects.propublica.org/nonprofits"
         self.timeout = 30
+        self.context = context  # "profile" or "opportunity"
     
     async def fetch_xml_by_ein(self, ein: str) -> Optional[bytes]:
         """
@@ -108,32 +109,43 @@ class XMLFetcher:
                     if "xml" not in content_type and "application/octet-stream" not in content_type:
                         logger.warning(f"Unexpected content type for object_id {object_id}: {content_type}")
                         # Still try to process - sometimes content-type is not set correctly
-                    
+
                     xml_content = await response.read()
                     logger.info(f"Downloaded XML for object_id {object_id} ({len(xml_content):,} bytes)")
                     return xml_content
-                    
+
                 elif response.status == 404:
                     logger.warning(f"XML file not found for object_id {object_id}")
                     return None
+                elif response.status == 429:
+                    # Rate limited - handle differently based on context
+                    if self.context == "profile":
+                        logger.warning(f"Rate limited for profile context, but continuing without delay for object_id {object_id}")
+                        # For profile context, we don't enforce rate limits as strongly
+                        # Return None but don't wait - let the profile completion proceed
+                        return None
+                    else:
+                        logger.error(f"Rate limited for opportunity context for object_id {object_id}: status {response.status}")
+                        return None
                 else:
                     logger.error(f"Failed to download XML for object_id {object_id}: status {response.status}")
                     return None
-                    
+
         except Exception as e:
             logger.error(f"Error downloading XML for object_id {object_id}: {e}")
             return None
 
 
-async def fetch_xml_for_ein(ein: str) -> Optional[bytes]:
+async def fetch_xml_for_ein(ein: str, context: str = "opportunity") -> Optional[bytes]:
     """
     Convenience function to fetch XML data for an EIN.
-    
+
     Args:
         ein: Organization EIN
-        
+        context: "profile" or "opportunity" - affects rate limiting behavior
+
     Returns:
         XML content as bytes, or None if not found
     """
-    fetcher = XMLFetcher()
+    fetcher = XMLFetcher(context=context)
     return await fetcher.fetch_xml_by_ein(ein)

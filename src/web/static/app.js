@@ -2647,10 +2647,13 @@ function catalynxApp() {
         // Initialization
         async init() {
             console.log('Initializing Catalynx Web Interface...');
-            
+
             // Initialize unified AI data manager FIRST
             this.initializeDataManager();
-            
+
+            // Restore modal data from previous session if available
+            this.restoreModalData();
+
             // Initialize welcome stage if active
             if (this.activeStage === 'welcome') {
                 await this.loadWelcomeStatus();
@@ -2998,12 +3001,113 @@ function catalynxApp() {
             this.currentEditingProfile = null;
         },
 
-        editProfile(profile) {
+        async editProfile(profile) {
+            console.log('DATABASE-FIRST EDIT: Starting profile edit with database priority approach');
+            console.log('Passed profile data:', profile);
+            console.log('Profile ID:', profile.profile_id);
+
+            if (!profile.profile_id) {
+                this.showNotification('Error', 'Profile ID is missing. Cannot edit profile.', 'error');
+                return;
+            }
+
             this.isEditingProfile = true;
             this.currentEditingProfile = profile.profile_id;
-            
-            // Populate form with profile data
+
+            // Set only the profile ID initially - everything else comes from database
             this.profileForm.profile_id = profile.profile_id;
+
+            // DATABASE-FIRST APPROACH: Database is the single source of truth
+            console.log('PRIORITY 1: Loading authoritative data from database...');
+            const databaseLoadSuccess = await this.loadFreshProfileData(profile);
+
+            if (!databaseLoadSuccess) {
+                // Critical error: Database loading failed completely
+                console.error('DATABASE-FIRST FAILURE: Could not load profile data from database');
+                console.warn('EMERGENCY FALLBACK: Using passed profile data (may be stale)');
+
+                // Only use passed data in extreme emergency
+                if (profile.name) {
+                    console.log('Emergency fallback: Using passed profile data due to database failure');
+                    this.populateFormWithProfile(profile);
+                } else {
+                    this.showNotification('Error', 'Could not load profile data. Database may be unavailable.', 'error');
+                    return;
+                }
+            } else {
+                console.log('DATABASE-FIRST SUCCESS: Profile loaded from authoritative database');
+
+                // NEVER overwrite database data with passed data - database is authoritative
+                // The passed profile parameter is only used for identification, not data
+                console.log('PROTECTION: Ignoring passed profile data - database is authoritative source');
+            }
+
+            // Log comprehensive data loading summary
+            console.log('PROFILE EDIT INITIALIZATION SUMMARY:', {
+                profile_id: this.profileForm.profile_id,
+                data_source: databaseLoadSuccess ? 'database (authoritative)' : 'passed_data (emergency)',
+                form_populated: Boolean(this.profileForm.name),
+                critical_fields_present: {
+                    name: Boolean(this.profileForm.name),
+                    mission_statement: Boolean(this.profileForm.mission_statement),
+                    website_url: Boolean(this.profileForm.website_url),
+                    location: Boolean(this.profileForm.location),
+                    annual_revenue: Boolean(this.profileForm.annual_revenue)
+                }
+            });
+
+            // Load verified intelligence data using tax-data-first approach
+            this.loadVerifiedIntelligenceData(profile);
+
+            this.showProfileModal = true;
+        },
+
+        async loadFreshProfileData(profile) {
+            // DATABASE-FIRST: Fetch authoritative profile data from database
+            try {
+                console.log('DATABASE QUERY: Fetching authoritative profile data for:', profile.profile_id);
+                const response = await fetch(`/api/profiles/${profile.profile_id}`);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const freshProfile = data.profile;
+
+                    // Enhanced logging to verify complete data retrieval
+                    console.log('DATABASE SUCCESS: Loaded complete profile data from database:', {
+                        profile_id: freshProfile.profile_id || freshProfile.id,
+                        ntee_codes: freshProfile.ntee_codes,
+                        government_criteria: freshProfile.government_criteria,
+                        keywords: freshProfile.keywords,
+                        website_url: freshProfile.website_url,
+                        annual_revenue: freshProfile.annual_revenue,
+                        location: freshProfile.location,
+                        mission_statement: freshProfile.mission_statement
+                    });
+
+                    // Validate that critical data was retrieved
+                    const hasRequiredData = freshProfile && (freshProfile.profile_id || freshProfile.id);
+
+                    if (hasRequiredData) {
+                        // Update form with authoritative database data
+                        this.updateFormWithFreshData(freshProfile);
+                        console.log('FORM POPULATED: Database data successfully loaded into form');
+                        return true; // Success: Database data loaded
+                    } else {
+                        console.error('DATABASE DATA INVALID: Response missing required profile data');
+                        return false; // Failure: Invalid response data
+                    }
+                } else {
+                    console.error(`DATABASE REQUEST FAILED: HTTP ${response.status} - ${response.statusText}`);
+                    return false; // Failure: HTTP error
+                }
+            } catch (error) {
+                console.error('DATABASE CONNECTION ERROR: Failed to load profile from database:', error);
+                return false; // Failure: Network/connection error
+            }
+        },
+
+        populateFormWithProfile(profile) {
+            // Fallback method to populate form with profile data
             this.profileForm.name = profile.name || '';
             this.profileForm.organization_type = profile.organization_type || '';
             this.profileForm.ein = profile.ein || '';
@@ -3013,14 +3117,14 @@ function catalynxApp() {
             this.profileForm.focus_areas_text = (profile.focus_areas || []).join('\n');
             this.profileForm.target_populations_text = (profile.target_populations || []).join('\n');
             this.profileForm.states_text = (profile.geographic_scope?.states || []).join(', ');
-            
+
             // Ensure nested objects exist before setting properties
             if (!this.profileForm.geographic_scope) {
                 this.profileForm.geographic_scope = {};
             }
             this.profileForm.geographic_scope.nationwide = profile.geographic_scope?.nationwide || false;
             this.profileForm.geographic_scope.international = profile.geographic_scope?.international || false;
-            
+
             if (!this.profileForm.funding_preferences) {
                 this.profileForm.funding_preferences = {};
             }
@@ -3031,42 +3135,71 @@ function catalynxApp() {
             this.profileForm.volunteer_count = profile.volunteer_count || null;
             this.profileForm.board_size = profile.board_size || null;
             this.profileForm.notes = profile.notes || '';
-            
+
             // Load NTEE codes and government criteria
             this.nteeModal.selectedNteeCodes = profile.ntee_codes || [];
             this.profileForm.government_criteria = profile.government_criteria || [];
             this.profileForm.schedule_i_grantees = profile.schedule_i_grantees || [];
             this.profileForm.schedule_i_status = profile.schedule_i_status || null;
-            
-            // Debug: Log what we loaded from the profile
-            console.log('Loading profile for edit:', {
-                profile_id: profile.profile_id,
-                ntee_codes: profile.ntee_codes,
-                government_criteria: profile.government_criteria,
-                loaded_ntee: this.nteeModal.selectedNteeCodes,
-                loaded_govt: this.profileForm.government_criteria
+        },
+
+        updateFormWithFreshData(freshProfile) {
+            console.log('Updating form with fresh database data');
+
+            // Update all form fields with fresh data
+            this.profileForm.profile_id = freshProfile.profile_id || freshProfile.id;
+            this.profileForm.name = freshProfile.name || '';
+            this.profileForm.organization_type = freshProfile.organization_type || '';
+            this.profileForm.ein = freshProfile.ein || '';
+            this.profileForm.website_url = freshProfile.website_url || '';
+            this.profileForm.mission_statement = freshProfile.mission_statement || '';
+            this.profileForm.keywords = freshProfile.keywords || '';
+            this.profileForm.focus_areas_text = (freshProfile.focus_areas || []).join('\n');
+            this.profileForm.target_populations_text = (freshProfile.target_populations || []).join('\n');
+            this.profileForm.states_text = (freshProfile.geographic_scope?.states || []).join(', ');
+
+            // Ensure nested objects exist before setting properties
+            if (!this.profileForm.geographic_scope) {
+                this.profileForm.geographic_scope = {};
+            }
+            this.profileForm.geographic_scope.nationwide = freshProfile.geographic_scope?.nationwide || false;
+            this.profileForm.geographic_scope.international = freshProfile.geographic_scope?.international || false;
+
+            if (!this.profileForm.funding_preferences) {
+                this.profileForm.funding_preferences = {};
+            }
+            this.profileForm.funding_preferences.min_amount = freshProfile.funding_preferences?.min_amount || null;
+            this.profileForm.funding_preferences.max_amount = freshProfile.funding_preferences?.max_amount || null;
+            this.profileForm.annual_revenue = freshProfile.annual_revenue || null;
+            this.profileForm.staff_size = freshProfile.staff_size || null;
+            this.profileForm.volunteer_count = freshProfile.volunteer_count || null;
+            this.profileForm.board_size = freshProfile.board_size || null;
+            this.profileForm.location = freshProfile.location || '';
+            this.profileForm.notes = freshProfile.notes || '';
+
+            // Load NTEE codes and government criteria from fresh data
+            this.nteeModal.selectedNteeCodes = freshProfile.ntee_codes || [];
+            this.profileForm.government_criteria = freshProfile.government_criteria || [];
+            this.profileForm.schedule_i_grantees = freshProfile.schedule_i_grantees || [];
+            this.profileForm.schedule_i_status = freshProfile.schedule_i_status || null;
+
+            console.log('Form updated with fresh data:', {
+                ntee_codes: this.nteeModal.selectedNteeCodes,
+                government_criteria: this.profileForm.government_criteria,
+                keywords: this.profileForm.keywords
             });
-            
-            // Load verified intelligence data using tax-data-first approach
-            this.loadVerifiedIntelligenceData(profile);
-            
-            this.showProfileModal = true;
         },
 
         async loadVerifiedIntelligenceData(profile) {
             // Load verified intelligence data using tax-data-first approach for Enhanced Data tab
             console.log('[VERIFIED INTELLIGENCE] Loading tax-data-first verified intelligence');
-            console.log('[DEBUG] loadVerifiedIntelligenceData called with profile:', profile.profile_id);
-            console.log('[DEBUG] Current webScrapingResults before:', this.webScrapingResults);
             
             if (!profile || !profile.profile_id) {
-                console.log('[ERROR] DEBUG: No profile or profile_id provided for intelligence lookup');
                 this.webScrapingResults = null;
                 return;
             }
             
             const profileId = profile.profile_id;
-            console.log('[DEBUG] Processing profile_id:', profileId, 'EIN:', profile.ein, 'Name:', profile.name);
             
             try {
                 console.log(`[VERIFIED INTELLIGENCE] Loading tax-data-first intelligence for profile: ${profileId}`);
@@ -3076,7 +3209,6 @@ function catalynxApp() {
                 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log('[DEBUG] Verified Intelligence API response:', data);
                     
                     if (data.success && data.data?.web_scraping_data) {
                         // Use verified intelligence data with source attribution
@@ -3117,7 +3249,7 @@ function catalynxApp() {
                     } else {
                         console.log('No verified intelligence data found for profile:', profileId);
                         this.webScrapingResults = null;
-                        this.enableWebScraping = false;
+                        this.enableWebScraping = true; // Keep enabled to allow fetching
                         this.verificationDetails = {};
                         
                         this.showNotification('Enhanced Data', 
@@ -3127,34 +3259,15 @@ function catalynxApp() {
                 } else {
                     console.warn('Failed to load verified intelligence:', response.status);
                     
-                    // Fallback to EIN-based legacy endpoint if profile-based fails
-                    if (profile.ein) {
-                        console.log('[FALLBACK] Trying legacy EIN-based endpoint');
-                        const legacyResponse = await fetch(`/api/profiles/${profile.ein}/json-intelligence`);
-                        if (legacyResponse.ok) {
-                            const legacyData = await legacyResponse.json();
-                            if (legacyData.success && legacyData.data?.web_scraping_data) {
-                                this.webScrapingResults = legacyData.data.web_scraping_data;
-                                this.enableWebScraping = true;
-                                this.verificationDetails = {};
-                                
-                                this.showNotification('Enhanced Data', 
-                                    'Loaded legacy data - consider refreshing for verified intelligence', 
-                                    'warning');
-                                return;
-                            }
-                        }
-                    }
-                    
                     this.webScrapingResults = null;
-                    this.enableWebScraping = false;
+                    this.enableWebScraping = true; // Keep enabled to allow fetching
                     this.verificationDetails = {};
                 }
                 
             } catch (error) {
                 console.error('Error loading verified intelligence data:', error);
                 this.webScrapingResults = null;
-                this.enableWebScraping = false;
+                this.enableWebScraping = true; // Keep enabled to allow retrying
                 this.verificationDetails = {};
                 
                 this.showNotification('Enhanced Data', 
@@ -3162,8 +3275,68 @@ function catalynxApp() {
                     'error');
             }
             
-            console.log('[DEBUG] webScrapingResults after processing:', this.webScrapingResults);
             console.log('[DEBUG] verificationDetails:', this.verificationDetails);
+        },
+
+        // Modal persistence functionality
+        saveModalData() {
+            const modalData = {
+                profileForm: this.profileForm,
+                webScrapingResults: this.webScrapingResults,
+                nteeModal: this.nteeModal,
+                enableWebScraping: this.enableWebScraping,
+                isEditingProfile: this.isEditingProfile,
+                currentEditingProfile: this.currentEditingProfile,
+                timestamp: Date.now()
+            };
+
+            try {
+                localStorage.setItem('catalynx_modal_data', JSON.stringify(modalData));
+                console.log('Modal data saved to localStorage');
+            } catch (error) {
+                console.error('Failed to save modal data:', error);
+            }
+        },
+
+        restoreModalData() {
+            try {
+                const savedData = localStorage.getItem('catalynx_modal_data');
+                if (savedData) {
+                    const modalData = JSON.parse(savedData);
+
+                    // Check if data is not too old (24 hours)
+                    const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+                    if (Date.now() - modalData.timestamp < maxAge) {
+                        // Restore form data
+                        this.profileForm = { ...this.profileForm, ...modalData.profileForm };
+                        this.webScrapingResults = modalData.webScrapingResults;
+                        this.nteeModal = { ...this.nteeModal, ...modalData.nteeModal };
+                        this.enableWebScraping = modalData.enableWebScraping;
+                        this.isEditingProfile = modalData.isEditingProfile;
+                        this.currentEditingProfile = modalData.currentEditingProfile;
+
+                        console.log('Modal data restored from localStorage');
+                        return true;
+                    } else {
+                        // Data is too old, remove it
+                        this.clearModalData();
+                        console.log('Modal data expired, cleared from localStorage');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to restore modal data:', error);
+                this.clearModalData();
+            }
+            return false;
+        },
+
+        clearModalData() {
+            try {
+                localStorage.removeItem('catalynx_modal_data');
+                console.log('Modal data cleared from localStorage');
+            } catch (error) {
+                console.error('Failed to clear modal data:', error);
+            }
         },
 
         async fetchEINData() {
@@ -3181,7 +3354,8 @@ function catalynxApp() {
             try {
                 const requestData = {
                     ein: this.profileForm.ein,
-                    enable_web_scraping: this.enableWebScraping
+                    enable_web_scraping: this.enableWebScraping,
+                    profile_id: this.profileForm.profile_id || this.currentEditingProfile
                 };
                 
                 console.log('Request data:', requestData);
@@ -3209,29 +3383,89 @@ function catalynxApp() {
                         this.autoPopulateFromScrapedData();
                     }
                     
-                    // Update profile form with fetched data (ProPublica API data)
-                    if (result.data.name) {
-                        console.log('Setting name:', result.data.name);
-                        this.profileForm.name = result.data.name;
+                    // SIMPLIFIED DATA PRIORITY SYSTEM: User > 990/990-PF > Web Scraping
+                    const dataPriorityGuard = (fieldName, newValue, existingValue, newSource = "990") => {
+                        // Initialize field source tracking if not exists
+                        if (!this.profileForm.dataSources) {
+                            this.profileForm.dataSources = {};
+                        }
+
+                        const existingSource = this.profileForm.dataSources[fieldName] || "empty";
+
+                        // Source priority: user > 990 > web
+                        const sourcePriority = { user: 3, "990": 2, web: 1, empty: 0 };
+                        const newPriority = sourcePriority[newSource] || 1;
+                        const existingPriority = sourcePriority[existingSource] || 0;
+
+                        console.log(`Data Priority Check [${fieldName}]: new=${newSource}(${newPriority}), existing=${existingSource}(${existingPriority})`);
+
+                        // Check if new value is meaningful
+                        const hasNewValue = newValue && String(newValue).trim() !== '';
+                        const hasExistingValue = existingValue && String(existingValue).trim() !== '';
+
+                        // Never overwrite user data
+                        if (existingSource === "user") {
+                            console.log(`PROTECTED ${fieldName}: user data has highest priority`);
+                            return { shouldUpdate: false, action: 'PROTECTED', reason: 'user_data_priority' };
+                        }
+
+                        // Only update if new data has higher or equal priority and has a value
+                        if (hasNewValue && (newPriority >= existingPriority || !hasExistingValue)) {
+                            console.log(`UPDATED ${fieldName}: ${newSource} data (${String(newValue).substring(0, 50)}...)`);
+                            return { shouldUpdate: true, action: 'UPDATED', newSource };
+                        } else {
+                            console.log(`KEPT ${fieldName}: existing ${existingSource} data has priority or new data is empty`);
+                            return { shouldUpdate: false, action: 'KEPT', reason: 'priority_or_empty' };
+                        }
+                    };
+
+                    // Track all field update decisions for user feedback
+                    const updateSummary = { updated: [], protected: [], kept: [] };
+
+                    // Apply data priority protection to each field (User > 990 > Web)
+                    const updateField = (fieldName, newValue, formField, sourceType = "990") => {
+                        const decision = dataPriorityGuard(fieldName, newValue, this.profileForm[formField], sourceType);
+                        if (decision.shouldUpdate) {
+                            this.profileForm[formField] = newValue;
+                            this.profileForm.dataSources[fieldName] = decision.newSource;
+                            updateSummary.updated.push(fieldName);
+                        } else {
+                            updateSummary[decision.action.toLowerCase()].push(fieldName);
+                        }
+                        return decision;
+                    };
+
+                    // Update fields based on priority system
+                    updateField('name', result.data.name, 'name');
+                    updateField('mission_statement', result.data.mission_statement, 'mission_statement');
+                    updateField('organization_type', result.data.organization_type, 'organization_type');
+
+                    // Website URL with validation
+                    if (result.data.website_url && result.data.website_url.trim() &&
+                        result.data.website_url.toLowerCase() !== 'unknown' &&
+                        result.data.website_url.toLowerCase() !== 'n/a') {
+                        updateField('website_url', result.data.website_url, 'website_url');
                     }
-                    if (result.data.mission_statement) {
-                        console.log('Setting mission:', result.data.mission_statement);
-                        this.profileForm.mission_statement = result.data.mission_statement;
-                    }
-                    if (result.data.organization_type) {
-                        console.log('Setting org type:', result.data.organization_type);
-                        this.profileForm.organization_type = result.data.organization_type;
-                    }
-                    
-                    // Additional fields from EIN lookup
+
+                    // Location field
                     if (result.data.state && result.data.city) {
-                        this.profileForm.states_text = result.data.state;
-                        console.log('Setting location:', result.data.city + ', ' + result.data.state);
+                        const newLocation = result.data.city + ', ' + result.data.state;
+                        const decision = updateField('location', newLocation, 'location');
+                        if (decision.shouldUpdate) {
+                            this.profileForm.states_text = result.data.state;
+                        }
                     }
-                    if (result.data.revenue) {
-                        this.profileForm.annual_revenue = result.data.revenue;
-                        console.log('Setting revenue:', result.data.revenue);
-                    }
+
+                    // Annual revenue
+                    updateField('annual_revenue', result.data.revenue, 'annual_revenue');
+
+                    // Log comprehensive update summary
+                    console.log('FETCH DATA PRIORITY SUMMARY:', {
+                        updated: updateSummary.updated,
+                        protected: updateSummary.protected,
+                        kept: updateSummary.kept,
+                        total_fields_processed: updateSummary.updated.length + updateSummary.protected.length + updateSummary.kept.length
+                    });
                     
                     // Enhanced fields from web scraping
                     if (result.data.enhanced_with_web_data) {
@@ -3348,6 +3582,18 @@ function catalynxApp() {
             }
         },
 
+        // User data tracking method - marks fields as user-edited with highest priority
+        markFieldAsUserEdited(fieldName) {
+            // Initialize field source tracking if not exists
+            if (!this.profileForm.dataSources) {
+                this.profileForm.dataSources = {};
+            }
+
+            // Mark field as user-edited with highest priority
+            this.profileForm.dataSources[fieldName] = "user";
+            console.log(`Field marked as user-edited: ${fieldName}`);
+        },
+
         async saveProfile() {
             this.profileSaving = true;
             try {
@@ -3388,19 +3634,39 @@ function catalynxApp() {
                     ntee_codes: this.nteeModal.selectedNteeCodes || [],
                     government_criteria: this.profileForm.government_criteria || [],
                     schedule_i_grantees: this.profileForm.schedule_i_grantees || [],
-                    schedule_i_status: this.profileForm.schedule_i_status || null
+                    schedule_i_status: this.profileForm.schedule_i_status || null,
+                    // Enhanced data fields for verified intelligence persistence
+                    verification_data: this.profileForm.verification_data || {},
+                    web_enhanced_data: this.profileForm.web_enhanced_data || {}
                 };
 
                 // Debug: Log what we're about to save
                 console.log('Saving profile data:', {
                     ntee_codes: profileData.ntee_codes,
                     government_criteria: profileData.government_criteria,
-                    keywords: profileData.keywords
+                    keywords: profileData.keywords,
+                    website_url: profileData.website_url,
+                    annual_revenue: profileData.annual_revenue,
+                    location: profileData.location,
+                    mission_statement: profileData.mission_statement
+                });
+                console.log('Full profile form state:', {
+                    website_url: this.profileForm.website_url,
+                    annual_revenue: this.profileForm.annual_revenue,
+                    location: this.profileForm.location,
+                    mission_statement: this.profileForm.mission_statement
                 });
 
                 let response;
                 if (this.isEditingProfile) {
                     // Update existing profile
+                    if (!this.currentEditingProfile) {
+                        this.showNotification('Error', 'Profile ID is missing. Cannot update profile.', 'error');
+                        this.profileSaving = false;
+                        return;
+                    }
+
+                    console.log(`Updating profile with ID: ${this.currentEditingProfile}`);
                     response = await fetch(`/api/profiles/${this.currentEditingProfile}`, {
                         method: 'PUT',
                         headers: {
@@ -3426,11 +3692,27 @@ function catalynxApp() {
                         ntee_codes: savedProfile.profile?.ntee_codes,
                         government_criteria: savedProfile.profile?.government_criteria
                     });
-                    
+
+                    // Update the local profile state with saved data instead of reloading all profiles
+                    if (this.isEditingProfile && savedProfile.profile) {
+                        const profileIndex = this.profiles.findIndex(p => p.profile_id === this.currentEditingProfile);
+                        if (profileIndex !== -1) {
+                            // Update the profile in the local array with the saved data
+                            this.profiles[profileIndex] = { ...this.profiles[profileIndex], ...savedProfile.profile };
+                            this.filteredProfiles = [...this.profiles]; // Update filtered profiles too
+                            console.log('Updated local profile state with saved changes');
+                        }
+                    } else if (!this.isEditingProfile && savedProfile.profile) {
+                        // For new profiles, add to the profiles array
+                        this.profiles.push(savedProfile.profile);
+                        this.filteredProfiles = [...this.profiles];
+                        this.profileCount = this.profiles.length;
+                    }
+
                     this.showProfileModal = false;
-                    this.resetProfileForm();
-                    await this.loadProfiles(); // Reload profiles
-                    
+                    // Don't reset form here - let it keep the saved values visible
+                    // Form will be reset when opening a new profile modal
+
                     // Switch back to profiler stage to show updated profiles
                     this.switchStage('profiler');
                     
@@ -3440,8 +3722,26 @@ function catalynxApp() {
                         'success'
                     );
                 } else {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Failed to save profile');
+                    // Handle specific error responses
+                    let errorMessage = 'Failed to save profile';
+
+                    if (response.status === 404) {
+                        errorMessage = `Profile not found (ID: ${this.currentEditingProfile}). It may have been deleted.`;
+                        console.error('404 Error - Profile not found:', this.currentEditingProfile);
+
+                        // Reset editing state for 404 errors
+                        this.isEditingProfile = false;
+                        this.currentEditingProfile = null;
+                    } else {
+                        try {
+                            const error = await response.json();
+                            errorMessage = error.detail || error.message || errorMessage;
+                        } catch (jsonError) {
+                            console.error('Could not parse error response:', jsonError);
+                        }
+                    }
+
+                    throw new Error(errorMessage);
                 }
             } catch (error) {
                 console.error('Error saving profile:', error);
@@ -17024,9 +17324,7 @@ function addDesktopContextMenus(appData) {
                 label: 'Edit Profile',
                 shortcut: 'Ctrl+E',
                 action: () => {
-                    appData.editingProfile = profile;
-                    appData.profileForm = {...profile};
-                    appData.showProfileModal = true;
+                    appData.editProfile(profile);
                 }
             },
             {

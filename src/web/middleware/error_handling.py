@@ -30,6 +30,49 @@ from src.web.models.error_responses import (
 logger = logging.getLogger(__name__)
 
 
+class DateTimeAwareJSONResponse(JSONResponse):
+    """JSON response that properly serializes datetime objects."""
+    
+    def render(self, content: Any) -> bytes:
+        """Render content as JSON with datetime serialization."""
+        def convert_datetime_objects(obj):
+            """Recursively convert datetime objects to ISO strings."""
+            try:
+                if hasattr(obj, 'isoformat'):  # datetime, date objects
+                    return obj.isoformat()
+                elif isinstance(obj, dict):
+                    return {key: convert_datetime_objects(value) for key, value in obj.items()}
+                elif isinstance(obj, list):
+                    return [convert_datetime_objects(item) for item in obj]
+                else:
+                    return obj
+            except Exception as e:
+                # If conversion fails, return string representation
+                logger.warning(f"DateTime conversion failed for {type(obj)}: {e}")
+                return str(obj) if obj is not None else None
+        
+        try:
+            converted_content = convert_datetime_objects(content)
+            return json.dumps(
+                converted_content,
+                ensure_ascii=False,
+                allow_nan=False,
+                indent=None,
+                separators=(",", ":"),
+                default=str  # Fallback for any objects that can't be serialized
+            ).encode("utf-8")
+        except Exception as e:
+            # Final fallback - return basic JSON response
+            logger.error(f"JSON serialization failed: {e}")
+            fallback_content = {
+                "success": False,
+                "error": "JSON serialization error",
+                "message": str(e),
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            return json.dumps(fallback_content, ensure_ascii=False).encode("utf-8")
+
+
 class ErrorHandlingMiddleware(BaseHTTPMiddleware):
     """Middleware that provides comprehensive error handling with standardized responses."""
     
@@ -150,7 +193,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             # Determine HTTP status code based on error type
             status_code = self._get_status_code_for_error(error_info)
             
-            return JSONResponse(
+            return DateTimeAwareJSONResponse(
                 status_code=status_code,
                 content=error_response.dict()
             )
@@ -168,7 +211,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
                 request_id=request_id
             )
             
-            return JSONResponse(
+            return DateTimeAwareJSONResponse(
                 status_code=500,
                 content=fallback_response.dict()
             )
@@ -265,7 +308,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             request_id
         )
     
-    return JSONResponse(
+    return DateTimeAwareJSONResponse(
         status_code=exc.status_code,
         content=error_response.dict()
     )
