@@ -2378,6 +2378,22 @@ async def fetch_ein_data(request: dict):
                             "tax_baseline_available": verification_result.tax_baseline is not None
                         }
 
+                        # Map verified leadership to board_members field for database consistency
+                        if verification_result.verified_leadership:
+                            board_members_list = []
+                            for leader in verification_result.verified_leadership:
+                                if hasattr(leader, 'name') and leader.name:
+                                    member_entry = leader.name
+                                    if hasattr(leader, 'title') and leader.title:
+                                        member_entry += f" - {leader.title}"
+                                    board_members_list.append(member_entry)
+                                elif hasattr(leader, 'content') and leader.content:
+                                    board_members_list.append(leader.content)
+
+                            if board_members_list:
+                                profile_updates["board_members"] = board_members_list
+                                logger.info(f"Saving {len(board_members_list)} verified leadership entries to board_members field")
+
                     # Fallback: Only update fields that have real data (legacy support)
                     elif response_data.get("mission_statement") and len(response_data["mission_statement"].strip()) > 10:
                         profile_updates["mission_statement"] = response_data["mission_statement"]
@@ -2385,6 +2401,39 @@ async def fetch_ein_data(request: dict):
                     # Fallback: Use verified website URL from XML + web verification (takes priority)
                     elif response_data.get("website_url"):
                         profile_updates["website_url"] = response_data["website_url"]
+
+                    # Fallback: Map leadership/officers data to board_members if no verification result
+                    if not verification_result and extracted_info:
+                        board_members_list = []
+
+                        # Process leadership data
+                        leadership_data = extracted_info.get('leadership', [])
+                        officers_data = extracted_info.get('officers', [])
+
+                        # Combine leadership and officers data, removing duplicates
+                        all_leadership = leadership_data + officers_data
+                        seen_names = set()
+
+                        for leader in all_leadership:
+                            leader_text = ""
+                            if isinstance(leader, dict):
+                                if leader.get('name'):
+                                    leader_text = leader['name']
+                                    if leader.get('title'):
+                                        leader_text += f" - {leader['title']}"
+                                elif leader.get('content'):
+                                    leader_text = leader['content']
+                            else:
+                                leader_text = str(leader).strip()
+
+                            # Only add if non-empty and not duplicate
+                            if leader_text and len(leader_text) > 3 and leader_text not in seen_names:
+                                seen_names.add(leader_text)
+                                board_members_list.append(leader_text)
+
+                        if board_members_list:
+                            profile_updates["board_members"] = board_members_list[:10]  # Limit to 10 entries
+                            logger.info(f"Fallback: Saving {len(board_members_list)} leadership/officers entries to board_members field")
 
                     # Add keywords from scraped programs if available
                     if response_data.get("programs") and len(response_data["programs"]) > 0:
