@@ -2528,6 +2528,41 @@ function catalynxApp() {
             annual_revenue: null,
             funding_types: []
         },
+
+        // Enhanced Data Form
+        enhancedDataForm: {
+            // Contacts
+            phone: '',
+            email: '',
+            address: '',
+            boardMembers: [
+                // Dynamic array: {name: '', title: ''}
+            ],
+
+            // Services
+            primaryProgramArea: '',
+            serviceareas: [], // Checkbox array: ['local', 'county', 'state', 'regional', 'national', 'international']
+
+            // Financial
+            programExpenses: null,
+            adminCosts: null,
+            fundraisingExpenses: null,
+            revenueSources: [], // Checkbox array: ['grants', 'donations', 'fees', 'events', 'investments', 'other']
+
+            // News & Media
+            partnerships: [
+                // Dynamic array of strings
+            ],
+            news: [
+                // Dynamic array: {date: '', title: '', link: ''}
+            ],
+            socialMedia: {
+                facebook: '',
+                twitter: '',
+                linkedin: ''
+            }
+        },
+
         showCreateProfile: false,
         showViewProfile: false,
         showEditProfile: false,
@@ -3030,6 +3065,10 @@ function catalynxApp() {
                 if (profile.name) {
                     console.log('Emergency fallback: Using passed profile data due to database failure');
                     this.populateFormWithProfile(profile);
+
+                    // Load intelligence data even in fallback mode (may use stale data)
+                    console.log('ENHANCED DATA: Loading verified intelligence with fallback profile data');
+                    this.loadVerifiedIntelligenceData(profile);
                 } else {
                     this.showNotification('Error', 'Could not load profile data. Database may be unavailable.', 'error');
                     return;
@@ -3055,9 +3094,6 @@ function catalynxApp() {
                     annual_revenue: Boolean(this.profileForm.annual_revenue)
                 }
             });
-
-            // Load verified intelligence data using tax-data-first approach
-            this.loadVerifiedIntelligenceData(profile);
 
             this.showProfileModal = true;
         },
@@ -3091,6 +3127,11 @@ function catalynxApp() {
                         // Update form with authoritative database data
                         this.updateFormWithFreshData(freshProfile);
                         console.log('FORM POPULATED: Database data successfully loaded into form');
+
+                        // Load verified intelligence data using fresh database profile
+                        console.log('ENHANCED DATA: Loading verified intelligence with fresh profile data');
+                        this.loadVerifiedIntelligenceData(freshProfile);
+
                         return true; // Success: Database data loaded
                     } else {
                         console.error('DATABASE DATA INVALID: Response missing required profile data');
@@ -3188,6 +3229,232 @@ function catalynxApp() {
                 government_criteria: this.profileForm.government_criteria,
                 keywords: this.profileForm.keywords
             });
+
+            // Load enhanced data form
+            this.loadEnhancedDataForm(freshProfile);
+        },
+
+        loadEnhancedDataForm(profile) {
+            console.log('Loading Enhanced Data form from profile');
+
+            // Initialize enhanced data form with existing data or defaults
+            this.enhancedDataForm = {
+                // Contacts - Extract from web_enhanced_data or use empty defaults
+                phone: '',
+                email: '',
+                address: '',
+                boardMembers: this.extractBoardMembers(profile),
+
+                // Services - Extract from existing data
+                primaryProgramArea: this.extractPrimaryProgramArea(profile),
+                serviceareas: this.extractServiceAreas(profile),
+
+                // Financial - Extract from web_enhanced_data or use empty defaults
+                programExpenses: null,
+                adminCosts: null,
+                fundraisingExpenses: null,
+                revenueSources: [],
+
+                // News & Media - Extract from web_enhanced_data or use empty defaults
+                partnerships: [],
+                news: [],
+                socialMedia: {
+                    facebook: '',
+                    twitter: '',
+                    linkedin: ''
+                }
+            };
+
+            // Extract contact info from web_enhanced_data if available
+            if (profile.web_enhanced_data && profile.web_enhanced_data.extracted_info) {
+                const extractedInfo = profile.web_enhanced_data.extracted_info;
+
+                // Extract contact information
+                if (extractedInfo.contact_info && extractedInfo.contact_info.length > 0) {
+                    extractedInfo.contact_info.forEach(contact => {
+                        if (typeof contact === 'object') {
+                            if (contact.type === 'phone' && !this.enhancedDataForm.phone) {
+                                this.enhancedDataForm.phone = contact.value || contact.content || '';
+                            } else if (contact.type === 'email' && !this.enhancedDataForm.email) {
+                                this.enhancedDataForm.email = contact.value || contact.content || '';
+                            } else if (contact.type === 'address' && !this.enhancedDataForm.address) {
+                                this.enhancedDataForm.address = contact.value || contact.content || '';
+                            }
+                        }
+                    });
+                }
+            }
+
+            console.log('Enhanced Data form loaded:', this.enhancedDataForm);
+        },
+
+        extractBoardMembers(profile) {
+            const boardMembers = [];
+
+            // Extract from board_members JSON if available
+            if (profile.board_members) {
+                try {
+                    const boardData = typeof profile.board_members === 'string'
+                        ? JSON.parse(profile.board_members)
+                        : profile.board_members;
+
+                    if (Array.isArray(boardData)) {
+                        boardData.forEach(member => {
+                            if (typeof member === 'object') {
+                                boardMembers.push({
+                                    name: member.name || '',
+                                    title: member.position || member.title || 'Board Member'
+                                });
+                            } else if (typeof member === 'string') {
+                                boardMembers.push({
+                                    name: member,
+                                    title: 'Board Member'
+                                });
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Could not parse board_members JSON:', e);
+                }
+            }
+
+            // Extract from web_enhanced_data leadership if available
+            if (profile.web_enhanced_data && profile.web_enhanced_data.extracted_info && profile.web_enhanced_data.extracted_info.leadership) {
+                profile.web_enhanced_data.extracted_info.leadership.forEach(leader => {
+                    if (typeof leader === 'object') {
+                        boardMembers.push({
+                            name: leader.name || '',
+                            title: leader.title || 'Leadership'
+                        });
+                    } else if (typeof leader === 'string') {
+                        boardMembers.push({
+                            name: leader,
+                            title: 'Leadership'
+                        });
+                    }
+                });
+            }
+
+            return boardMembers;
+        },
+
+        extractPrimaryProgramArea(profile) {
+            // Try to map focus areas to program areas
+            if (profile.focus_areas && profile.focus_areas.length > 0) {
+                const firstArea = profile.focus_areas[0].toLowerCase();
+
+                // Map common focus areas to program areas
+                const mapping = {
+                    'education': 'education',
+                    'health': 'health',
+                    'medical': 'health',
+                    'human services': 'human_services',
+                    'social services': 'human_services',
+                    'arts': 'arts_culture',
+                    'culture': 'arts_culture',
+                    'environment': 'environment',
+                    'community': 'community_development',
+                    'religion': 'religion',
+                    'safety': 'public_safety',
+                    'international': 'international',
+                    'civil rights': 'civil_rights',
+                    'youth': 'youth_development'
+                };
+
+                for (const [key, value] of Object.entries(mapping)) {
+                    if (firstArea.includes(key)) {
+                        return value;
+                    }
+                }
+            }
+
+            return '';
+        },
+
+        extractServiceAreas(profile) {
+            const serviceAreas = [];
+
+            // Extract from geographic scope
+            if (profile.geographic_scope) {
+                if (profile.geographic_scope.nationwide) {
+                    serviceAreas.push('national');
+                }
+                if (profile.geographic_scope.international) {
+                    serviceAreas.push('international');
+                }
+                if (profile.geographic_scope.states && profile.geographic_scope.states.length > 0) {
+                    serviceAreas.push('state');
+                }
+            }
+
+            // Default to local if no areas specified
+            if (serviceAreas.length === 0) {
+                serviceAreas.push('local');
+            }
+
+            return serviceAreas;
+        },
+
+        mergeEnhancedDataWithExisting(existingWebData) {
+            // Merge enhanced form data with existing web_enhanced_data
+            const mergedData = { ...existingWebData };
+
+            // Ensure extracted_info exists
+            if (!mergedData.extracted_info) {
+                mergedData.extracted_info = {};
+            }
+
+            // Update contact information
+            if (this.enhancedDataForm.phone || this.enhancedDataForm.email || this.enhancedDataForm.address) {
+                if (!mergedData.extracted_info.contact_info) {
+                    mergedData.extracted_info.contact_info = [];
+                }
+
+                // Add/update contact info from form
+                if (this.enhancedDataForm.phone) {
+                    this.addOrUpdateContactInfo(mergedData.extracted_info.contact_info, 'phone', this.enhancedDataForm.phone);
+                }
+                if (this.enhancedDataForm.email) {
+                    this.addOrUpdateContactInfo(mergedData.extracted_info.contact_info, 'email', this.enhancedDataForm.email);
+                }
+                if (this.enhancedDataForm.address) {
+                    this.addOrUpdateContactInfo(mergedData.extracted_info.contact_info, 'address', this.enhancedDataForm.address);
+                }
+            }
+
+            // Update leadership/board members
+            if (this.enhancedDataForm.boardMembers && this.enhancedDataForm.boardMembers.length > 0) {
+                mergedData.extracted_info.leadership = this.enhancedDataForm.boardMembers.map(member => ({
+                    name: member.name,
+                    title: member.title,
+                    source: 'enhanced_form'
+                }));
+            }
+
+            // Add form metadata
+            mergedData.enhanced_form_updated = new Date().toISOString();
+            mergedData.enhanced_form_version = '1.0';
+
+            return mergedData;
+        },
+
+        addOrUpdateContactInfo(contactArray, type, value) {
+            // Find existing contact of this type and update, or add new one
+            const existingIndex = contactArray.findIndex(contact =>
+                contact.type === type || (typeof contact === 'object' && contact.type === type)
+            );
+
+            const contactInfo = {
+                type: type,
+                value: value,
+                source: 'enhanced_form'
+            };
+
+            if (existingIndex >= 0) {
+                contactArray[existingIndex] = contactInfo;
+            } else {
+                contactArray.push(contactInfo);
+            }
         },
 
         async loadVerifiedIntelligenceData(profile) {
@@ -3637,7 +3904,9 @@ function catalynxApp() {
                     schedule_i_status: this.profileForm.schedule_i_status || null,
                     // Enhanced data fields for verified intelligence persistence
                     verification_data: this.profileForm.verification_data || {},
-                    web_enhanced_data: this.profileForm.web_enhanced_data || {}
+                    web_enhanced_data: this.mergeEnhancedDataWithExisting(this.profileForm.web_enhanced_data || {}),
+                    // Enhanced form data
+                    enhanced_form_data: this.enhancedDataForm
                 };
 
                 // Debug: Log what we're about to save

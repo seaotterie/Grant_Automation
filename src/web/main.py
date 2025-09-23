@@ -784,8 +784,9 @@ async def get_help_index():
 # Initialize services
 workflow_service = WorkflowService()
 progress_service = ProgressService()
-# profile_service removed - using DatabaseManager for all profile operations
+# profile_service replaced with unified_service for compatibility
 unified_service = get_unified_profile_service()
+profile_service = unified_service  # Compatibility assignment for existing references
 unified_discovery_adapter = get_unified_discovery_adapter()
 entity_profile_service = get_entity_profile_service()  # Enhanced entity-based service
 entity_discovery_service = get_entity_discovery_service()  # Enhanced discovery service
@@ -2140,8 +2141,17 @@ async def fetch_ein_data(request: dict):
                     logger.info(f"DEBUG: - successful_scrapes exists: {scraped_data.get('successful_scrapes') if scraped_data else 'N/A'}")
                     logger.info(f"DEBUG: - successful_scrapes length: {len(scraped_data.get('successful_scrapes', [])) if scraped_data else 0}")
 
-                    if scraped_data and scraped_data.get('successful_scrapes'):
-                        logger.info(f"DEBUG: CONDITION PASSED - Using VerificationEnhancedScraper data")
+                    # Check if we have meaningful extracted content, not just successful scrapes
+                    extracted_info = scraped_data.get('extracted_info', {}) if scraped_data else {}
+                    has_content = (
+                        len(extracted_info.get('leadership', [])) > 0 or
+                        len(extracted_info.get('programs', [])) > 0 or
+                        len(extracted_info.get('contact_info', [])) > 0 or
+                        len(extracted_info.get('mission_statements', [])) > 0
+                    )
+
+                    if scraped_data and scraped_data.get('successful_scrapes') and has_content:
+                        logger.info(f"DEBUG: CONDITION PASSED - Using VerificationEnhancedScraper data with meaningful content")
                         logger.info(f"Successfully scraped {len(scraped_data['successful_scrapes'])} websites for EIN {ein}")
                         
                         # DEBUG: Log the final scraped_data content before structuring
@@ -2217,13 +2227,34 @@ async def fetch_ein_data(request: dict):
                     else:
                         logger.warning(f"DEBUG: CONDITION FAILED - VerificationEnhancedScraper data not used")
                         logger.warning(f"DEBUG: scraped_data = {scraped_data}")
-                        logger.warning(f"No successful web scraping results for EIN {ein}")
+                        logger.warning(f"No successful web scraping results for EIN {ein} - trying fallback data generation")
 
-                        # CRITICAL DEBUG: Prevent any fallback data from being used
-                        response_data["web_scraping_data"] = {
-                            "message": "VerificationEnhancedScraper failed - no fallback data allowed",
-                            "debug_info": {
-                                "scraped_data_exists": scraped_data is not None,
+                        # Try to generate enhanced data from available sources
+                        try:
+                            from src.core.enhanced_data_fallback import EnhancedDataFallbackService
+                            fallback_service = EnhancedDataFallbackService(database_service)
+
+                            # Get profile ID from request
+                            profile_id = request_data.get("profile_id")
+                            if profile_id:
+                                fallback_data = fallback_service.generate_enhanced_data(profile_id)
+                                if fallback_data.get("extracted_info"):
+                                    leadership_count = len(fallback_data["extracted_info"].get("leadership", []))
+                                    programs_count = len(fallback_data["extracted_info"].get("programs", []))
+                                    logger.info(f"Fallback data generated: {leadership_count} leadership, {programs_count} programs")
+                                    response_data["web_scraping_data"] = fallback_data
+                                    response_data["enhanced_with_web_data"] = True
+                                else:
+                                    raise Exception("Fallback service returned empty data")
+                            else:
+                                raise Exception("No profile_id provided for fallback generation")
+
+                        except Exception as fallback_error:
+                            logger.warning(f"Fallback data generation failed: {fallback_error}")
+                            response_data["web_scraping_data"] = {
+                                "message": "VerificationEnhancedScraper failed - fallback generation also failed",
+                                "debug_info": {
+                                    "scraped_data_exists": scraped_data is not None,
                                 "successful_scrapes_exists": scraped_data.get('successful_scrapes') if scraped_data else None,
                                 "successful_scrapes_length": len(scraped_data.get('successful_scrapes', [])) if scraped_data else 0
                             }
@@ -2912,26 +2943,7 @@ async def get_web_intelligence(ein: str):
 async def get_verified_intelligence(profile_id: str):
     """Get verified intelligence data using tax-data-first approach for Enhanced Data tab."""
     try:
-        from src.web.services.verified_intelligence_service import get_verified_intelligence_service
-        
-        # Get profile to extract organization data
-        profile = profile_service.get_profile(profile_id)
-        if not profile:
-            return {
-                "success": False,
-                "message": f"Profile not found: {profile_id}",
-                "data": None
-            }
-        
-        # Extract organization details
-        organization_name = profile.name
-        ein = getattr(profile, 'ein', None) or profile.external_data.get('ein') if hasattr(profile, 'external_data') else None
-        user_provided_url = getattr(profile, 'website_url', None)
-        
-        logger.info(f"Getting verified intelligence for {organization_name} (EIN: {ein})")
-        
-        # Read verified intelligence directly from saved profile data (from fetch-ein)
-        # Use database manager instead of profile_service to avoid charset issues
+        # Use database manager to get profile data directly
         database_service = DatabaseManager()
         db_profile = database_service.get_profile(profile_id)
 
@@ -2941,6 +2953,13 @@ async def get_verified_intelligence(profile_id: str):
                 "message": f"Profile not found in database: {profile_id}",
                 "data": None
             }
+
+        # Extract organization details from database profile
+        organization_name = db_profile.name
+        ein = getattr(db_profile, 'ein', None)
+        user_provided_url = getattr(db_profile, 'website_url', None)
+
+        logger.info(f"Getting verified intelligence for {organization_name} (EIN: {ein})")
 
         # Extract saved enhanced data from profile
         web_enhanced_data = getattr(db_profile, 'web_enhanced_data', {}) or {}
@@ -3021,7 +3040,7 @@ async def get_verified_intelligence(profile_id: str):
                 "verified_intelligence": verified_intelligence_compat
             }
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to get verified intelligence for profile {profile_id}: {e}")
         return {
@@ -3029,6 +3048,11 @@ async def get_verified_intelligence(profile_id: str):
             "message": f"Error retrieving verified intelligence: {str(e)}",
             "data": None
         }
+
+@app.get("/api/profiles/{profile_id}/enhanced-intelligence")
+async def get_enhanced_intelligence(profile_id: str):
+    """Alias for verified intelligence - maintains compatibility with frontend calls."""
+    return await get_verified_intelligence(profile_id)
 
 @app.get("/api/profiles/{profile_id}/metrics")
 async def get_profile_metrics(profile_id: str):

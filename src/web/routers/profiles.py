@@ -7,6 +7,7 @@ Extracted from monolithic main.py for better modularity
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 import logging
+import json
 from datetime import datetime
 from typing import List, Dict, Optional, Any
 
@@ -138,6 +139,24 @@ async def create_profile(
         if not success:
             raise HTTPException(status_code=500, detail="Failed to save profile to database")
 
+        # Process any fetched web scraping data through transformation pipeline
+        web_enhanced_data = profile_data.get('web_enhanced_data')
+        if web_enhanced_data:
+            logger.info(f"Processing web enhanced data for new profile {profile.id}")
+            board_members_json = profile_data.get('board_members')
+            if isinstance(board_members_json, list):
+                board_members_json = json.dumps(board_members_json)
+
+            transformation_success = db_manager.process_fetched_data(
+                profile=profile,
+                web_scraping_results=web_enhanced_data,
+                board_members_json=board_members_json
+            )
+            if transformation_success:
+                logger.info(f"Successfully processed fetched data for new profile {profile.id}")
+            else:
+                logger.warning(f"Data transformation completed with warnings for new profile {profile.id}")
+
         # Debug: Log the profile after creation
         logger.info(f"Profile created in database: ntee_codes={profile.ntee_codes}, government_criteria={profile.government_criteria}, keywords={profile.keywords}")
 
@@ -261,6 +280,24 @@ async def update_profile(
         success = db_manager.update_profile(updated_profile)
         if not success:
             raise HTTPException(status_code=500, detail="Failed to update profile in database")
+
+        # Process any fetched web scraping data through transformation pipeline
+        web_enhanced_data = update_data.get('web_enhanced_data')
+        if web_enhanced_data:
+            logger.info(f"Processing web enhanced data for profile {profile_id}")
+            board_members_json = update_data.get('board_members')
+            if isinstance(board_members_json, list):
+                board_members_json = json.dumps(board_members_json)
+
+            transformation_success = db_manager.process_fetched_data(
+                profile=updated_profile,
+                web_scraping_results=web_enhanced_data,
+                board_members_json=board_members_json
+            )
+            if transformation_success:
+                logger.info(f"Successfully processed fetched data for profile {profile_id}")
+            else:
+                logger.warning(f"Data transformation completed with warnings for profile {profile_id}")
 
         # Debug: Log the profile after update
         logger.info(f"Profile updated in database: ntee_codes={updated_profile.ntee_codes}, government_criteria={updated_profile.government_criteria}, keywords={updated_profile.keywords}")

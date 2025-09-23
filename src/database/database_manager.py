@@ -107,11 +107,15 @@ class DatabaseManager:
         import os
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         self.schema_path = os.path.join(project_root, "src", "database", "schema.sql")
+        self.normalized_schema_path = os.path.join(project_root, "normalized_schema_design.sql")
         self._connection = None
-        
+
+        # Initialize data transformer for normalized storage
+        self._data_transformer = None
+
         # Ensure database directory exists
         Path(self.database_path).parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Initialize database on creation
         self._initialize_database()
         
@@ -128,10 +132,49 @@ class DatabaseManager:
                 else:
                     logger.info("Database already exists, verifying schema")
                     self._verify_schema(conn)
-                    
+
+                # Initialize normalized schema for analytical operations
+                self._initialize_normalized_schema(conn)
+
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
             raise
+
+    def _initialize_normalized_schema(self, conn: sqlite3.Connection):
+        """Initialize normalized schema for analytics"""
+        try:
+            # Check if normalized tables exist
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='people'")
+
+            if not cursor.fetchone():
+                logger.info("Creating normalized analytics schema")
+                normalized_schema_file = Path(self.normalized_schema_path)
+                if normalized_schema_file.exists():
+                    with open(normalized_schema_file, 'r') as f:
+                        normalized_sql = f.read()
+                    conn.executescript(normalized_sql)
+                    conn.commit()
+                    logger.info("Normalized analytics schema created successfully")
+                else:
+                    logger.warning(f"Normalized schema file not found: {normalized_schema_file}")
+            else:
+                logger.info("Normalized analytics schema already exists")
+
+        except Exception as e:
+            logger.warning(f"Failed to initialize normalized schema: {e}")
+
+    def _get_data_transformer(self):
+        """Get or initialize data transformer"""
+        if self._data_transformer is None:
+            try:
+                from src.data_transformation.main_service import CatalynxDataTransformer
+                self._data_transformer = CatalynxDataTransformer(self)
+                logger.info("Data transformer initialized successfully")
+            except ImportError:
+                logger.warning("Data transformation service not available")
+                self._data_transformer = None
+        return self._data_transformer
             
     def _create_schema(self, conn: sqlite3.Connection):
         """Create database schema from SQL file"""
@@ -244,18 +287,18 @@ class DatabaseManager:
 
                 cursor.execute("""
                     INSERT INTO profiles (
-                        id, name, organization_type, ein, mission_statement, status,
-                        keywords, focus_areas, program_areas, target_populations, 
-                        ntee_codes, government_criteria, geographic_scope, service_areas,
-                        funding_preferences, annual_revenue, form_type, foundation_grants,
-                        board_members, discovery_count, opportunities_count,
+                        id, name, organization_type, ein, website_url, location,
+                        mission_statement, status, keywords, focus_areas, program_areas,
+                        target_populations, ntee_codes, government_criteria, geographic_scope,
+                        service_areas, funding_preferences, annual_revenue, form_type,
+                        foundation_grants, board_members, discovery_count, opportunities_count,
                         last_discovery_date, performance_metrics, processing_history,
                         verification_data, web_enhanced_data
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     profile.id, profile.name, profile.organization_type, profile.ein,
-                    profile.mission_statement, profile.status, profile.keywords,
-                    focus_areas_json, program_areas_json, target_populations_json,
+                    profile.website_url, profile.location, profile.mission_statement, profile.status,
+                    profile.keywords, focus_areas_json, program_areas_json, target_populations_json,
                     ntee_codes_json, government_criteria_json, geographic_scope_json,
                     service_areas_json, funding_preferences_json, profile.annual_revenue,
                     profile.form_type, foundation_grants_json, board_members_json,
@@ -286,6 +329,50 @@ class DatabaseManager:
                 
         except Exception as e:
             logger.error(f"Failed to get profile {profile_id}: {e}")
+            return None
+
+    def get_profile_by_id(self, profile_id: str) -> Optional[Dict[str, Any]]:
+        """Get profile by ID and return as dictionary (for API compatibility)"""
+        try:
+            profile = self.get_profile(profile_id)
+            if profile:
+                # Convert Profile object to dictionary for API response
+                return {
+                    'id': profile.id,
+                    'profile_id': profile.id,  # For frontend compatibility
+                    'name': profile.name,
+                    'organization_type': profile.organization_type,
+                    'ein': profile.ein,
+                    'website_url': profile.website_url,
+                    'location': profile.location,
+                    'mission_statement': profile.mission_statement,
+                    'status': profile.status,
+                    'keywords': profile.keywords,
+                    'focus_areas': profile.focus_areas,
+                    'program_areas': profile.program_areas,
+                    'target_populations': profile.target_populations,
+                    'ntee_codes': profile.ntee_codes,
+                    'government_criteria': profile.government_criteria,
+                    'geographic_scope': profile.geographic_scope,
+                    'service_areas': profile.service_areas,
+                    'funding_preferences': profile.funding_preferences,
+                    'annual_revenue': profile.annual_revenue,
+                    'form_type': profile.form_type,
+                    'foundation_grants': profile.foundation_grants,
+                    'board_members': profile.board_members,
+                    'discovery_count': profile.discovery_count,
+                    'opportunities_count': profile.opportunities_count,
+                    'last_discovery_date': profile.last_discovery_date.isoformat() if profile.last_discovery_date else None,
+                    'performance_metrics': profile.performance_metrics,
+                    'verification_data': profile.verification_data,
+                    'web_enhanced_data': profile.web_enhanced_data,
+                    'created_at': profile.created_at.isoformat() if profile.created_at else None,
+                    'updated_at': profile.updated_at.isoformat() if profile.updated_at else None,
+                    'processing_history': profile.processing_history
+                }
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get profile by ID {profile_id}: {e}")
             return None
             
     def get_all_profiles(self) -> List[Profile]:
@@ -386,6 +473,38 @@ class DatabaseManager:
             logger.error(f"Failed to update profile {profile.id}: {e}")
             return False
 
+    def process_fetched_data(self, profile: Profile, web_scraping_results: Optional[Dict] = None,
+                           board_members_json: Optional[str] = None) -> bool:
+        """Process fetched data through the transformation pipeline and store normalized records"""
+        try:
+            transformer = self._get_data_transformer()
+            if transformer:
+                logger.info(f"Processing fetched data for profile {profile.id} through transformation pipeline")
+
+                # Transform the data into normalized records
+                result = transformer.transform_profile_data(
+                    profile_id=profile.id,
+                    web_scraping_results=web_scraping_results,
+                    board_members_json=board_members_json
+                )
+
+                if result.success:
+                    logger.info(f"Successfully processed fetched data: {result.stats.total_people_created} people, "
+                              f"{result.stats.total_roles_created} roles, {result.stats.total_programs_created} programs")
+                    return True
+                else:
+                    logger.warning(f"Data transformation completed with errors: {len(result.errors)} errors")
+                    for error in result.errors:
+                        logger.warning(f"Transformation error: {error.message}")
+                    return False
+            else:
+                logger.warning("Data transformer not available, skipping normalized data processing")
+                return True  # Don't fail the profile save if transformer unavailable
+
+        except Exception as e:
+            logger.error(f"Failed to process fetched data for profile {profile.id}: {e}")
+            return False
+
     def delete_profile(self, profile_id: str) -> bool:
         """Delete profile and all associated opportunities"""
         try:
@@ -443,8 +562,8 @@ class DatabaseManager:
             website_url=row['website_url'],
             location=row['location'],
             # Enhanced data fields
-            verification_data=json.loads(row['verification_data']) if row.get('verification_data') else None,
-            web_enhanced_data=json.loads(row['web_enhanced_data']) if row.get('web_enhanced_data') else None
+            verification_data=json.loads(row['verification_data']) if row['verification_data'] else None,
+            web_enhanced_data=json.loads(row['web_enhanced_data']) if row['web_enhanced_data'] else None
         )
 
     # =====================================================================================
