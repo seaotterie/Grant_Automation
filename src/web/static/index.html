@@ -4718,11 +4718,6 @@
                                               @input="markFieldAsUserEdited('mission_statement')"
                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
                                               placeholder="Describe your organization's mission and purpose"></textarea>
-                                    <div class="mt-1 flex justify-end">
-                                        <span class="text-xs text-gray-500">
-                                            <span x-text="(profileForm.mission_statement || '').length"></span>/1000 characters
-                                        </span>
-                                    </div>
                                 </div>
                                 
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -5135,11 +5130,6 @@
                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
                                               placeholder="Describe the organization's mission and purpose"
                                               x-init="if (selectedProfile && !selectedProfile.mission_statement) selectedProfile.mission_statement = ''"></textarea>
-                                    <div class="mt-1 flex justify-end">
-                                        <span class="text-xs text-gray-500">
-                                            <span x-text="(selectedProfile?.mission_statement || '').length"></span>/1000 characters
-                                        </span>
-                                    </div>
                                 </div>
                                 
                                 <div>
@@ -7370,7 +7360,7 @@
                     </div>
                     
                     <!-- Tab Content -->
-                    <div class="flex-1 overflow-y-auto px-4 pb-4">
+                    <div class="flex-1 overflow-y-auto px-4 pb-4" style="min-height: 0;">
                         
                         
                         <!-- Overview Tab -->
@@ -8469,16 +8459,16 @@
         <!-- Background overlay -->
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
              @click="showProfileModal = false"></div>
-        
+
         <!-- Modal content -->
-        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-4 sm:p-0">
             <div x-transition:enter="ease-out duration-300"
                  x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave="ease-in duration-200"
                  x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                 class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-4 sm:align-middle w-full max-w-4xl mx-auto border-2 border-gray-300 dark:border-gray-600 sm:p-8">
+                 class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
                 
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between mb-6">
@@ -8490,10 +8480,13 @@
                         <span class="text-2xl">&times;</span>
                     </button>
                 </div>
-                
-                <!-- Profile Form -->
-                <form @submit.prevent="saveProfile()" class="flex flex-col max-h-[85vh] overflow-hidden">
-                    
+
+                <!-- Modal Content -->
+                <div class="mt-3">
+
+                    <!-- Profile Form -->
+                    <form @submit.prevent="saveProfile()" class="space-y-6">
+
                     <!-- Tab Navigation -->
                     <div class="border-b-2 border-gray-300 dark:border-gray-600 mb-6">
                         <nav class="-mb-0.5 flex space-x-1">
@@ -8516,12 +8509,22 @@
                                 Government Criteria
                             </button>
                             <button type="button"
-                                    @click="profileModalActiveTab = 'enhanced'"
-                                    :class="profileModalActiveTab === 'enhanced' ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900 dark:border-purple-400 dark:text-purple-300' : 'bg-gray-100 border-gray-300 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-200'"
+                                    @click="profileModalActiveTab = 'tax-filing'"
+                                    :class="profileModalActiveTab === 'tax-filing' ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900 dark:border-purple-400 dark:text-purple-300' : 'bg-gray-100 border-gray-300 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-200'"
                                     class="px-4 py-3 border-2 border-b-0 rounded-t-lg font-semibold text-sm transition-all shadow-sm">
-                                Enhanced Data
+                                Tax Filing Data
+                                <span x-show="webScrapingResults?.verified_leadership?.length > 0"
+                                      class="ml-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-blue-500 rounded-full">
+                                    <span x-text="webScrapingResults?.verified_leadership?.length || 0"></span>
+                                </span>
+                            </button>
+                            <button type="button"
+                                    @click="profileModalActiveTab = 'web-search'"
+                                    :class="profileModalActiveTab === 'web-search' ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900 dark:border-purple-400 dark:text-purple-300' : 'bg-gray-100 border-gray-300 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-200'"
+                                    class="px-4 py-3 border-2 border-b-0 rounded-t-lg font-semibold text-sm transition-all shadow-sm">
+                                Web Search Data
                                 <span x-show="webScrapingResults && webScrapingResults.successful_scrapes && webScrapingResults.successful_scrapes.length > 0"
-                                      class="ml-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-green-500 rounded-full">
+                                      class="ml-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-purple-500 rounded-full">
                                     <span x-text="webScrapingResults?.successful_scrapes?.length || 0"></span>
                                 </span>
                             </button>
@@ -8529,13 +8532,13 @@
                     </div>
                     
                     <!-- Tab Content -->
-                    <div class="flex-1 overflow-hidden">
+                    <div class="mt-6">
                         
                         <!-- Basic Information Tab -->
-                        <div x-show="profileModalActiveTab === 'basic'" class="h-full overflow-y-auto">
-                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col h-full">
-                                <div class="space-y-3 mb-4">
-                                <div class="flex justify-between items-center">
+                        <div x-show="profileModalActiveTab === 'basic'" class="p-2">
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                                <!-- Header Section -->
+                                <div class="flex justify-between items-center mb-4">
                                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h4>
                                     <button type="button" @click="fetchEINData()"
                                             :disabled="!profileForm.ein || einFetchLoading"
@@ -8545,11 +8548,9 @@
                                         <span x-show="einFetchLoading">Fetching...</span>
                                     </button>
                                 </div>
-                                
-                            </div>
-                            
-                            <!-- Fields stacked vertically -->
-                            <div class="space-y-4 flex-1">
+
+                                <!-- Fields stacked vertically -->
+                                <div class="space-y-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Name *</label>
                                     <input type="text" 
@@ -8632,30 +8633,25 @@
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                         Mission Statement
                                     </label>
-                                    <textarea x-model="profileForm.mission_statement" 
-                                              rows="4"
+                                    <textarea x-model="profileForm.mission_statement"
+                                              rows="3"
                                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
                                               placeholder="Describe your organization's mission and purpose"></textarea>
-                                    <div class="mt-1 flex justify-end">
-                                        <span class="text-xs text-gray-500">
-                                            <span x-text="(profileForm.mission_statement || '').length"></span>/1000 characters
-                                        </span>
-                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Keywords</label>
                                     <textarea x-model="profileForm.keywords"
                                               @input="markFieldAsUserEdited('keywords')"
-                                              rows="4"
+                                              rows="3"
                                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
                                               placeholder="Key terms and phrases that describe your work"></textarea>
                                 </div>
-                            </div>
+                                </div>
                             </div>
                         </div>
                         
                         <!-- NTEE Codes Tab -->
-                        <div x-show="profileModalActiveTab === 'ntee'" class="h-full overflow-y-auto">
+                        <div x-show="profileModalActiveTab === 'ntee'" class="p-2">
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col h-full">
                                 <div class="flex justify-between items-center mb-4">
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white">NTEE Codes</h4>
@@ -8671,7 +8667,7 @@
                                 <div class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-600">
                                     <h5 class="text-sm font-medium text-gray-900 dark:text-white">Selected Codes</h5>
                                 </div>
-                                <div class="p-4 overflow-y-auto max-h-[432px]">
+                                <div class="p-4 flex-1 overflow-y-auto">
                                     <div x-show="nteeModal.selectedNteeCodes.length === 0" class="text-sm text-gray-500 dark:text-gray-400 text-center">
                                         No NTEE codes selected
                                     </div>
@@ -8697,7 +8693,7 @@
                         </div>
                         
                         <!-- Government Criteria Tab -->
-                        <div x-show="profileModalActiveTab === 'government'" class="h-full overflow-y-auto">
+                        <div x-show="profileModalActiveTab === 'government'" class="p-2">
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col h-full">
                                 <div class="flex justify-between items-center mb-4">
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Government Criteria</h4>
@@ -8713,7 +8709,7 @@
                                 <div class="bg-gray-100 dark:bg-gray-800 px-4 py-2 border-b border-gray-200 dark:border-gray-600">
                                     <h5 class="text-sm font-medium text-gray-900 dark:text-white">Selected Criteria</h5>
                                 </div>
-                                <div class="p-4 overflow-y-auto max-h-[432px]">
+                                <div class="p-4 flex-1 overflow-y-auto">
                                     <!-- Show message when no criteria selected -->
                                     <div x-show="getSelectedGovernmentCriteriaInfo().length === 0" 
                                          class="text-sm text-gray-500 dark:text-gray-400 text-center">
@@ -8753,11 +8749,251 @@
                             </div>
                         </div>
                         
-                        <!-- Enhanced Data Tab -->
-                        <div x-show="profileModalActiveTab === 'enhanced'" class="h-full overflow-y-auto">
+                        <!-- Tax Filing Data Tab -->
+                        <div x-show="profileModalActiveTab === 'tax-filing'" class="p-2">
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col h-full">
                                 <div class="flex justify-between items-center mb-4">
-                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Enhanced Data Management</h4>
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Tax Filing Data</h4>
+                                    <div class="text-right">
+                                        <!-- Source Breakdown Display -->
+                                        <div x-show="webScrapingResults?.verified_leadership?.length > 0" class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                            <div class="flex items-center gap-2">
+                                                <span class="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded"
+                                                      x-text="'Leadership: ' + (webScrapingResults?.verified_leadership?.length || 0)"></span>
+                                            </div>
+                                        </div>
+                                        <div x-show="webScrapingResults?.foundation_intelligence?.is_foundation" class="text-xs text-gray-500 dark:text-gray-400">
+                                            Foundation (990-PF) Data Available
+                                        </div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                                            IRS Tax Filing Data
+                                        </div>
+                                    </div>
+                                </div>
+
+                                
+
+                                <div class="space-y-4 flex-1 overflow-y-auto pr-2" style="scrollbar-width: thin;">
+
+                                        <!-- Tax Filing Leadership -->
+                                        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                            <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+                                                <svg class="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                </svg>
+                                                Leadership & Officers (Tax Filing Data)
+                                            </h5>
+
+                                            <div x-show="webScrapingResults?.extracted_info?.leadership?.length > 0" class="space-y-2">
+                                                <template x-for="(leader, index) in webScrapingResults?.extracted_info?.leadership || []" :key="index">
+                                                    <div class="bg-blue-50 dark:bg-blue-900/20 rounded p-3 border-l-4 border-blue-400">
+                                                        <div class="flex justify-between items-start">
+                                                            <div class="flex-1">
+                                                                <div class="font-medium text-gray-900 dark:text-white" x-text="leader.name || 'Unknown Name'"></div>
+                                                                <div class="text-sm text-gray-600 dark:text-gray-400" x-text="leader.title || 'Unknown Title'"></div>
+                                                            </div>
+                                                            <div class="text-xs text-blue-600 dark:text-blue-400 ml-4">
+                                                                <div x-text="(leader.confidence_score * 100 || 90).toFixed(0) + '% confidence'"></div>
+                                                                <div class="text-xs text-gray-500">IRS Tax Filing</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <div x-show="!webScrapingResults?.extracted_info?.leadership?.length" class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                                                No leadership data available from tax filings
+                                            </div>
+                                        </div>
+
+                                        <!-- Contact Information (BusinessOfficerGrp) -->
+                                        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                            <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+                                                <svg class="w-4 h-4 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                                                </svg>
+                                                Contact Information (Tax Filing Data)
+                                            </h5>
+
+                                            <div x-show="webScrapingResults?.extracted_info?.contact_info?.length > 0" class="space-y-3">
+                                                <template x-for="(contact, index) in webScrapingResults?.extracted_info?.contact_info || []" :key="index">
+                                                    <div class="bg-orange-50 dark:bg-orange-900/20 rounded p-3 border-l-4 border-orange-400">
+                                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            <!-- Contact Type and Value -->
+                                                            <div>
+                                                                <div class="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide" x-text="contact.type || 'Contact'"></div>
+                                                                <div class="text-sm text-gray-700 dark:text-gray-300" x-text="contact.value || contact.content || contact"></div>
+                                                            </div>
+
+                                                            <!-- Source -->
+                                                            <div x-show="contact.source">
+                                                                <div class="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">Source</div>
+                                                                <div class="text-sm text-gray-700 dark:text-gray-300" x-text="contact.source"></div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="text-xs text-orange-600 dark:text-orange-400 mt-2">Source: IRS Tax Filing</div>
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <div x-show="!webScrapingResults?.extracted_info?.contact_info?.length" class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                                                No contact information available from tax filings
+                                            </div>
+                                        </div>
+
+                                        <!-- Financial Data (CYTotalRevenueAmt, CYTotalExpensesAmt) -->
+                                        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                            <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+                                                <svg class="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                                </svg>
+                                                Financial Data (Tax Filing Data)
+                                            </h5>
+
+                                            <div x-show="webScrapingResults?.extracted_info?.financials" class="space-y-3">
+                                                <div class="bg-green-50 dark:bg-green-900/20 rounded p-3 border-l-4 border-green-400">
+                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <!-- Total Revenue -->
+                                                        <div x-show="webScrapingResults?.extracted_info?.financials?.total_revenue">
+                                                            <div class="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">Total Revenue (CYTotalRevenueAmt)</div>
+                                                            <div class="text-lg font-semibold text-green-600 dark:text-green-400" x-text="'$' + (webScrapingResults?.extracted_info?.financials?.total_revenue || 0).toLocaleString()"></div>
+                                                        </div>
+
+                                                        <!-- Total Expenses -->
+                                                        <div x-show="webScrapingResults?.extracted_info?.financials?.total_expenses">
+                                                            <div class="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">Total Expenses (CYTotalExpensesAmt)</div>
+                                                            <div class="text-lg font-semibold text-red-600 dark:text-red-400" x-text="'$' + (webScrapingResults?.extracted_info?.financials?.total_expenses || 0).toLocaleString()"></div>
+                                                        </div>
+
+                                                        <!-- Net Income -->
+                                                        <div x-show="webScrapingResults?.extracted_info?.financials?.total_revenue && webScrapingResults?.extracted_info?.financials?.total_expenses">
+                                                            <div class="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">Net Income</div>
+                                                            <div class="text-lg font-semibold"
+                                                                 :class="((webScrapingResults?.extracted_info?.financials?.total_revenue || 0) - (webScrapingResults?.extracted_info?.financials?.total_expenses || 0)) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                                                                 x-text="'$' + ((webScrapingResults?.extracted_info?.financials?.total_revenue || 0) - (webScrapingResults?.extracted_info?.financials?.total_expenses || 0)).toLocaleString()"></div>
+                                                        </div>
+
+                                                        <!-- Tax Year -->
+                                                        <div x-show="webScrapingResults?.extracted_info?.financials?.tax_year">
+                                                            <div class="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">Tax Year</div>
+                                                            <div class="text-sm text-gray-700 dark:text-gray-300" x-text="webScrapingResults?.extracted_info?.financials?.tax_year"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-xs text-green-600 dark:text-green-400 mt-2">Source: 990 Financial Data (IRS Tax Filing)</div>
+                                                </div>
+                                            </div>
+
+                                            <div x-show="!webScrapingResults?.extracted_info?.financials" class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                                                No financial data available from tax filings
+                                            </div>
+                                        </div>
+
+                                        <!-- Foundation Intelligence (990-PF only) -->
+                                        <div x-show="webScrapingResults?.foundation_intelligence?.is_foundation" class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                            <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+                                                <svg class="w-4 h-4 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                                </svg>
+                                                Foundation Intelligence (990-PF)
+                                            </h5>
+
+                                            <!-- Foundation Grant Making -->
+                                            <div x-show="webScrapingResults?.foundation_grants?.length > 0" class="mb-4">
+                                                <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Recent Grants Awarded</h6>
+                                                <template x-for="(grant, index) in webScrapingResults?.foundation_grants || []" :key="index">
+                                                    <div class="text-sm text-gray-700 dark:text-gray-300 bg-orange-50 dark:bg-orange-900/20 rounded px-3 py-2 mb-2 border-l-4 border-orange-400">
+                                                        <div class="font-medium" x-text="grant.recipient_name || grant.name || 'Grant Recipient'"></div>
+                                                        <div x-show="grant.amount" class="text-green-600 dark:text-green-400 font-medium" x-text="'$' + (grant.amount || 0).toLocaleString()"></div>
+                                                        <div x-show="grant.purpose" class="text-xs text-gray-600 dark:text-gray-400 mt-1" x-text="grant.purpose"></div>
+                                                        <div class="text-xs text-orange-600 dark:text-orange-400 mt-1">Source: IRS 990-PF Filing</div>
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <!-- Foundation Capacity -->
+                                            <div x-show="webScrapingResults?.foundation_intelligence?.grant_making_capacity" class="mb-4">
+                                                <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Grant Making Capacity</h6>
+                                                <div class="grid grid-cols-2 gap-3 text-sm">
+                                                    <div x-show="webScrapingResults?.foundation_intelligence?.grant_making_capacity?.annual_distribution" class="bg-gray-50 dark:bg-gray-700 rounded px-3 py-2">
+                                                        <div class="text-xs text-gray-500 dark:text-gray-400">Annual Distribution</div>
+                                                        <div class="font-medium" x-text="'$' + (webScrapingResults?.foundation_intelligence?.grant_making_capacity?.annual_distribution || 0).toLocaleString()"></div>
+                                                    </div>
+                                                    <div x-show="webScrapingResults?.foundation_intelligence?.grant_making_capacity?.total_assets" class="bg-gray-50 dark:bg-gray-700 rounded px-3 py-2">
+                                                        <div class="text-xs text-gray-500 dark:text-gray-400">Total Assets</div>
+                                                        <div class="font-medium" x-text="'$' + (webScrapingResults?.foundation_intelligence?.grant_making_capacity?.total_assets || 0).toLocaleString()"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Application Process -->
+                                            <div x-show="webScrapingResults?.foundation_intelligence?.application_process" class="mb-4">
+                                                <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Application Information</h6>
+                                                <div class="text-sm text-gray-700 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 rounded px-3 py-2">
+                                                    <div x-show="webScrapingResults?.foundation_intelligence?.application_process?.contact_info" x-text="webScrapingResults?.foundation_intelligence?.application_process?.contact_info"></div>
+                                                    <div x-show="webScrapingResults?.foundation_intelligence?.application_process?.deadlines" x-text="'Deadlines: ' + webScrapingResults?.foundation_intelligence?.application_process?.deadlines" class="text-xs text-blue-600 dark:text-blue-400 mt-1"></div>
+                                                    <div class="text-xs text-blue-600 dark:text-blue-400 mt-1">Source: 990-PF Part XIV</div>
+                                                </div>
+                                            </div>
+
+                                            <!-- No Foundation Data -->
+                                            <div x-show="!webScrapingResults?.foundation_grants?.length && !webScrapingResults?.foundation_intelligence?.grant_making_capacity" class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                                                <div x-show="webScrapingResults?.foundation_intelligence?.processing_failed">990-PF processing failed - limited foundation data available</div>
+                                                <div x-show="!webScrapingResults?.foundation_intelligence?.processing_failed">Foundation intelligence data not available</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Tax Filing Mission & Programs -->
+                                        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                            <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+                                                <svg class="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                                </svg>
+                                                Mission & Programs (Tax Filing Data)
+                                            </h5>
+
+                                            <div x-show="webScrapingResults?.extracted_info?.mission_statements?.length > 0" class="mb-4">
+                                                <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Mission Statement</h6>
+                                                <template x-for="(mission, index) in webScrapingResults?.extracted_info?.mission_statements || []" :key="index">
+                                                    <div class="text-sm text-gray-700 dark:text-gray-300 bg-green-50 dark:bg-green-900/20 rounded px-3 py-2 mb-2 border-l-4 border-green-400">
+                                                        <div x-text="typeof mission === 'object' ? mission.content || mission.description || mission : mission"></div>
+                                                        <div class="text-xs text-green-600 dark:text-green-400 mt-1">Source: IRS Tax Filing</div>
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <div x-show="webScrapingResults?.extracted_info?.programs?.length > 0" class="mb-4">
+                                                <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Program Activities</h6>
+                                                <template x-for="(program, index) in webScrapingResults?.extracted_info?.programs || []" :key="index">
+                                                    <div class="text-sm text-gray-700 dark:text-gray-300 bg-green-50 dark:bg-green-900/20 rounded px-3 py-2 mb-2 border-l-4 border-green-400">
+                                                        <div x-text="typeof program === 'object' ? program.content || program.description || program.name || program : program"></div>
+                                                        <div class="text-xs text-green-600 dark:text-green-400 mt-1">Source: IRS Tax Filing</div>
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <div x-show="!webScrapingResults?.extracted_info?.mission_statements?.length && !webScrapingResults?.extracted_info?.programs?.length" class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                                                No mission or program data available from tax filings
+                                            </div>
+                                        </div>
+
+                                        <!-- Data Source Attribution -->
+                                        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                                            <div class="flex items-center text-xs text-blue-700 dark:text-blue-300">
+                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                All data in this tab comes from official IRS tax filings (990/990-PF) and ProPublica database. This information is read-only and cannot be edited.
+                                            </div>
+                                        </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Web Search Data Tab -->
+                        <div x-show="profileModalActiveTab === 'web-search'" class="p-2">
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col h-full">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Web Search Data</h4>
                                     <div class="text-right">
                                         <!-- Source Breakdown Display -->
                                         <div x-show="webScrapingResults?.source_breakdown" class="text-xs text-gray-500 dark:text-gray-400 mb-1">
@@ -8777,212 +9013,12 @@
                                             <span x-text="webScrapingResults?.data_source"></span>
                                         </div>
                                         <div x-show="!webScrapingResults" class="text-xs text-gray-500 dark:text-gray-400">
-                                            Enhanced Data Form
+                                            Web Search & Scrapy Data
                                         </div>
                                     </div>
                                 </div>
-                                
 
-                                <!-- Enhanced Data Form - Always visible -->
-                                <div class="space-y-6 max-h-96 overflow-y-auto pr-2" style="scrollbar-width: thin;">
-
-                                    <!-- Contacts Section -->
-                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                                        <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
-                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
-                                            </svg>
-                                            Contacts
-                                        </h5>
-
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <!-- Phone -->
-                                            <div>
-                                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
-                                                <input type="tel"
-                                                       x-model="enhancedDataForm.phone"
-                                                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
-                                                       placeholder="(555) 123-4567">
-                                            </div>
-
-                                            <!-- Email -->
-                                            <div>
-                                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                                                <input type="email"
-                                                       x-model="enhancedDataForm.email"
-                                                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
-                                                       placeholder="contact@organization.org">
-                                            </div>
-                                        </div>
-
-                                        <!-- Address -->
-                                        <div class="mt-4">
-                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
-                                            <textarea x-model="enhancedDataForm.address"
-                                                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white resize-none"
-                                                     rows="2"
-                                                     placeholder="Street address, City, State ZIP"></textarea>
-                                        </div>
-
-                                        <!-- Board Members/Officers -->
-                                        <div class="mt-4">
-                                            <div class="flex justify-between items-center mb-2">
-                                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">Board Members/Officers</label>
-                                                <button type="button"
-                                                        @click="enhancedDataForm.boardMembers.push({name: '', title: ''})"
-                                                        class="text-xs text-purple-600 hover:text-purple-800 dark:text-purple-400">+ Add</button>
-                                            </div>
-                                            <div class="space-y-2">
-                                                <template x-for="(member, index) in enhancedDataForm.boardMembers" :key="index">
-                                                    <div class="flex gap-2 items-center">
-                                                        <input type="text"
-                                                               x-model="member.name"
-                                                               class="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
-                                                               placeholder="Name">
-                                                        <input type="text"
-                                                               x-model="member.title"
-                                                               class="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
-                                                               placeholder="Title">
-                                                        <button type="button"
-                                                                @click="enhancedDataForm.boardMembers.splice(index, 1)"
-                                                                class="text-red-500 hover:text-red-700 text-xs">×</button>
-                                                    </div>
-                                                </template>
-                                            </div>
-                                        </div>
-                                    </div>
-                                
-                                    <!-- Services Section -->
-                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                                        <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
-                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                                            </svg>
-                                            Services
-                                        </h5>
-
-                                        <!-- Primary Program Area -->
-                                        <div class="mb-4">
-                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Primary Program Area</label>
-                                            <select x-model="enhancedDataForm.primaryProgramArea"
-                                                   class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white">
-                                                <option value="">Select program area...</option>
-                                                <option value="education">Education</option>
-                                                <option value="health">Health & Medical</option>
-                                                <option value="human_services">Human Services</option>
-                                                <option value="arts_culture">Arts & Culture</option>
-                                                <option value="environment">Environment</option>
-                                                <option value="community_development">Community Development</option>
-                                                <option value="religion">Religion</option>
-                                                <option value="public_safety">Public Safety</option>
-                                                <option value="international">International</option>
-                                                <option value="civil_rights">Civil Rights</option>
-                                                <option value="youth_development">Youth Development</option>
-                                                <option value="other">Other</option>
-                                            </select>
-                                        </div>
-
-                                        <!-- Geographic Coverage -->
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Service Areas/Geographic Coverage</label>
-                                            <div class="grid grid-cols-2 gap-2 text-xs">
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" x-model="enhancedDataForm.serviceareas" value="local" class="mr-2 text-purple-600">
-                                                    Local
-                                                </label>
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" x-model="enhancedDataForm.serviceareas" value="county" class="mr-2 text-purple-600">
-                                                    County
-                                                </label>
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" x-model="enhancedDataForm.serviceareas" value="state" class="mr-2 text-purple-600">
-                                                    State
-                                                </label>
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" x-model="enhancedDataForm.serviceareas" value="regional" class="mr-2 text-purple-600">
-                                                    Regional
-                                                </label>
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" x-model="enhancedDataForm.serviceareas" value="national" class="mr-2 text-purple-600">
-                                                    National
-                                                </label>
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" x-model="enhancedDataForm.serviceareas" value="international" class="mr-2 text-purple-600">
-                                                    International
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Financial Section -->
-                                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                                        <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
-                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                                            </svg>
-                                            Financial
-                                        </h5>
-
-                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                            <!-- Program Expenses -->
-                                            <div>
-                                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Program Expenses</label>
-                                                <input type="number"
-                                                       x-model="enhancedDataForm.programExpenses"
-                                                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
-                                                       placeholder="0">
-                                            </div>
-
-                                            <!-- Admin Costs -->
-                                            <div>
-                                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Admin Costs</label>
-                                                <input type="number"
-                                                       x-model="enhancedDataForm.adminCosts"
-                                                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
-                                                       placeholder="0">
-                                            </div>
-
-                                            <!-- Fundraising Expenses -->
-                                            <div>
-                                                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Fundraising Expenses</label>
-                                                <input type="number"
-                                                       x-model="enhancedDataForm.fundraisingExpenses"
-                                                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
-                                                       placeholder="0">
-                                            </div>
-                                        </div>
-
-                                        <!-- Revenue Sources -->
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Revenue Sources</label>
-                                            <div class="grid grid-cols-2 gap-2 text-xs">
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" x-model="enhancedDataForm.revenueSources" value="grants" class="mr-2 text-purple-600">
-                                                    Grants
-                                                </label>
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" x-model="enhancedDataForm.revenueSources" value="donations" class="mr-2 text-purple-600">
-                                                    Donations
-                                                </label>
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" x-model="enhancedDataForm.revenueSources" value="fees" class="mr-2 text-purple-600">
-                                                    Service Fees
-                                                </label>
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" x-model="enhancedDataForm.revenueSources" value="events" class="mr-2 text-purple-600">
-                                                    Events
-                                                </label>
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" x-model="enhancedDataForm.revenueSources" value="investments" class="mr-2 text-purple-600">
-                                                    Investments
-                                                </label>
-                                                <label class="flex items-center">
-                                                    <input type="checkbox" x-model="enhancedDataForm.revenueSources" value="other" class="mr-2 text-purple-600">
-                                                    Other
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <div class="space-y-6 flex-1 overflow-y-auto pr-2" style="scrollbar-width: thin;">
 
                                     <!-- News Section -->
                                     <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
@@ -9079,133 +9115,47 @@
                                         </div>
                                     </div>
 
-
-
-
-                                </div>
-                            </div>
-                        </div>
-                                        <div x-show="!webScrapingResults?.extracted_info?.social_media?.length" class="mb-4">
-                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Social Media</h6>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">No social media links found</p>
-                                        </div>
-
-                                        <!-- Partnerships/Affiliations -->
-                                        <div x-show="webScrapingResults?.extracted_info?.partnerships?.length > 0" class="mb-4">
-                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Partnerships</h6>
-                                            <template x-for="(partnership, index) in webScrapingResults?.extracted_info?.partnerships || []" :key="index">
-                                                <div class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded px-3 py-2 mb-2">
-                                                    <div x-text="typeof partnership === 'object' ? (partnership.content || partnership) : partnership"></div>
-                                                    <div x-show="typeof partnership === 'object' && partnership.source"
-                                                         class="text-xs text-blue-600 dark:text-blue-400 mt-1"
-                                                         x-text="'Source: ' + (partnership.source || 'Unknown')"></div>
-                                                </div>
-                                            </template>
-                                        </div>
-                                        <div x-show="!webScrapingResults?.extracted_info?.partnerships?.length" class="mb-4">
-                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Partnerships</h6>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">No partnerships found</p>
-                                        </div>
-
-                                        <!-- Recent News/Press -->
-                                        <div x-show="webScrapingResults?.extracted_info?.news?.length > 0" class="mb-4">
-                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Recent News</h6>
-                                            <template x-for="(news, index) in webScrapingResults?.extracted_info?.news || []" :key="index">
-                                                <div class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded px-3 py-2 mb-2">
-                                                    <div x-text="typeof news === 'object' ? (news.title || news.content || news) : news"></div>
-                                                    <div x-show="typeof news === 'object' && news.date"
-                                                         class="text-xs text-gray-500 mt-1"
-                                                         x-text="news.date"></div>
-                                                    <div x-show="typeof news === 'object' && news.source"
-                                                         class="text-xs text-blue-600 dark:text-blue-400 mt-1"
-                                                         x-text="'Source: ' + (news.source || 'Unknown')"></div>
-                                                </div>
-                                            </template>
-                                        </div>
-                                        <div x-show="!webScrapingResults?.extracted_info?.news?.length" class="mb-4">
-                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Recent News</h6>
-                                            <p class="text-sm text-gray-500 dark:text-gray-400 italic">No recent news found</p>
-                                        </div>
-                                    </div>
-
-                                    <!-- Foundation Intelligence Section (990-PF only) -->
-                                    <div x-show="webScrapingResults?.foundation_intelligence?.is_foundation" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 p-4 mt-4">
-                                        <h5 class="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
-                                            <svg class="w-4 h-4 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                                            </svg>
-                                            Foundation Intelligence (990-PF)
-                                        </h5>
-
-                                        <!-- Foundation Grant Making -->
-                                        <div x-show="webScrapingResults?.foundation_grants?.length > 0" class="mb-4">
-                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Recent Grants Awarded</h6>
-                                            <template x-for="(grant, index) in webScrapingResults?.foundation_grants || []" :key="index">
-                                                <div class="text-sm text-gray-700 dark:text-gray-300 bg-orange-50 dark:bg-orange-900/20 rounded px-3 py-2 mb-2 border-l-4 border-orange-400">
-                                                    <div class="font-medium" x-text="grant.recipient_name || grant.name || 'Grant Recipient'"></div>
-                                                    <div x-show="grant.amount" class="text-green-600 dark:text-green-400 font-medium" x-text="'$' + (grant.amount || 0).toLocaleString()"></div>
-                                                    <div x-show="grant.purpose" class="text-xs text-gray-600 dark:text-gray-400 mt-1" x-text="grant.purpose"></div>
-                                                    <div class="text-xs text-orange-600 dark:text-orange-400 mt-1">Source: IRS 990-PF Filing</div>
-                                                </div>
-                                            </template>
-                                        </div>
-
-                                        <!-- Foundation Capacity -->
-                                        <div x-show="webScrapingResults?.foundation_intelligence?.grant_making_capacity" class="mb-4">
-                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Grant Making Capacity</h6>
-                                            <div class="grid grid-cols-2 gap-3 text-sm">
-                                                <div x-show="webScrapingResults?.foundation_intelligence?.grant_making_capacity?.annual_distribution" class="bg-gray-50 dark:bg-gray-700 rounded px-3 py-2">
-                                                    <div class="text-xs text-gray-500 dark:text-gray-400">Annual Distribution</div>
-                                                    <div class="font-medium" x-text="'$' + (webScrapingResults?.foundation_intelligence?.grant_making_capacity?.annual_distribution || 0).toLocaleString()"></div>
-                                                </div>
-                                                <div x-show="webScrapingResults?.foundation_intelligence?.grant_making_capacity?.total_assets" class="bg-gray-50 dark:bg-gray-700 rounded px-3 py-2">
-                                                    <div class="text-xs text-gray-500 dark:text-gray-400">Total Assets</div>
-                                                    <div class="font-medium" x-text="'$' + (webScrapingResults?.foundation_intelligence?.grant_making_capacity?.total_assets || 0).toLocaleString()"></div>
-                                                </div>
+                                        <!-- Data Source Attribution for Web Search -->
+                                        <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
+                                            <div class="flex items-center text-xs text-purple-700 dark:text-purple-300">
+                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                </svg>
+                                                All data in this tab can be edited and comes from web search and Scrapy data sources. Changes are saved to your profile.
                                             </div>
                                         </div>
-
-                                        <!-- Application Process -->
-                                        <div x-show="webScrapingResults?.foundation_intelligence?.application_process" class="mb-4">
-                                            <h6 class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wide">Application Information</h6>
-                                            <div class="text-sm text-gray-700 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 rounded px-3 py-2">
-                                                <div x-show="webScrapingResults?.foundation_intelligence?.application_process?.contact_info" x-text="webScrapingResults?.foundation_intelligence?.application_process?.contact_info"></div>
-                                                <div x-show="webScrapingResults?.foundation_intelligence?.application_process?.deadlines" x-text="'Deadlines: ' + webScrapingResults?.foundation_intelligence?.application_process?.deadlines" class="text-xs text-blue-600 dark:text-blue-400 mt-1"></div>
-                                                <div class="text-xs text-blue-600 dark:text-blue-400 mt-1">Source: 990-PF Part XIV</div>
-                                            </div>
-                                        </div>
-
-                                        <!-- No Foundation Data -->
-                                        <div x-show="!webScrapingResults?.foundation_grants?.length && !webScrapingResults?.foundation_intelligence?.grant_making_capacity" class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
-                                            <div x-show="webScrapingResults?.foundation_intelligence?.processing_failed">990-PF processing failed - limited foundation data available</div>
-                                            <div x-show="!webScrapingResults?.foundation_intelligence?.processing_failed">Foundation intelligence data not available</div>
-                                        </div>
                                     </div>
-
                                 </div>
                             </div>
                         </div>
 
                     </div>
-                    
-                    <!-- Form Actions -->
-                    <div class="flex justify-end space-x-4 pt-4 mt-auto border-t border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800">
-                        <button type="button" 
-                                @click="showProfileModal = false"
-                                class="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                            Cancel
-                        </button>
-                        <button type="submit" 
-                                :disabled="profileSaving || !profileForm.name"
-                                class="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white rounded-lg transition-colors flex items-center gap-2">
-                            <div x-show="profileSaving" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            <span x-text="profileSaving ? 'Saving...' : (isEditingProfile ? 'Update Profile' : 'Create Profile')"></span>
-                        </button>
-                    </div>
+
+                    </div> <!-- Close Tab Content container -->
+
                 </form>
-            </div>
-        </div>
-    </div>
+
+                </div> <!-- Close Modal Content -->
+
+                <!-- Action buttons - Using Delete Modal Pattern -->
+                <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                    <button type="button"
+                            @click="saveProfile()"
+                            :disabled="profileSaving || !profileForm.name"
+                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-purple-600 text-base font-medium text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-gray-800 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
+                        <div x-show="profileSaving" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        <span x-text="profileSaving ? 'Saving...' : (isEditingProfile ? 'Update Profile' : 'Create Profile')"></span>
+                    </button>
+                    <button type="button"
+                            @click="showProfileModal = false"
+                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 sm:mt-0 sm:w-auto sm:text-sm transition-colors">
+                        Cancel
+                    </button>
+                </div>
+
+            </div> <!-- Close main modal container -->
+        </div> <!-- Close center container -->
+    </div> <!-- Close outer modal container -->
 
     <!-- Delete Confirmation Modal -->
     <div x-show="showDeleteConfirmation" 
@@ -9776,6 +9726,17 @@
             console.log('📋 Hybrid pagination: Using built-in pagination system');
         }
     </script>
+
+    <!-- Catalynx Modules - Disabled to prevent conflicts with main app.js -->
+    <!-- <script src="/static/js/core/error-handler.js" onerror="console.error('Failed to load error-handler.js')"></script> -->
+    <!-- <script src="/static/js/core/catalynx-utils.js" onerror="console.error('Failed to load catalynx-utils.js')"></script> -->
+    <!-- <script src="/static/js/utils/api-client.js" onerror="console.error('Failed to load api-client.js')"></script> -->
+
+    <!-- Alpine.js Stores - Disabled to prevent conflicts with main app.js -->
+    <!-- <script src="/static/js/stores/ui-store.js" onerror="console.error('Failed to load ui-store.js')"></script> -->
+    <!-- <script src="/static/js/stores/profiles-store.js" onerror="console.error('Failed to load profiles-store.js')"></script> -->
+    <!-- <script src="/static/js/stores/opportunities-store.js" onerror="console.error('Failed to load opportunities-store.js')"></script> -->
+
     <script src="/static/app.js?v=REAL_DATA_ONLY_20250911" onerror="console.error('Failed to load app.js')"></script>
     
     <!-- DEBUGGING: Visual indicator that our code is active -->

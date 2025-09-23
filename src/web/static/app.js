@@ -2,290 +2,290 @@
 // Alpine.js application with real-time WebSocket updates
 // Version: TYPE_COLOR_FIX_v1.2 - Updated organization type colors
 
-// Enhanced Error Handling System
-const ErrorHandler = {
-    // Error display state
-    currentError: null,
-    retryAttempts: new Map(),
-    maxRetryAttempts: 3,
+// Enhanced Error Handling System - Now loaded from separate file
+// const ErrorHandler = {
+//     // Error display state
+//     currentError: null,
+//     retryAttempts: new Map(),
+//     maxRetryAttempts: 3,
+
+//     // Show user-friendly error notification
+//     showError(error, context = {}) {
+//         console.error('Error:', error, context);
+//
+//         // Parse error response if available
+//         const errorInfo = this.parseErrorResponse(error);
+//
+//         // Show toast notification
+//         this.showToast({
+//             type: 'error',
+//             title: errorInfo.title,
+//             message: errorInfo.message,
+//             actions: errorInfo.actions,
+//             context: context
+//         });
+//
+//         // Store current error for retry functionality
+//         this.currentError = { error, context, errorInfo };
+//
+//         return errorInfo;
+//     },
     
-    // Show user-friendly error notification
-    showError(error, context = {}) {
-        console.error('Error:', error, context);
-        
-        // Parse error response if available
-        const errorInfo = this.parseErrorResponse(error);
-        
-        // Show toast notification
-        this.showToast({
-            type: 'error',
-            title: errorInfo.title,
-            message: errorInfo.message,
-            actions: errorInfo.actions,
-            context: context
-        });
-        
-        // Store current error for retry functionality
-        this.currentError = { error, context, errorInfo };
-        
-        return errorInfo;
-    },
-    
-    // Parse standardized error responses
-    parseErrorResponse(error) {
-        // Default error info
-        let errorInfo = {
-            title: 'Error Occurred',
-            message: 'An unexpected error occurred. Please try again.',
-            actions: ['retry'],
-            canRetry: true,
-            severity: 'medium'
-        };
-        
-        try {
-            // Handle fetch response errors
-            if (error.response) {
-                const data = error.response.data || error.response;
-                
-                if (data.error_type) {
-                    // Standardized error response
-                    errorInfo.title = data.message || errorInfo.title;
-                    errorInfo.message = data.recovery_guidance?.suggested_actions?.[0] || errorInfo.message;
-                    errorInfo.canRetry = data.recovery_guidance?.retry_allowed || false;
-                    errorInfo.actions = this.getActionsFromRecovery(data.recovery_guidance);
-                } else if (data.detail) {
-                    // FastAPI HTTPException
-                    errorInfo.title = 'Request Failed';
-                    errorInfo.message = data.detail;
-                }
-                
-                // Set severity based on status code
-                if (error.response.status >= 500) {
-                    errorInfo.severity = 'high';
-                } else if (error.response.status >= 400) {
-                    errorInfo.severity = 'medium';
-                }
-                
-            } else if (error.message) {
-                // JavaScript error
-                if (error.message.includes('network') || error.message.includes('fetch')) {
-                    errorInfo.title = 'Network Error';
-                    errorInfo.message = 'Check your internet connection and try again.';
-                } else if (error.message.includes('timeout')) {
-                    errorInfo.title = 'Request Timeout';
-                    errorInfo.message = 'The request took too long. Please try again.';
-                } else {
-                    errorInfo.message = error.message;
-                }
-            }
-            
-        } catch (parseError) {
-            console.warn('Error parsing error response:', parseError);
-        }
-        
-        return errorInfo;
-    },
-    
-    // Get user actions from recovery guidance
-    getActionsFromRecovery(guidance) {
-        const actions = ['dismiss'];
-        
-        if (guidance?.retry_allowed) {
-            actions.unshift('retry');
-        }
-        
-        if (guidance?.documentation_link) {
-            actions.push('help');
-        }
-        
-        return actions;
-    },
-    
-    // Show toast notification
-    showToast({ type = 'info', title, message, actions = ['dismiss'], duration = 5000, context = {} }) {
-        const toast = {
-            id: Date.now(),
-            type,
-            title,
-            message,
-            actions,
-            context,
-            timestamp: new Date(),
-            visible: true
-        };
-        
-        // Add to Alpine.js toast system
-        if (window.alpine && window.alpine.store && window.alpine.store('toasts')) {
-            window.alpine.store('toasts').add(toast);
-        } else {
-            // Fallback to console and browser notification
-            console.log(`${type.toUpperCase()}: ${title} - ${message}`);
-            this.showFallbackNotification(toast);
-        }
-        
-        // Auto-dismiss after duration
-        if (duration > 0) {
-            setTimeout(() => {
-                this.dismissToast(toast.id);
-            }, duration);
-        }
-        
-        return toast;
-    },
-    
-    // Fallback notification for when Alpine.js isn't available
-    showFallbackNotification(toast) {
-        // Create a simple popup
-        const notification = document.createElement('div');
-        notification.className = `fixed top-4 right-4 max-w-sm p-4 rounded-lg shadow-lg z-50 ${
-            toast.type === 'error' ? 'bg-red-100 border-red-400 text-red-700' :
-            toast.type === 'warning' ? 'bg-yellow-100 border-yellow-400 text-yellow-700' :
-            toast.type === 'success' ? 'bg-green-100 border-green-400 text-green-700' :
-            'bg-blue-100 border-blue-400 text-blue-700'
-        }`;
-        
-        notification.innerHTML = `
-            <div class="flex justify-between items-start">
-                <div>
-                    <h4 class="font-semibold">${toast.title}</h4>
-                    <p class="text-sm">${toast.message}</p>
-                </div>
-                <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-lg">&times;</button>
-            </div>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.remove();
-            }
-        }, 5000);
-    },
-    
-    // Dismiss toast notification
-    dismissToast(toastId) {
-        if (window.alpine && window.alpine.store && window.alpine.store('toasts')) {
-            window.alpine.store('toasts').dismiss(toastId);
-        }
-    },
-    
-    // Retry last failed operation
-    async retry(operation = null, context = {}) {
-        const error = this.currentError;
-        if (!error || !error.errorInfo.canRetry) {
-            this.showError(new Error('No retryable operation available'));
-            return false;
-        }
-        
-        const operationKey = operation || `${error.context.operation || 'unknown'}_${error.context.url || 'unknown'}`;
-        const attempts = this.retryAttempts.get(operationKey) || 0;
-        
-        if (attempts >= this.maxRetryAttempts) {
-            this.showError(new Error('Maximum retry attempts exceeded. Please refresh the page or contact support.'));
-            return false;
-        }
-        
-        // Increment retry counter
-        this.retryAttempts.set(operationKey, attempts + 1);
-        
-        // Show retry notification
-        this.showToast({
-            type: 'info',
-            title: 'Retrying Operation',
-            message: `Attempt ${attempts + 1} of ${this.maxRetryAttempts}...`,
-            duration: 2000
-        });
-        
-        try {
-            // If a specific retry function is provided, use it
-            if (context.retryFunction && typeof context.retryFunction === 'function') {
-                await context.retryFunction();
-            } else {
-                // Generic retry - re-execute the failed operation
-                console.log('Generic retry not implemented yet - please refresh the page');
-                return false;
-            }
-            
-            // Success - clear retry counter
-            this.retryAttempts.delete(operationKey);
-            this.showToast({
-                type: 'success',
-                title: 'Operation Succeeded',
-                message: 'The operation completed successfully.',
-                duration: 3000
-            });
-            
-            return true;
-            
-        } catch (retryError) {
-            console.error('Retry failed:', retryError);
-            this.showError(retryError, { ...context, isRetry: true });
-            return false;
-        }
-    },
-    
-    // Wrap fetch requests with error handling
-    async safeFetch(url, options = {}) {
-        const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        try {
-            const response = await fetch(url, {
-                ...options,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...options.headers
-                }
-            });
-            
-            // Check if response is ok
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ 
-                    detail: `HTTP ${response.status}: ${response.statusText}` 
-                }));
-                
-                const error = new Error(`Request failed: ${response.status}`);
-                error.response = {
-                    status: response.status,
-                    statusText: response.statusText,
-                    data: errorData
-                };
-                throw error;
-            }
-            
-            return response;
-            
-        } catch (error) {
-            // Add context to error
-            error.context = {
-                url,
-                method: options.method || 'GET',
-                requestId,
-                timestamp: new Date().toISOString()
-            };
-            
-            throw error;
-        }
-    },
-    
-    // Handle API responses with error checking
-    async handleApiResponse(responsePromise, context = {}) {
-        try {
-            const response = await responsePromise;
-            return response;
-        } catch (error) {
-            const errorInfo = this.showError(error, context);
-            
-            // Determine if we should throw or return null
-            if (errorInfo.severity === 'high' || context.throwOnError) {
-                throw error;
-            }
-            
-            return null;
-        }
-    }
-};
+//     // Parse standardized error responses
+//     parseErrorResponse(error) {
+//         // Default error info
+//         let errorInfo = {
+//             title: 'Error Occurred',
+//             message: 'An unexpected error occurred. Please try again.',
+//             actions: ['retry'],
+//             canRetry: true,
+//             severity: 'medium'
+//         };
+//
+//         try {
+//             // Handle fetch response errors
+//             if (error.response) {
+//                 const data = error.response.data || error.response;
+//
+//                 if (data.error_type) {
+//                     // Standardized error response
+//                     errorInfo.title = data.message || errorInfo.title;
+//                     errorInfo.message = data.recovery_guidance?.suggested_actions?.[0] || errorInfo.message;
+//                     errorInfo.canRetry = data.recovery_guidance?.retry_allowed || false;
+//                     errorInfo.actions = this.getActionsFromRecovery(data.recovery_guidance);
+//                 } else if (data.detail) {
+//                     // FastAPI HTTPException
+//                     errorInfo.title = 'Request Failed';
+//                     errorInfo.message = data.detail;
+//                 }
+//
+//                 // Set severity based on status code
+//                 if (error.response.status >= 500) {
+//                     errorInfo.severity = 'high';
+//                 } else if (error.response.status >= 400) {
+//                     errorInfo.severity = 'medium';
+//                 }
+//
+//             } else if (error.message) {
+//                 // JavaScript error
+//                 if (error.message.includes('network') || error.message.includes('fetch')) {
+//                     errorInfo.title = 'Network Error';
+//                     errorInfo.message = 'Check your internet connection and try again.';
+//                 } else if (error.message.includes('timeout')) {
+//                     errorInfo.title = 'Request Timeout';
+//                     errorInfo.message = 'The request took too long. Please try again.';
+//                 } else {
+//                     errorInfo.message = error.message;
+//                 }
+//             }
+//
+//         } catch (parseError) {
+//             console.warn('Error parsing error response:', parseError);
+//         }
+//
+//         return errorInfo;
+//     },
+//
+//     // Get user actions from recovery guidance
+//     getActionsFromRecovery(guidance) {
+//         const actions = ['dismiss'];
+//
+//         if (guidance?.retry_allowed) {
+//             actions.unshift('retry');
+//         }
+//
+//         if (guidance?.documentation_link) {
+//             actions.push('help');
+//         }
+//
+//         return actions;
+//     },
+//
+//     // Show toast notification
+//     showToast({ type = 'info', title, message, actions = ['dismiss'], duration = 5000, context = {} }) {
+//         const toast = {
+//             id: Date.now(),
+//             type,
+//             title,
+//             message,
+//             actions,
+//             context,
+//             timestamp: new Date(),
+//             visible: true
+//         };
+//
+//         // Add to Alpine.js toast system
+//         if (window.alpine && window.alpine.store && window.alpine.store('toasts')) {
+//             window.alpine.store('toasts').add(toast);
+//         } else {
+//             // Fallback to console and browser notification
+//             console.log(`${type.toUpperCase()}: ${title} - ${message}`);
+//             this.showFallbackNotification(toast);
+//         }
+//
+//         // Auto-dismiss after duration
+//         if (duration > 0) {
+//             setTimeout(() => {
+//                 this.dismissToast(toast.id);
+//             }, duration);
+//         }
+//
+//         return toast;
+//     },
+//
+//     // Fallback notification for when Alpine.js isn't available
+//     showFallbackNotification(toast) {
+//         // Create a simple popup
+//         const notification = document.createElement('div');
+//         notification.className = `fixed top-4 right-4 max-w-sm p-4 rounded-lg shadow-lg z-50 ${
+//             toast.type === 'error' ? 'bg-red-100 border-red-400 text-red-700' :
+//             toast.type === 'warning' ? 'bg-yellow-100 border-yellow-400 text-yellow-700' :
+//             toast.type === 'success' ? 'bg-green-100 border-green-400 text-green-700' :
+//             'bg-blue-100 border-blue-400 text-blue-700'
+//         }`;
+//
+//         notification.innerHTML = `
+//             <div class="flex justify-between items-start">
+//                 <div>
+//                     <h4 class="font-semibold">${toast.title}</h4>
+//                     <p class="text-sm">${toast.message}</p>
+//                 </div>
+//                 <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-lg">&times;</button>
+//             </div>
+//         `;
+//
+//         document.body.appendChild(notification);
+//
+//         // Auto-remove after 5 seconds
+//         setTimeout(() => {
+//             if (notification.parentElement) {
+//                 notification.remove();
+//             }
+//         }, 5000);
+//     },
+//
+//     // Dismiss toast notification
+//     dismissToast(toastId) {
+//         if (window.alpine && window.alpine.store && window.alpine.store('toasts')) {
+//             window.alpine.store('toasts').dismiss(toastId);
+//         }
+//     },
+//
+//     // Retry last failed operation
+//     async retry(operation = null, context = {}) {
+//         const error = this.currentError;
+//         if (!error || !error.errorInfo.canRetry) {
+//             this.showError(new Error('No retryable operation available'));
+//             return false;
+//         }
+//
+//         const operationKey = operation || `${error.context.operation || 'unknown'}_${error.context.url || 'unknown'}`;
+//         const attempts = this.retryAttempts.get(operationKey) || 0;
+//
+//         if (attempts >= this.maxRetryAttempts) {
+//             this.showError(new Error('Maximum retry attempts exceeded. Please refresh the page or contact support.'));
+//             return false;
+//         }
+//
+//         // Increment retry counter
+//         this.retryAttempts.set(operationKey, attempts + 1);
+//
+//         // Show retry notification
+//         this.showToast({
+//             type: 'info',
+//             title: 'Retrying Operation',
+//             message: `Attempt ${attempts + 1} of ${this.maxRetryAttempts}...`,
+//             duration: 2000
+//         });
+//
+//         try {
+//             // If a specific retry function is provided, use it
+//             if (context.retryFunction && typeof context.retryFunction === 'function') {
+//                 await context.retryFunction();
+//             } else {
+//                 // Generic retry - re-execute the failed operation
+//                 console.log('Generic retry not implemented yet - please refresh the page');
+//                 return false;
+//             }
+//
+//             // Success - clear retry counter
+//             this.retryAttempts.delete(operationKey);
+//             this.showToast({
+//                 type: 'success',
+//                 title: 'Operation Succeeded',
+//                 message: 'The operation completed successfully.',
+//                 duration: 3000
+//             });
+//
+//             return true;
+//
+//         } catch (retryError) {
+//             console.error('Retry failed:', retryError);
+//             this.showError(retryError, { ...context, isRetry: true });
+//             return false;
+//         }
+//     },
+//
+//     // Wrap fetch requests with error handling
+//     async safeFetch(url, options = {}) {
+//         const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+//
+//         try {
+//             const response = await fetch(url, {
+//                 ...options,
+//                 headers: {
+//                     'Content-Type': 'application/json',
+//                     ...options.headers
+//                 }
+//             });
+//
+//             // Check if response is ok
+//             if (!response.ok) {
+//                 const errorData = await response.json().catch(() => ({
+//                     detail: `HTTP ${response.status}: ${response.statusText}`
+//                 }));
+//
+//                 const error = new Error(`Request failed: ${response.status}`);
+//                 error.response = {
+//                     status: response.status,
+//                     statusText: response.statusText,
+//                     data: errorData
+//                 };
+//                 throw error;
+//             }
+//
+//             return response;
+//
+//         } catch (error) {
+//             // Add context to error
+//             error.context = {
+//                 url,
+//                 method: options.method || 'GET',
+//                 requestId,
+//                 timestamp: new Date().toISOString()
+//             };
+//
+//             throw error;
+//         }
+//     },
+//
+//     // Handle API responses with error checking
+//     async handleApiResponse(responsePromise, context = {}) {
+//         try {
+//             const response = await responsePromise;
+//             return response;
+//         } catch (error) {
+//             const errorInfo = this.showError(error, context);
+//
+//             // Determine if we should throw or return null
+//             if (errorInfo.severity === 'high' || context.throwOnError) {
+//                 throw error;
+//             }
+//
+//             return null;
+//         }
+//     }
+// };
 
 // Shared utility functions used across all tabs
 const CatalynxUtils = {
@@ -2536,7 +2536,7 @@ function catalynxApp() {
             email: '',
             address: '',
             boardMembers: [
-                // Dynamic array: {name: '', title: ''}
+                {name: '', title: ''} // Start with one empty board member
             ],
 
             // Services
@@ -2551,10 +2551,10 @@ function catalynxApp() {
 
             // News & Media
             partnerships: [
-                // Dynamic array of strings
+                '' // Start with one empty field
             ],
             news: [
-                // Dynamic array: {date: '', title: '', link: ''}
+                {date: '', title: '', link: ''} // Start with one empty news item
             ],
             socialMedia: {
                 facebook: '',
@@ -3256,8 +3256,8 @@ function catalynxApp() {
                 revenueSources: [],
 
                 // News & Media - Extract from web_enhanced_data or use empty defaults
-                partnerships: [],
-                news: [],
+                partnerships: [''], // Start with one empty field
+                news: [{date: '', title: '', link: ''}], // Start with one empty news item
                 socialMedia: {
                     facebook: '',
                     twitter: '',
@@ -3333,6 +3333,11 @@ function catalynxApp() {
                         });
                     }
                 });
+            }
+
+            // Ensure at least one empty field for editing
+            if (boardMembers.length === 0) {
+                boardMembers.push({name: '', title: ''});
             }
 
             return boardMembers;
@@ -18435,15 +18440,51 @@ function addDesktopBulkSelection(appData) {
 // ALPINE.JS INITIALIZATION
 // ========================================
 
-// Wait for Alpine.js to be available, then initialize
-document.addEventListener('DOMContentLoaded', function() {
-    // Check if Alpine.js is loaded
-    if (typeof Alpine === 'undefined') {
-        console.error('Alpine.js not loaded. Retrying...');
-        // Retry after a short delay
-        setTimeout(initializeAlpine, 100);
+// Immediate registration attempt (before Alpine loads)
+if (typeof window !== 'undefined') {
+    window.catalynxAppFunction = catalynxApp;
+    console.log('DEBUG: catalynxApp stored as window function');
+}
+
+// Register with Alpine.js using the proper event system
+document.addEventListener('alpine:init', () => {
+    console.log('DEBUG: Alpine.js init event fired');
+    console.log('DEBUG: catalynxApp function type:', typeof catalynxApp);
+
+    if (typeof Alpine !== 'undefined' && Alpine.data) {
+        Alpine.data('catalynxApp', catalynxApp);
+        console.log('SUCCESS: Catalynx app registered with Alpine.js via alpine:init');
     } else {
-        initializeAlpine();
+        console.error('ERROR: Alpine.js not available during init event');
+    }
+});
+
+// Immediate registration (for when Alpine is already loaded)
+if (typeof Alpine !== 'undefined' && Alpine.data) {
+    console.log('DEBUG: Alpine.js already available, registering immediately');
+    Alpine.data('catalynxApp', catalynxApp);
+    console.log('SUCCESS: Catalynx app registered with Alpine.js immediately');
+}
+
+// Fallback registration on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DEBUG: DOMContentLoaded event fired');
+
+    if (typeof Alpine !== 'undefined' && Alpine.data) {
+        console.log('DEBUG: Alpine.js available on DOMContentLoaded, registering');
+        Alpine.data('catalynxApp', catalynxApp);
+        console.log('SUCCESS: Catalynx app registered with Alpine.js on DOMContentLoaded');
+    } else {
+        console.log('DEBUG: Alpine.js not available on DOMContentLoaded, will retry');
+        // Retry after a short delay
+        setTimeout(() => {
+            if (typeof Alpine !== 'undefined' && Alpine.data) {
+                Alpine.data('catalynxApp', catalynxApp);
+                console.log('SUCCESS: Catalynx app registered with Alpine.js (delayed)');
+            } else {
+                console.error('ERROR: Alpine.js still not available after delay');
+            }
+        }, 100);
     }
 });
 
@@ -18515,5 +18556,572 @@ window.addEventListener('error', function(event) {
 window.addEventListener('unhandledrejection', function(event) {
     console.error('CRITICAL: Unhandled Promise Rejection:', event.reason);
 });
+
+// ========================================
+// Development Tools (Localhost Only)
+// ========================================
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    console.log('🛠️ Development mode detected - Loading debug tools...');
+
+    // Global debug object for console access
+    window.catalynx = {
+        // Quick state inspection (now using Alpine stores)
+        getState() {
+            console.group('📊 Catalynx Application State');
+
+            // UI Store
+            if (Alpine && Alpine.store && Alpine.store('ui')) {
+                const ui = Alpine.store('ui');
+                console.log('🎨 UI State:', {
+                    activeTab: ui.activeTab,
+                    activeStage: ui.activeStage,
+                    hasActiveModal: ui.hasActiveModal,
+                    loading: ui.loading,
+                    currentPage: ui.currentPage
+                });
+            }
+
+            // Profiles Store
+            if (Alpine && Alpine.store && Alpine.store('profiles')) {
+                const profiles = Alpine.store('profiles');
+                console.log('👥 Profiles State:', {
+                    totalProfiles: profiles.profiles.length,
+                    selectedProfile: profiles.selectedProfile?.organization_name || 'None',
+                    profilesLoading: profiles.profilesLoading,
+                    hasProfiles: profiles.hasProfiles
+                });
+            }
+
+            // Opportunities Store
+            if (Alpine && Alpine.store && Alpine.store('opportunities')) {
+                const opportunities = Alpine.store('opportunities');
+                console.log('🎯 Opportunities State:', {
+                    totalOpportunities: opportunities.opportunitiesData.length,
+                    prospects: opportunities.prospects.length,
+                    qualified: opportunities.qualified.length,
+                    candidates: opportunities.candidates.length,
+                    targets: opportunities.targets.length,
+                    opportunities: opportunities.opportunities.length,
+                    discoveryActive: opportunities.discoveryActive
+                });
+            }
+
+            console.groupEnd();
+
+            return {
+                ui: Alpine.store('ui'),
+                profiles: Alpine.store('profiles'),
+                opportunities: Alpine.store('opportunities')
+            };
+        },
+
+        // Modal state inspector (now using UI store)
+        getModals() {
+            if (Alpine && Alpine.store && Alpine.store('ui')) {
+                const ui = Alpine.store('ui');
+                const modalStates = {
+                    profileModal: ui.showProfileModal,
+                    organizationModal: ui.showOrganizationSelectionModal,
+                    intelligenceModal: ui.showIntelligenceModal,
+                    exportModal: ui.showExportModal,
+                    deleteModal: ui.showDeleteConfirmationModal,
+                    prospectModal: ui.showProspectModal,
+                    fourTierIntelligenceModal: ui.show4TierIntelligenceModal,
+                    hasActiveModal: ui.hasActiveModal
+                };
+                console.table(modalStates);
+                return modalStates;
+            }
+            console.warn('UI store not available');
+            return null;
+        },
+
+        // Generate test data for development (now using Alpine stores)
+        loadTestData() {
+            if (!Alpine || !Alpine.store) {
+                console.warn('Alpine.js stores not available');
+                return null;
+            }
+
+            // Generate test profiles
+            const testProfiles = [];
+            for (let i = 1; i <= 5; i++) {
+                testProfiles.push({
+                    profile_id: `test-${i}`,
+                    organization_name: `Test Organization ${i}`,
+                    ein: `12-345678${i}`,
+                    mission_statement: `Mission statement for test organization ${i}`,
+                    focus_areas: [`Area ${i}A`, `Area ${i}B`],
+                    geographic_focus: [`Region ${i}`],
+                    revenue_range: i % 2 === 0 ? '$100K-$500K' : '$500K-$1M',
+                    organization_type: 'Nonprofit',
+                    status: 'active',
+                    created_at: new Date().toISOString()
+                });
+            }
+
+            // Generate test opportunities
+            const testOpportunities = [];
+            for (let i = 1; i <= 10; i++) {
+                testOpportunities.push({
+                    opportunity_id: `opp-${i}`,
+                    organization_name: `Test Funder ${i}`,
+                    program_name: `Test Opportunity ${i}`,
+                    funding_amount: Math.floor(Math.random() * 100000) + 10000,
+                    application_deadline: new Date(Date.now() + Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
+                    funnel_stage: ['prospects', 'qualified', 'candidates'][i % 3],
+                    compatibility_score: Math.random(),
+                    discovery_source: 'Test Data',
+                    source_type: 'Foundation',
+                    discovered_at: new Date().toISOString()
+                });
+            }
+
+            // Load into stores
+            const profilesStore = Alpine.store('profiles');
+            const opportunitiesStore = Alpine.store('opportunities');
+
+            if (profilesStore) {
+                profilesStore.profiles = testProfiles;
+                profilesStore.filteredProfiles = [...testProfiles];
+                profilesStore.profileCount = testProfiles.length;
+
+                // Select first profile
+                if (testProfiles.length > 0) {
+                    profilesStore.selectProfile(testProfiles[0]);
+                }
+            }
+
+            if (opportunitiesStore) {
+                opportunitiesStore.opportunitiesData = testOpportunities;
+                opportunitiesStore.updateStageArrays();
+                opportunitiesStore.updateMetrics();
+            }
+
+            console.log('✅ Test data loaded into stores:', testProfiles.length, 'profiles,', testOpportunities.length, 'opportunities');
+            return { profiles: testProfiles.length, opportunities: testOpportunities.length };
+        },
+
+        // Clear all data (useful for testing empty states) - now using Alpine stores
+        clearData() {
+            if (!Alpine || !Alpine.store) {
+                console.warn('Alpine.js stores not available');
+                return false;
+            }
+
+            // Clear profiles store
+            const profilesStore = Alpine.store('profiles');
+            if (profilesStore) {
+                profilesStore.reset();
+            }
+
+            // Clear opportunities store
+            const opportunitiesStore = Alpine.store('opportunities');
+            if (opportunitiesStore) {
+                opportunitiesStore.reset();
+            }
+
+            // Clear UI store modals and reset to defaults
+            const uiStore = Alpine.store('ui');
+            if (uiStore) {
+                uiStore.closeAllModals();
+                uiStore.activeTab = 'status';
+                uiStore.activeStage = 'welcome';
+                uiStore.clearNotifications();
+            }
+
+            console.log('🗑️ All store data cleared');
+            return true;
+        },
+
+        // Force error for testing error handling
+        triggerTestError() {
+            throw new Error('Test error triggered from catalynx.triggerTestError()');
+        },
+
+        // Log performance metrics
+        getPerformanceMetrics() {
+            if (window.performance) {
+                const metrics = {
+                    loadTime: window.performance.timing.loadEventEnd - window.performance.timing.navigationStart,
+                    domReady: window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart,
+                    firstPaint: window.performance.getEntriesByType('paint').find(entry => entry.name === 'first-paint')?.startTime,
+                    memoryUsage: window.performance.memory ? {
+                        used: Math.round(window.performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB',
+                        total: Math.round(window.performance.memory.totalJSHeapSize / 1024 / 1024) + ' MB'
+                    } : 'Not available'
+                };
+                console.table(metrics);
+                return metrics;
+            }
+            return 'Performance API not available';
+        },
+
+        // Quick access to common functions
+        help() {
+            console.log(`
+🛠️ Catalynx Debug Tools:
+• catalynx.getState() - View all Alpine store states
+• catalynx.getModals() - Check modal states
+• catalynx.loadTestData() - Generate test profiles & opportunities
+• catalynx.clearData() - Clear all store data (test empty states)
+• catalynx.triggerTestError() - Test error handling
+• catalynx.getPerformanceMetrics() - View performance data
+
+🏪 Store Direct Access:
+• Alpine.store('ui') - Access UI state store
+• Alpine.store('profiles') - Access profiles store
+• Alpine.store('opportunities') - Access opportunities store
+
+🎯 Store Quick Actions:
+• Alpine.store('ui').switchTab('discover') - Switch tabs
+• Alpine.store('ui').openModal('profile') - Open modals
+• Alpine.store('profiles').loadProfiles() - Load profiles
+• Alpine.store('opportunities').loadOpportunities(profileId) - Load opportunities
+
+Example: catalynx.getState()
+            `);
+        }
+    };
+
+    // Auto-show help on first load
+    setTimeout(() => {
+        console.log('🚀 Catalynx development tools loaded! Type "catalynx.help()" for available commands.');
+    }, 1000);
+
+    // ========================================
+    // Desktop Keyboard Shortcuts
+    // ========================================
+
+    // Global keyboard shortcut handler
+    document.addEventListener('keydown', function(event) {
+        // Only trigger when no input/textarea is focused and no modals are open
+        const activeElement = document.activeElement;
+        const isInputFocused = activeElement.tagName === 'INPUT' ||
+                              activeElement.tagName === 'TEXTAREA' ||
+                              activeElement.contentEditable === 'true';
+
+        // Get Alpine app instance
+        const appElement = document.querySelector('[x-data*="catalynxApp"]');
+        const app = appElement?.__x?.$data;
+
+        if (!app || isInputFocused) return;
+
+        // Ctrl + Number keys for tab navigation
+        if (event.ctrlKey && !event.shiftKey && !event.altKey) {
+            switch(event.key) {
+                case '1':
+                    event.preventDefault();
+                    app.activeTab = 'status';
+                    console.log('🔄 Switched to Status tab');
+                    break;
+                case '2':
+                    event.preventDefault();
+                    app.activeTab = 'discover';
+                    console.log('🔄 Switched to Discover tab');
+                    break;
+                case '3':
+                    event.preventDefault();
+                    app.activeTab = 'analyze';
+                    console.log('🔄 Switched to Analyze tab');
+                    break;
+                case '4':
+                    event.preventDefault();
+                    app.activeTab = 'intelligence';
+                    console.log('🔄 Switched to Intelligence tab');
+                    break;
+                case '5':
+                    event.preventDefault();
+                    app.activeTab = 'export';
+                    console.log('🔄 Switched to Export tab');
+                    break;
+                case 'n':
+                    event.preventDefault();
+                    if (typeof app.openCreateProfileModal === 'function') {
+                        app.openCreateProfileModal();
+                        console.log('➕ Opened New Profile modal');
+                    }
+                    break;
+                case 's':
+                    event.preventDefault();
+                    if (typeof app.saveCurrentProfile === 'function') {
+                        app.saveCurrentProfile();
+                        console.log('💾 Save triggered');
+                    }
+                    break;
+                case 'f':
+                    event.preventDefault();
+                    // Focus on search input if available
+                    const searchInput = document.querySelector('input[type="search"], input[placeholder*="search" i], input[placeholder*="filter" i]');
+                    if (searchInput) {
+                        searchInput.focus();
+                        console.log('🔍 Focused on search input');
+                    }
+                    break;
+                case 'd':
+                    event.preventDefault();
+                    if (app.selectedProfile && typeof app.startDiscovery === 'function') {
+                        app.startDiscovery();
+                        console.log('🚀 Started discovery for selected profile');
+                    }
+                    break;
+            }
+        }
+
+        // Alt key shortcuts for secondary actions
+        if (event.altKey && !event.ctrlKey && !event.shiftKey) {
+            switch(event.key) {
+                case 't':
+                    event.preventDefault();
+                    // Toggle dark mode
+                    document.documentElement.classList.toggle('dark');
+                    console.log('🌙 Toggled dark mode');
+                    break;
+                case 'c':
+                    event.preventDefault();
+                    // Clear notifications
+                    if (typeof app.clearNotifications === 'function') {
+                        app.clearNotifications();
+                        console.log('🧹 Cleared notifications');
+                    }
+                    break;
+            }
+        }
+
+        // Escape key - close modals and clear selections
+        if (event.key === 'Escape') {
+            event.preventDefault();
+
+            // Close any open modals
+            const modalClosed = [
+                'showProfileModal',
+                'showOrganizationSelectionModal',
+                'showIntelligenceModal',
+                'showExportModal',
+                'showDeleteConfirmationModal'
+            ].some(modalProperty => {
+                if (app[modalProperty]) {
+                    app[modalProperty] = false;
+                    return true;
+                }
+                return false;
+            });
+
+            if (modalClosed) {
+                console.log('❌ Closed modal with Escape');
+            } else if (app.selectedProfile) {
+                // Clear selection if no modal was open
+                app.selectedProfile = null;
+                console.log('❌ Cleared profile selection');
+            }
+        }
+
+        // F1 - Show help
+        if (event.key === 'F1') {
+            event.preventDefault();
+            showKeyboardShortcutsHelp();
+        }
+    });
+
+    // Show keyboard shortcuts help
+    function showKeyboardShortcutsHelp() {
+        console.log(`
+⌨️ Catalynx Keyboard Shortcuts:
+
+📁 Tab Navigation:
+• Ctrl+1 - Status tab
+• Ctrl+2 - Discover tab
+• Ctrl+3 - Analyze tab
+• Ctrl+4 - Intelligence tab
+• Ctrl+5 - Export tab
+
+🛠️ Actions:
+• Ctrl+N - New Profile
+• Ctrl+S - Save
+• Ctrl+F - Focus Search
+• Ctrl+D - Start Discovery (with selected profile)
+
+🎨 Interface:
+• Alt+T - Toggle Dark Mode
+• Alt+C - Clear Notifications
+• Esc - Close Modals / Clear Selection
+• F1 - Show this help
+
+💡 Tip: These shortcuts only work when not typing in an input field.
+        `);
+    }
+
+    // Show shortcuts help on first load
+    setTimeout(() => {
+        console.log('⌨️ Desktop keyboard shortcuts enabled! Press F1 for help.');
+    }, 1500);
+
+    // ========================================
+    // Hot Reload for Development
+    // ========================================
+
+    let lastServerCheck = Date.now();
+    let serverCheckInterval = null;
+    let hotReloadEnabled = true;
+
+    // Check if FastAPI server is running and responsive
+    async function checkServerHealth() {
+        try {
+            const response = await fetch('/api/health', {
+                method: 'GET',
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
+            });
+
+            if (response.ok) {
+                lastServerCheck = Date.now();
+                return true;
+            } else {
+                throw new Error(`Server responded with ${response.status}`);
+            }
+        } catch (error) {
+            console.warn('🔄 Server health check failed:', error.message);
+            return false;
+        }
+    }
+
+    // Watch for file changes by monitoring server responses
+    async function watchForChanges() {
+        if (!hotReloadEnabled) return;
+
+        try {
+            // Check if app.js has been modified by comparing last-modified header
+            const response = await fetch('/static/app.js', {
+                method: 'HEAD',
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
+            });
+
+            const lastModified = response.headers.get('Last-Modified');
+            if (lastModified) {
+                const modifiedTime = new Date(lastModified).getTime();
+
+                // Check if we have a stored modification time
+                const storedTime = localStorage.getItem('catalynx-last-modified');
+                if (storedTime && modifiedTime > parseInt(storedTime)) {
+                    console.log('🔄 File changes detected! Reloading page...');
+                    location.reload();
+                    return;
+                }
+
+                // Store current modification time
+                localStorage.setItem('catalynx-last-modified', modifiedTime.toString());
+            }
+
+            // Also check server health periodically
+            const serverHealthy = await checkServerHealth();
+            if (!serverHealthy && (Date.now() - lastServerCheck) > 30000) {
+                console.log('🔄 Server appears to be restarting. Will reload when ready...');
+
+                // Wait for server to come back online
+                const waitForServer = setInterval(async () => {
+                    if (await checkServerHealth()) {
+                        console.log('🔄 Server back online! Reloading...');
+                        clearInterval(waitForServer);
+                        location.reload();
+                    }
+                }, 2000);
+
+                // Stop waiting after 2 minutes
+                setTimeout(() => {
+                    clearInterval(waitForServer);
+                    console.log('🔄 Stopped waiting for server restart');
+                }, 120000);
+            }
+
+        } catch (error) {
+            console.warn('🔄 Hot reload check failed:', error.message);
+        }
+    }
+
+    // Initialize hot reload
+    function initHotReload() {
+        // Set initial modification time
+        fetch('/static/app.js', { method: 'HEAD', cache: 'no-cache' })
+            .then(response => {
+                const lastModified = response.headers.get('Last-Modified');
+                if (lastModified) {
+                    localStorage.setItem('catalynx-last-modified', new Date(lastModified).getTime().toString());
+                }
+            })
+            .catch(() => {
+                // Ignore initial fetch errors
+            });
+
+        // Start watching for changes every 5 seconds
+        serverCheckInterval = setInterval(watchForChanges, 5000);
+
+        console.log('🔄 Hot reload enabled! Files will auto-refresh when changed.');
+    }
+
+    // Add hot reload controls to debug object
+    window.catalynx.hotReload = {
+        start() {
+            if (!serverCheckInterval) {
+                initHotReload();
+                hotReloadEnabled = true;
+                console.log('🔄 Hot reload started');
+            } else {
+                console.log('🔄 Hot reload already running');
+            }
+        },
+
+        stop() {
+            if (serverCheckInterval) {
+                clearInterval(serverCheckInterval);
+                serverCheckInterval = null;
+                hotReloadEnabled = false;
+                console.log('🔄 Hot reload stopped');
+            }
+        },
+
+        check() {
+            watchForChanges();
+        },
+
+        forceReload() {
+            localStorage.removeItem('catalynx-last-modified');
+            location.reload();
+        }
+    };
+
+    // Auto-start hot reload
+    initHotReload();
+
+    // Stop hot reload when page is hidden (saves resources)
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            hotReloadEnabled = false;
+        } else {
+            hotReloadEnabled = true;
+            // Check immediately when page becomes visible
+            setTimeout(watchForChanges, 1000);
+        }
+    });
+
+    // Update help to include hot reload commands
+    const originalHelp = window.catalynx.help;
+    window.catalynx.help = function() {
+        originalHelp();
+        console.log(`
+🔄 Hot Reload Controls:
+• catalynx.hotReload.start() - Start file watching
+• catalynx.hotReload.stop() - Stop file watching
+• catalynx.hotReload.check() - Check for changes now
+• catalynx.hotReload.forceReload() - Force page reload
+        `);
+    };
+}
 
 // ========================================

@@ -12,6 +12,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Quer
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 import asyncio
 import json
 import logging
@@ -343,13 +344,37 @@ async def secure_profile_deletion(profile_id: str, deleted_by: str) -> bool:
         
         return False
 
+# Lifespan event handler (replaces deprecated on_event)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize and cleanup services."""
+    # Startup
+    logger.info("Starting Catalynx Web Interface...")
+    logger.info("Registering processors...")
+
+    # Auto-register processors
+    try:
+        from src.processors.registry import register_all_processors
+        registered_count = register_all_processors()
+        logger.info(f"Registered {registered_count} processors")
+    except Exception as e:
+        logger.warning(f"Failed to auto-register processors: {e}")
+
+    logger.info("Catalynx API ready!")
+
+    yield
+
+    # Shutdown (if needed)
+    logger.info("Shutting down Catalynx Web Interface...")
+
 # Create FastAPI application
 app = FastAPI(
     title="Catalynx - Grant Research Automation",
     description="Modern web interface for intelligent grant research and classification",
     version="2.0.0",
     docs_url="/api/docs",
-    redoc_url="/api/redoc"
+    redoc_url="/api/redoc",
+    lifespan=lifespan
 )
 
 # Configure CORS for development
@@ -10767,24 +10792,6 @@ async def get_available_chart_types():
     except Exception as e:
         logger.error(f"Error retrieving chart types: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve chart types: {str(e)}")
-
-
-# Startup event
-@app.on_event("startup")
-async def startup_event():
-    """Initialize services on startup."""
-    logger.info("Starting Catalynx Web Interface...")
-    logger.info("Registering processors...")
-    
-    # Auto-register processors
-    try:
-        from src.processors.registry import register_all_processors
-        registered_count = register_all_processors()
-        logger.info(f"Registered {registered_count} processors")
-    except Exception as e:
-        logger.warning(f"Failed to auto-register processors: {e}")
-    
-    logger.info("Catalynx API ready!")
 
 if __name__ == "__main__":
     # Run the application
