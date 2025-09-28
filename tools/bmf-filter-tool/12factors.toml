@@ -1,0 +1,127 @@
+[tool]
+name = "bmf-filter"
+version = "1.0.0"
+description = "Filter IRS nonprofit data by criteria - 12-Factor implementation"
+intent = "bmf_filter"
+framework = "12-factor-agents"
+integration_type = "catalynx_tool"
+
+[tool.capabilities]
+primary = "bmf_filtering"
+secondary = ["nonprofit_discovery", "data_filtering", "database_querying"]
+data_sources = ["bmf_organizations", "form_990", "form_990pf"]
+
+[tool.input]
+type = "BMFFilterIntent"
+schema = "baml_src/bmf_filter.baml"
+validation = "strict"
+natural_language = true
+
+[tool.output]
+type = "BMFFilterResult"
+schema = "baml_src/bmf_filter.baml"
+format = "structured"
+metadata_included = true
+
+[tool.dependencies]
+database = "nonprofit_intelligence.db"
+cache = "optional"
+llm = "optional"
+external_apis = []
+
+[tool.integration]
+catalynx_database = "data/nonprofit_intelligence.db"
+existing_processors = ["bmf_processor"]
+comparison_benchmarks = true
+migration_pathway = "gradual_replacement"
+
+[tool.performance]
+max_concurrent = 10
+timeout_seconds = 30
+cache_ttl = 3600
+max_results = 1000
+target_response_time_ms = 100
+memory_limit_mb = 512
+
+[tool.12factors]
+# Human Layer 12-Factor Agents Framework Implementation
+# https://github.com/humanlayer/12-factor-agents
+
+natural_language_to_tools = true       # Factor 1: Convert natural language to structured tool calls
+own_prompts = true                     # Factor 2: Take full control of prompt engineering
+own_context_window = true              # Factor 3: Carefully manage context provided to LLM
+tools_as_structured_outputs = true     # Factor 4: Treat tools as predictable, structured data interfaces
+unify_execution_business_state = true  # Factor 5: Integrate agent state with business logic
+launch_pause_resume_apis = true        # Factor 6: Design flexible interaction models with simple APIs
+contact_humans_tool_calls = true       # Factor 7: Build direct communication channels between agents and users
+control_flow_management = true         # Factor 8: Maintain explicit control over agent decision-making
+compact_error_handling = true          # Factor 9: Integrate error information directly into context
+small_focused_agents = true            # Factor 10: Design narrow, specialized agent implementations
+trigger_from_anywhere = true           # Factor 11: Create flexible entry points for agent interactions
+stateless_reducer_model = true         # Factor 12: Treat agents as pure transformation functions
+
+[tool.factor_implementations]
+# Detailed implementation of key 12-factor agents principles
+
+factor_1_implementation = "BMFFilterIntent converts 'Find education orgs in VA' → structured database query criteria"
+factor_2_implementation = "BAML schema provides full prompt control - no hidden prompting, deterministic structure"
+factor_3_implementation = "Minimal context usage - focused on search criteria only, heavy lifting done by database"
+factor_4_implementation = "Tool forces LLM to output well-formed BMFFilterResult JSON, eliminating parsing errors"
+factor_5_implementation = "Agent execution state unified with nonprofit database business workflows"
+factor_6_implementation = "Single async execute() method - simple launch, can be paused/resumed in workflows"
+factor_7_implementation = "Results include human-readable summaries, recommendations, and match explanations"
+factor_8_implementation = "Explicit control flow: criteria → database query → structured results (no unpredictable loops)"
+factor_9_implementation = "Errors integrated into BMFFilterResult structure, not thrown exceptions"
+factor_10_implementation = "Single responsibility: filter 700K BMF records to ~10 relevant organizations"
+factor_11_implementation = "Triggered from web UI, API, CLI, or workflow orchestrator"
+factor_12_implementation = "Pure function: BMFFilterCriteria → BMFFilterResult (deterministic, reproducible)"
+
+[tool.factor_4_details]
+# Factor 4: Tools as Structured Outputs - Core Implementation
+structured_output_enforcement = "BAML schema prevents JSON parsing errors by forcing structured format"
+output_schema = "BMFFilterResult with organizations[], summary, execution_metadata, quality_assessment"
+reliability_improvement = "Eliminates '2 AM JSON parsing errors' common in LLM applications"
+deterministic_outputs = "Every tool call produces predictable BMFOrganization, BMFSearchSummary structures"
+tool_as_formatter = "Tool serves as structured output generator, not just functionality provider"
+production_readiness = "Designed for reliable LLM-powered software in production environments"
+
+[tool.environment]
+# Environment variable configuration
+required_vars = [
+    "BMF_DATABASE_PATH",
+    "BMF_FILTER_PORT"
+]
+optional_vars = [
+    "BMF_CACHE_ENABLED",
+    "BMF_MAX_RESULTS",
+    "BMF_TIMEOUT_SECONDS",
+    "OPENAI_API_KEY",
+    "LOG_LEVEL"
+]
+config_file = ".env.tool"
+
+[tool.deployment]
+# Deployment and scaling configuration
+container_ready = true
+health_check_endpoint = "/health"
+metrics_endpoint = "/metrics"
+graceful_shutdown_timeout = 10
+min_instances = 1
+max_instances = 5
+auto_scaling = true
+
+[tool.testing]
+# Testing strategy and requirements
+unit_tests = "tests/test_tool.py"
+integration_tests = "tests/test_integration.py"
+performance_tests = "tests/test_performance.py"
+coverage_target = 90
+benchmark_existing = true
+
+[tool.documentation]
+# Documentation and examples
+readme = "README.md"
+api_spec = "auto_generated"
+examples = "app/main.py"
+architecture_comparison = true
+migration_guide = true

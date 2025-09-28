@@ -1,0 +1,124 @@
+[tool]
+name = "foundation-grant-intelligence"
+version = "1.0.0"
+description = "990-PF foundation analysis and grant-making capacity assessment - 12-Factor Agents implementation"
+intent = "foundation_intelligence"
+framework = "12-factor-agents"
+integration_type = "catalynx_tool"
+
+[tool.capabilities]
+primary = "foundation_analysis"
+secondary = ["grant_making_profiles", "payout_requirements", "capacity_scoring", "investment_analysis"]
+data_sources = ["form990_pf_data", "propublica_foundations"]
+
+[tool.input]
+type = "FoundationAnalysisCriteria"
+schema = "baml_src/foundation_intelligence.baml"
+validation = "strict"
+natural_language = false
+
+[tool.output]
+type = "FoundationIntelligenceResult"
+schema = "baml_src/foundation_intelligence.baml"
+format = "structured"
+metadata_included = true
+
+[tool.dependencies]
+database = "optional"
+cache = "optional"
+llm = "none"
+external_apis = "none"
+
+[tool.integration]
+catalynx_database = "data/nonprofit_intelligence.db"
+existing_processors = ["propublica_fetch"]
+comparison_benchmarks = true
+migration_pathway = "gradual_replacement"
+
+[tool.performance]
+max_concurrent = 1
+timeout_seconds = 30
+cache_ttl = 86400
+max_results = 100
+target_response_time_ms = 200
+memory_limit_mb = 256
+
+[tool.12factors]
+# Human Layer 12-Factor Agents Framework Implementation
+# https://github.com/humanlayer/12-factor-agents
+
+natural_language_to_tools = false      # Factor 1: Takes structured EINs from previous tools
+own_prompts = true                     # Factor 2: Full control over foundation analysis algorithms
+own_context_window = true              # Factor 3: Minimal context - financial data provides analysis input
+tools_as_structured_outputs = true     # Factor 4: Forces structured FoundationIntelligenceResult output
+unify_execution_business_state = true  # Factor 5: Foundation analysis unified with grant research workflows
+launch_pause_resume_apis = true        # Factor 6: Simple async execute() method for analysis
+contact_humans_tool_calls = true       # Factor 7: Provides human-readable capacity scores and recommendations
+control_flow_management = true         # Factor 8: Explicit control over analysis workflow and calculations
+compact_error_handling = true          # Factor 9: Analysis errors integrated into result structure
+small_focused_agents = true            # Factor 10: Single responsibility - foundation intelligence only
+trigger_from_anywhere = true           # Factor 11: Can be triggered from workflows or standalone
+stateless_reducer_model = true         # Factor 12: Pure function - Foundation data → intelligence analysis
+
+[tool.factor_implementations]
+# Detailed implementation of key 12-factor agents principles
+
+factor_1_implementation = "Takes structured EIN list with 990-PF data from previous tools, not natural language"
+factor_2_implementation = "Complete control over foundation analysis algorithms and capacity scoring"
+factor_3_implementation = "Minimal context - foundation financial data provides analysis input"
+factor_4_implementation = "Tool forces structured FoundationIntelligenceResult with guaranteed JSON format"
+factor_5_implementation = "Foundation analysis state integrated with nonprofit grant research workflows"
+factor_6_implementation = "Single async execute() method for comprehensive foundation intelligence"
+factor_7_implementation = "Results include human-readable capacity scores, payout requirements, grant recommendations"
+factor_8_implementation = "Explicit flow: Foundation data → payout analysis → capacity scoring → intelligence"
+factor_9_implementation = "Analysis errors and data limitations integrated into FoundationIntelligenceResult"
+factor_10_implementation = "Single responsibility: foundation intelligence only - NO API calls, NO XML parsing"
+factor_11_implementation = "Triggered from API enrichment results, web UI, or workflow orchestrator"
+factor_12_implementation = "Pure function: FoundationAnalysisCriteria → FoundationIntelligenceResult"
+
+[tool.factor_4_details]
+# Factor 4: Tools as Structured Outputs - Foundation Intelligence Implementation
+structured_output_enforcement = "Guarantees FoundationIntelligenceResult with capacity scores, payout analysis"
+output_schema = "GrantMakingProfile[], PayoutAnalysis[], CapacityScore[], InvestmentProfile[] with consistent structure"
+reliability_improvement = "Eliminates foundation analysis errors and inconsistent capacity scoring"
+deterministic_outputs = "Consistent foundation intelligence structure regardless of data complexity"
+tool_as_formatter = "Tool serves as foundation data analyzer with guaranteed intelligence structure"
+production_readiness = "Reliable foundation analysis for production grant research workflows"
+
+[tool.environment]
+# Environment variable configuration
+required_vars = []  # No external APIs required
+optional_vars = [
+    "FOUNDATION_ANALYSIS_CACHE_ENABLED",
+    "FOUNDATION_PAYOUT_RATE",
+    "FOUNDATION_MAJOR_THRESHOLD",
+    "FOUNDATION_SIGNIFICANT_GRANT_THRESHOLD",
+    "FOUNDATION_LOG_PERFORMANCE"
+]
+config_file = ".env.tool"
+
+[tool.deployment]
+# Deployment and scaling configuration
+container_ready = true
+health_check_endpoint = "/health"
+metrics_endpoint = "/metrics"
+graceful_shutdown_timeout = 10
+min_instances = 1
+max_instances = 2
+auto_scaling = true
+
+[tool.testing]
+# Testing strategy and requirements
+unit_tests = "tests/test_foundation_intelligence_tool.py"
+integration_tests = "tests/test_foundation_analysis_integration.py"
+performance_tests = "tests/test_foundation_analysis_performance.py"
+coverage_target = 85
+benchmark_existing = true
+
+[tool.documentation]
+# Documentation and examples
+readme = "README.md"
+api_spec = "auto_generated"
+examples = "app/foundation_intelligence_analyzer.py"
+architecture_comparison = true
+migration_guide = true

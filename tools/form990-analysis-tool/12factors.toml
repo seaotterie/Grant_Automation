@@ -1,0 +1,126 @@
+[tool]
+name = "form990-analysis"
+version = "1.0.0"
+description = "Deep financial analysis using Form 990 database - 12-Factor Agents implementation"
+intent = "form990_analysis"
+framework = "12-factor-agents"
+integration_type = "catalynx_tool"
+
+[tool.capabilities]
+primary = "financial_analysis"
+secondary = ["multi_year_trends", "health_assessment", "grant_capacity", "risk_analysis"]
+data_sources = ["form_990", "form_990pf", "form_990ez", "bmf_organizations"]
+
+[tool.input]
+type = "Form990AnalysisCriteria"
+schema = "baml_src/form990_analysis.baml"
+validation = "strict"
+natural_language = false
+
+[tool.output]
+type = "Form990AnalysisResult"
+schema = "baml_src/form990_analysis.baml"
+format = "structured"
+metadata_included = true
+
+[tool.dependencies]
+database = "nonprofit_intelligence.db"
+cache = "optional"
+llm = "none"
+external_apis = []
+
+[tool.integration]
+catalynx_database = "data/nonprofit_intelligence.db"
+existing_processors = ["ai_heavy_light", "ai_heavy_deep"]
+comparison_benchmarks = true
+migration_pathway = "gradual_replacement"
+
+[tool.performance]
+max_concurrent = 5
+timeout_seconds = 300
+cache_ttl = 3600
+max_results = 50
+target_response_time_ms = 1000
+memory_limit_mb = 1024
+
+[tool.12factors]
+# Human Layer 12-Factor Agents Framework Implementation
+# https://github.com/humanlayer/12-factor-agents
+
+natural_language_to_tools = false      # Factor 1: Takes structured EINs, not natural language
+own_prompts = true                     # Factor 2: Full control over analysis logic and outputs
+own_context_window = true              # Factor 3: Minimal context - database does heavy lifting
+tools_as_structured_outputs = true     # Factor 4: Forces structured Form990AnalysisResult output
+unify_execution_business_state = true  # Factor 5: Analysis state unified with nonprofit database
+launch_pause_resume_apis = true        # Factor 6: Simple async execute() method
+contact_humans_tool_calls = true       # Factor 7: Provides human-readable insights and warnings
+control_flow_management = true         # Factor 8: Explicit control over analysis workflow
+compact_error_handling = true          # Factor 9: Errors integrated into result structure
+small_focused_agents = true            # Factor 10: Single responsibility - financial analysis only
+trigger_from_anywhere = true           # Factor 11: Can be triggered standalone or in workflows
+stateless_reducer_model = true         # Factor 12: Pure function - EINs → financial analysis
+
+[tool.factor_implementations]
+# Detailed implementation of key 12-factor agents principles
+
+factor_1_implementation = "Takes structured EIN list from BMF filter tool, not natural language"
+factor_2_implementation = "Complete control over financial analysis algorithms and health scoring"
+factor_3_implementation = "Minimal context - financial data retrieved from database, not LLM context"
+factor_4_implementation = "Tool forces structured Form990AnalysisResult with financial health, trends, insights"
+factor_5_implementation = "Financial analysis state integrated with nonprofit intelligence database"
+factor_6_implementation = "Single async execute() method with Form990AnalysisCriteria input"
+factor_7_implementation = "Results include human-readable financial health insights and warning flags"
+factor_8_implementation = "Explicit analysis flow: EINs → database query → financial calculations → insights"
+factor_9_implementation = "Analysis errors integrated into Form990AnalysisResult, not exceptions"
+factor_10_implementation = "Single responsibility: multi-year financial analysis of Form 990 data"
+factor_11_implementation = "Triggered from BMF filter results, web UI, API, or workflow orchestrator"
+factor_12_implementation = "Pure function: Form990AnalysisCriteria → Form990AnalysisResult (deterministic)"
+
+[tool.factor_4_details]
+# Factor 4: Tools as Structured Outputs - Financial Analysis Implementation
+structured_output_enforcement = "Guarantees Form990AnalysisResult with financial health, trends, metadata"
+output_schema = "Form990OrganizationAnalysis[] with financial years, health assessment, insights"
+reliability_improvement = "Eliminates parsing errors in financial data presentation"
+deterministic_outputs = "Consistent financial health scoring and trend analysis structure"
+tool_as_formatter = "Tool serves as financial intelligence formatter with guaranteed structure"
+production_readiness = "Reliable financial analysis for production grant research workflows"
+
+[tool.environment]
+# Environment variable configuration
+required_vars = [
+    "FORM990_DATABASE_PATH"
+]
+optional_vars = [
+    "FORM990_CACHE_ENABLED",
+    "FORM990_MAX_ORGANIZATIONS",
+    "FORM990_DEFAULT_YEARS",
+    "FORM990_TIMEOUT_SECONDS",
+    "FORM990_LOG_PERFORMANCE"
+]
+config_file = ".env.tool"
+
+[tool.deployment]
+# Deployment and scaling configuration
+container_ready = true
+health_check_endpoint = "/health"
+metrics_endpoint = "/metrics"
+graceful_shutdown_timeout = 10
+min_instances = 1
+max_instances = 3
+auto_scaling = true
+
+[tool.testing]
+# Testing strategy and requirements
+unit_tests = "tests/test_form990_tool.py"
+integration_tests = "tests/test_database_integration.py"
+performance_tests = "tests/test_financial_analysis.py"
+coverage_target = 90
+benchmark_existing = true
+
+[tool.documentation]
+# Documentation and examples
+readme = "README.md"
+api_spec = "auto_generated"
+examples = "app/form990_analyzer.py"
+architecture_comparison = true
+migration_guide = true

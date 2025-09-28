@@ -1,0 +1,125 @@
+[tool]
+name = "xml-schedule-parser"
+version = "1.0.0"
+description = "XML download and schedule parsing for detailed 990 filing data - 12-Factor Agents implementation"
+intent = "xml_schedule_extraction"
+framework = "12-factor-agents"
+integration_type = "catalynx_tool"
+
+[tool.capabilities]
+primary = "xml_parsing"
+secondary = ["schedule_i_grants", "schedule_j_board", "schedule_k_supplemental", "xml_download"]
+data_sources = ["propublica_xml", "irs_xml_filings"]
+
+[tool.input]
+type = "XMLScheduleCriteria"
+schema = "baml_src/xml_schedule_parsing.baml"
+validation = "strict"
+natural_language = false
+
+[tool.output]
+type = "XMLScheduleResult"
+schema = "baml_src/xml_schedule_parsing.baml"
+format = "structured"
+metadata_included = true
+
+[tool.dependencies]
+database = "none"
+cache = "required"
+llm = "none"
+external_apis = ["propublica_xml_download"]
+
+[tool.integration]
+catalynx_database = "data/nonprofit_intelligence.db"
+existing_processors = ["xml_downloader"]
+comparison_benchmarks = true
+migration_pathway = "gradual_replacement"
+
+[tool.performance]
+max_concurrent = 3
+timeout_seconds = 60
+cache_ttl = 2592000  # 30 days for XML files
+max_results = 100
+target_response_time_ms = 1000
+memory_limit_mb = 512
+
+[tool.12factors]
+# Human Layer 12-Factor Agents Framework Implementation
+# https://github.com/humanlayer/12-factor-agents
+
+natural_language_to_tools = false      # Factor 1: Takes structured EINs from previous tools
+own_prompts = true                     # Factor 2: Full control over XML parsing and data extraction
+own_context_window = true              # Factor 3: Minimal context - XML files provide structured data
+tools_as_structured_outputs = true     # Factor 4: Forces structured XMLScheduleResult output
+unify_execution_business_state = true  # Factor 5: XML parsing unified with grant research workflows
+launch_pause_resume_apis = true        # Factor 6: Simple async execute() method with caching
+contact_humans_tool_calls = true       # Factor 7: Provides human-readable schedule data extraction
+control_flow_management = true         # Factor 8: Explicit control over XML download and parsing
+compact_error_handling = true          # Factor 9: XML errors integrated into result structure
+small_focused_agents = true            # Factor 10: Single responsibility - XML schedule parsing only
+trigger_from_anywhere = true           # Factor 11: Can be triggered from workflows or standalone
+stateless_reducer_model = true         # Factor 12: Pure function - EINs → parsed schedule data
+
+[tool.factor_implementations]
+# Detailed implementation of key 12-factor agents principles
+
+factor_1_implementation = "Takes structured EIN list from ProPublica API tool, not natural language"
+factor_2_implementation = "Complete control over XML download, parsing, and schedule data extraction"
+factor_3_implementation = "Minimal context - XML files provide structured data, not LLM context"
+factor_4_implementation = "Tool forces structured XMLScheduleResult with guaranteed JSON format"
+factor_5_implementation = "XML parsing state integrated with nonprofit grant research workflows"
+factor_6_implementation = "Single async execute() method with intelligent caching and object_id discovery"
+factor_7_implementation = "Results include human-readable grant records, board data, and financial details"
+factor_8_implementation = "Explicit flow: EINs → object_id discovery → XML download → schedule parsing"
+factor_9_implementation = "XML parsing errors and download failures integrated into XMLScheduleResult"
+factor_10_implementation = "Single responsibility: XML schedule parsing only - NO API calls, NO analysis"
+factor_11_implementation = "Triggered from API enrichment results, web UI, or workflow orchestrator"
+factor_12_implementation = "Pure function: XMLScheduleCriteria → XMLScheduleResult"
+
+[tool.factor_4_details]
+# Factor 4: Tools as Structured Outputs - XML Schedule Parsing Implementation
+structured_output_enforcement = "Guarantees XMLScheduleResult with grant records, board data, supplemental info"
+output_schema = "GrantRecord[], BoardMember[], SupplementalFinancialData[] with consistent structure"
+reliability_improvement = "Eliminates XML parsing errors and inconsistent schedule data extraction"
+deterministic_outputs = "Consistent schedule data structure regardless of XML file complexity"
+tool_as_formatter = "Tool serves as XML data formatter with guaranteed schedule extraction structure"
+production_readiness = "Reliable XML schedule parsing for production grant research workflows"
+
+[tool.environment]
+# Environment variable configuration
+required_vars = []  # No API keys required for XML parsing
+optional_vars = [
+    "XML_CACHE_ENABLED",
+    "XML_CACHE_DIRECTORY",
+    "XML_DOWNLOAD_TIMEOUT",
+    "XML_MAX_CONCURRENT_DOWNLOADS",
+    "XML_MAX_YEARS_BACK",
+    "XML_LOG_PERFORMANCE"
+]
+config_file = ".env.tool"
+
+[tool.deployment]
+# Deployment and scaling configuration
+container_ready = true
+health_check_endpoint = "/health"
+metrics_endpoint = "/metrics"
+graceful_shutdown_timeout = 10
+min_instances = 1
+max_instances = 3
+auto_scaling = true
+
+[tool.testing]
+# Testing strategy and requirements
+unit_tests = "tests/test_xml_parser_tool.py"
+integration_tests = "tests/test_xml_download_integration.py"
+performance_tests = "tests/test_xml_parsing_performance.py"
+coverage_target = 85
+benchmark_existing = true
+
+[tool.documentation]
+# Documentation and examples
+readme = "README.md"
+api_spec = "auto_generated"
+examples = "app/xml_schedule_parser.py"
+architecture_comparison = true
+migration_guide = true

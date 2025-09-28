@@ -1,0 +1,117 @@
+# XML 990 Parser Tool Configuration
+# Human Layer 12-Factor Agents Framework Implementation
+
+[tool]
+name = "XML 990 Parser Tool"
+version = "1.0.0"
+description = "XML download and 990 form schedule parsing for regular nonprofits only"
+form_specialization = "990"
+target_organizations = "Regular nonprofits (501c3, etc.)"
+
+# Factor 1: One codebase tracked in revision control
+codebase_tracked = true
+version_control = "git"
+single_codebase = true
+
+# Factor 2: Explicitly declare and isolate dependencies
+dependencies_explicit = true
+dependency_isolation = true
+dependencies = [
+    "asyncio",
+    "aiohttp",
+    "aiofiles",
+    "xml.etree.ElementTree",
+    "beautifulsoup4",
+    "pathlib",
+    "dataclasses",
+    "typing"
+]
+
+# Factor 3: Store config in the environment
+config_in_environment = true
+configuration_sources = ["environment_variables", "config_files"]
+
+# Factor 4: Tools as Structured Outputs (CORE PRINCIPLE)
+tools_as_structured_outputs = true
+structured_output_format = "XML990Result dataclass"
+eliminates_parsing_errors = true
+factor_4_compliance = "Tools return predictable, structured data interfaces that eliminate parsing errors"
+
+# Factor 5: Strictly separate build and run stages
+separate_build_run = true
+build_stage = "Tool initialization and dependency loading"
+run_stage = "XML parsing execution with structured output"
+
+# Factor 6: Execute as stateless processes
+stateless_execution = true
+process_state = "No persistent state between executions"
+shared_nothing_architecture = true
+
+# Factor 7: Export services via port binding
+port_binding = false
+service_export = "Direct Python function calls (not network services)"
+
+# Factor 8: Scale out via the process model
+process_model_scaling = true
+concurrent_processing = true
+max_concurrent_downloads = 3
+
+# Factor 9: Maximize robustness with fast startup and graceful shutdown
+fast_startup = true
+graceful_shutdown = true
+startup_time_target = "< 100ms"
+
+# Factor 10: Small, Focused Agents (SINGLE RESPONSIBILITY)
+small_focused_agents = true
+single_responsibility = "XML download and 990 form parsing for regular nonprofits"
+responsibility_boundary = "Does NOT handle 990-PF or 990-EZ forms (separate tools)"
+agent_size = "Small - focused on one form type"
+
+# Factor 11: Autonomous Operation
+autonomous_operation = true
+self_contained = true
+minimal_external_dependencies = true
+
+# Factor 12: API First
+api_first = true
+programmatic_interface = true
+human_interface = "Secondary (testing/debugging only)"
+
+# Tool-Specific Configuration
+[tool.xml_parsing]
+form_types_supported = ["990"]
+form_types_rejected = ["990-PF", "990-EZ"]
+schema_validation_strict = true
+schedules_extractable = ["officers", "governance", "programs", "financials", "grants"]
+
+[tool.caching]
+cache_directory = "cache/xml_filings_990"
+cache_enabled = true
+cache_xml_files = true
+
+[tool.download]
+source = "ProPublica object_id methodology"
+max_concurrent_downloads = 3
+download_timeout_seconds = 60
+max_retries = 2
+
+[tool.data_extraction]
+officer_extraction = "Form990PartVIISectionAGrp elements"
+governance_extraction = "IRS990 governance indicators"
+program_extraction = "Program service accomplishment groups"
+financial_extraction = "Revenue, expenses, assets from IRS990"
+grant_extraction = "Schedule I grants (if available)"
+
+[tool.quality_assurance]
+schema_validation = true
+error_handling = "Graceful degradation with structured error reporting"
+data_completeness_tracking = true
+execution_metadata = "Comprehensive performance and quality metrics"
+
+# Integration with 12-Factor Agent Framework
+[framework]
+compliance_level = "Full"
+factor_4_implementation = "Core - structured outputs eliminate XML parsing complexity"
+factor_10_implementation = "Core - single responsibility for 990 forms only"
+integration_pattern = "Specialized tool in multi-tool workflow"
+consumer_interface = "Structured dataclass results"
