@@ -1,0 +1,36 @@
+[tool]
+name = "bmf-filter"
+version = "1.0.0"
+description = "Filter IRS nonprofit data by criteria"
+intent = "bmf_filter"
+
+[tool.capabilities]
+primary = "bmf_filtering"
+secondary = ["nonprofit_discovery", "data_filtering"]
+
+[tool.input]
+type = "BMFFilterIntent"
+schema = "baml_src/bmf_filter.baml"
+
+[tool.output]
+type = "BMFFilterResult"
+schema = "baml_src/bmf_filter.baml"
+
+[tool.dependencies]
+database = "bmf_organizations"
+cache = "optional"
+llm = "optional"
+
+[tool.performance]
+max_concurrent = 10
+timeout_seconds = 30
+cache_ttl = 3600
+max_results = 1000
+
+[tool.12factors]
+# Factor compliance tracking
+config_external = true          # Factor 3: All config from environment
+stateless = true               # Factor 6: Stateless processes
+port_binding = true            # Factor 7: Export via port binding
+structured_io = true           # Factor 4: Structured inputs/outputs
+disposable = true              # Factor 9: Fast startup/shutdown
