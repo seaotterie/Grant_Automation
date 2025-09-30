@@ -1,27 +1,47 @@
 # Catalynx - Grant Research Intelligence Platform
 
-## SYSTEM STATUS: PHASE 1 IN PROGRESS - 12-FACTOR TRANSFORMATION 🚀
+## SYSTEM STATUS: PHASE 2 COMPLETE - TWO-TOOL ARCHITECTURE OPERATIONAL ✅
 
-**Production-ready grant intelligence platform** with 4-tier business packages ($0.75-$42.00), entity-based data architecture, 18 operational processors, modern web interface, advanced decision support systems, and **fully migrated SQLite database architecture**. Currently undergoing **12-factor tool transformation** to modernize processor architecture.
+**Production-ready grant intelligence platform** with 4-tier business packages ($0.75-$42.00), entity-based data architecture, modern web interface, and **12-factor tool transformation in progress**. Phase 2 milestone achieved: **Two unified AI tools replace 8 processors** (87.5% consolidation).
 
-### 12-Factor Transformation Status (Week 1 of 9)
-- **Progress**: Phase 1 Foundation Infrastructure - IN PROGRESS
-- **Completed Tools**: 9/19 operational (47% of MVP)
-- **Architecture**: Two-tool pipeline (screening → human gateway → deep intelligence)
-- **Timeline**: 9 weeks to production-ready 12-factor architecture
+### 12-Factor Transformation Status (Week 3 of 9)
+- **Progress**: Phase 2 Complete - Two-Tool Architecture Operational
+- **Completed Tools**: 11/19 operational (58% of MVP)
+- **Architecture**: Screening Tool + Deep Intelligence Tool (replaces 8 AI processors)
+- **Timeline**: 9 weeks total, on track for production completion
 
-**Current Phase Deliverables**:
-- ✅ Repository cleanup (Playwright artifacts committed)
-- ✅ Deprecation directory structure (`src/processors/_deprecated/`)
-- ✅ Tool infrastructure directories (`src/core/tool_framework/`, `src/workflows/`)
-- ✅ Tool Registry System (`src/core/tool_registry.py`)
-- ✅ Base Tool Framework (`src/core/tool_framework/base_tool.py`)
-- ✅ BAML Validator (`src/core/tool_framework/baml_validator.py`)
-- ✅ Workflow Engine Foundation (`src/workflows/`)
-- 🔄 Tool Development Guide (pending)
-- 🔄 Tool Template Structure (pending)
+**Phase 2 Achievement - Two-Tool Pipeline**:
 
-**Next**: Week 2-3 - Unified AI Tools Development (Screening + Deep Intelligence)
+**Tool 1: Opportunity Screening Tool** ✅
+- Fast mode: $0.0004/opportunity, ~2 sec (PLAN equivalent)
+- Thorough mode: $0.02/opportunity, ~5 sec (ANALYZE equivalent)
+- Mass screening: 200 opportunities → ~10 selected
+- Replaces: 2 processors (ai_lite_unified, ai_heavy_light)
+
+**Human Gateway**:
+- Manual review and strategic selection
+- Web scraping for additional context
+- Priority ranking and focus area selection
+
+**Tool 2: Deep Intelligence Tool** ✅
+- Quick depth: $0.75, 5-10 min (CURRENT tier equivalent)
+- Standard depth: $7.50, 15-20 min (STANDARD tier equivalent)
+- Enhanced depth: $22.00, 30-45 min (ENHANCED tier equivalent)
+- Complete depth: $42.00, 45-60 min (COMPLETE tier equivalent)
+- Comprehensive analysis: ~10 selected opportunities
+- Replaces: 6 processors (ai_heavy_deep, ai_heavy_researcher, 4 tier processors)
+
+**Pipeline Economics**:
+- Stage 1: $0.68 for 200 opportunities
+- Stage 2: $50-100 typical (variable depth)
+- Total: ~$50-100 vs. manual research
+- Result: 87.5% processor reduction with better architecture
+
+**Completed Phases**:
+- ✅ Phase 1 (Week 1): Foundation infrastructure, tool framework, workflow engine
+- ✅ Phase 2 (Week 2-3): Two unified AI tools operational
+
+**Next**: Phase 3 (Week 4) - Supporting Tools Development
 
 ## CRITICAL: GPT-5 MODEL CONFIGURATION
 
@@ -305,7 +325,7 @@ foundation_capacity = intelligence_db.analyze_foundation_grants(ein="541026365")
 - **Depths**: quick ($0.75), standard ($7.50), enhanced ($22.00), complete ($42.00)
 - **Replaces**: 6 processors (ai_heavy_deep, ai_heavy_researcher, 4 tier processors)
 
-### Operational Tools (9 of 19 Complete)
+### Operational Tools (11 of 19 Complete - 58%)
 1. ✅ XML 990 Parser Tool - Regular nonprofit 990 parsing
 2. ✅ XML 990-PF Parser Tool - Private foundation 990-PF parsing
 3. ✅ XML 990-EZ Parser Tool - Small nonprofit 990-EZ parsing
@@ -315,10 +335,10 @@ foundation_capacity = intelligence_db.analyze_foundation_grants(ein="541026365")
 7. ✅ Foundation Grant Intelligence Tool - Grant-making analysis
 8. ✅ ProPublica API Enrichment Tool - Additional data enrichment
 9. ✅ XML Schedule Parser Tool - Schedule extraction and parsing
+10. ✅ **Opportunity Screening Tool** - Mass screening with fast/thorough modes (NEW - Phase 2)
+11. ✅ **Deep Intelligence Tool** - 4-depth comprehensive analysis (NEW - Phase 2)
 
-### Remaining Tools (10 tools, Weeks 4-6)
-- Opportunity Screening Tool (Week 2)
-- Deep Intelligence Tool (Week 3)
+### Remaining Tools (8 tools, Weeks 4-6)
 - Government opportunity tools (3 tools - deferred to Phase 9)
 - Additional data enrichment tools (5 tools)
 - Export and reporting tools (2 tools)
