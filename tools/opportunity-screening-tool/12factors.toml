@@ -1,0 +1,140 @@
+# Opportunity Screening Tool Configuration
+# Human Layer 12-Factor Agents Framework Implementation
+
+[tool]
+name = "Opportunity Screening Tool"
+version = "1.0.0"
+description = "Mass screening of grant opportunities (100s → 10s) with fast and thorough modes"
+purpose = "Screen large volumes of opportunities to identify high-potential matches for deep analysis"
+replaces_processors = ["ai_lite_unified", "ai_heavy_light"]
+
+# Factor 1: One codebase tracked in revision control
+codebase_tracked = true
+version_control = "git"
+single_codebase = true
+
+# Factor 2: Explicitly declare and isolate dependencies
+dependencies_explicit = true
+dependency_isolation = true
+dependencies = [
+    "asyncio",
+    "dataclasses",
+    "typing",
+    "datetime",
+    "openai",  # For AI screening
+    "pydantic"  # For data validation
+]
+
+# Factor 3: Store config in the environment
+config_in_environment = true
+configuration_sources = ["environment_variables", "config_files"]
+required_env_vars = ["OPENAI_API_KEY"]
+optional_config = ["default_mode", "default_threshold", "max_recommendations"]
+
+# Factor 4: Tools as Structured Outputs (CORE PRINCIPLE)
+tools_as_structured_outputs = true
+structured_output_format = "ScreeningOutput dataclass with OpportunityScore[] array"
+eliminates_parsing_errors = true
+factor_4_compliance = "Returns structured ScreeningOutput with dimensional scores, eliminating AI response parsing complexity"
+
+# Factor 5: Strictly separate build and run stages
+separate_build_run = true
+build_stage = "Tool initialization, config loading, BAML schema compilation"
+run_stage = "Opportunity screening execution with structured output"
+
+# Factor 6: Execute as stateless processes
+stateless_execution = true
+process_state = "No persistent state between screening runs"
+shared_nothing_architecture = true
+
+# Factor 7: Export services via port binding
+port_binding = false
+service_export = "Direct Python function calls (not network services)"
+
+# Factor 8: Scale out via the process model
+process_model_scaling = true
+concurrent_processing = true
+batch_processing = true
+batch_sizes = { fast = 10, thorough = 5 }
+
+# Factor 9: Maximize robustness with fast startup and graceful shutdown
+fast_startup = true
+graceful_shutdown = true
+startup_time_target = "< 100ms"
+
+# Factor 10: Small, Focused Agents (SINGLE RESPONSIBILITY)
+small_focused_agents = true
+single_responsibility = "Mass screening of grant opportunities to identify high-potential matches"
+responsibility_boundary = "Does NOT perform deep analysis (separate tool), Does NOT fetch opportunities (separate tools)"
+agent_size = "Medium - handles both fast and thorough screening modes"
+
+# Factor 11: Autonomous Operation
+autonomous_operation = true
+self_contained = true
+minimal_external_dependencies = true
+
+# Factor 12: API First
+api_first = true
+programmatic_interface = true
+human_interface = "Secondary (via web UI integration)"
+
+# Tool-Specific Configuration
+
+[tool.screening_modes]
+fast = { cost_per_opp = 0.0004, time_seconds = 2, analysis_depth = "Basic strategic fit and eligibility" }
+thorough = { cost_per_opp = 0.02, time_seconds = 5, analysis_depth = "Comprehensive multi-dimensional analysis" }
+
+[tool.scoring_dimensions]
+fast_mode = ["strategic_fit", "eligibility", "timing"]
+thorough_mode = ["strategic_fit", "eligibility", "timing", "financial", "competition"]
+
+[tool.scoring_weights]
+# Fast mode weights
+fast_strategic_fit = 0.50
+fast_eligibility = 0.30
+fast_timing = 0.20
+
+# Thorough mode weights
+thorough_strategic_fit = 0.35
+thorough_eligibility = 0.25
+thorough_timing = 0.15
+thorough_financial = 0.15
+thorough_competition = 0.10
+
+[tool.thresholds]
+default_minimum_score = 0.55
+fast_mode_eligibility_minimum = 0.70
+thorough_mode_eligibility_minimum = 0.75
+proceed_to_deep_analysis = { fast = 0.55, thorough = 0.60 }
+
+[tool.batch_processing]
+max_concurrent_fast = 10
+max_concurrent_thorough = 5
+parallel_execution = true
+
+[tool.cost_tracking]
+track_api_costs = true
+cost_per_fast_screening = 0.0004
+cost_per_thorough_screening = 0.02
+estimated_batch_cost = { fast_200 = 0.08, thorough_200 = 4.00 }
+
+[tool.output_structure]
+primary_output = "ScreeningOutput"
+dimensional_scores = "OpportunityScore[]"
+summary_statistics = ["total_screened", "passed_threshold", "recommended_for_deep_analysis"]
+quality_metrics = ["avg_confidence_level", "high_confidence_count"]
+
+# Integration with 12-Factor Agent Framework
+[framework]
+compliance_level = "Full"
+factor_4_implementation = "Core - structured ScreeningOutput with typed OpportunityScore array"
+factor_10_implementation = "Core - single responsibility for opportunity screening only"
+integration_pattern = "First stage in two-tool pipeline (screening → human gateway → deep intelligence)"
+consumer_interface = "Structured dataclass results with batch processing support"
+human_gateway = "Outputs feed manual review and selection for deep analysis tool"
+
+[framework.workflow_integration]
+position_in_pipeline = "Stage 1: Mass Screening"
+input_source = "Opportunity discovery tools"
+output_consumers = ["Human reviewers", "Deep Intelligence Tool"]
+typical_workflow = "Discover 200 opps → Screen → Select 10 → Deep analysis"
