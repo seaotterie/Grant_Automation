@@ -1,0 +1,64 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e5]:
+        - heading "Catalynx CATALYNX" [level=1] [ref=e7]:
+          - img "Catalynx" [ref=e8]
+          - generic [ref=e9]: CATALYNX
+        - button "☀️" [ref=e10] [cursor=pointer]:
+          - generic [ref=e11] [cursor=pointer]: ☀️
+      - navigation [ref=e12]:
+        - link "WELCOME" [ref=e14]:
+          - /url: "#"
+        - link "PROFILER" [ref=e16]:
+          - /url: "#"
+        - link "DISCOVER" [ref=e18]:
+          - /url: "#"
+        - link "PLAN" [ref=e20]:
+          - /url: "#"
+        - link "ANALYZE" [ref=e22]:
+          - /url: "#"
+        - link "EXAMINE" [ref=e24]:
+          - /url: "#"
+        - link "APPROACH" [ref=e26]:
+          - /url: "#"
+        - link "SETTINGS" [ref=e28]:
+          - /url: "#"
+        - generic [ref=e30]:
+          - generic [ref=e31]: Catalynx
+          - generic [ref=e32]: Opportunity Intelligence Platform
+    - main [ref=e33]:
+      - generic [ref=e35]:
+        - generic [ref=e37]:
+          - heading "Welcome" [level=2] [ref=e38]:
+            - generic [ref=e39]: Welcome
+          - paragraph [ref=e40]: Getting started with Catalynx platform
+        - generic [ref=e42]:
+          - textbox "Search profiles, organizations, workflows..." [ref=e43]
+          - generic:
+            - img
+          - button [ref=e44] [cursor=pointer]:
+            - img [ref=e45] [cursor=pointer]
+        - generic [ref=e47]:
+          - generic [ref=e50]:
+            - generic [ref=e51]: System Healthy
+            - generic [ref=e52]: Unknown uptime
+          - generic [ref=e55]:
+            - generic [ref=e56]: API
+            - generic [ref=e57]: Responsive
+          - button [ref=e59] [cursor=pointer]:
+            - img [ref=e60] [cursor=pointer]
+          - generic [ref=e63]: 7:59:12 AM
+      - generic [ref=e67]:
+        - img "Catalynx Logo" [ref=e69]
+        - heading "Welcome to Catalynx" [level=1] [ref=e70]
+        - paragraph [ref=e71]: Comprehensive Opportunity Intelligence & Network Analysis
+        - generic [ref=e72]:
+          - button "Get Started" [ref=e73] [cursor=pointer]
+          - button "Quick Tutorial" [ref=e75] [cursor=pointer]
+  - contentinfo
+```

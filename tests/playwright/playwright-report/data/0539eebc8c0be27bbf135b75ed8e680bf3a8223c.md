@@ -1,0 +1,42 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - button [ref=e4] [cursor=pointer]:
+        - img [ref=e5] [cursor=pointer]
+      - heading "Catalynx" [level=1] [ref=e7]
+      - button [ref=e8] [cursor=pointer]:
+        - img [ref=e9] [cursor=pointer]
+  - main [ref=e12]:
+    - generic [ref=e14]:
+      - generic [ref=e16]:
+        - heading "Welcome" [level=2] [ref=e17]:
+          - generic [ref=e18]: Welcome
+        - paragraph [ref=e19]: Getting started with Catalynx platform
+      - generic [ref=e21]:
+        - textbox "Search profiles, organizations, workflows..." [ref=e22]
+        - generic:
+          - img
+        - button [ref=e23] [cursor=pointer]:
+          - img [ref=e24] [cursor=pointer]
+      - generic [ref=e26]:
+        - generic [ref=e29]:
+          - generic [ref=e30]: System Error
+          - generic [ref=e31]: Unknown uptime
+        - generic [ref=e34]:
+          - generic [ref=e35]: API
+          - generic [ref=e36]: Responsive
+        - button [ref=e38] [cursor=pointer]:
+          - img [ref=e39] [cursor=pointer]
+        - generic [ref=e42]: 7:59:58 AM
+    - generic [ref=e46]:
+      - img "Catalynx Logo" [ref=e48]
+      - heading "Welcome to Catalynx" [level=1] [ref=e49]
+      - paragraph [ref=e50]: Comprehensive Opportunity Intelligence & Network Analysis
+      - generic [ref=e51]:
+        - button "Get Started" [ref=e52] [cursor=pointer]
+        - button "Quick Tutorial" [ref=e54] [cursor=pointer]
+  - contentinfo
+```
