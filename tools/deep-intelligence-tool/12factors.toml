@@ -1,0 +1,179 @@
+# Deep Intelligence Tool Configuration
+# Human Layer 12-Factor Agents Framework Implementation
+
+[tool]
+name = "Deep Intelligence Tool"
+version = "1.0.0"
+description = "Comprehensive deep intelligence analysis with 4 configurable depth levels ($0.75-$42.00)"
+purpose = "Stage 2: Detailed analysis of ~10 selected opportunities from screening tool"
+replaces_processors = [
+    "ai_heavy_deep_researcher",
+    "ai_heavy_researcher",
+    "current_tier_processor",
+    "standard_tier_processor",
+    "enhanced_tier_processor",
+    "complete_tier_processor",
+    "enhanced_ai_lite_processor"
+]
+
+# Factor 1: One codebase tracked in revision control
+codebase_tracked = true
+version_control = "git"
+single_codebase = true
+
+# Factor 2: Explicitly declare and isolate dependencies
+dependencies_explicit = true
+dependency_isolation = true
+dependencies = [
+    "asyncio",
+    "dataclasses",
+    "typing",
+    "datetime",
+    "openai",
+    "pydantic"
+]
+
+# Factor 3: Store config in the environment
+config_in_environment = true
+configuration_sources = ["environment_variables", "config_files"]
+required_env_vars = ["OPENAI_API_KEY"]
+optional_config = ["default_depth"]
+
+# Factor 4: Tools as Structured Outputs (CORE PRINCIPLE)
+tools_as_structured_outputs = true
+structured_output_format = "DeepIntelligenceOutput with comprehensive analysis modules"
+eliminates_parsing_errors = true
+factor_4_compliance = "Returns structured DeepIntelligenceOutput with dimensional analyses, eliminating complex response parsing"
+
+# Factor 5: Strictly separate build and run stages
+separate_build_run = true
+build_stage = "Tool initialization, depth handler setup, BAML schema compilation"
+run_stage = "Intelligence analysis execution with depth-specific features"
+
+# Factor 6: Execute as stateless processes
+stateless_execution = true
+process_state = "No persistent state between analysis runs"
+shared_nothing_architecture = true
+
+# Factor 7: Export services via port binding
+port_binding = false
+service_export = "Direct Python function calls (not network services)"
+
+# Factor 8: Scale out via the process model
+process_model_scaling = true
+concurrent_processing = true
+batch_processing = true
+
+# Factor 9: Maximize robustness with fast startup and graceful shutdown
+fast_startup = true
+graceful_shutdown = true
+startup_time_target = "< 100ms"
+
+# Factor 10: Small, Focused Agents (SINGLE RESPONSIBILITY)
+small_focused_agents = true
+single_responsibility = "Comprehensive deep intelligence analysis of selected grant opportunities"
+responsibility_boundary = "Does NOT screen opportunities (separate tool), Does NOT discover opportunities (separate tools)"
+agent_size = "Large - handles 4 depth levels with progressive feature sets"
+
+# Factor 11: Autonomous Operation
+autonomous_operation = true
+self_contained = true
+minimal_external_dependencies = true
+
+# Factor 12: API First
+api_first = true
+programmatic_interface = true
+human_interface = "Secondary (via web UI integration)"
+
+# Depth Level Configurations
+
+[tool.depths.quick]
+cost_usd = 0.75
+time_minutes = [5, 10]
+equivalent_to = "CURRENT tier"
+analysis_stages = ["PLAN", "ANALYZE", "EXAMINE", "APPROACH"]
+features = [
+    "strategic_fit",
+    "financial_viability",
+    "operational_readiness",
+    "risk_assessment"
+]
+
+[tool.depths.standard]
+cost_usd = 7.50
+time_minutes = [15, 20]
+equivalent_to = "STANDARD tier"
+analysis_stages = ["PLAN", "ANALYZE", "EXAMINE", "APPROACH"]
+features = [
+    "strategic_fit",
+    "financial_viability",
+    "operational_readiness",
+    "risk_assessment",
+    "historical_intelligence",
+    "geographic_analysis"
+]
+
+[tool.depths.enhanced]
+cost_usd = 22.00
+time_minutes = [30, 45]
+equivalent_to = "ENHANCED tier"
+analysis_stages = ["PLAN", "ANALYZE", "EXAMINE", "APPROACH"]
+features = [
+    "strategic_fit",
+    "financial_viability",
+    "operational_readiness",
+    "risk_assessment",
+    "historical_intelligence",
+    "geographic_analysis",
+    "network_intelligence",
+    "relationship_mapping"
+]
+
+[tool.depths.complete]
+cost_usd = 42.00
+time_minutes = [45, 60]
+equivalent_to = "COMPLETE tier"
+analysis_stages = ["PLAN", "ANALYZE", "EXAMINE", "APPROACH"]
+features = [
+    "strategic_fit",
+    "financial_viability",
+    "operational_readiness",
+    "risk_assessment",
+    "historical_intelligence",
+    "geographic_analysis",
+    "network_intelligence",
+    "relationship_mapping",
+    "policy_analysis",
+    "strategic_consulting"
+]
+report_pages = "26+"
+
+# Analysis Components
+
+[tool.analysis_components]
+strategic_fit = ["mission_alignment", "program_alignment", "geographic_alignment"]
+financial_viability = ["budget_capacity", "financial_health", "sustainability"]
+operational_readiness = ["capacity", "timeline_feasibility", "infrastructure"]
+risk_assessment = ["eligibility", "competition", "capacity", "timeline", "financial"]
+
+[tool.output_structure]
+primary_output = "DeepIntelligenceOutput"
+core_modules = ["strategic_fit", "financial_viability", "operational_readiness", "risk_assessment"]
+enhanced_modules = ["historical_intelligence", "geographic_analysis"]
+advanced_modules = ["network_intelligence", "relationship_mapping"]
+premium_modules = ["policy_analysis", "strategic_consulting"]
+
+# Integration with 12-Factor Agent Framework
+[framework]
+compliance_level = "Full"
+factor_4_implementation = "Core - comprehensive structured DeepIntelligenceOutput with depth-specific modules"
+factor_10_implementation = "Core - single responsibility for deep intelligence analysis only"
+integration_pattern = "Second stage in two-tool pipeline (screening → human gateway → deep intelligence)"
+consumer_interface = "Structured dataclass results with 4 configurable depth levels"
+human_gateway = "Receives ~10 opportunities selected from screening tool output"
+
+[framework.workflow_integration]
+position_in_pipeline = "Stage 2: Deep Intelligence"
+input_source = "Human-selected opportunities from screening tool output"
+output_consumers = ["Human decision makers", "Proposal development teams"]
+typical_workflow = "Screen 200 → Select 10 → Deep analyze at appropriate depth → Make go/no-go decisions"
