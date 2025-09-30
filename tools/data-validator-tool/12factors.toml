@@ -1,0 +1,23 @@
+# Data Validator Tool Configuration
+
+[tool]
+name = "Data Validator Tool"
+version = "1.0.0"
+description = "Data validation for workflow quality assurance (no API cost)"
+purpose = "Validate data completeness and quality"
+replaces_processors = []
+
+[tool.factors]
+codebase_tracked = true
+dependencies_explicit = true
+tools_as_structured_outputs = true
+stateless_execution = true
+small_focused_agents = true
+
+[tool.output_structure]
+primary_output = "DataValidatorOutput"
+cost_per_validation = 0.00
+
+[framework]
+compliance_level = "Full"
+factor_10_implementation = "Single responsibility - data validation only"

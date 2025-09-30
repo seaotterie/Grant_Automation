@@ -1,0 +1,23 @@
+# EIN Validator Tool Configuration
+
+[tool]
+name = "EIN Validator Tool"
+version = "1.0.0"
+description = "EIN format validation and organization lookup (no API cost)"
+purpose = "Validate EIN format and verify organization existence"
+replaces_processors = ["ein_lookup"]
+
+[tool.factors]
+codebase_tracked = true
+dependencies_explicit = true
+tools_as_structured_outputs = true
+stateless_execution = true
+small_focused_agents = true
+
+[tool.output_structure]
+primary_output = "EINValidatorOutput"
+cost_per_validation = 0.00
+
+[framework]
+compliance_level = "Full"
+factor_10_implementation = "Single responsibility - EIN validation only"
