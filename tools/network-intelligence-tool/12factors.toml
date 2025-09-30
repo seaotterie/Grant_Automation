@@ -1,0 +1,44 @@
+# Network Intelligence Tool Configuration
+
+[tool]
+name = "Network Intelligence Tool"
+version = "1.0.0"
+description = "Board network analysis and relationship mapping ($0.04 per analysis)"
+purpose = "Strategic network intelligence for relationship cultivation"
+replaces_processors = [
+    "board_network_analyzer",
+    "enhanced_network_analyzer"
+]
+
+# 12-Factor compliance
+[tool.factors]
+codebase_tracked = true
+dependencies_explicit = true
+config_in_environment = true
+tools_as_structured_outputs = true
+separate_build_run = true
+stateless_execution = true
+port_binding = false
+process_model_scaling = true
+fast_startup = true
+small_focused_agents = true
+autonomous_operation = true
+api_first = true
+
+[tool.analysis_features]
+board_profiling = "Individual board member network analysis"
+centrality_metrics = "Degree, betweenness, closeness, eigenvector centrality"
+cluster_identification = "Network community detection"
+relationship_pathways = "Direct and indirect connection mapping"
+strategic_connections = "High-value cultivation opportunities"
+funder_analysis = "Target funder connection assessment"
+
+[tool.output_structure]
+primary_output = "NetworkIntelligenceOutput"
+cost_per_analysis = 0.04
+
+[framework]
+compliance_level = "Full"
+factor_4_implementation = "Structured NetworkIntelligenceOutput with comprehensive network analysis"
+factor_10_implementation = "Single responsibility - network intelligence only"
+integration_pattern = "Supporting tool for enhanced intelligence workflows"
