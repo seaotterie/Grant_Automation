@@ -1,8 +1,27 @@
 # Catalynx - Grant Research Intelligence Platform
 
-## SYSTEM STATUS: PHASE 7 COMPLETE - CRITICAL DATABASE MIGRATION ✅
+## SYSTEM STATUS: PHASE 1 IN PROGRESS - 12-FACTOR TRANSFORMATION 🚀
 
-**Production-ready grant intelligence platform** with 4-tier business packages ($0.75-$42.00), entity-based data architecture, 18 operational processors, modern web interface, advanced decision support systems, and **fully migrated SQLite database architecture** eliminating critical 500 errors.
+**Production-ready grant intelligence platform** with 4-tier business packages ($0.75-$42.00), entity-based data architecture, 18 operational processors, modern web interface, advanced decision support systems, and **fully migrated SQLite database architecture**. Currently undergoing **12-factor tool transformation** to modernize processor architecture.
+
+### 12-Factor Transformation Status (Week 1 of 9)
+- **Progress**: Phase 1 Foundation Infrastructure - IN PROGRESS
+- **Completed Tools**: 9/19 operational (47% of MVP)
+- **Architecture**: Two-tool pipeline (screening → human gateway → deep intelligence)
+- **Timeline**: 9 weeks to production-ready 12-factor architecture
+
+**Current Phase Deliverables**:
+- ✅ Repository cleanup (Playwright artifacts committed)
+- ✅ Deprecation directory structure (`src/processors/_deprecated/`)
+- ✅ Tool infrastructure directories (`src/core/tool_framework/`, `src/workflows/`)
+- ✅ Tool Registry System (`src/core/tool_registry.py`)
+- ✅ Base Tool Framework (`src/core/tool_framework/base_tool.py`)
+- ✅ BAML Validator (`src/core/tool_framework/baml_validator.py`)
+- ✅ Workflow Engine Foundation (`src/workflows/`)
+- 🔄 Tool Development Guide (pending)
+- 🔄 Tool Template Structure (pending)
+
+**Next**: Week 2-3 - Unified AI Tools Development (Screening + Deep Intelligence)
 
 ## CRITICAL: GPT-5 MODEL CONFIGURATION
 
@@ -228,4 +247,104 @@ foundation_capacity = intelligence_db.analyze_foundation_grants(ein="541026365")
 
 ---
 
-**STATUS: PHASE 6 COMPLETE - PRODUCTION PLATFORM** - Advanced grant research intelligence with 4-tier business services ($0.75-$42.00), dual architecture (tab processors + tier services), entity-based data organization, and comprehensive decision support systems ready for enterprise deployment.
+## 12-FACTOR TOOL ARCHITECTURE (PHASE 1-9 TRANSFORMATION)
+
+### Transformation Overview
+**Goal**: Modernize 43 processors → 19 12-factor compliant tools
+**Timeline**: 9 weeks (Started: 2025-09-30)
+**Status**: Phase 1 Foundation Infrastructure (Week 1) - IN PROGRESS
+
+### Tool Infrastructure (NEW - Phase 1)
+
+#### Tool Registry System (`src/core/tool_registry.py`)
+- Auto-discovery of tools via `12factors.toml` files
+- Tool metadata management and version tracking
+- Status management (operational, deprecated, in_development)
+- Inventory reporting and tool lifecycle management
+
+#### Base Tool Framework (`src/core/tool_framework/`)
+- **BaseTool**: Abstract base class for async tools
+- **SyncBaseTool**: Base class for synchronous tools
+- **ToolResult[T]**: Generic structured output container
+- **ToolExecutionContext**: Execution metadata and configuration
+- **Factor 4**: Tools as Structured Outputs - eliminates parsing errors
+- **Factor 6**: Stateless execution - no persistent state between runs
+- **Factor 10**: Single Responsibility - each tool does one thing well
+
+#### BAML Validator (`src/core/tool_framework/baml_validator.py`)
+- Structured output validation (dataclasses, schemas, enums)
+- Type checking and field validation
+- Required field enforcement
+- Range validation for numbers
+- Example schemas: NONPROFIT_PROFILE_SCHEMA, OPPORTUNITY_SCHEMA
+
+#### Workflow Engine (`src/workflows/`)
+- **WorkflowParser**: YAML workflow definition parser
+- **WorkflowEngine**: Multi-tool orchestration with dependency management
+- Parallel execution of independent steps
+- Context variable substitution (${context.var}, ${steps.step.output})
+- Error handling and retry logic
+
+### Two-Tool Architecture (Weeks 2-3)
+
+#### Tool 1: Opportunity Screening Tool
+- **Purpose**: Screen 100s of opportunities → shortlist of ~10
+- **Cost**: $0.02/opportunity (~$4-8 for 200 opportunities)
+- **Speed**: ~5 seconds per opportunity
+- **Replaces**: 2 processors (ai_lite_unified, ai_heavy_light)
+
+#### Human Gateway
+- Manual review and filtering of screened opportunities
+- Web scraping for additional context
+- Selection of ~10 opportunities for deep analysis
+
+#### Tool 2: Deep Intelligence Tool
+- **Purpose**: Comprehensive analysis of selected opportunities
+- **Cost**: $0.75-$42.00 per opportunity (depth-dependent)
+- **Speed**: 5-60 minutes per opportunity
+- **Depths**: quick ($0.75), standard ($7.50), enhanced ($22.00), complete ($42.00)
+- **Replaces**: 6 processors (ai_heavy_deep, ai_heavy_researcher, 4 tier processors)
+
+### Operational Tools (9 of 19 Complete)
+1. ✅ XML 990 Parser Tool - Regular nonprofit 990 parsing
+2. ✅ XML 990-PF Parser Tool - Private foundation 990-PF parsing
+3. ✅ XML 990-EZ Parser Tool - Small nonprofit 990-EZ parsing
+4. ✅ BMF Filter Tool - IRS Business Master File filtering
+5. ✅ Form 990 Analysis Tool - Financial metrics and analytics
+6. ✅ Form 990 ProPublica Tool - ProPublica API enrichment
+7. ✅ Foundation Grant Intelligence Tool - Grant-making analysis
+8. ✅ ProPublica API Enrichment Tool - Additional data enrichment
+9. ✅ XML Schedule Parser Tool - Schedule extraction and parsing
+
+### Remaining Tools (10 tools, Weeks 4-6)
+- Opportunity Screening Tool (Week 2)
+- Deep Intelligence Tool (Week 3)
+- Government opportunity tools (3 tools - deferred to Phase 9)
+- Additional data enrichment tools (5 tools)
+- Export and reporting tools (2 tools)
+
+### Processor Deprecation Strategy
+- Progressive deprecation as tools come online
+- Legacy processors moved to `src/processors/_deprecated/`
+- Tests moved to `tests/deprecated_processor_tests/`
+- Major cleanup in Phase 7 (Week 7)
+- Full removal in Phase 9 (Week 9)
+
+### 12-Factor Compliance Tracking
+All tools comply with 12 factors via `12factors.toml` configuration:
+1. ✅ One codebase tracked in revision control
+2. ✅ Explicitly declare and isolate dependencies
+3. ✅ Store config in the environment
+4. ✅ **Tools as Structured Outputs (CORE)** - Predictable data interfaces
+5. ✅ Strictly separate build and run stages
+6. ✅ Execute as stateless processes
+7. ✅ Export services via port binding (or function calls)
+8. ✅ Scale out via the process model
+9. ✅ Maximize robustness with fast startup
+10. ✅ **Small, Focused Agents (CORE)** - Single responsibility per tool
+11. ✅ Autonomous operation
+12. ✅ API First design
+
+---
+
+**STATUS: PHASE 1 IN PROGRESS** - Foundation infrastructure complete. Ready for unified AI tools development (Weeks 2-3).
