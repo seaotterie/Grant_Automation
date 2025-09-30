@@ -1,0 +1,118 @@
+# Financial Intelligence Tool Configuration
+# Human Layer 12-Factor Agents Framework Implementation
+
+[tool]
+name = "Financial Intelligence Tool"
+version = "1.0.0"
+description = "Comprehensive financial analysis with AI-enhanced insights ($0.03 per analysis)"
+purpose = "Deep financial health assessment and grant capacity analysis"
+replaces_processors = [
+    "financial_scorer"
+]
+
+# Factor 1: One codebase tracked in revision control
+codebase_tracked = true
+version_control = "git"
+single_codebase = true
+
+# Factor 2: Explicitly declare and isolate dependencies
+dependencies_explicit = true
+dependency_isolation = true
+dependencies = [
+    "asyncio",
+    "dataclasses",
+    "typing",
+    "datetime",
+    "openai",
+    "pydantic"
+]
+
+# Factor 3: Store config in the environment
+config_in_environment = true
+configuration_sources = ["environment_variables", "config_files"]
+required_env_vars = ["OPENAI_API_KEY"]
+optional_config = []
+
+# Factor 4: Tools as Structured Outputs (CORE PRINCIPLE)
+tools_as_structured_outputs = true
+structured_output_format = "FinancialIntelligenceOutput with comprehensive metrics and AI insights"
+eliminates_parsing_errors = true
+factor_4_compliance = "Returns structured FinancialIntelligenceOutput with detailed financial analysis modules"
+
+# Factor 5: Strictly separate build and run stages
+separate_build_run = true
+build_stage = "Tool initialization, BAML schema compilation"
+run_stage = "Financial analysis execution with AI insights"
+
+# Factor 6: Execute as stateless processes
+stateless_execution = true
+process_state = "No persistent state between analysis runs"
+shared_nothing_architecture = true
+
+# Factor 7: Export services via port binding
+port_binding = false
+service_export = "Direct Python function calls (not network services)"
+
+# Factor 8: Scale out via the process model
+process_model_scaling = true
+concurrent_processing = true
+batch_processing = true
+
+# Factor 9: Maximize robustness with fast startup and graceful shutdown
+fast_startup = true
+graceful_shutdown = true
+startup_time_target = "< 50ms"
+
+# Factor 10: Small, Focused Agents (SINGLE RESPONSIBILITY)
+small_focused_agents = true
+single_responsibility = "Comprehensive financial analysis with AI-enhanced insights for nonprofits"
+responsibility_boundary = "Does NOT collect financial data (separate tools), Does NOT generate reports (separate tool)"
+agent_size = "Medium - handles comprehensive financial metrics and analysis"
+
+# Factor 11: Autonomous Operation
+autonomous_operation = true
+self_contained = true
+minimal_external_dependencies = true
+
+# Factor 12: API First
+api_first = true
+programmatic_interface = true
+human_interface = "Secondary (via web UI integration)"
+
+# Analysis Components
+
+[tool.metrics]
+liquidity = ["current_ratio", "months_of_expenses", "liquid_assets_ratio"]
+efficiency = ["program_expense_ratio", "admin_expense_ratio", "fundraising_expense_ratio", "fundraising_efficiency"]
+sustainability = ["revenue_growth_rate", "expense_growth_rate", "net_assets_growth_rate", "operating_margin"]
+diversification = ["revenue_concentration_score", "largest_revenue_source_pct"]
+capacity = ["asset_to_revenue_ratio", "debt_to_asset_ratio"]
+
+[tool.analysis_features]
+financial_metrics = "Comprehensive calculation of 15+ financial metrics"
+health_rating = "Overall financial health rating (excellent to critical)"
+strengths_concerns = "Identification of financial strengths and concerns with recommendations"
+trend_analysis = "Multi-year trend analysis with forecasting"
+grant_capacity = "Assessment of grant management and match capability"
+ai_insights = "AI-generated strategic insights and recommendations"
+
+[tool.output_structure]
+primary_output = "FinancialIntelligenceOutput"
+core_modules = ["metrics", "health_rating", "strengths", "concerns"]
+enhanced_modules = ["trends", "grant_capacity", "ai_insights"]
+cost_per_analysis = 0.03
+
+# Integration with 12-Factor Agent Framework
+[framework]
+compliance_level = "Full"
+factor_4_implementation = "Core - comprehensive structured FinancialIntelligenceOutput with detailed metrics"
+factor_10_implementation = "Core - single responsibility for financial intelligence analysis only"
+integration_pattern = "Supporting tool for deep intelligence and decision support workflows"
+consumer_interface = "Structured dataclass results with comprehensive financial analysis"
+typical_usage = "Called during deep intelligence analysis or standalone financial assessment"
+
+[framework.workflow_integration]
+position_in_pipeline = "Supporting Analysis: Financial Intelligence"
+input_source = "990 financial data from XML parsers or database"
+output_consumers = ["Deep Intelligence Tool", "Decision Support Systems", "Report Generators"]
+typical_workflow = "990 Data → Financial Intelligence Tool → Comprehensive Analysis → Decision Support"
