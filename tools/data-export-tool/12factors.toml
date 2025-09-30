@@ -1,0 +1,27 @@
+# Data Export Tool Configuration
+
+[tool]
+name = "Data Export Tool"
+version = "1.0.0"
+description = "Multi-format data export with professional templates (no API cost)"
+purpose = "Export intelligence data to PDF, Excel, CSV, JSON, HTML"
+replaces_processors = ["export_processor"]
+
+[tool.factors]
+codebase_tracked = true
+dependencies_explicit = true
+tools_as_structured_outputs = true
+stateless_execution = true
+small_focused_agents = true
+
+[tool.export_formats]
+supported = ["pdf", "excel", "csv", "json", "html"]
+templates = ["executive", "detailed", "technical", "summary", "custom"]
+
+[tool.output_structure]
+primary_output = "DataExportOutput"
+cost_per_export = 0.00
+
+[framework]
+compliance_level = "Full"
+factor_10_implementation = "Single responsibility - data export only"
