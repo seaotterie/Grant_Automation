@@ -1,0 +1,25 @@
+# Schedule I Grant Analyzer Tool Configuration
+
+[tool]
+name = "Schedule I Grant Analyzer Tool"
+version = "1.0.0"
+description = "Foundation grant-making pattern analysis from 990-PF Schedule I ($0.03 per analysis)"
+purpose = "Analyze foundation grants for funding intelligence and match assessment"
+replaces_processors = ["schedule_i_processor", "funnel_schedule_i_analyzer"]
+
+[tool.factors]
+codebase_tracked = true
+dependencies_explicit = true
+config_in_environment = true
+tools_as_structured_outputs = true
+stateless_execution = true
+small_focused_agents = true
+
+[tool.output_structure]
+primary_output = "ScheduleIGrantAnalyzerOutput"
+cost_per_analysis = 0.03
+
+[framework]
+compliance_level = "Full"
+factor_4_implementation = "Structured ScheduleIGrantAnalyzerOutput with grant patterns and intelligence"
+factor_10_implementation = "Single responsibility - Schedule I grant analysis only"
