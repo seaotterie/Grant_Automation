@@ -13,9 +13,10 @@ import time
 import logging
 from datetime import datetime
 
-from src.intelligence.standard_tier_processor import StandardTierProcessor, StandardTierResult
-from src.intelligence.enhanced_tier_processor import EnhancedTierProcessor, EnhancedTierResult
-from src.intelligence.complete_tier_processor import CompleteTierProcessor, CompleteTierResult
+# PHASE 8: Tier processors deleted, replaced by Tool 2 (Deep Intelligence Tool)
+# from src.intelligence.standard_tier_processor import StandardTierProcessor, StandardTierResult
+# from src.intelligence.enhanced_tier_processor import EnhancedTierProcessor, EnhancedTierResult
+# from src.intelligence.complete_tier_processor import CompleteTierProcessor, CompleteTierResult
 
 logger = logging.getLogger(__name__)
 
@@ -224,9 +225,10 @@ class TaskManager:
 # Global instances
 cost_calculator = TierCostCalculator()
 task_manager = TaskManager()
-standard_tier_processor = StandardTierProcessor()
-enhanced_tier_processor = EnhancedTierProcessor()
-complete_tier_processor = CompleteTierProcessor()
+# PHASE 8: Tier processors deleted, replaced by Tool 2 (Deep Intelligence Tool)
+# standard_tier_processor = StandardTierProcessor()
+# enhanced_tier_processor = EnhancedTierProcessor()
+# complete_tier_processor = CompleteTierProcessor()
 
 # Router
 router = APIRouter(prefix="/api/intelligence", tags=["Intelligence Analysis"])

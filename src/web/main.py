@@ -10303,11 +10303,13 @@ async def synthesize_decision(
         visualizations, audit trails, and export-ready data.
     """
     try:
-        from src.integration.decision_synthesis_integration import (
-            decision_synthesis_bridge, DecisionSynthesisRequest, WorkflowStageResult
+        # PHASE 8: Integration layer removed for desktop simplification
+        # Decision synthesis framework removed - single user makes decisions manually
+        raise HTTPException(
+            status_code=410,
+            detail="Decision synthesis endpoint deprecated in Phase 8. Use Tool 2 (Deep Intelligence Tool) for comprehensive analysis."
         )
-        from src.core.unified_scorer_interface import WorkflowStage, ScorerType
-        
+
         logger.info(f"Starting decision synthesis for profile {profile_id}")
         
         # Validate required fields
