@@ -1,0 +1,140 @@
+name: "Deep Intelligence Workflow"
+description: "Comprehensive intelligence analysis for selected opportunities"
+version: "1.0.0"
+
+metadata:
+  category: "intelligence"
+  typical_batch_size: 10
+  depth_options: ["quick", "standard", "enhanced", "complete"]
+  cost_range: [0.75, 42.00]
+
+steps:
+  # Step 1: Load and validate opportunity data
+  - name: "validate_opportunity"
+    tool: "data-validator-tool"
+    inputs:
+      data: "${context.opportunity}"
+      validation_schema: "opportunity"
+      required_fields: ["opportunity_id", "title", "funder", "description"]
+    optional: false
+    timeout_seconds: 10
+
+  # Step 2: Validate organization data
+  - name: "validate_organization"
+    tool: "ein-validator-tool"
+    inputs:
+      ein: "${context.organization_ein}"
+      lookup: true
+    optional: false
+    timeout_seconds: 30
+
+  # Step 3: Parse 990 data if available (for financial context)
+  - name: "parse_990"
+    tool: "xml-990-parser-tool"
+    depends_on: ["validate_organization"]
+    inputs:
+      ein: "${context.organization_ein}"
+      tax_period: "latest"
+    optional: true  # May not always have 990 data
+    timeout_seconds: 120
+
+  # Step 4: Financial intelligence (if 990 available)
+  - name: "financial_intelligence"
+    tool: "financial-intelligence-tool"
+    depends_on: ["parse_990"]
+    inputs:
+      form_990_data: "${steps.parse_990.output}"
+      ein: "${context.organization_ein}"
+    optional: true
+    timeout_seconds: 60
+
+  # Step 5: Network intelligence (Enhanced+ depths only)
+  - name: "network_intelligence"
+    tool: "network-intelligence-tool"
+    depends_on: ["parse_990"]
+    inputs:
+      ein: "${context.organization_ein}"
+      target_funders: ["${context.funder_name}"]
+      board_data: "${steps.parse_990.output.board_members}"
+    optional: true  # Only for Enhanced+ depths
+    timeout_seconds: 120
+
+  # Step 6: Core deep intelligence analysis
+  - name: "deep_analysis"
+    tool: "deep-intelligence-tool"
+    depends_on: ["validate_opportunity", "validate_organization"]
+    inputs:
+      opportunity_id: "${context.opportunity_id}"
+      opportunity_title: "${context.opportunity_title}"
+      opportunity_description: "${context.opportunity_description}"
+      funder_name: "${context.funder_name}"
+      funder_type: "${context.funder_type}"
+      organization_ein: "${context.organization_ein}"
+      organization_name: "${context.organization_name}"
+      organization_mission: "${context.organization_mission}"
+      organization_revenue: "${steps.financial_intelligence.output.total_revenue}"
+      depth: "${context.analysis_depth}"
+      screening_score: "${context.screening_score}"
+    optional: false
+    retry_count: 2
+    timeout_seconds: 3600  # Up to 60 minutes for complete depth
+
+  # Step 7: Risk assessment (uses deep analysis results)
+  - name: "risk_assessment"
+    tool: "risk-intelligence-tool"
+    depends_on: ["deep_analysis"]
+    inputs:
+      opportunity_data: "${context.opportunity}"
+      organization_data: {
+        "ein": "${context.organization_ein}",
+        "financial_data": "${steps.financial_intelligence.output}"
+      }
+      strategic_fit_score: "${steps.deep_analysis.output.strategic_fit.fit_score}"
+    optional: false
+    timeout_seconds: 60
+
+  # Step 8: Generate application package outline
+  - name: "package_outline"
+    tool: "grant-package-generator-tool"
+    depends_on: ["deep_analysis", "risk_assessment"]
+    inputs:
+      opportunity_id: "${context.opportunity_id}"
+      opportunity_title: "${context.opportunity_title}"
+      funder_name: "${context.funder_name}"
+      application_deadline: "${context.opportunity_deadline}"
+      organization_ein: "${context.organization_ein}"
+      organization_name: "${context.organization_name}"
+      include_documents: [
+        "cover_letter",
+        "proposal_narrative",
+        "budget",
+        "organizational_documents"
+      ]
+      intelligence_data: "${steps.deep_analysis.output}"
+    optional: true
+    timeout_seconds: 30
+
+  # Step 9: Export comprehensive report
+  - name: "export_intelligence_report"
+    tool: "data-export-tool"
+    depends_on: ["deep_analysis", "risk_assessment", "package_outline"]
+    inputs:
+      data: {
+        "deep_intelligence": "${steps.deep_analysis.output}",
+        "risk_assessment": "${steps.risk_assessment.output}",
+        "financial_intelligence": "${steps.financial_intelligence.output}",
+        "network_intelligence": "${steps.network_intelligence.output}",
+        "package_outline": "${steps.package_outline.output}"
+      }
+      export_format: "${context.export_format}"  # "pdf", "json", "excel"
+      template: "deep_intelligence_report"
+      output_path: "${context.output_directory}/intelligence_report_${context.opportunity_id}.${context.export_format}"
+    optional: false
+    timeout_seconds: 120
+
+# Expected outputs:
+# - Comprehensive intelligence report (PDF/JSON/Excel)
+# - Grant package outline with checklist
+# - Risk assessment with mitigation strategies
+# - Financial and network intelligence (depth-dependent)
+# - Ready for executive review and go/no-go decision

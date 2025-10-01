@@ -1,0 +1,58 @@
+[tool]
+name = "Report Generator Tool"
+version = "1.0.0"
+status = "operational"
+category = "reporting"
+
+[tool.metadata]
+description = "Professional report generation with masters thesis-level templates"
+purpose = "Generate comprehensive intelligence reports using DOSSIER template structure"
+single_responsibility = "Report generation and formatting from structured data"
+cost_per_operation = 0.00
+replaces = []
+
+[tool.factors]
+factor_1_codebase = "Single tool in tools/report-generator-tool/"
+factor_2_dependencies = "Core framework via src/core/tool_framework, Jinja2 for templating"
+factor_3_config = "Template directory and output formats configurable via config dict"
+factor_4_structured_output = "Returns ReportOutput dataclass with file path, sections, metadata"
+factor_5_build_run_separation = "Tool execution separate from template rendering"
+factor_6_stateless = "No state between executions - pure function rendering"
+factor_7_port_binding = "Async function interface via execute() method"
+factor_8_concurrency = "Async-ready for parallel report generation"
+factor_9_disposability = "Fast startup (<100ms), immediate rendering"
+factor_10_single_responsibility = "Report generation only - no data analysis, no scoring, no fetching"
+factor_11_autonomous = "Operates independently with structured inputs"
+factor_12_api_first = "Function-based API with type-safe interfaces"
+
+[tool.inputs]
+type = "ReportInput"
+required_fields = ["template_type", "opportunity_data", "organization_data"]
+optional_fields = ["scoring_results", "intelligence_data", "financial_data", "network_data", "risk_data", "output_format"]
+
+[tool.outputs]
+type = "ReportOutput"
+fields = ["report_id", "template_used", "file_path", "format", "sections_generated", "generation_time_seconds", "file_size_bytes"]
+
+[tool.performance]
+typical_duration_seconds = 1.5
+ai_calls_per_execution = 0
+cost_per_execution = 0.00
+
+[tool.integration]
+module_path = "tools.report-generator-tool.app.report_tool"
+class_name = "ReportGeneratorTool"
+convenience_function = "generate_report"
+
+[tool.templates]
+comprehensive = "Complete masters thesis-level analysis (DOSSIER structure)"
+executive = "2-page executive summary for decision makers"
+risk = "Risk assessment focused report with matrices"
+implementation = "Implementation plan and action roadmap"
+
+[tool.sections]
+executive_summary = "Overall recommendation, key findings, methodology"
+opportunity_analysis = "Opportunity overview, organization analysis, grantor intelligence, strategic fit"
+pursuit_strategy = "Strategic approach, network intelligence, scoring analysis, winning strategy"
+tab_analysis = "DISCOVER, PLAN, ANALYZE, EXAMINE, APPROACH tab breakdown"
+devops = "System architecture, data sources, quality assurance"

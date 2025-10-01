@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Modal Test</title>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100" x-data="{ showModal: false }">
+    <button @click="showModal = true" class="bg-blue-500 text-white px-4 py-2 rounded m-4">
+        Open Modal
+    </button>
+
+    <!-- Modal exactly matching your structure -->
+    <div x-show="showModal" class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="showModal = false"></div>
+
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl relative z-20"
+                 style="height: 90vh; max-height: 90vh; min-height: 500px; display: flex; flex-direction: column;">
+
+                <!-- Header -->
+                <div class="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
+                    <h3 class="text-lg font-medium">Test Modal</h3>
+                    <button @click="showModal = false">×</button>
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    <p>This is the scrollable content area.</p>
+                    <div style="height: 1000px;">Tall content to test scrolling</div>
+                </div>
+
+                <!-- Footer - EXACT position from your working structure -->
+                <div class="border-t border-gray-200 px-6 py-4 bg-yellow-300 flex-shrink-0" style="border: 5px solid red !important;">
+                    <div class="text-black font-bold text-lg mb-2">FOOTER TEST - DIRECT CHILD OF FLEXBOX</div>
+                    <div class="flex justify-end space-x-3">
+                        <button @click="showModal = false" class="px-4 py-2 bg-gray-500 text-white rounded">Cancel</button>
+                        <button class="px-4 py-2 bg-blue-500 text-white rounded">Update</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -69,6 +69,7 @@ from src.auth.jwt_auth import get_current_user_dependency, User
 from src.web.auth_routes import router as auth_router
 from src.web.routers.ai_processing import router as ai_processing_router
 from src.web.routers.intelligence import router as intelligence_router
+from src.web.routers.workflows import router as workflows_router
 # Optional enhanced scraping router (requires scrapy)
 try:
     from src.web.routers.enhanced_scraping import router as enhanced_scraping_router
@@ -414,6 +415,9 @@ app.include_router(ai_processing_router)
 
 # Include Intelligence (Tiered Analysis) routes
 app.include_router(intelligence_router)
+
+# Include Workflow execution routes
+app.include_router(workflows_router)
 
 # Include Enhanced Scraping routes
 # Include enhanced scraping router only if available

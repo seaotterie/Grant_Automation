@@ -1,0 +1,160 @@
+<!-- CLEAN TAB STRUCTURE - Direct children of scrollable content area -->
+
+                    <!-- Basic Information Tab -->
+                    <div x-show="profileModalActiveTab === 'basic'" class="space-y-6">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                            <h4 class="font-semibold mb-4">Organization Details</h4>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Organization Name</label>
+                                    <input type="text" x-model="profileData.name"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">EIN</label>
+                                    <input type="text" x-model="profileData.ein"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Organization Type</label>
+                                    <select x-model="profileData.organization_type"
+                                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+                                        <option value="nonprofit">Nonprofit</option>
+                                        <option value="foundation">Foundation</option>
+                                        <option value="for_profit">For-Profit</option>
+                                        <option value="government">Government</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Annual Revenue</label>
+                                    <input type="number" x-model="profileData.annual_revenue"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium mb-2">Website URL</label>
+                                    <input type="url" x-model="profileData.website_url"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium mb-2">Location</label>
+                                    <input type="text" x-model="profileData.location"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium mb-2">Mission Statement</label>
+                                    <textarea x-model="profileData.mission_statement" rows="3"
+                                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NTEE Codes Tab -->
+                    <div x-show="profileModalActiveTab === 'ntee'" class="space-y-6">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                            <h4 class="font-semibold mb-4">NTEE Classification Codes</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Selected NTEE Codes</label>
+                                    <div class="flex flex-wrap gap-2" x-show="profileData.ntee_codes && profileData.ntee_codes.length > 0">
+                                        <template x-for="code in profileData.ntee_codes" :key="code">
+                                            <span class="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-sm">
+                                                <span x-text="code"></span>
+                                                <button @click="profileData.ntee_codes = profileData.ntee_codes.filter(c => c !== code)"
+                                                        class="ml-1 text-blue-600 hover:text-blue-800">×</button>
+                                            </span>
+                                        </template>
+                                    </div>
+                                    <p x-show="!profileData.ntee_codes || profileData.ntee_codes.length === 0"
+                                       class="text-gray-500 text-sm">No NTEE codes selected</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Government Criteria Tab -->
+                    <div x-show="profileModalActiveTab === 'government'" class="space-y-6">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                            <h4 class="font-semibold mb-4">Government Funding Criteria</h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Government Criteria</label>
+                                    <div class="flex flex-wrap gap-2" x-show="profileData.government_criteria && profileData.government_criteria.length > 0">
+                                        <template x-for="criteria in profileData.government_criteria" :key="criteria">
+                                            <span class="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded text-sm">
+                                                <span x-text="criteria"></span>
+                                                <button @click="profileData.government_criteria = profileData.government_criteria.filter(c => c !== criteria)"
+                                                        class="ml-1 text-green-600 hover:text-green-800">×</button>
+                                            </span>
+                                        </template>
+                                    </div>
+                                    <p x-show="!profileData.government_criteria || profileData.government_criteria.length === 0"
+                                       class="text-gray-500 text-sm">No government criteria selected</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tax Filing Data Tab -->
+                    <div x-show="profileModalActiveTab === 'tax-filing'" class="space-y-6">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                            <h4 class="font-semibold mb-4">Tax Filing Information</h4>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Board Members</label>
+                                    <div class="space-y-2" x-show="profileData.board_members && profileData.board_members.length > 0">
+                                        <template x-for="(member, index) in profileData.board_members" :key="index">
+                                            <div class="flex items-center justify-between bg-white dark:bg-gray-600 p-2 rounded">
+                                                <span x-text="typeof member === 'string' ? member : member.name + ' - ' + member.position"></span>
+                                                <button @click="profileData.board_members.splice(index, 1)"
+                                                        class="text-red-500 hover:text-red-700">Remove</button>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <p x-show="!profileData.board_members || profileData.board_members.length === 0"
+                                       class="text-gray-500 text-sm">No board members listed</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Web Search Data Tab -->
+                    <div x-show="profileModalActiveTab === 'web-search'" class="space-y-6">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                            <h4 class="font-semibold mb-4">Web-Enhanced Data</h4>
+                            <div class="space-y-4">
+                                <div x-show="webScrapingResults">
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                        Data enhanced through web search and verification processes.
+                                    </p>
+
+                                    <div x-show="webScrapingResults?.verified_leadership?.length > 0">
+                                        <h5 class="font-medium mb-2">Verified Leadership</h5>
+                                        <div class="space-y-2">
+                                            <template x-for="leader in webScrapingResults.verified_leadership" :key="leader.name">
+                                                <div class="bg-white dark:bg-gray-600 p-2 rounded">
+                                                    <span x-text="leader.name + ' - ' + leader.title"></span>
+                                                    <span class="text-xs text-green-600 ml-2">(Verified)</span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+
+                                    <div class="text-xs text-gray-500 mt-4">
+                                        All data in this tab comes from web search and Scrapy data sources. Changes are saved to your profile.
+                                    </div>
+                                </div>
+
+                                <div x-show="!webScrapingResults">
+                                    <p class="text-gray-500 text-sm">No web search data available</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>

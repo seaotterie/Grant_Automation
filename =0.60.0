@@ -1,0 +1,6 @@
+Collecting baml-py
+  Downloading baml_py-0.208.5-cp38-abi3-win_amd64.whl.metadata (305 bytes)
+Downloading baml_py-0.208.5-cp38-abi3-win_amd64.whl (20.0 MB)
+   ---------------------------------------- 20.0/20.0 MB 9.3 MB/s eta 0:00:00
+Installing collected packages: baml-py
+Successfully installed baml-py-0.208.5

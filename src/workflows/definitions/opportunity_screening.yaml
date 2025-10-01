@@ -1,0 +1,51 @@
+name: "Opportunity Screening Workflow"
+description: "Mass screening of grant opportunities using two-stage funnel"
+version: "1.0.0"
+
+metadata:
+  category: "screening"
+  estimated_cost_per_100_opps: 0.68
+  typical_batch_size: 200
+  expected_output_count: 10-15
+
+steps:
+  - name: "fast_screening"
+    tool: "opportunity-screening-tool"
+    inputs:
+      opportunities: "${context.opportunities}"
+      organization_profile: "${context.organization_profile}"
+      screening_mode: "fast"
+      minimum_threshold: 0.35  # Low threshold for fast pass
+      max_recommendations: 50
+    optional: false
+    retry_count: 2
+    timeout_seconds: 300
+
+  - name: "thorough_screening"
+    tool: "opportunity-screening-tool"
+    depends_on: ["fast_screening"]
+    inputs:
+      opportunities: "${steps.fast_screening.output.recommended_opportunities}"
+      organization_profile: "${context.organization_profile}"
+      screening_mode: "thorough"
+      minimum_threshold: 0.55  # Higher threshold for final selection
+      max_recommendations: 15
+    optional: false
+    retry_count: 2
+    timeout_seconds: 600
+
+  - name: "ranking_and_prioritization"
+    tool: "data-export-tool"
+    depends_on: ["thorough_screening"]
+    inputs:
+      data: "${steps.thorough_screening.output}"
+      export_format: "json"
+      template: "screening_summary"
+      output_path: "${context.output_directory}/screening_results.json"
+    optional: true
+    timeout_seconds: 30
+
+# Expected outputs for human gateway:
+# - screening_results.json with 10-15 recommended opportunities
+# - Each opportunity has detailed scores and rationale
+# - Ready for human review and web scraping enhancement

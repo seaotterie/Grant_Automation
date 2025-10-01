@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Catalynx - Grant Research Automation</title>
+    <title>Catalynx - Grant Research Intelligence Platform</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -8447,7 +8447,7 @@
     
     
     <!-- Profile Creation/Edit Modal -->
-    <div x-show="showProfileModal" 
+    <div x-show="showProfileModal"
          x-transition:enter="ease-out duration-300"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
@@ -8455,37 +8455,34 @@
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
          class="fixed inset-0 z-50 overflow-y-auto">
-        
+
         <!-- Background overlay -->
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
              @click="showProfileModal = false"></div>
 
         <!-- Modal content -->
-        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-4 sm:p-0">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
             <div x-transition:enter="ease-out duration-300"
                  x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave="ease-in duration-200"
                  x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                 class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full sm:p-6">
-                
+                 class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-4 sm:align-middle w-full max-w-4xl mx-auto border-2 border-gray-300 dark:border-gray-600 sm:p-8">
+
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
                         <span x-text="isEditingProfile ? 'Edit Organization Profile' : 'Create Organization Profile'"></span>
                     </h3>
-                    <button @click="saveModalData(); showProfileModal = false"
+                    <button @click="showProfileModal = false"
                             class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
                         <span class="text-2xl">&times;</span>
                     </button>
                 </div>
 
-                <!-- Modal Content -->
-                <div class="mt-3">
-
-                    <!-- Profile Form -->
-                    <form @submit.prevent="saveProfile()" class="space-y-6">
+                <!-- Profile Form -->
+                <form @submit.prevent="saveProfile()" class="flex flex-col max-h-[85vh] overflow-hidden">
 
                     <!-- Tab Navigation -->
                     <div class="border-b-2 border-gray-300 dark:border-gray-600 mb-6">
@@ -8508,61 +8505,648 @@
                                     class="px-4 py-3 border-2 border-b-0 rounded-t-lg font-semibold text-sm transition-all shadow-sm">
                                 Government Criteria
                             </button>
-                            <button type="button"
-                                    @click="profileModalActiveTab = 'tax-filing'"
-                                    :class="profileModalActiveTab === 'tax-filing' ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900 dark:border-purple-400 dark:text-purple-300' : 'bg-gray-100 border-gray-300 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-200'"
-                                    class="px-4 py-3 border-2 border-b-0 rounded-t-lg font-semibold text-sm transition-all shadow-sm">
-                                Tax Filing Data
-                                <span x-show="webScrapingResults?.verified_leadership?.length > 0"
-                                      class="ml-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-blue-500 rounded-full">
-                                    <span x-text="webScrapingResults?.verified_leadership?.length || 0"></span>
-                                </span>
-                            </button>
-                            <button type="button"
-                                    @click="profileModalActiveTab = 'web-search'"
-                                    :class="profileModalActiveTab === 'web-search' ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900 dark:border-purple-400 dark:text-purple-300' : 'bg-gray-100 border-gray-300 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-200'"
-                                    class="px-4 py-3 border-2 border-b-0 rounded-t-lg font-semibold text-sm transition-all shadow-sm">
-                                Web Search Data
-                                <span x-show="webScrapingResults && webScrapingResults.successful_scrapes && webScrapingResults.successful_scrapes.length > 0"
-                                      class="ml-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-purple-500 rounded-full">
-                                    <span x-text="webScrapingResults?.successful_scrapes?.length || 0"></span>
-                                </span>
-                            </button>
-                        </nav>
-                    </div>
-                    
-                    <!-- Tab Content -->
-                    <div class="mt-6">
-                        
-                        <!-- Basic Information Tab -->
-                        <div x-show="profileModalActiveTab === 'basic'" class="p-2">
-                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                                <!-- Header Section -->
-                                <div class="flex justify-between items-center mb-4">
-                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h4>
-                                    <button type="button" @click="fetchEINData()"
-                                            :disabled="!profileForm.ein || einFetchLoading"
-                                            :class="!profileForm.ein || einFetchLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
-                                            class="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium transition-colors">
-                                        <span x-show="!einFetchLoading">Fetch</span>
-                                        <span x-show="einFetchLoading">Fetching...</span>
-                                    </button>
-                                </div>
+                        <button type="button"
+                                @click="profileModalActiveTab = 'enhanced'"
+                                :class="profileModalActiveTab === 'enhanced' ? 'bg-purple-100 border-purple-500 text-purple-700 dark:bg-purple-900 dark:border-purple-400 dark:text-purple-300' : 'bg-gray-100 border-gray-300 text-gray-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-200'"
+                                class="px-4 py-3 border-2 border-b-0 rounded-t-lg font-semibold text-sm transition-all shadow-sm">
+                            Enhanced Data
+                            <span x-show="webScrapingResults && (webScrapingResults.successful_scrapes?.length > 0 || webScrapingResults.extracted_info?.financials)"
+                                  class="ml-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-green-500 rounded-full">
+                                <span x-text="(webScrapingResults?.successful_scrapes?.length || 0) + (webScrapingResults?.extracted_info?.financials ? 1 : 0)"></span>
+                            </span>
+                        </button>
+                    </nav>
+                </div>
 
-                                <!-- Fields stacked vertically -->
-                                <div class="space-y-4">
+                    <!-- Tab Content -->
+                    <div class="flex-1 overflow-hidden">
+                        
+
+                        <!-- Basic Information Tab -->
+                        <div x-show="profileModalActiveTab === 'basic'" class="h-full overflow-y-auto">
+                            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col h-full">
+                            <!-- Header Section -->
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Basic Information</h4>
+                                <button type="button" @click="fetchEINData()"
+                                        :disabled="!profileForm.ein || einFetchLoading"
+                                        :class="!profileForm.ein || einFetchLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
+                                        class="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium transition-colors">
+                                    <span x-show="!einFetchLoading">Fetch</span>
+                                    <span x-show="einFetchLoading">Fetching...</span>
+                                </button>
+                            </div>
+
+                            <!-- Fields stacked vertically -->
+                            <div class="space-y-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Name *</label>
-                                    <input type="text" 
+                                    <input type="text"
                                            x-model="profileForm.name"
                                            required
                                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
                                            placeholder="Enter organization name">
                                 </div>
+
                                 <!-- EIN and Schedule I Status Row -->
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">EIN (Tax ID) *</label>
+                                        <input type="text"
+                                               x-model="profileForm.ein"
+                                               pattern="^\d{2}-?\d{7}$"
+                                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                               placeholder="12-3456789">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Schedule I Status</label>
+                                        <div class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 text-sm h-[38px] flex items-center">
+                                            <template x-if="!profileData.schedule_i_grantees && !profileData.schedule_i_status">
+                                                <span class="text-gray-500 dark:text-gray-400 text-xs">Not checked</span>
+                                            </template>
+                                            <template x-if="profileData.schedule_i_grantees">
+                                                <span class="text-green-600 dark:text-green-400 text-xs font-medium">✓ Grant Recipient</span>
+                                            </template>
+                                            <template x-if="profileData.schedule_i_status && !profileData.schedule_i_grantees">
+                                                <span class="text-yellow-600 dark:text-yellow-400 text-xs font-medium">⚠ Check Status</span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Organization Type</label>
+                                    <select x-model="profileData.organization_type"
+                                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                                        <option value="">Select organization type...</option>
+                                        <option value="nonprofit">Nonprofit Organization (501c3)</option>
+                                        <option value="foundation">Private Foundation (501c3)</option>
+                                        <option value="public_charity">Public Charity</option>
+                                        <option value="private_operating">Private Operating Foundation</option>
+                                        <option value="supporting_organization">Supporting Organization</option>
+                                        <option value="for_profit">For-Profit Organization</option>
+                                        <option value="government">Government Entity</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Website URL</label>
+                                    <input type="url"
+                                           x-model="profileData.website_url"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                           placeholder="https://www.organization.org">
+                                </div>
+
+                                <!-- Location Fields -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">City</label>
+                                        <input type="text"
+                                               x-model="profileData.city"
+                                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                               placeholder="City">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">State</label>
+                                        <select x-model="profileData.state"
+                                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm">
+                                            <option value="">Select state...</option>
+                                            <option value="VA">Virginia</option>
+                                            <option value="MD">Maryland</option>
+                                            <option value="DC">Washington DC</option>
+                                            <option value="CA">California</option>
+                                            <option value="NY">New York</option>
+                                            <option value="TX">Texas</option>
+                                            <option value="FL">Florida</option>
+                                            <!-- Add more states as needed -->
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mission Statement</label>
+                                    <textarea x-model="profileData.mission_statement"
+                                              rows="3"
+                                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm resize-vertical"
+                                              placeholder="Describe the organization's mission and primary objectives..."></textarea>
+                                </div>
+
+                                <!-- Financial Information -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Annual Revenue</label>
+                                        <input type="number"
+                                               x-model="profileData.annual_revenue"
+                                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                               placeholder="0"
+                                               min="0">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Employee Count</label>
+                                        <input type="number"
+                                               x-model="profileData.employee_count"
+                                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                               placeholder="0"
+                                               min="0">
+                                    </div>
+                                </div>
+
+                                <!-- Data Source Attribution -->
+                                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                                    <div class="flex items-center text-xs text-blue-700 dark:text-blue-300">
+                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        Data automatically populated from IRS Business Master File (BMF), ProPublica Nonprofit Explorer, and 990/990-PF tax filings when using EIN Fetch.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NTEE Codes Tab -->
+                    <div x-show="profileModalActiveTab === 'ntee'" class="p-2 pb-12">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">NTEE Classification & Focus Areas</h4>
+
+                            <div class="space-y-6">
+                                <!-- Keywords -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Keywords</label>
+                                    <input type="text" x-model="profileData.keywords"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                           placeholder="grant, funding, nonprofit, education, healthcare">
+                                </div>
+
+                                <!-- Focus Areas -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Focus Areas *</label>
+                                    <input type="text" x-model="profileData.focus_areas"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                           placeholder="Healthcare, Education, Community Development">
+                                </div>
+
+                                <!-- Target Populations -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Target Populations</label>
+                                    <input type="text" x-model="profileData.target_populations"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                           placeholder="Youth, Seniors, Low-income families">
+                                </div>
+
+                                <!-- Selected NTEE Codes Display -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Selected NTEE Codes</label>
+                                    <div class="flex flex-wrap gap-2" x-show="profileData.ntee_codes && profileData.ntee_codes.length > 0">
+                                        <template x-for="code in profileData.ntee_codes" :key="code">
+                                            <span class="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-sm">
+                                                <span x-text="code"></span>
+                                                <button @click="profileData.ntee_codes = profileData.ntee_codes.filter(c => c !== code)"
+                                                        class="ml-1 text-blue-600 hover:text-blue-800">×</button>
+                                            </span>
+                                        </template>
+                                    </div>
+                                    <p x-show="!profileData.ntee_codes || profileData.ntee_codes.length === 0"
+                                       class="text-gray-500 dark:text-gray-400 text-sm">No NTEE codes selected</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Government Criteria Tab -->
+                    <div x-show="profileModalActiveTab === 'government'" class="p-2 pb-12">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Government Funding Criteria</h4>
+
+                            <div class="space-y-6">
+                                <!-- Geographic Scope -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Geographic Scope</label>
+                                    <input type="text" x-model="profileData.geographic_scope"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                           placeholder="Local, State, Regional, National">
+                                </div>
+
+                                <!-- Funding Preferences -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Funding Preferences</label>
+                                    <input type="text" x-model="profileData.funding_preferences"
+                                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                           placeholder="Federal grants, State funding, Foundation grants">
+                                </div>
+
+                                <!-- Selected Government Criteria Display -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Government Criteria</label>
+                                    <div class="flex flex-wrap gap-2" x-show="profileData.government_criteria && profileData.government_criteria.length > 0">
+                                        <template x-for="criteria in profileData.government_criteria" :key="criteria">
+                                            <span class="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded text-sm">
+                                                <span x-text="criteria"></span>
+                                                <button @click="profileData.government_criteria = profileData.government_criteria.filter(c => c !== criteria)"
+                                                        class="ml-1 text-green-600 hover:text-green-800">×</button>
+                                            </span>
+                                        </template>
+                                    </div>
+                                    <p x-show="!profileData.government_criteria || profileData.government_criteria.length === 0"
+                                       class="text-gray-500 dark:text-gray-400 text-sm">No government criteria selected</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tax Filing Data Tab -->
+                    <div x-show="profileModalActiveTab === 'tax-filing'" class="p-2 pb-12">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col h-full">
+                            <!-- Header Section -->
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white">990 & 990-PF Tax Filing Analysis</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Data extracted from official IRS tax filings and ProPublica database</p>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <div x-show="webScrapingResults?.foundation_intelligence?.is_foundation" class="px-2 py-1 bg-purple-100 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300 text-xs font-medium rounded-full">
+                                        Private Foundation (990-PF)
+                                    </div>
+                                    <div x-show="webScrapingResults?.foundation_intelligence?.is_foundation" class="text-xs text-gray-500 dark:text-gray-400">
+                                        Foundation (990-PF) Data Available
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Financial Metrics Dashboard -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <!-- Revenue -->
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                    <div class="text-2xl font-bold text-green-600 dark:text-green-400"
+                                         x-text="webScrapingResults?.extracted_info?.financials?.total_revenue ?
+                                                 '$' + parseInt(webScrapingResults.extracted_info.financials.total_revenue).toLocaleString() :
+                                                 'Not Available'">Not Available</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">Total Revenue</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Most Recent 990 Filing</div>
+                                </div>
+
+                                <!-- Assets -->
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400"
+                                         x-text="webScrapingResults?.extracted_info?.financials?.total_assets ?
+                                                 '$' + parseInt(webScrapingResults.extracted_info.financials.total_assets).toLocaleString() :
+                                                 'Not Available'">Not Available</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">Total Assets</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">End of Tax Year</div>
+                                </div>
+
+                                <!-- Grant Making (for Foundations) -->
+                                <div x-show="webScrapingResults?.foundation_intelligence?.is_foundation"
+                                     class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/10">
+                                    <div class="text-2xl font-bold text-purple-600 dark:text-purple-400"
+                                         x-text="webScrapingResults?.foundation_intelligence?.grants_paid ?
+                                                 '$' + parseInt(webScrapingResults.foundation_intelligence.grants_paid).toLocaleString() :
+                                                 'Not Available'">Not Available</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">Grants Paid</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">990-PF Schedule A</div>
+                                </div>
+                            </div>
+
+                            <!-- Leadership Section -->
+                            <div class="mb-6">
+                                <h5 class="text-md font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                    </svg>
+                                    Leadership & Board (Form 990, Part VII)
+                                </h5>
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                    <div x-show="webScrapingResults?.extracted_info?.leadership?.length > 0" class="space-y-3">
+                                        <template x-for="leader in (webScrapingResults?.extracted_info?.leadership || [])" :key="leader.name">
+                                            <div class="flex justify-between items-center py-2 px-3 bg-gray-50 dark:bg-gray-700 rounded">
+                                                <div>
+                                                    <div class="font-medium text-gray-900 dark:text-white" x-text="leader.name"></div>
+                                                    <div class="text-sm text-gray-600 dark:text-gray-400" x-text="leader.position"></div>
+                                                </div>
+                                                <div class="text-right">
+                                                    <div class="text-sm font-medium text-gray-900 dark:text-white"
+                                                         x-text="leader.compensation ? '$' + parseInt(leader.compensation).toLocaleString() : 'No Comp'"></div>
+                                                    <div class="text-xs text-gray-500 dark:text-gray-400">Annual</div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <div x-show="!webScrapingResults?.extracted_info?.leadership?.length" class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                                        No leadership data available from tax filings
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contact Information -->
+                            <div class="mb-6">
+                                <h5 class="text-md font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                    </svg>
+                                    Contact Information (Form 990, Part I)
+                                </h5>
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                    <div x-show="webScrapingResults?.extracted_info?.contact_info?.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <template x-for="contact in (webScrapingResults?.extracted_info?.contact_info || [])" :key="contact.type">
+                                            <div class="flex items-center">
+                                                <div class="text-sm font-medium text-gray-700 dark:text-gray-300 w-20" x-text="contact.type + ':'"></div>
+                                                <div class="text-sm text-gray-900 dark:text-white" x-text="contact.value"></div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <div x-show="!webScrapingResults?.extracted_info?.contact_info?.length" class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                                        No contact information available from tax filings
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Financial Details -->
+                            <div class="mb-6">
+                                <h5 class="text-md font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                    Financial Summary (Form 990, Part I & II)
+                                </h5>
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                    <div x-show="webScrapingResults?.extracted_info?.financials" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div class="text-center">
+                                            <div class="text-lg font-semibold text-green-600 dark:text-green-400"
+                                                 x-text="webScrapingResults?.extracted_info?.financials?.total_revenue ?
+                                                         '$' + parseInt(webScrapingResults.extracted_info.financials.total_revenue).toLocaleString() :
+                                                         '$0'"></div>
+                                            <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Total Revenue</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-lg font-semibold text-red-600 dark:text-red-400"
+                                                 x-text="webScrapingResults?.extracted_info?.financials?.total_expenses ?
+                                                         '$' + parseInt(webScrapingResults.extracted_info.financials.total_expenses).toLocaleString() :
+                                                         '$0'"></div>
+                                            <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Total Expenses</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-lg font-semibold text-blue-600 dark:text-blue-400"
+                                                 x-text="webScrapingResults?.extracted_info?.financials?.net_assets ?
+                                                         '$' + parseInt(webScrapingResults.extracted_info.financials.net_assets).toLocaleString() :
+                                                         '$0'"></div>
+                                            <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Net Assets</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-lg font-semibold text-purple-600 dark:text-purple-400"
+                                                 x-text="webScrapingResults?.extracted_info?.financials?.program_expenses ?
+                                                         '$' + parseInt(webScrapingResults.extracted_info.financials.program_expenses).toLocaleString() :
+                                                         '$0'"></div>
+                                            <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Program Expenses</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-green-600 dark:text-green-400 mt-2">Source: 990 Financial Data (IRS Tax Filing)</div>
+                                </div>
+
+                                <div x-show="!webScrapingResults?.extracted_info?.financials" class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                                    No financial data available from tax filings. Use EIN Fetch in Basic Information to retrieve.
+                                </div>
+                            </div>
+
+                            <!-- Foundation Intelligence (990-PF specific) -->
+                            <div x-show="webScrapingResults?.foundation_intelligence?.is_foundation" class="mb-6">
+                                <h5 class="text-md font-semibold text-purple-900 dark:text-purple-300 mb-3 flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                    </svg>
+                                    Private Foundation Intelligence (990-PF Analysis)
+                                </h5>
+                                <div class="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-4 border border-purple-200 dark:border-purple-700">
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div class="text-center">
+                                            <div class="text-lg font-semibold text-purple-600 dark:text-purple-400"
+                                                 x-text="webScrapingResults?.foundation_intelligence?.qualifying_distributions ?
+                                                         '$' + parseInt(webScrapingResults.foundation_intelligence.qualifying_distributions).toLocaleString() :
+                                                         'Not Available'"></div>
+                                            <div class="text-xs text-purple-700 dark:text-purple-300 mt-1">Required Distribution</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-lg font-semibold text-purple-600 dark:text-purple-400"
+                                                 x-text="webScrapingResults?.foundation_intelligence?.grants_paid ?
+                                                         '$' + parseInt(webScrapingResults.foundation_intelligence.grants_paid).toLocaleString() :
+                                                         'Not Available'"></div>
+                                            <div class="text-xs text-purple-700 dark:text-purple-300 mt-1">Grants Paid</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-lg font-semibold text-purple-600 dark:text-purple-400"
+                                                 x-text="webScrapingResults?.foundation_intelligence?.investment_income ?
+                                                         '$' + parseInt(webScrapingResults.foundation_intelligence.investment_income).toLocaleString() :
+                                                         'Not Available'"></div>
+                                            <div class="text-xs text-purple-700 dark:text-purple-300 mt-1">Investment Income</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-purple-600 dark:text-purple-400 mt-3 text-center">
+                                        Foundation Grant-Making Capacity Analysis from 990-PF Part I & Schedule A
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Data Source Attribution -->
+                            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                                <div class="flex items-center text-xs text-blue-700 dark:text-blue-300">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    All data in this tab comes from official IRS tax filings (990/990-PF) and ProPublica database. This information is read-only and cannot be edited.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Web Search Data Tab -->
+                    <div x-show="profileModalActiveTab === 'web-search'" class="p-2 pb-12">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                            <!-- Header Section -->
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Web-Enhanced Intelligence</h4>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Data enhanced through Scrapy web scraping and cross-source validation</p>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <div x-show="webScrapingResults?.verification_status === 'verified'" class="px-2 py-1 bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-xs font-medium rounded-full">
+                                        Verified
+                                    </div>
+                                    <div x-show="webScrapingResults?.verification_status === 'partial'" class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 text-xs font-medium rounded-full">
+                                        Partially Verified
+                                    </div>
+                                    <div x-show="webScrapingResults?.verification_status === 'unverified'" class="px-2 py-1 bg-gray-100 dark:bg-gray-900/20 text-gray-800 dark:text-gray-300 text-xs font-medium rounded-full">
+                                        Unverified
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Data Quality Summary -->
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                    <div class="text-lg font-semibold text-green-600 dark:text-green-400"
+                                         x-text="webScrapingResults?.data_sources?.length || 0"></div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">Data Sources</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Web + Scrapy</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                    <div class="text-lg font-semibold text-blue-600 dark:text-blue-400"
+                                         x-text="webScrapingResults?.verified_fields || 0"></div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">Verified Fields</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Cross-validated</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                    <div class="text-lg font-semibold text-purple-600 dark:text-purple-400"
+                                         x-text="webScrapingResults?.confidence_score ? (webScrapingResults.confidence_score * 100).toFixed(0) + '%' : '0%'"></div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">Confidence</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Data Quality</div>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                    <div class="text-lg font-semibold text-orange-600 dark:text-orange-400"
+                                         x-text="webScrapingResults?.last_updated ? new Date(webScrapingResults.last_updated).toLocaleDateString() : 'Never'"></div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">Last Updated</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">Scrapy Run</div>
+                                </div>
+                            </div>
+
+                            <!-- Leadership Verification -->
+                            <div class="mb-6">
+                                <h5 class="text-md font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Verified Leadership (Web Sources)
+                                </h5>
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                    <div x-show="webScrapingResults?.verified_leadership?.length > 0" class="space-y-3">
+                                        <template x-for="leader in (webScrapingResults?.verified_leadership || [])" :key="leader.name + leader.title">
+                                            <div class="flex justify-between items-center py-2 px-3 bg-green-50 dark:bg-green-900/10 rounded border border-green-200 dark:border-green-700">
+                                                <div>
+                                                    <div class="font-medium text-gray-900 dark:text-white" x-text="leader.name"></div>
+                                                    <div class="text-sm text-gray-600 dark:text-gray-400" x-text="leader.title"></div>
+                                                </div>
+                                                <div class="flex items-center space-x-2">
+                                                    <span class="text-xs text-green-600 dark:text-green-400 font-medium">Verified</span>
+                                                    <span class="px-2 py-1 bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-xs rounded-full"
+                                                          x-text="leader.source || 'Web'"></span>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <div x-show="!webScrapingResults?.verified_leadership?.length" class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                                        No verified leadership data available from web sources
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Enhanced Contact Information -->
+                            <div class="mb-6">
+                                <h5 class="text-md font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                    </svg>
+                                    Enhanced Contact Information
+                                </h5>
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                    <div x-show="webScrapingResults?.enhanced_contact?.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <template x-for="contact in (webScrapingResults?.enhanced_contact || [])" :key="contact.type + contact.value">
+                                            <div class="flex justify-between items-center">
+                                                <div class="flex items-center">
+                                                    <div class="text-sm font-medium text-gray-700 dark:text-gray-300 w-16" x-text="contact.type + ':'"></div>
+                                                    <div class="text-sm text-gray-900 dark:text-white" x-text="contact.value"></div>
+                                                </div>
+                                                <span x-show="contact.verified" class="text-xs text-green-600 dark:text-green-400">✓</span>
+                                                <span x-show="!contact.verified" class="text-xs text-yellow-600 dark:text-yellow-400">?</span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <div x-show="!webScrapingResults?.enhanced_contact?.length" class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                                        No enhanced contact information available from web sources
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cross-Source Data Validation -->
+                            <div class="mb-6">
+                                <h5 class="text-md font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                    Cross-Source Data Validation
+                                </h5>
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                    <div x-show="webScrapingResults?.validation_results" class="space-y-3">
+                                        <!-- Name Validation -->
+                                        <div class="flex justify-between items-center py-2 px-3 rounded"
+                                             :class="webScrapingResults?.validation_results?.name_match ? 'bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-700' : 'bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-700'">
+                                            <span class="text-sm font-medium">Organization Name</span>
+                                            <div class="flex items-center space-x-2">
+                                                <span class="text-xs"
+                                                      :class="webScrapingResults?.validation_results?.name_match ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'"
+                                                      x-text="webScrapingResults?.validation_results?.name_match ? 'Matches 990' : 'Partial Match'"></span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Address Validation -->
+                                        <div class="flex justify-between items-center py-2 px-3 rounded"
+                                             :class="webScrapingResults?.validation_results?.address_match ? 'bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-700' : 'bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-700'">
+                                            <span class="text-sm font-medium">Address</span>
+                                            <div class="flex items-center space-x-2">
+                                                <span class="text-xs"
+                                                      :class="webScrapingResults?.validation_results?.address_match ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'"
+                                                      x-text="webScrapingResults?.validation_results?.address_match ? 'Verified' : 'Different'"></span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Website Validation -->
+                                        <div class="flex justify-between items-center py-2 px-3 rounded"
+                                             :class="webScrapingResults?.validation_results?.website_active ? 'bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-700' : 'bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-700'">
+                                            <span class="text-sm font-medium">Website Status</span>
+                                            <div class="flex items-center space-x-2">
+                                                <span class="text-xs"
+                                                      :class="webScrapingResults?.validation_results?.website_active ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
+                                                      x-text="webScrapingResults?.validation_results?.website_active ? 'Active' : 'Inactive'"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div x-show="!webScrapingResults?.validation_results" class="text-sm text-gray-500 dark:text-gray-400 italic text-center py-4">
+                                        No cross-source validation data available. Use EIN Fetch to enable validation.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Data Sources & Attribution -->
+                            <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
+                                <div class="flex items-center text-xs text-purple-700 dark:text-purple-300">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"></path>
+                                    </svg>
+                                    Data sources: Scrapy web scraper, official websites, LinkedIn, Charity Navigator, GuideStar. Cross-validated with 990/990-PF tax filings. Refreshed during EIN Fetch operations.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer - Direct child of flexbox container -->
+                <div class="border-t border-gray-200 dark:border-gray-700 px-6 py-4 bg-gray-50 dark:bg-gray-700 flex-shrink-0">
+                    <div class="flex justify-end space-x-3">
+                        <button type="button"
+                                @click="showProfileModal = false"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                form="profileForm"
+                                :disabled="profilesLoading"
+                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <span x-show="!profilesLoading">Update Profile</span>
+                            <span x-show="profilesLoading">Updating...</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
                                         <input type="text" 
                                                x-model="profileForm.ein"
                                                pattern="^\d{2}-?\d{7}$"
@@ -8647,26 +9231,11 @@
                                               placeholder="Key terms and phrases that describe your work"></textarea>
                                 </div>
                                 </div>
-
-                                <!-- Basic Information Tab Footer -->
-                                <div class="flex justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
-                                    <button type="button"
-                                            @click="showProfileModal = false"
-                                            class="inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 text-sm transition-colors">
-                                        Cancel
-                                    </button>
-                                    <button type="submit"
-                                            :disabled="profileSaving"
-                                            class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-purple-600 text-base font-medium text-white hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-gray-800 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                        <div x-show="profileSaving" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                        <span x-text="profileSaving ? 'Saving...' : (isEditingProfile ? 'Update Profile' : 'Create Profile')"></span>
-                                    </button>
-                                </div>
                             </div>
                         </div>
                         
                         <!-- NTEE Codes Tab -->
-                        <div x-show="profileModalActiveTab === 'ntee'" class="p-2">
+                        <div x-show="profileModalActiveTab === 'ntee'" class="p-2 pb-12">
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col h-full">
                                 <div class="flex justify-between items-center mb-4">
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white">NTEE Codes</h4>
@@ -8708,7 +9277,7 @@
                         </div>
                         
                         <!-- Government Criteria Tab -->
-                        <div x-show="profileModalActiveTab === 'government'" class="p-2">
+                        <div x-show="profileModalActiveTab === 'government'" class="p-2 pb-12">
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col h-full">
                                 <div class="flex justify-between items-center mb-4">
                                 <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Government Criteria</h4>
@@ -8765,7 +9334,7 @@
                         </div>
                         
                         <!-- Tax Filing Data Tab -->
-                        <div x-show="profileModalActiveTab === 'tax-filing'" class="p-2">
+                        <div x-show="profileModalActiveTab === 'tax-filing'" class="p-2 pb-12">
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col h-full">
                                 <div class="flex justify-between items-center mb-4">
                                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Tax Filing Data</h4>
@@ -9005,7 +9574,7 @@
                         </div>
 
                         <!-- Web Search Data Tab -->
-                        <div x-show="profileModalActiveTab === 'web-search'" class="p-2">
+                        <div x-show="profileModalActiveTab === 'web-search'" class="p-2 pb-12">
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 flex flex-col h-full">
                                 <div class="flex justify-between items-center mb-4">
                                     <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Web Search Data</h4>
@@ -9144,18 +9713,30 @@
                             </div>
                         </div>
 
+                    </form>
+                </div>
+
+                <!-- Modal Footer - Direct child of flexbox container -->
+                <div class="border-t border-gray-200 dark:border-gray-700 px-6 py-4 bg-gray-50 dark:bg-gray-700 flex-shrink-0">
+                    <div class="flex justify-end space-x-3">
+                        <button type="button"
+                                @click="showProfileModal = false"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                form="profileForm"
+                                :disabled="profilesLoading"
+                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <span x-show="!profilesLoading">Update Profile</span>
+                            <span x-show="profilesLoading">Updating...</span>
+                        </button>
                     </div>
+                </div>
 
-                    </div> <!-- Close Tab Content container -->
-
-                </form>
-
-                </div> <!-- Close Modal Content -->
-
-
-            </div> <!-- Close main modal container -->
-        </div> <!-- Close center container -->
-    </div> <!-- Close outer modal container -->
+            </div>
+        </div>
+    </div>
 
     <!-- Delete Confirmation Modal -->
     <div x-show="showDeleteConfirmation" 
@@ -9738,7 +10319,20 @@
     <!-- <script src="/static/js/stores/opportunities-store.js" onerror="console.error('Failed to load opportunities-store.js')"></script> -->
 
     <script src="/static/app.js?v=REAL_DATA_ONLY_20250911" onerror="console.error('Failed to load app.js')"></script>
-    
+
+    <!-- CRITICAL DEBUG: Check if catalynxApp loaded -->
+    <script>
+        console.log('DEBUG: Checking if catalynxApp is available...');
+        console.log('DEBUG: typeof catalynxApp:', typeof catalynxApp);
+        console.log('DEBUG: window.catalynxAppFunction:', typeof window.catalynxAppFunction);
+
+        if (typeof catalynxApp === 'undefined') {
+            console.error('CRITICAL: catalynxApp function is NOT defined! This will cause Alpine.js to fail.');
+        } else {
+            console.log('SUCCESS: catalynxApp function is defined');
+        }
+    </script>
+
     <!-- DEBUGGING: Visual indicator that our code is active -->
     
     <!-- Real data only - no mock/test data injection -->

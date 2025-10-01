@@ -1,0 +1,51 @@
+[tool]
+name = "Historical Funding Analyzer Tool"
+version = "1.0.0"
+status = "operational"
+category = "analysis"
+
+[tool.metadata]
+description = "Historical funding pattern analysis and trend detection"
+purpose = "Analyze USASpending.gov data for funding patterns, geographic distribution, and temporal trends"
+single_responsibility = "Historical funding analysis only - no real-time data fetching"
+cost_per_operation = 0.00
+replaces = ["Historical analysis portions of tier processors"]
+
+[tool.factors]
+factor_1_codebase = "Single tool in tools/historical-funding-analyzer-tool/"
+factor_2_dependencies = "Core framework via src/core/tool_framework, pandas for data analysis"
+factor_3_config = "Analysis parameters configurable via config dict"
+factor_4_structured_output = "Returns HistoricalAnalysis dataclass with patterns, trends, insights"
+factor_5_build_run_separation = "Tool execution separate from data analysis"
+factor_6_stateless = "No state between executions - pure function analysis"
+factor_7_port_binding = "Async function interface via execute() method"
+factor_8_concurrency = "Async-ready for parallel analysis"
+factor_9_disposability = "Fast startup (<100ms), immediate analysis"
+factor_10_single_responsibility = "Historical analysis only - no data fetching, no scoring, no reporting"
+factor_11_autonomous = "Operates independently with historical data inputs"
+factor_12_api_first = "Function-based API with type-safe interfaces"
+
+[tool.inputs]
+type = "HistoricalAnalysisInput"
+required_fields = ["organization_ein", "historical_data"]
+optional_fields = ["analysis_years", "include_geographic", "include_temporal", "include_patterns"]
+
+[tool.outputs]
+type = "HistoricalAnalysis"
+fields = ["total_awards", "total_funding", "funding_patterns", "geographic_distribution", "temporal_trends", "insights"]
+
+[tool.performance]
+typical_duration_seconds = 0.5
+ai_calls_per_execution = 0
+cost_per_execution = 0.00
+
+[tool.integration]
+module_path = "tools.historical-funding-analyzer-tool.app.historical_tool"
+class_name = "HistoricalFundingAnalyzerTool"
+convenience_function = "analyze_historical_funding"
+
+[tool.analysis_types]
+funding_patterns = "Award size distribution, frequency patterns, category analysis"
+geographic_distribution = "State-level funding distribution, regional analysis"
+temporal_trends = "Year-over-year trends, seasonal patterns, growth analysis"
+competitive_analysis = "Similar organization comparisons, market share analysis"

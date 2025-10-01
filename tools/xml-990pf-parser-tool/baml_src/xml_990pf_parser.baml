@@ -12,17 +12,41 @@ class XML990PFParseCriteria {
     validate_990pf_schema bool               // Strict validation that forms are 990-PF (not 990 or 990-EZ)
 }
 
+// Foundation contact information from 990-PF header
+class FoundationContactInfo {
+    ein string
+    foundation_name string
+    address_line_1 string?
+    address_line_2 string?
+    city string?
+    state string?
+    zip_code string?
+    country string?
+    phone_number string?
+    website string?
+    email string?
+    principal_officer_name string?           // Name of principal officer
+    principal_officer_title string?         // Title of principal officer
+    contact_person_name string?              // Contact person for grant inquiries
+    contact_person_title string?
+    tax_year int
+    data_source string                       // "Form 990-PF XML Header"
+}
+
 // Foundation officer/director from 990-PF Part VIII
 class FoundationOfficer {
     ein string
     person_name string
+    normalized_person_name string            // Cleaned name for network matching (UPPERCASE, no punctuation)
     title string                             // President, Secretary, Treasurer, Director, Trustee, etc.
+    role_category string                     // Executive, Board, Staff, Volunteer
     average_hours_per_week float?
     compensation float?                      // Total compensation from foundation
     employee_benefit_program bool?           // Participating in employee benefit programs
     expense_account_allowance float?         // Expense account or allowance
     is_officer bool                          // Officer designation
     is_director bool                         // Director/trustee designation
+    influence_score float?                   // Calculated decision-making power score (0-1)
     tax_year int
     data_source string                       // "Form 990-PF XML"
 }
@@ -31,6 +55,8 @@ class FoundationOfficer {
 class FoundationGrant {
     ein string
     recipient_name string
+    normalized_recipient_name string         // Cleaned org name for network matching
+    recipient_ein string?                    // **CRITICAL** for org-to-org network mapping
     recipient_type string?                   // Individual, Organization, etc.
     recipient_address string?
     recipient_relationship string?           // Relationship to foundation
@@ -40,6 +66,81 @@ class FoundationGrant {
     grant_monitoring_procedures string?      // How foundation monitors use
     tax_year int
     schedule_part string                     // "Part XV - Grants"
+}
+
+// Foundation grant distribution analysis for strategic intelligence
+class FoundationGrantAnalysis {
+    ein string
+    tax_year int
+    total_grants_count int
+    total_grants_amount float
+    average_grant_size float
+    largest_grant_amount float?
+    smallest_grant_amount float?
+    median_grant_amount float?
+
+    // Grant recipient patterns
+    individual_recipients_count int          // Grants to individuals
+    organization_recipients_count int        // Grants to organizations
+    geographic_concentration string?         // Primary geographic focus
+    recipient_diversity_score float?        // 0-1 score of recipient diversity
+
+    // Grant purpose analysis
+    top_grant_purposes string[]             // Most common grant purposes
+    funding_focus_areas string[]            // Key funding priority areas
+    impact_grant_percentage float?          // % of grants labeled as "impact"
+    flexible_funding_percentage float?      // % of grants for flexible funding
+
+    // Grant size distribution
+    large_grants_count int                  // Grants >= $100K
+    medium_grants_count int                 // Grants $10K - $99K
+    small_grants_count int                  // Grants < $10K
+    grant_size_strategy string              // "Large Impact", "Broad Distribution", "Mixed Strategy"
+
+    // Historical patterns
+    grant_making_consistency string         // "Consistent", "Variable", "Seasonal"
+    repeat_recipient_percentage float?      // % of grants to previous recipients
+    new_recipient_percentage float?         // % of grants to new recipients
+
+    data_source string                      // "Form 990-PF Grant Analysis"
+}
+
+// Foundation classification and grant-making approach analysis
+class FoundationClassification {
+    ein string
+    tax_year int
+
+    // Foundation type classification
+    foundation_type string                   // "Private Foundation", "Operating Foundation", "Family Foundation", "Corporate Foundation"
+    foundation_size_category string          // "Major", "Large", "Medium", "Small" based on assets
+    grant_making_approach string             // "Strategic", "Responsive", "Mixed", "Emerging"
+
+    // Grant-making characteristics
+    funding_model string                     // "Proactive", "Reactive", "Invitation Only", "Open Application"
+    geographic_scope string                  // "Local", "Regional", "National", "International"
+    sector_focus string[]                    // Primary sectors based on grant analysis
+
+    // Foundation maturity and sophistication
+    operational_sophistication string       // "High", "Medium", "Basic" based on governance indicators
+    grant_making_maturity string            // "Mature", "Developing", "Emerging" based on processes
+    professional_management string          // "Professional", "Board-Managed", "Mixed" based on compensation
+
+    // Grant strategy intelligence
+    risk_tolerance string                    // "Conservative", "Moderate", "Aggressive" based on grant patterns
+    innovation_focus string                  // "High", "Medium", "Low" based on grant purposes
+    capacity_building_emphasis string       // "High", "Medium", "Low" based on grant types
+
+    // Foundation accessibility for grant seekers
+    grant_accessibility_score float         // 0-1 score for how accessible foundation is to new applicants
+    application_complexity string           // "Simple", "Moderate", "Complex" based on procedures
+    funding_predictability string           // "Predictable", "Variable", "Opportunistic"
+
+    // Strategic positioning
+    competitive_landscape_position string   // Position relative to similar foundations
+    unique_value_proposition string?        // What makes this foundation distinctive
+    grant_seeker_recommendations string[]  // Strategic advice for potential applicants
+
+    data_source string                      // "Form 990-PF Classification Analysis"
 }
 
 // Investment holding from 990-PF Part II
@@ -53,6 +154,45 @@ class InvestmentHolding {
     acquisition_date string?
     cost_basis float?
     investment_category string               // "Corporate Stock", "Corporate Bonds", "Government Securities", etc.
+}
+
+// Investment portfolio analysis for grant capacity assessment
+class InvestmentAnalysis {
+    ein string
+    tax_year int
+
+    // Portfolio composition
+    total_investment_value float             // Total fair market value of investments
+    total_investment_count int               // Number of investment holdings
+    portfolio_diversification_score float   // 0-1 score of diversification
+
+    // Asset allocation analysis
+    equity_percentage float?                 // % in stocks/equity investments
+    fixed_income_percentage float?           // % in bonds/fixed income
+    alternative_investments_percentage float? // % in other investments
+    cash_equivalent_percentage float?        // % in cash/cash equivalents
+
+    // Investment performance indicators
+    unrealized_gains_losses float?           // Difference between FMV and book value
+    investment_return_estimate float?        // Estimated annual return rate
+    investment_volatility_assessment string  // "Low", "Medium", "High" risk portfolio
+
+    // Grant capacity analysis
+    sustainable_grant_capacity float         // Estimated sustainable annual grant amount
+    grant_funding_stability string           // "Very Stable", "Stable", "Variable", "Volatile"
+    endowment_sustainability_years int?      // Years foundation could operate at current levels
+
+    // Strategic investment insights
+    investment_strategy_type string          // "Conservative", "Balanced", "Growth", "Income"
+    liquidity_assessment string              // "High", "Medium", "Low" - ability to convert to cash
+    professional_management_indicators bool  // Evidence of professional investment management
+
+    // Grant-making implications
+    grant_capacity_trend string              // "Growing", "Stable", "Declining"
+    optimal_grant_timing string?             // Best times to apply based on portfolio performance
+    multi_year_grant_feasibility string     // "High", "Medium", "Low" based on stability
+
+    data_source string                       // "Form 990-PF Investment Analysis"
 }
 
 // Excise tax computation from 990-PF Part VI
@@ -197,16 +337,20 @@ class XML990PFQualityAssessment {
 
 // Complete XML 990-PF parsing result - Factor 4 structured output
 class XML990PFResult {
-    officers: FoundationOfficer[]
-    grants_paid: FoundationGrant[]
-    investment_holdings: InvestmentHolding[]
-    excise_tax_data: ExciseTaxData[]
-    payout_requirements: PayoutRequirement[]
-    governance_indicators: FoundationGovernance[]
-    financial_summaries: Foundation990PFFinancialSummary[]
-    xml_files_processed: XML990PFFileMetadata[]
-    execution_metadata: XML990PFExecutionMetadata
-    quality_assessment: XML990PFQualityAssessment
+    contact_info FoundationContactInfo[]
+    officers FoundationOfficer[]
+    grants_paid FoundationGrant[]
+    grant_analysis FoundationGrantAnalysis[]
+    foundation_classification FoundationClassification[]
+    investment_holdings InvestmentHolding[]
+    investment_analysis InvestmentAnalysis[]
+    excise_tax_data ExciseTaxData[]
+    payout_requirements PayoutRequirement[]
+    governance_indicators FoundationGovernance[]
+    financial_summaries Foundation990PFFinancialSummary[]
+    xml_files_processed XML990PFFileMetadata[]
+    execution_metadata XML990PFExecutionMetadata
+    quality_assessment XML990PFQualityAssessment
     tool_name string                         // "XML 990-PF Parser Tool"
     framework_compliance string              // "Human Layer 12-Factor Agents"
     factor_4_implementation string           // "Tools as Structured Outputs - eliminates XML parsing errors"

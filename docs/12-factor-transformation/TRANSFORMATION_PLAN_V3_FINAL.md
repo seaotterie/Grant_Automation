@@ -1,10 +1,10 @@
-# 12-FACTOR TRANSFORMATION PLAN V3 FINAL
-**Two-Tool Architecture with Progressive Repo Cleanup**
+# 12-FACTOR TRANSFORMATION PLAN V3.1 REVISED
+**Two-Tool Architecture with Scoring/Reporting Foundation**
 
-**Date**: 2025-09-29
-**Version**: 3.0 FINAL
-**Status**: Ready for Implementation ✅
-**Architecture**: Two unified AI tools + human gateway
+**Date**: 2025-09-30 (Revised from 2025-09-29)
+**Version**: 3.1 REVISED
+**Status**: Phase 4 Complete, Phase 5 In Progress ✅
+**Architecture**: Two unified AI tools + scoring/reporting + human gateway
 
 ---
 
@@ -12,9 +12,9 @@
 
 ### Transformation Approach
 - **From**: 8 API processors + 43 total processors (monolithic legacy)
-- **To**: 2 unified AI tools + 16 supporting tools (12-factor compliant)
-- **Timeline**: 7 weeks to MVP (vs. 16 weeks original)
-- **Effort Reduction**: 56% faster transformation
+- **To**: 2 unified AI tools + 20 supporting tools (12-factor compliant)
+- **Timeline**: 11 weeks to nonprofit core (14 weeks with government)
+- **Effort Reduction**: 31% faster vs. 16 weeks original plan
 
 ### Core Architecture Decision ✅
 
@@ -37,9 +37,15 @@ Tool 2: Deep Intelligence Tool (Replaces 6 processors)
 └── Depths: quick, standard, enhanced, complete
 ```
 
+### Phase Restructuring (V3.1 Update)
+- **OLD Phase 4** (Workflow + Human Gateway) → **NEW Phase 9** (deferred to Week 10-11)
+- **NEW Phase 4**: Scoring Algorithms & Report Templates (Week 5)
+- **Rationale**: Scoring foundation required before workflow UI can display meaningful results
+
 ### Deferred Features
-- Government grant tools (5 tools) → After nonprofit core complete
-- Geographic/market tools → Optional Phase 4
+- Workflow/human gateway → Phase 9 (after scoring/reporting proven)
+- Government grant tools (4 tools) → Phase 10 (after nonprofit core complete)
+- Geographic/market tools → Optional future enhancement
 - Peer similarity → Eliminated as bloat
 
 ### Cleanup Strategy
@@ -401,146 +407,347 @@ class DeepIntelligenceOutput {
 
 ---
 
-## PHASE 4: WORKFLOW IMPLEMENTATION + HUMAN GATEWAY (Week 5)
+## PHASE 4: SCORING ALGORITHMS & REPORT TEMPLATES (Week 5)
 
-### 4.1 Unified Intelligence Workflow
+### 4.1 Tool 20: Multi-Dimensional Scorer Tool
 
-**Create**: `workflows/intelligence_analysis.yaml`
+**Purpose**: Unified scoring system across all workflow stages with sophisticated dimensional analysis
 
-```yaml
-workflow: intelligence_analysis
-description: "Two-tool pipeline with human gateway"
+**Consolidates**:
+- `discovery_scorer.py` - 4-track discovery scoring
+- `success_scorer.py` - Organizational success probability
+- Scoring portions of AI processors
 
-inputs:
-  all_opportunities: array[object]
-  organization_profile: object
-  screening_mode: enum[fast, thorough]
-  minimum_threshold: float
-
-stages:
-  # Stage 1: Mass Screening
-  - name: screen_opportunities
-    tool: opportunity-screening-tool
-    inputs:
-      opportunities: "{{ all_opportunities }}"
-      organization_profile: "{{ organization_profile }}"
-      screening_mode: "{{ screening_mode }}"
-      minimum_threshold: "{{ minimum_threshold }}"
-    outputs:
-      screening_results: screening
-
-  # Stage 2: Human Gateway (Web Interface)
-  - name: await_human_selection
-    type: human_input
-    interface: web_ui
-    display:
-      component: "screening_review_interface"
-      data: "{{ screening_results }}"
-    capabilities:
-      - review_scores
-      - web_scraping
-      - manual_filtering
-      - note_taking
-    outputs:
-      selected_opportunities: selections
-
-  # Stage 3: Deep Intelligence (for selected)
-  - name: deep_intelligence_analysis
-    tool: deep-intelligence-tool
-    for_each: "{{ selected_opportunities }}"
-    inputs:
-      opportunity: "{{ item }}"
-      organization_profile: "{{ organization_profile }}"
-      depth: "{{ item.selected_depth }}"
-      screening_score: "{{ item.screening_score }}"
-      user_notes: "{{ item.user_notes }}"
-    outputs:
-      intelligence_reports: reports
-
-  # Stage 4: Supporting Analysis (conditional)
-  - name: financial_analysis
-    tool: financial-intelligence-tool
-    condition: "{{ depth >= standard }}"
-    for_each: "{{ selected_opportunities }}"
-
-  - name: network_analysis
-    tool: network-intelligence-tool
-    condition: "{{ depth >= enhanced }}"
-    for_each: "{{ selected_opportunities }}"
-
-  # Stage 5: Generate Reports
-  - name: generate_reports
-    tool: report-generator-tool
-    inputs:
-      intelligence_reports: "{{ intelligence_reports }}"
+**Implementation**:
+```
+tools/multi-dimensional-scorer-tool/
+├── app/
+│   ├── scorer_tool.py           # Main tool implementation
+│   ├── scorer_models.py         # Pydantic models
+│   ├── stage_scorers.py         # Stage-specific scoring logic
+│   └── dimensional_weights.py   # Weight configurations per stage
+├── baml_src/
+│   └── scorer.baml              # BAML schema definitions
+├── tests/
+│   ├── test_discover_scoring.py
+│   ├── test_plan_scoring.py
+│   ├── test_analyze_scoring.py
+│   └── test_examine_scoring.py
+├── 12factors.toml
+└── README.md
 ```
 
+**BAML Schema**:
+```baml
+class ScoringInput {
+  opportunity_data: Opportunity
+  organization_profile: OrganizationProfile
+  workflow_stage: WorkflowStage  // "discover" | "plan" | "analyze" | "examine" | "approach"
+  track_type: TrackType?  // "nonprofit" | "federal" | "state" | "commercial"
+  enhanced_data: EnhancedData?  // Financial, network, risk data
+}
+
+class MultiDimensionalScore {
+  overall_score: float  // 0.0-1.0
+  confidence: float  // 0.0-1.0
+  dimensional_scores: DimensionalScore[]
+  stage: string
+  track_type: string?
+  boost_factors_applied: string[]
+  metadata: ScoringMetadata
+}
+
+class DimensionalScore {
+  dimension_name: string
+  raw_score: float
+  weight: float
+  weighted_score: float
+  boost_factor: float  // 1.0 = no boost, >1.0 = boosted
+  data_quality: float  // 0.0-1.0
+}
+```
+
+**Stage-Specific Dimensions** (from SCORING_ALGORITHMS.md):
+
+**DISCOVER Stage**:
+- Mission Alignment (0.30)
+- Geographic Fit (0.25)
+- Financial Match (0.20)
+- Eligibility (0.15)
+- Timing (0.10)
+
+**PLAN Stage**:
+- Success Probability (0.30)
+- Organizational Capacity (0.25)
+- Financial Viability (0.20)
+- Network Leverage (0.15)
+- Compliance (0.10)
+
+**ANALYZE Stage**:
+- Competitive Position (0.30)
+- Strategic Alignment (0.25)
+- Risk Profile (0.20)
+- Implementation Feasibility (0.15)
+- ROI Potential (0.10)
+
+**EXAMINE Stage**:
+- Deep Intelligence Quality (0.30)
+- Relationship Pathways (0.25)
+- Strategic Fit (0.20)
+- Partnership Potential (0.15)
+- Innovation Opportunity (0.10)
+
+**APPROACH Stage**:
+- Overall Viability (0.30)
+- Success Probability (0.25)
+- Strategic Value (0.20)
+- Resource Requirements (0.15)
+- Timeline Feasibility (0.10)
+
+**Boost Factors**:
+- Financial data available: +10% to financial dimensions
+- Network data available: +15% to network/relationship dimensions
+- Historical data available: +12% to success probability
+- Risk assessment complete: +8% to viability scores
+
 **Tasks**:
-- [ ] Implement workflow parser for YAML
-- [ ] Build workflow execution engine
-- [ ] Implement human_input gateway type
-- [ ] Add conditional step execution
-- [ ] Add for_each iteration support
-- [ ] Testing with full pipeline
+- [ ] Design comprehensive BAML schema for scoring
+- [ ] Implement stage-specific scoring logic (5 stages)
+- [ ] Implement track-specific optimization (4 tracks)
+- [ ] Build confidence calculation algorithm
+- [ ] Implement boost factor system
+- [ ] Data quality assessment
+- [ ] Unit tests for each stage/track combination
+- [ ] Integration tests with real data
+- [ ] Performance optimization (<10ms per score)
 
-### 4.2 Human Gateway Interface
+**Deprecation**:
+- [ ] Move `discovery_scorer.py` → `_deprecated/`
+- [ ] Move `success_scorer.py` → `_deprecated/`
+- [ ] Update `DEPRECATED_PROCESSORS.md`
 
-**Web Interface Components**:
-- [ ] Screening results dashboard
-- [ ] Opportunity scoring display
-- [ ] Manual selection interface
-- [ ] Depth tier selector per opportunity
-- [ ] Note-taking capability
-- [ ] Web scraping trigger
-- [ ] Batch actions (select all, deselect, etc.)
+**Deliverable**: Multi-dimensional scorer operational, 2 processors deprecated
 
-**Backend Support**:
-- [ ] API endpoint: `POST /api/screening/execute`
-- [ ] API endpoint: `GET /api/screening/{session_id}/results`
-- [ ] API endpoint: `POST /api/screening/{session_id}/select`
-- [ ] API endpoint: `POST /api/intelligence/execute`
-- [ ] Session management for multi-step workflow
-- [ ] Progress tracking
+### 4.2 Tool 21: Report Generator Tool
 
-**Deliverable**: Complete workflow operational with human gateway
+**Purpose**: Professional, masters thesis-level report generation using DOSSIER template structure
+
+**Implementation**:
+```
+tools/report-generator-tool/
+├── app/
+│   ├── report_tool.py           # Main tool implementation
+│   ├── report_models.py         # Pydantic models
+│   ├── template_engine.py       # Template rendering
+│   └── report_sections.py       # Section generators
+├── templates/
+│   ├── comprehensive_analysis.html  # Full DOSSIER template
+│   ├── executive_summary.html       # 2-page summary
+│   ├── risk_assessment.html         # Risk matrix focused
+│   └── implementation_plan.html     # Action plan focused
+├── baml_src/
+│   └── reporter.baml            # BAML schema definitions
+├── tests/
+│   ├── test_comprehensive_report.py
+│   ├── test_executive_summary.py
+│   └── test_template_rendering.py
+├── 12factors.toml
+└── README.md
+```
+
+**BAML Schema**:
+```baml
+class ReportInput {
+  template_type: ReportTemplate  // "comprehensive" | "executive" | "risk" | "implementation"
+  opportunity_data: Opportunity
+  organization_data: OrganizationProfile
+  scoring_results: MultiDimensionalScore[]
+  intelligence_data: DeepIntelligenceOutput?
+  financial_data: FinancialIntelligenceOutput?
+  network_data: NetworkIntelligenceOutput?
+  risk_data: RiskAssessmentOutput?
+  output_format: OutputFormat  // "html" | "pdf"
+}
+
+class ReportOutput {
+  report_id: string
+  template_used: string
+  file_path: string
+  format: string
+  sections_generated: ReportSection[]
+  generation_time_seconds: float
+  file_size_bytes: int
+}
+
+class ReportSection {
+  section_id: string
+  section_title: string
+  content_type: string  // "text" | "table" | "chart" | "matrix"
+  content: string  // HTML or markdown
+  data_sources: string[]
+}
+```
+
+**Template Structure** (from ULTIMATE_FINAL_MASTERS_THESIS_DOSSIER.html):
+
+**Section 1: Executive Summary**
+- Overall recommendation
+- Key strategic findings table
+- Strategic analysis summary
+- GPT-5 methodology overview
+
+**Section 2: Opportunity Analysis**
+- 2.1 Opportunity Overview
+- 2.2 Organization Deep Analysis
+- 2.3 Grantor Deep Intelligence
+- 2.4 Strategic Fit & Alignment (scoring matrix)
+- 2.5 Opportunity Deep Dive
+- 2.6 Funding History & Precedent
+
+**Section 3: Pursuit Strategy**
+- 3.1 Strategic Approach & Methodology
+- 3.2 Network & Relationship Intelligence
+- 3.3 Detailed Scoring Analysis (multi-dimensional breakdown)
+- 3.4 Winning Strategy & Implementation Plan
+
+**Section 4: Comprehensive Tab Analysis**
+- 4.1 DISCOVER Tab - 4-Track Intelligence
+- 4.2 PLAN Tab - Success Scoring
+- 4.3 ANALYZE Tab - AI-Lite Research
+- 4.4 EXAMINE Tab - AI-Heavy Intelligence
+- 4.5 APPROACH Tab - Decision Synthesis
+- 4.6 Intelligence Tier Analysis
+
+**Section 5: DevOps**
+- 5.1 System Architecture & Performance
+- 5.2 Data Sources & Validation
+- 5.3 Quality Assurance & Testing
+
+**Visual Components**:
+- Fixed navigation TOC with smooth scrolling
+- Metrics tables with alternating row colors
+- Scoring matrices with weighted calculations
+- Risk assessment heatmaps
+- Success probability indicators
+
+**Tasks**:
+- [ ] Design comprehensive BAML schema for reports
+- [ ] Implement comprehensive analysis template (DOSSIER structure)
+- [ ] Implement executive summary template
+- [ ] Implement risk assessment template
+- [ ] Implement implementation plan template
+- [ ] Build template rendering engine
+- [ ] Table and metrics formatting
+- [ ] TOC generation with navigation
+- [ ] PDF export capability (HTML → PDF)
+- [ ] Unit tests for each template
+- [ ] Integration tests with real data
+- [ ] Performance optimization (<2 sec per report)
+
+**Deliverable**: Report generator operational with 4 professional templates
+
+### 4.3 Enhanced Existing Tools
+
+**Deep Intelligence Tool (Tool 2) - Add Scoring Integration**:
+- [ ] Update output model to include dimensional scores
+- [ ] Add scoring breakdown by stage
+- [ ] Include confidence calculations
+- [ ] Generate report-ready sections
+
+**Financial Intelligence Tool (Tool 10) - 5-Dimension Scoring**:
+- [ ] Implement liquidity score (0-1.0)
+- [ ] Implement efficiency score (0-1.0)
+- [ ] Implement sustainability score (0-1.0)
+- [ ] Implement growth score (0-1.0)
+- [ ] Implement capacity score (0-1.0)
+- [ ] Overall financial health rating (0-100)
+
+**Risk Intelligence Tool (Tool 11) - Matrix Generation**:
+- [ ] Generate risk probability × impact matrices
+- [ ] Priority ranking of mitigation strategies
+- [ ] Risk heatmap data for visualization
+- [ ] Report-ready risk tables
+
+**Network Intelligence Tool (Tool 12) - Relationship Scoring**:
+- [ ] Network influence score (0-1.0)
+- [ ] Connection strength assessment
+- [ ] Introduction pathway identification
+- [ ] Report-ready relationship maps
+
+### 4.4 Data Model Enhancements
+
+**New Models**:
+```python
+class MultiDimensionalScore(BaseModel):
+    overall_score: float
+    confidence: float
+    dimensional_scores: List[DimensionalScore]
+    stage: str
+    track_type: Optional[str]
+    boost_factors_applied: List[str]
+    metadata: ScoringMetadata
+
+class DimensionalScore(BaseModel):
+    dimension_name: str
+    raw_score: float
+    weight: float
+    weighted_score: float
+    boost_factor: float
+    data_quality: float
+
+class ScoringContext(BaseModel):
+    workflow_stage: str
+    track_type: Optional[str]
+    enhanced_data_available: Dict[str, bool]
+
+class ReportTemplate(BaseModel):
+    template_id: str
+    template_name: str
+    sections: List[str]
+    output_formats: List[str]
+
+class ReportSection(BaseModel):
+    section_id: str
+    section_title: str
+    content_type: str
+    content: str
+    data_sources: List[str]
+```
+
+**Deliverable**: Enhanced data models with scoring and reporting support
 
 ---
 
 ## PHASE 5: REMAINING TOOLS + DOC CONSOLIDATION (Week 6)
 
-### 5.1 Additional Supporting Tools (4 tools)
+### 5.1 Additional Supporting Tools (3 tools)
 
-#### Tool 16: Historical Funding Analyzer Tool
+#### Tool 22: Historical Funding Analyzer Tool
 **From**: Historical analysis portions of tier processors
 - USASpending.gov data analysis
 - Funding pattern detection
 - Geographic distribution analysis
 - BAML schema for historical analysis
 
-#### Tool 17: Report Generator Tool
-**Consolidates**: `report_generator.py`
-- Business report generation
-- Executive summaries
-- Implementation plans
-- BAML schema for report output
-
-#### Tool 18: Data Export Tool
+#### Tool 23: Data Export Tool
 **Consolidates**: `export_processor.py`
+**NOTE**: Tool 18 (Data Export) was completed in Phase 3. This is an enhanced version.
 - Multi-format export (PDF, Excel, JSON)
-- Data packaging
-- Batch export support
+- Data packaging and batch export
+- Integration with report generator
 - BAML schema for export configuration
 
-#### Tool 19: Grant Package Generator Tool
+#### Tool 24: Grant Package Generator Tool
 **From**: `grant_package_generator.py`
-- Application package assembly
-- Document coordination
-- Submission planning
+**NOTE**: Tool 19 (Grant Package Generator) was completed in Phase 3. This enhances with scoring/reporting integration.
+- Application package assembly with scoring insights
+- Document coordination with report integration
+- Submission planning with risk assessment
 - BAML schema for package output
 
 **Tasks per tool**: Same as Phase 3
 
-**Deliverable**: 4 additional tools operational, 4 more processors deprecated
+**Deliverable**: 3 additional tools operational (Tool 22 new, Tools 23-24 enhanced)
 
 ### 5.2 Documentation Consolidation 🧹
 
@@ -844,7 +1051,210 @@ stages:
 
 ---
 
-## PHASE 9: GOVERNMENT GRANT TOOLS (After Nonprofit Core Complete)
+## PHASE 9: WORKFLOW IMPLEMENTATION + HUMAN GATEWAY (Week 10-11)
+
+### Critical Decision: Deferred Until Atomic Tools Mature ⏸️
+
+**Status**: DEFERRED FROM PHASE 4 - Will implement after scoring/reporting proven
+
+**Rationale**:
+- **Scoring Foundation First**: Multi-dimensional scorer must be operational before building UI to display scores
+- **Template-Driven Development**: Report templates guide workflow output design
+- **Atomic Tools Complete**: All individual capabilities proven before orchestration
+- **Reduced Risk**: Workflow UI is last layer, depends on stable tool foundation
+
+### 9.1 Unified Intelligence Workflow
+
+**Create**: `workflows/intelligence_analysis.yaml`
+
+```yaml
+workflow: intelligence_analysis
+description: "Two-tool pipeline with human gateway and professional reporting"
+
+inputs:
+  all_opportunities: array[object]
+  organization_profile: object
+  screening_mode: enum[fast, thorough]
+  minimum_threshold: float
+  report_template: enum[comprehensive, executive, risk, implementation]
+
+stages:
+  # Stage 1: Mass Screening
+  - name: screen_opportunities
+    tool: opportunity-screening-tool
+    inputs:
+      opportunities: "{{ all_opportunities }}"
+      organization_profile: "{{ organization_profile }}"
+      screening_mode: "{{ screening_mode }}"
+      minimum_threshold: "{{ minimum_threshold }}"
+    outputs:
+      screening_results: screening
+
+  # Stage 2: Multi-Dimensional Scoring
+  - name: score_opportunities
+    tool: multi-dimensional-scorer-tool
+    for_each: "{{ screening_results.opportunity_scores }}"
+    inputs:
+      opportunity_data: "{{ item }}"
+      organization_profile: "{{ organization_profile }}"
+      workflow_stage: "discover"
+      track_type: "{{ item.track_type }}"
+    outputs:
+      dimensional_scores: scores
+
+  # Stage 3: Human Gateway (Web Interface)
+  - name: await_human_selection
+    type: human_input
+    interface: web_ui
+    display:
+      component: "screening_review_interface"
+      data:
+        opportunities: "{{ screening_results }}"
+        scores: "{{ dimensional_scores }}"
+    capabilities:
+      - review_multi_dimensional_scores
+      - view_scoring_breakdown
+      - web_scraping
+      - manual_filtering
+      - note_taking
+      - depth_selection
+    outputs:
+      selected_opportunities: selections
+
+  # Stage 4: Deep Intelligence (for selected)
+  - name: deep_intelligence_analysis
+    tool: deep-intelligence-tool
+    for_each: "{{ selected_opportunities }}"
+    inputs:
+      opportunity: "{{ item }}"
+      organization_profile: "{{ organization_profile }}"
+      depth: "{{ item.selected_depth }}"
+      screening_score: "{{ item.screening_score }}"
+      user_notes: "{{ item.user_notes }}"
+    outputs:
+      intelligence_reports: reports
+
+  # Stage 5: Supporting Analysis (conditional based on depth)
+  - name: financial_analysis
+    tool: financial-intelligence-tool
+    condition: "{{ depth >= standard }}"
+    for_each: "{{ selected_opportunities }}"
+    outputs:
+      financial_results: financial
+
+  - name: network_analysis
+    tool: network-intelligence-tool
+    condition: "{{ depth >= enhanced }}"
+    for_each: "{{ selected_opportunities }}"
+    outputs:
+      network_results: network
+
+  - name: risk_assessment
+    tool: risk-intelligence-tool
+    for_each: "{{ selected_opportunities }}"
+    outputs:
+      risk_results: risks
+
+  # Stage 6: Final Multi-Dimensional Scoring
+  - name: final_scoring
+    tool: multi-dimensional-scorer-tool
+    for_each: "{{ selected_opportunities }}"
+    inputs:
+      opportunity_data: "{{ item }}"
+      organization_profile: "{{ organization_profile }}"
+      workflow_stage: "approach"
+      enhanced_data:
+        financial: "{{ financial_results[item.id] }}"
+        network: "{{ network_results[item.id] }}"
+        risk: "{{ risk_results[item.id] }}"
+        deep_analysis: "{{ intelligence_reports[item.id] }}"
+    outputs:
+      final_scores: final_scores
+
+  # Stage 7: Generate Professional Reports
+  - name: generate_reports
+    tool: report-generator-tool
+    for_each: "{{ selected_opportunities }}"
+    inputs:
+      template_type: "{{ report_template }}"
+      opportunity_data: "{{ item }}"
+      organization_data: "{{ organization_profile }}"
+      scoring_results: "{{ final_scores[item.id] }}"
+      intelligence_data: "{{ intelligence_reports[item.id] }}"
+      financial_data: "{{ financial_results[item.id] }}"
+      network_data: "{{ network_results[item.id] }}"
+      risk_data: "{{ risk_results[item.id] }}"
+      output_format: "{{ output_format }}"
+    outputs:
+      professional_reports: reports
+```
+
+**Tasks**:
+- [ ] Enhance workflow parser for human_input gateway type
+- [ ] Implement conditional step execution based on depth
+- [ ] Add for_each iteration with context passing
+- [ ] Implement workflow state management
+- [ ] Testing with full pipeline (screening → human → intelligence → reporting)
+
+### 9.2 Human Gateway Interface
+
+**Web Interface Components**:
+- [ ] **Screening Results Dashboard**: Display opportunities with multi-dimensional scores
+- [ ] **Scoring Breakdown Visualization**: Chart dimensional scores by stage
+- [ ] **Opportunity Comparison View**: Side-by-side scoring comparison
+- [ ] **Manual Selection Interface**: Drag-drop priority ordering
+- [ ] **Depth Tier Selector**: Per-opportunity depth configuration with cost calculator
+- [ ] **Note-Taking Capability**: Rich text editor for research notes
+- [ ] **Web Scraping Trigger**: External research integration
+- [ ] **Batch Actions**: Select all, deselect, apply depth to multiple
+- [ ] **Report Preview**: Live preview of selected report template
+- [ ] **Cost Calculator**: Real-time cost estimation based on selections
+
+**Backend Support**:
+- [ ] API endpoint: `POST /api/workflows/screening/execute`
+- [ ] API endpoint: `GET /api/workflows/{session_id}/screening-results`
+- [ ] API endpoint: `GET /api/workflows/{session_id}/scores`
+- [ ] API endpoint: `POST /api/workflows/{session_id}/select`
+- [ ] API endpoint: `POST /api/workflows/intelligence/execute`
+- [ ] API endpoint: `GET /api/workflows/{session_id}/reports`
+- [ ] Session management for multi-step workflow
+- [ ] Real-time progress tracking via WebSocket
+- [ ] Report download endpoints
+
+**Data Flow**:
+```
+User Input → Screening Tool → Scorer Tool → [Human Gateway] →
+  → Deep Intelligence → Supporting Tools → Scorer Tool → Report Generator →
+  → Professional Reports (HTML/PDF)
+```
+
+**Deliverable**: Complete workflow operational with human gateway and integrated scoring/reporting
+
+### 9.3 Enhanced Workflow Features
+
+**Progress Visualization**:
+- [ ] Real-time workflow status dashboard
+- [ ] Step-by-step execution log
+- [ ] Cost tracking per step
+- [ ] Time estimates for pending steps
+
+**Error Handling**:
+- [ ] Graceful degradation for tool failures
+- [ ] Retry logic with exponential backoff
+- [ ] Resume capability for interrupted workflows
+- [ ] Detailed error reporting with recovery suggestions
+
+**Workflow Templates**:
+- [ ] Quick screening workflow (fast mode only)
+- [ ] Comprehensive analysis workflow (all depths)
+- [ ] Batch processing workflow (no human gateway)
+- [ ] Custom workflow builder (advanced users)
+
+**Deliverable**: Production-ready workflow system with human-in-the-loop capability
+
+---
+
+## PHASE 10: GOVERNMENT GRANT TOOLS (Week 12-14, After Nonprofit Core Complete)
 
 ### Critical Decision: Deferred to Avoid Workflow Confusion ⏸️
 
@@ -1054,20 +1464,22 @@ stages:
 10. ✅ propublica-api-enrichment-tool
 11. ✅ xml-schedule-parser-tool
 
-### Supporting Tools (8 tools)
-12. ✅ financial-intelligence-tool (Week 4)
-13. ✅ risk-intelligence-tool (Week 4)
-14. ✅ network-intelligence-tool (Week 4)
-15. ✅ schedule-i-grant-analyzer-tool (Week 4)
-16. ✅ data-validator-tool (Week 4)
-17. ✅ ein-validator-tool (Week 4)
-18. ✅ historical-funding-analyzer-tool (Week 6)
-19. ✅ report-generator-tool (Week 6)
-20. ✅ data-export-tool (Week 6)
-21. ✅ grant-package-generator-tool (Week 6)
+### Supporting Tools (10 tools)
+12. ✅ financial-intelligence-tool (Week 4, Phase 3)
+13. ✅ risk-intelligence-tool (Week 4, Phase 3)
+14. ✅ network-intelligence-tool (Week 4, Phase 3)
+15. ✅ schedule-i-grant-analyzer-tool (Week 4, Phase 3)
+16. ✅ data-validator-tool (Week 4, Phase 3)
+17. ✅ ein-validator-tool (Week 4, Phase 3)
+18. ✅ data-export-tool (Week 4, Phase 3)
+19. ✅ grant-package-generator-tool (Week 4, Phase 3)
+20. multi-dimensional-scorer-tool (Week 5, Phase 4)
+21. report-generator-tool (Week 5, Phase 4)
+22. historical-funding-analyzer-tool (Week 6, Phase 5)
 
-**Total MVP Tools**: 19 tools (vs. 52 original plan)
-**Reduction**: 63% fewer tools
+**Total MVP Tools**: 22 tools (vs. 52 original plan)
+**Reduction**: 58% fewer tools
+**Workflow Infrastructure**: Phase 9 (Week 10-11)
 
 ---
 
@@ -1120,37 +1532,49 @@ stages:
 - 7 processors deprecated
 
 ### Week 4: Supporting Tools (Part 1) ✅
-- 6 supporting tools operational
+- 8 supporting tools operational (Phase 3)
 - 6 additional processors deprecated
 - Root scripts organized
 
-### Week 5: Workflow Implementation ✅
-- Complete intelligence workflow operational
-- Human gateway interface functional
-- End-to-end testing complete
+### Week 5: Scoring & Reporting (Phase 4) 🔄
+- Multi-dimensional scorer operational
+- Report generator with DOSSIER templates
+- Enhanced tool outputs with scoring
+- 2 more processors deprecated
 
-### Week 6: Supporting Tools (Part 2) + Docs ✅
-- 4 additional tools operational
+### Week 6: Supporting Tools (Part 2) + Docs (Phase 5) ⏳
+- Historical funding analyzer
+- Enhanced export and package tools
 - Documentation consolidated
-- 4 more processors deprecated
 
-### Week 7: Web Integration + Testing ✅
+### Week 7: Web Integration + Testing (Phase 6) ⏳
 - APIs integrated
 - Frontend updated
 - Comprehensive testing complete
 
-### Week 8: Major Cleanup + Validation ✅
+### Week 8: Major Cleanup + Validation (Phase 7) ⏳
 - Legacy processors deleted
 - 12-factor compliance validated
 - Production-ready
 
-### Week 9: Production Deployment ✅
+### Week 9: Production Deployment (Phase 8) ⏳
 - Production cutover successful
 - Monitoring operational
 - Final optimization complete
 
-**Total Timeline**: 9 weeks to production (vs. 16 weeks original)
-**Time Savings**: 44% reduction in transformation timeline
+### Week 10-11: Workflow Implementation (Phase 9) ⏳
+- Complete intelligence workflow
+- Human gateway interface
+- Integrated scoring/reporting pipeline
+
+### Week 12-14: Government Tools (Phase 10) ⏸️
+- Deferred until nonprofit core proven
+- 4 government grant tools
+- Extended workflow integration
+
+**Total Timeline**: 11 weeks to full completion (vs. 16 weeks original)
+**Time Savings**: 31% reduction in transformation timeline
+**Current Progress**: Phase 3 complete, Phase 4 in planning
 
 ---
 
@@ -1208,16 +1632,18 @@ stages:
 
 **Phase 1 (Week 1)**: Tool registry, workflow engine, clean repo ✅
 **Phase 2 (Week 2-3)**: 2 unified AI tools, 8 processors deprecated ✅
-**Phase 3 (Week 4)**: 6 supporting tools, root scripts organized ✅
-**Phase 4 (Week 5)**: Complete workflow, human gateway operational ✅
-**Phase 5 (Week 6)**: 4 additional tools, documentation consolidated ✅
-**Phase 6 (Week 7)**: Web integration, comprehensive testing ✅
-**Phase 7 (Week 8)**: Legacy processors deleted, validation complete ✅
-**Phase 8 (Week 9)**: Production deployment, final optimization ✅
+**Phase 3 (Week 4)**: 8 supporting tools, root scripts organized ✅
+**Phase 4 (Week 5)**: Multi-dimensional scorer, report generator, enhanced tools 🔄
+**Phase 5 (Week 6)**: Historical analyzer, enhanced export/package, docs consolidated ⏳
+**Phase 6 (Week 7)**: Web integration, comprehensive testing ⏳
+**Phase 7 (Week 8)**: Legacy processors deleted, validation complete ⏳
+**Phase 8 (Week 9)**: Production deployment, final optimization ⏳
+**Phase 9 (Week 10-11)**: Workflow implementation, human gateway operational ⏳
+**Phase 10 (Week 12-14)**: Government grant tools (deferred) ⏸️
 
-**Total Effort**: 9 weeks focused development
-**Current Progress**: 17% complete (9 tools done)
-**Remaining Effort**: ~8 weeks
+**Total Effort**: 11 weeks focused development (nonprofit core), 14 weeks with government
+**Current Progress**: Phase 3 complete (19/22 tools, 86% of nonprofit core)
+**Remaining Effort**: ~7-8 weeks for nonprofit core, +3 weeks for government
 
 ---
 
@@ -1267,20 +1693,23 @@ This transformation plan delivers:
 
 1. **12-Factor Compliance**: Near-perfect alignment with framework principles
 2. **Two-Tool Architecture**: Matches real-world workflow (screen → human review → deep analysis)
-3. **Cost Efficiency**: 94% cost savings through intelligent two-stage pipeline
-4. **Maintainability**: 56% reduction in total tools, 87.5% reduction in AI code
-5. **Timeline**: 9 weeks to production (44% faster than original plan)
-6. **Clean Codebase**: Progressive cleanup results in production-ready, optimized repository
-7. **Business Flexibility**: Configurable depths, human-in-loop, automated workflows
+3. **Scoring Foundation**: Multi-dimensional scoring system before workflow UI
+4. **Professional Reporting**: Masters thesis-level reports using DOSSIER template
+5. **Cost Efficiency**: 94% cost savings through intelligent two-stage pipeline
+6. **Maintainability**: 58% reduction in total tools, 87.5% reduction in AI code
+7. **Timeline**: 11 weeks to nonprofit core (31% faster than original 16-week plan)
+8. **Clean Codebase**: Progressive cleanup results in production-ready, optimized repository
+9. **Business Flexibility**: Configurable depths, sophisticated scoring, professional reports
 
-**Status**: Ready for implementation ✅
+**Status**: Phase 3 Complete, Phase 4 In Planning ✅
 
-**Next Step**: Begin Phase 1 - Foundation + Initial Cleanup
+**Next Step**: Begin Phase 4 - Multi-Dimensional Scorer & Report Generator
 
 ---
 
-**Document Version**: 3.0 FINAL
-**Created**: 2025-09-29
-**Status**: APPROVED - Ready for Implementation
-**Architecture Decision**: Two unified AI tools with human gateway
-**Estimated Completion**: 9 weeks from start date
+**Document Version**: 3.1 REVISED
+**Original**: 2025-09-29
+**Revised**: 2025-09-30
+**Status**: Phase 3 Complete - Phase 4 Planned
+**Architecture Decision**: Two unified AI tools + scoring/reporting + human gateway (deferred to Phase 9)
+**Estimated Completion**: 11 weeks for nonprofit core, 14 weeks with government tools

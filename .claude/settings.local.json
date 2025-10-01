@@ -65,7 +65,8 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(timeout 5 curl -s http://localhost:8000/api/profiles)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(start http://localhost:8000)"
     ],
     "deny": [],
     "ask": [],

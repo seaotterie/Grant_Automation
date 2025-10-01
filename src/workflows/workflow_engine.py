@@ -11,7 +11,9 @@ import asyncio
 import logging
 
 from .workflow_parser import WorkflowDefinition, WorkflowStep
+from .tool_loader import get_tool_loader
 from src.core.tool_registry import get_registry
+from src.core.tool_framework import ToolExecutionContext
 
 
 class WorkflowStatus(Enum):
@@ -61,6 +63,7 @@ class WorkflowEngine:
         """Initialize workflow engine."""
         self.logger = logging.getLogger(__name__)
         self.tool_registry = get_registry()
+        self.tool_loader = get_tool_loader()
 
     async def execute_workflow(
         self,
@@ -204,23 +207,39 @@ class WorkflowEngine:
             if not tool_metadata:
                 raise ValueError(f"Tool not found: {step.tool}")
 
-            # TODO: Load and execute actual tool
-            # For now, return placeholder result
-            self.logger.warning(f"Tool execution not yet implemented: {step.tool}")
+            # Create execution context
+            execution_context = ToolExecutionContext(
+                tool_name=step.tool,
+                tool_version=tool_metadata.version,
+                execution_id=f"workflow_{step.name}",
+                metadata={"workflow_step": step.name}
+            )
 
-            output = {
-                "step": step.name,
-                "tool": step.tool,
-                "inputs": inputs,
-                "status": "placeholder"
-            }
+            # Execute tool using tool loader
+            self.logger.info(f"Executing tool {step.tool} for step {step.name}")
+            tool_result = await self.tool_loader.execute_tool(
+                tool_name=step.tool,
+                inputs=inputs,
+                context=execution_context
+            )
+
+            # Extract output from ToolResult
+            if tool_result.is_success:
+                output = tool_result.data
+                status = WorkflowStatus.COMPLETED
+                error = None
+            else:
+                output = None
+                status = WorkflowStatus.FAILED
+                error = tool_result.error
 
             execution_time_ms = (datetime.now() - start_time).total_seconds() * 1000
 
             return StepResult(
                 step_name=step.name,
-                status=WorkflowStatus.COMPLETED,
+                status=status,
                 output=output,
+                error=error,
                 execution_time_ms=execution_time_ms
             )
 

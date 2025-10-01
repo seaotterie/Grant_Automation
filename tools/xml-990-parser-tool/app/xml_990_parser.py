@@ -66,6 +66,48 @@ class RegularNonprofitOfficer:
 
 
 @dataclass
+class OrganizationContactInfo:
+    """Contact and organizational information from Form 990."""
+    ein: str
+    tax_year: int
+    website_url: Optional[str] = None
+    primary_phone: Optional[str] = None
+    alternate_phone: Optional[str] = None
+    email_address: Optional[str] = None
+    formation_year: Optional[int] = None
+    legal_domicile_state: Optional[str] = None
+    activity_mission_desc: Optional[str] = None
+    organization_type: Optional[str] = None
+    multi_state_operations: Optional[List[str]] = None
+    operational_footprint: Optional[str] = None
+
+
+@dataclass
+class Schedule990APublicCharity:
+    """Schedule A - Public Charity Classification (Grant Eligibility Intelligence)."""
+    ein: str
+    tax_year: int
+    public_charity_status: Optional[bool] = None
+    public_support_percentage: Optional[float] = None
+    support_test_passed: Optional[bool] = None
+    total_public_support: Optional[float] = None
+    total_support_amount: Optional[float] = None
+    grant_eligibility_classification: Optional[str] = None
+    grant_eligibility_confidence: Optional[str] = None
+
+
+@dataclass
+class Schedule990BMajorContributors:
+    """Schedule B - Major Contributor Intelligence (Foundation Relationship Patterns)."""
+    ein: str
+    tax_year: int
+    contributor_data_available: bool = False
+    major_contributor_count: Optional[int] = None
+    contributor_information_restricted: bool = False
+    foundation_relationship_indicator: bool = False
+
+
+@dataclass
 class Form990GrantRecord:
     """Schedule I: Grants and other assistance made."""
     ein: str
@@ -189,6 +231,9 @@ class XML990Result:
     governance_indicators: List[GovernanceIndicators]
     program_activities: List[ProgramActivity]
     financial_summaries: List[Form990FinancialSummary]
+    contact_information: List[OrganizationContactInfo]
+    schedule_a_public_charity: List[Schedule990APublicCharity]
+    schedule_b_contributors: List[Schedule990BMajorContributors]
     xml_files_processed: List[XML990FileMetadata]
     execution_metadata: XML990ExecutionMetadata
     quality_assessment: XML990QualityAssessment
@@ -243,6 +288,9 @@ class XML990ParserTool:
             governance_indicators=[],
             program_activities=[],
             financial_summaries=[],
+            contact_information=[],
+            schedule_a_public_charity=[],
+            schedule_b_contributors=[],
             xml_files_processed=[],
             execution_metadata=XML990ExecutionMetadata(
                 execution_time_ms=0.0,
@@ -541,6 +589,24 @@ class XML990ParserTool:
             if grants:
                 print(f"     Grants: {len(grants)} records extracted")
 
+            # Extract contact information
+            contact_info = self._extract_contact_information(root, ein, file_metadata.tax_year)
+            if contact_info:
+                result.contact_information.append(contact_info)
+                print(f"     Contact: information extracted (URL: {contact_info.website_url or 'N/A'})")
+
+            # Extract Schedule A (Grant Eligibility Intelligence)
+            schedule_a = self._extract_schedule_a_public_charity(root, ein, file_metadata.tax_year)
+            if schedule_a:
+                result.schedule_a_public_charity.append(schedule_a)
+                print(f"     Schedule A: {schedule_a.grant_eligibility_classification} ({schedule_a.grant_eligibility_confidence} confidence)")
+
+            # Extract Schedule B (Foundation Relationship Intelligence)
+            schedule_b = self._extract_schedule_b_contributors(root, ein, file_metadata.tax_year)
+            if schedule_b:
+                result.schedule_b_contributors.append(schedule_b)
+                print(f"     Schedule B: contributor data {'available' if schedule_b.contributor_data_available else 'not available'}")
+
             file_metadata.parsing_success = parsing_success
             result.xml_files_processed.append(file_metadata)
             result.execution_metadata.xml_files_parsed += 1
@@ -736,6 +802,211 @@ class XML990ParserTool:
 
         except Exception as e:
             print(f"     Error extracting governance: {e}")
+            return None
+
+    def _extract_contact_information(self, root: ET.Element, ein: str, tax_year: int) -> Optional[OrganizationContactInfo]:
+        """Extract contact information from Form 990."""
+
+        try:
+            # Handle namespace if present
+            ns = ""
+            if '}' in root.tag:
+                ns = root.tag.split('}')[0] + '}'
+
+            # Find the IRS990 element (Form 990 specific)
+            irs990_elem = None
+            irs990_paths = ['.//IRS990', f'.//{ns}IRS990']
+            for path in irs990_paths:
+                irs990_elem = root.find(path)
+                if irs990_elem is not None:
+                    break
+
+            if irs990_elem is None:
+                return None
+
+            # Extract phone numbers (multiple may exist)
+            phone_numbers = []
+            phone_paths = ['.//PhoneNum', f'.//{ns}PhoneNum']
+            for path in phone_paths:
+                phone_elems = irs990_elem.findall(path)
+                for phone_elem in phone_elems:
+                    if phone_elem is not None and phone_elem.text:
+                        phone_numbers.append(phone_elem.text.strip())
+
+            # Remove duplicates while preserving order
+            unique_phones = []
+            for phone in phone_numbers:
+                if phone not in unique_phones:
+                    unique_phones.append(phone)
+
+            # Extract organization type indicators
+            org_type_indicators = []
+            if self._get_element_text(irs990_elem, './/TypeOfOrganizationCorpInd'):
+                org_type_indicators.append('Corporation')
+            if self._get_element_text(irs990_elem, './/TypeOfOrganizationTrustInd'):
+                org_type_indicators.append('Trust')
+            if self._get_element_text(irs990_elem, './/TypeOfOrganizationAssocInd'):
+                org_type_indicators.append('Association')
+
+            # Extract multi-state operations (Geographic Intelligence)
+            states_paths = ['.//StatesWhereCopyOfReturnIsFldCd', f'.//{ns}StatesWhereCopyOfReturnIsFldCd']
+            multi_state_list = []
+            for path in states_paths:
+                states_elements = irs990_elem.findall(path)
+                if states_elements:
+                    multi_state_list = [elem.text.strip() for elem in states_elements if elem.text]
+                    break
+
+            # Create operational footprint description
+            operational_footprint = None
+            if multi_state_list:
+                state_count = len(multi_state_list)
+                if state_count == 1:
+                    operational_footprint = f"Single-state operations ({multi_state_list[0]})"
+                elif state_count <= 5:
+                    operational_footprint = f"Multi-state regional operations ({state_count} states)"
+                else:
+                    operational_footprint = f"National operations ({state_count} states)"
+
+            contact_info = OrganizationContactInfo(
+                ein=ein,
+                tax_year=tax_year,
+                website_url=self._get_element_text(irs990_elem, './/WebsiteAddressTxt'),
+                primary_phone=unique_phones[0] if len(unique_phones) > 0 else None,
+                alternate_phone=unique_phones[1] if len(unique_phones) > 1 else None,
+                email_address=self._get_element_text(irs990_elem, './/EmailAddressTxt'),
+                formation_year=self._get_element_int(irs990_elem, './/FormationYr'),
+                legal_domicile_state=self._get_element_text(irs990_elem, './/LegalDomicileStateCd'),
+                activity_mission_desc=self._get_element_text(irs990_elem, './/ActivityOrMissionDesc'),
+                organization_type=', '.join(org_type_indicators) if org_type_indicators else None,
+                multi_state_operations=multi_state_list if multi_state_list else None,
+                operational_footprint=operational_footprint
+            )
+
+            return contact_info
+
+        except Exception as e:
+            print(f"     Error extracting contact information: {e}")
+            return None
+
+    def _extract_schedule_a_public_charity(self, root: ET.Element, ein: str, tax_year: int) -> Optional[Schedule990APublicCharity]:
+        """Extract Schedule A public charity classification data for grant eligibility intelligence."""
+
+        try:
+            # Handle namespace if present
+            ns = ""
+            if '}' in root.tag:
+                ns = root.tag.split('}')[0] + '}'
+
+            # Find the IRS990ScheduleA element
+            schedule_a_elem = None
+            schedule_a_paths = ['.//IRS990ScheduleA', f'.//{ns}IRS990ScheduleA']
+            for path in schedule_a_paths:
+                schedule_a_elem = root.find(path)
+                if schedule_a_elem is not None:
+                    break
+
+            if schedule_a_elem is None:
+                return None
+
+            # Extract public charity status
+            public_charity_status = self._get_element_text(schedule_a_elem, './/PublicOrganization170Ind') == 'X'
+
+            # Extract public support percentage
+            public_support_pct = self._get_element_float(schedule_a_elem, './/PublicSupportCY170Pct')
+
+            # Extract support test results
+            support_test_passed = self._get_element_text(schedule_a_elem, './/ThirtyThrPctSuprtTestsCY170Ind') == 'X'
+
+            # Extract support amounts
+            total_public_support = self._get_element_float(schedule_a_elem, './/PublicSupportTotal170Amt')
+            total_support = self._get_element_float(schedule_a_elem, './/TotalSupportAmt')
+
+            # Determine grant eligibility classification
+            if public_charity_status:
+                classification = "Public Charity"
+            else:
+                classification = "Private Foundation"
+
+            # Determine grant eligibility confidence based on public support percentage
+            confidence = "Low"
+            if public_support_pct is not None:
+                if public_support_pct >= 0.333:  # 33⅓% test
+                    confidence = "High" if public_support_pct >= 0.5 else "Medium"
+
+            schedule_a_data = Schedule990APublicCharity(
+                ein=ein,
+                tax_year=tax_year,
+                public_charity_status=public_charity_status,
+                public_support_percentage=public_support_pct,
+                support_test_passed=support_test_passed,
+                total_public_support=total_public_support,
+                total_support_amount=total_support,
+                grant_eligibility_classification=classification,
+                grant_eligibility_confidence=confidence
+            )
+
+            return schedule_a_data
+
+        except Exception as e:
+            print(f"     Error extracting Schedule A: {e}")
+            return None
+
+    def _extract_schedule_b_contributors(self, root: ET.Element, ein: str, tax_year: int) -> Optional[Schedule990BMajorContributors]:
+        """Extract Schedule B major contributor data for foundation relationship intelligence."""
+
+        try:
+            # Handle namespace if present
+            ns = ""
+            if '}' in root.tag:
+                ns = root.tag.split('}')[0] + '}'
+
+            # Find the IRS990ScheduleB element
+            schedule_b_elem = None
+            schedule_b_paths = ['.//IRS990ScheduleB', f'.//{ns}IRS990ScheduleB']
+            for path in schedule_b_paths:
+                schedule_b_elem = root.find(path)
+                if schedule_b_elem is not None:
+                    break
+
+            if schedule_b_elem is None:
+                return None
+
+            # Check for contributor information groups
+            contributor_groups = schedule_b_elem.findall('.//ContributorInformationGrp')
+            contributor_count = len(contributor_groups)
+
+            # Check if contributor information is restricted/redacted
+            restricted_info = False
+            foundation_relationship = False
+
+            if contributor_groups:
+                # Check first contributor for restriction patterns
+                first_contributor = contributor_groups[0]
+                contributor_num = self._get_element_text(first_contributor, './/ContributorNum')
+                business_name = self._get_element_text(first_contributor, './/BusinessNameLine1')
+
+                if contributor_num == 'RESTRICTED' or business_name == 'RESTRICTED':
+                    restricted_info = True
+
+                # Foundation relationship indicator based on presence of business names vs individual names
+                business_names = [self._get_element_text(grp, './/BusinessNameLine1') for grp in contributor_groups]
+                if any(name and 'FOUNDATION' in name.upper() or 'FUND' in name.upper() for name in business_names if name != 'RESTRICTED'):
+                    foundation_relationship = True
+
+            schedule_b_data = Schedule990BMajorContributors(
+                ein=ein,
+                tax_year=tax_year,
+                contributor_data_available=contributor_count > 0,
+                major_contributor_count=contributor_count if not restricted_info else None,
+                contributor_information_restricted=restricted_info,
+                foundation_relationship_indicator=foundation_relationship
+            )
+
+            return schedule_b_data
+
+        except Exception as e:
+            print(f"     Error extracting Schedule B: {e}")
             return None
 
     def _extract_program_activities(self, root: ET.Element, ein: str, tax_year: int) -> List[ProgramActivity]:

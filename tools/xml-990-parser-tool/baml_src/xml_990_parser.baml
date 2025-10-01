@@ -45,6 +45,45 @@ class Form990GrantRecord {
     schedule_part string                     // "Schedule I"
 }
 
+// Contact and organizational information
+class OrganizationContactInfo {
+    ein string
+    tax_year int
+    website_url string?                      // WebsiteAddressTxt
+    primary_phone string?                    // PhoneNum (primary)
+    alternate_phone string?                  // PhoneNum (alternate)
+    email_address string?                    // EmailAddressTxt (if available)
+    formation_year int?                      // FormationYr
+    legal_domicile_state string?             // LegalDomicileStateCd
+    activity_mission_desc string?            // ActivityOrMissionDesc
+    organization_type string?                // TypeOfOrganization indicators
+    multi_state_operations string[]?        // StatesWhereCopyOfReturnIsFldCd - Geographic operations
+    operational_footprint string?           // Analysis of geographic scope for grant targeting
+}
+
+// Schedule A - Public Charity Classification (Grant Eligibility Intelligence)
+class Schedule990APublicCharity {
+    ein string
+    tax_year int
+    public_charity_status bool?              // PublicOrganization170Ind - true if public charity
+    public_support_percentage float?         // PublicSupportCY170Pct - % of support from public
+    support_test_passed bool?                // ThirtyThrPctSuprtTestsCY170Ind - passes 33⅓% test
+    total_public_support float?              // PublicSupportTotal170Amt - total public support
+    total_support_amount float?              // TotalSupportAmt - total support received
+    grant_eligibility_classification string? // "Public Charity" or "Private Foundation"
+    grant_eligibility_confidence string?     // "High", "Medium", "Low" based on support %
+}
+
+// Schedule B - Major Contributor Intelligence (Foundation Relationship Patterns)
+class Schedule990BMajorContributors {
+    ein string
+    tax_year int
+    contributor_data_available bool          // Whether contributor info exists (even if restricted)
+    major_contributor_count int?             // Number of major contributors (if available)
+    contributor_information_restricted bool  // True if contributor details are redacted
+    foundation_relationship_indicator bool   // Suggests institutional funding relationships
+}
+
 // Governance and management data from various Form 990 sections
 class GovernanceIndicators {
     ein string
@@ -155,6 +194,9 @@ class XML990Result {
     governance_indicators: GovernanceIndicators[]
     program_activities: ProgramActivity[]
     financial_summaries: Form990FinancialSummary[]
+    contact_information: OrganizationContactInfo[]
+    schedule_a_public_charity: Schedule990APublicCharity[]
+    schedule_b_contributors: Schedule990BMajorContributors[]
     xml_files_processed: XML990FileMetadata[]
     execution_metadata: XML990ExecutionMetadata
     quality_assessment: XML990QualityAssessment

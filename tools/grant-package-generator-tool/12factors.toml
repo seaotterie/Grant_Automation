@@ -1,0 +1,45 @@
+[tool]
+name = "Grant Package Generator Tool"
+version = "1.0.0"
+status = "operational"
+category = "package_assembly"
+
+[tool.metadata]
+description = "Coordinate and assemble grant application packages"
+purpose = "Application package assembly and coordination"
+single_responsibility = "Grant application package assembly and coordination"
+cost_per_operation = 0.00
+replaces = ["grant_package_generator.py"]
+
+[tool.factors]
+factor_1_codebase = "Single tool in tools/grant-package-generator-tool/"
+factor_2_dependencies = "Core framework via src/core/tool_framework"
+factor_3_config = "Packages directory configurable via config dict"
+factor_4_structured_output = "Returns GrantPackageOutput dataclass with package status, documents, checklist, submission plan"
+factor_5_build_run_separation = "Tool execution separate from package assembly logic"
+factor_6_stateless = "No state between executions - each run independent"
+factor_7_port_binding = "Async function interface via execute() method"
+factor_8_concurrency = "Async-ready for parallel package generation"
+factor_9_disposability = "Fast startup, graceful shutdown"
+factor_10_single_responsibility = "Package assembly only - no AI analysis or document generation"
+factor_11_autonomous = "Operates independently with structured inputs"
+factor_12_api_first = "Function-based API with type-safe interfaces"
+
+[tool.inputs]
+type = "GrantPackageInput"
+required_fields = ["opportunity_id", "opportunity_title", "funder_name", "application_deadline", "organization_ein", "organization_name", "include_documents"]
+optional_fields = ["intelligence_data", "custom_sections"]
+
+[tool.outputs]
+type = "GrantPackageOutput"
+fields = ["package_id", "package_status", "package_directory", "included_documents", "missing_documents", "checklist", "submission_plan", "ready_for_submission"]
+
+[tool.performance]
+typical_duration_seconds = 0.1
+ai_calls_per_execution = 0
+cost_per_execution = 0.00
+
+[tool.integration]
+module_path = "tools.grant-package-generator-tool.app.package_tool"
+class_name = "GrantPackageGeneratorTool"
+convenience_function = "generate_grant_package"

@@ -1,0 +1,64 @@
+[tool]
+name = "Multi-Dimensional Scorer Tool"
+version = "1.0.0"
+status = "operational"
+category = "scoring"
+
+[tool.metadata]
+description = "Unified multi-dimensional scoring across all workflow stages"
+purpose = "Sophisticated dimensional analysis with stage-specific weights and boost factors"
+single_responsibility = "Multi-dimensional opportunity scoring with confidence calculation"
+cost_per_operation = 0.00
+replaces = ["discovery_scorer.py", "success_scorer.py"]
+
+[tool.factors]
+factor_1_codebase = "Single tool in tools/multi-dimensional-scorer-tool/"
+factor_2_dependencies = "Core framework via src/core/tool_framework"
+factor_3_config = "Stage weights and boost factors configurable via config dict"
+factor_4_structured_output = "Returns MultiDimensionalScore dataclass with dimensional breakdown, confidence, boost factors"
+factor_5_build_run_separation = "Tool execution separate from scoring algorithm logic"
+factor_6_stateless = "No state between executions - pure function scoring"
+factor_7_port_binding = "Async function interface via execute() method"
+factor_8_concurrency = "Async-ready for parallel scoring across multiple opportunities"
+factor_9_disposability = "Fast startup (<1ms), immediate scoring"
+factor_10_single_responsibility = "Scoring only - no AI analysis, no data fetching, no report generation"
+factor_11_autonomous = "Operates independently with structured inputs"
+factor_12_api_first = "Function-based API with type-safe interfaces"
+
+[tool.inputs]
+type = "ScoringInput"
+required_fields = ["opportunity_data", "organization_profile", "workflow_stage"]
+optional_fields = ["track_type", "enhanced_data"]
+
+[tool.outputs]
+type = "MultiDimensionalScore"
+fields = ["overall_score", "confidence", "dimensional_scores", "stage", "track_type", "boost_factors_applied", "metadata"]
+
+[tool.performance]
+typical_duration_seconds = 0.01
+ai_calls_per_execution = 0
+cost_per_execution = 0.00
+
+[tool.integration]
+module_path = "tools.multi-dimensional-scorer-tool.app.scorer_tool"
+class_name = "MultiDimensionalScorerTool"
+convenience_function = "score_opportunity"
+
+[tool.stages]
+discover = ["mission_alignment", "geographic_fit", "financial_match", "eligibility", "timing"]
+plan = ["success_probability", "organizational_capacity", "financial_viability", "network_leverage", "compliance"]
+analyze = ["competitive_position", "strategic_alignment", "risk_profile", "implementation_feasibility", "roi_potential"]
+examine = ["deep_intelligence_quality", "relationship_pathways", "strategic_fit", "partnership_potential", "innovation_opportunity"]
+approach = ["overall_viability", "success_probability", "strategic_value", "resource_requirements", "timeline_feasibility"]
+
+[tool.tracks]
+nonprofit = "Nonprofit/foundation opportunities (990-based)"
+federal = "Federal grant opportunities (Grants.gov)"
+state = "State grant opportunities (state portals)"
+commercial = "Corporate foundation opportunities"
+
+[tool.boost_factors]
+financial_data = 0.10
+network_data = 0.15
+historical_data = 0.12
+risk_assessment = 0.08
