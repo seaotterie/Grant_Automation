@@ -42,7 +42,10 @@
 
 **Tool 25: Web Intelligence Tool** ✅
 - **Scrapy-powered web scraping** for nonprofit intelligence gathering
-- **3 Use Cases**: Profile Builder ($0.05-0.10), Competitor Research ($0.15-0.25), Foundation Research ($0.10-0.20)
+- **3 Use Cases**: Profile Builder ($0.05-0.10), Opportunity Research ($0.15-0.25), Foundation Research ($0.10-0.20)
+- **Use Case 1**: Profile Builder - Scrape YOUR organization's website for profile data
+- **Use Case 2**: Opportunity Research - Scrape grantmaking nonprofits (United Way, community foundations) for grant opportunities
+- **Use Case 3**: Foundation Research - Scrape private foundations (990-PF) for grant opportunities
 - **Smart URL Resolution**: User → 990 → GPT priority with confidence scoring
 - **990 Verification Pipeline**: Cross-validates web data against IRS tax filings
 - **Respectful Scraping**: 2s delay, robots.txt compliance, user-agent identification
