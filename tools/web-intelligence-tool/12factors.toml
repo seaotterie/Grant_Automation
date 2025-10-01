@@ -1,0 +1,126 @@
+# Tool 25: Web Intelligence Tool - 12-Factor Configuration
+# Scrapy-powered web scraping for nonprofit intelligence gathering
+
+[tool]
+name = "web-intelligence-tool"
+version = "1.0.0"
+description = "Web scraping and intelligence gathering for nonprofits, foundations, and grant opportunities"
+status = "operational"
+category = "intelligence"
+
+[tool.metadata]
+replaces = ["verification_enhanced_scraper.py (enhanced with Scrapy framework)"]
+cost_per_execution = "0.05-0.25 USD"  # Variable based on use case
+execution_time = "10-60 seconds"  # Depends on website size and depth
+requires_api_key = false
+requires_database = false
+
+[tool.io]
+# Input: Organization/Foundation data + use case selector
+input_schema = "baml_src/web_intelligence_input.baml"
+
+# Output: Structured intelligence data with 990 verification
+output_schema = [
+    "baml_src/organization_intelligence.baml",
+    "baml_src/competitor_intelligence.baml",
+    "baml_src/foundation_intelligence.baml"
+]
+
+[tool.dependencies]
+# Core Python dependencies
+python_packages = [
+    "scrapy>=2.13.0",
+    "pydantic>=2.0.0",
+    "aiohttp>=3.9.0",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=5.0.0"
+]
+
+# Internal Catalynx dependencies
+internal_services = [
+    "src.core.smart_url_resolution_service.SmartURLResolutionService",
+    "src.core.tax_filing_leadership_service.TaxFilingLeadershipService"
+]
+
+[tool.config]
+# Scrapy Core Settings
+max_depth = 3
+concurrent_requests = 2  # Respectful scraping for single-user desktop app
+download_delay = 2.0  # Seconds between requests (respectful)
+user_agent = "CatalynxBot/1.0 (+https://catalynx.io/bot)"
+respect_robots_txt = true
+timeout = 30  # Request timeout in seconds
+
+# Quality & Verification
+min_verification_confidence = 0.7  # Minimum 990 verification score
+min_data_quality_score = 0.6  # Minimum extracted data quality
+
+# Caching
+enable_cache = true
+cache_expiry_hours = 168  # 7 days
+
+[tool.config.use_case_1_profile_builder]
+# Profile Builder: Scrape organization's website for profile data
+enabled = true
+target_pages = ["about", "mission", "programs", "board", "staff", "contact", "team", "leadership"]
+max_pages_per_site = 10
+extract_fields = ["mission", "programs", "leadership", "contact", "financials"]
+verification_required = true  # Must verify against 990 data
+
+[tool.config.use_case_2_competitor_research]
+# Competitor Research: Data mine peer nonprofit websites
+enabled = true
+target_pages = ["grants", "funding", "press", "news", "impact", "partners", "annual-report"]
+max_pages_per_site = 15
+extract_fields = ["grants_received", "funding_sources", "programs", "partnerships", "impact_metrics"]
+verification_required = false  # No 990 data for competitors
+
+[tool.config.use_case_3_foundation_research]
+# Foundation Research: Scrape foundation sites for grant opportunities
+enabled = true
+target_pages = ["apply", "guidelines", "grants", "priorities", "trustees", "how-to-apply", "funding"]
+max_pages_per_site = 12
+extract_fields = ["application_guidelines", "deadlines", "priorities", "trustees", "recent_grants"]
+verification_required = true  # Verify trustees against 990-PF data
+
+# 12-Factor Compliance Mapping
+[twelve_factors]
+"1_codebase" = "Tracked in git, single codebase"
+"2_dependencies" = "Explicitly declared in python_packages"
+"3_config" = "All scraping rules in this 12factors.toml file"
+"4_backing_services" = "SmartURLResolutionService, TaxFilingLeadershipService as attached resources"
+"5_build_release_run" = "Tool loaded dynamically, configuration injected at runtime"
+"6_processes" = "Stateless spider execution, no session persistence"
+"7_port_binding" = "Callable via function interface, no network binding"
+"8_concurrency" = "Horizontal scaling via multiple spider instances"
+"9_disposability" = "Fast startup (<1s), graceful shutdown, robust to crashes"
+"10_dev_prod_parity" = "Same code, same config across environments"
+"11_logs" = "Event stream to stdout, structured JSON logging"
+"12_admin_processes" = "One-off admin tasks via separate scripts"
+
+[twelve_factors.custom]
+"13_api_first" = "Tool exposes async function interface for integration"
+"14_structured_outputs" = "All outputs use BAML schemas for type safety"
+"15_small_focused" = "Single responsibility: web intelligence gathering"
+"16_autonomous" = "Self-contained spider execution with built-in validation"
+
+[tool.integration]
+# Integration points with existing Catalynx systems
+profile_builder = "POST /api/profiles/fetch-ein"
+deep_intelligence = "Tool 2 (Deep Intelligence Tool)"
+schedule_i_analyzer = "Tool 13 (Schedule I Grant Analyzer Tool)"
+
+[tool.performance]
+# Performance targets
+target_execution_time_seconds = 30
+max_execution_time_seconds = 120
+cache_hit_rate_target = 0.75
+data_quality_target = 0.85
+
+[tool.compliance]
+# Web scraping compliance
+robots_txt_compliance = true
+rate_limiting_enabled = true
+user_agent_identification = true
+no_aggressive_crawling = true
+copyright_respect = true
