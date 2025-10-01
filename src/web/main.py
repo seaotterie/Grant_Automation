@@ -419,6 +419,10 @@ app.include_router(intelligence_router)
 # Include Workflow execution routes
 app.include_router(workflows_router)
 
+# Include unified tool execution routes (Phase 6)
+from src.web.routers.tools import router as tools_router
+app.include_router(tools_router)
+
 # Include Enhanced Scraping routes
 # Include enhanced scraping router only if available
 if enhanced_scraping_available and enhanced_scraping_router:
