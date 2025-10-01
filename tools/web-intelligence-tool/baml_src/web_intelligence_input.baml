@@ -2,9 +2,9 @@
 // Defines inputs for all 3 use cases
 
 enum UseCase {
-    PROFILE_BUILDER      // Use Case 1: Build organization profile
-    COMPETITOR_RESEARCH  // Use Case 2: Research competitor nonprofits
-    FOUNDATION_RESEARCH  // Use Case 3: Research foundation grant opportunities
+    PROFILE_BUILDER      // Use Case 1: Build YOUR organization profile
+    OPPORTUNITY_RESEARCH // Use Case 2: Research grantmaking nonprofits (United Way, community foundations)
+    FOUNDATION_RESEARCH  // Use Case 3: Research private foundations (990-PF filers)
 }
 
 class WebIntelligenceRequest {

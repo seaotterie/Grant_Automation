@@ -189,11 +189,11 @@ CUSTOM_SETTINGS = {
         'verification_required': True,
     },
 
-    # Competitor Research (Use Case 2)
-    'competitor_research': {
+    # Opportunity Research (Use Case 2) - Grantmaking nonprofits
+    'opportunity_research': {
         'max_pages': 15,
-        'target_pages': ['grants', 'funding', 'press', 'news', 'impact', 'partners', 'annual-report'],
-        'verification_required': False,
+        'target_pages': ['grants', 'funding', 'apply', 'giving', 'how-to-apply', 'grant-programs', 'application'],
+        'verification_required': True,  # Verify against 990 Schedule I
     },
 
     # Foundation Research (Use Case 3)

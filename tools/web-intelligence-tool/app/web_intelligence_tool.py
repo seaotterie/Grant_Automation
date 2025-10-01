@@ -5,7 +5,7 @@ Tool 25 in the Catalynx 12-Factor Tool Architecture.
 
 This is a Scrapy-powered web scraping tool for gathering nonprofit intelligence:
 - Use Case 1: Profile Builder - Auto-populate org profiles from websites
-- Use Case 2: Competitor Research - Analyze peer nonprofit websites
+- Use Case 2: Opportunity Research - Discover grants from grantmaking nonprofits
 - Use Case 3: Foundation Research - Find grant opportunities and details
 
 12-Factor Compliance:
@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 class UseCase(str, Enum):
     """Use case selector"""
     PROFILE_BUILDER = "PROFILE_BUILDER"
-    COMPETITOR_RESEARCH = "COMPETITOR_RESEARCH"
+    OPPORTUNITY_RESEARCH = "OPPORTUNITY_RESEARCH"  # Grantmaking nonprofits
     FOUNDATION_RESEARCH = "FOUNDATION_RESEARCH"
 
 
@@ -180,8 +180,8 @@ class WebIntelligenceTool:
             # Execute appropriate spider based on use case
             if request.use_case == UseCase.PROFILE_BUILDER:
                 intelligence_data = await self._execute_profile_builder_spider(request)
-            elif request.use_case == UseCase.COMPETITOR_RESEARCH:
-                intelligence_data = await self._execute_competitor_spider(request)
+            elif request.use_case == UseCase.OPPORTUNITY_RESEARCH:
+                intelligence_data = await self._execute_opportunity_spider(request)
             elif request.use_case == UseCase.FOUNDATION_RESEARCH:
                 intelligence_data = await self._execute_foundation_spider(request)
             else:
@@ -262,16 +262,19 @@ class WebIntelligenceTool:
 
         return result
 
-    async def _execute_competitor_spider(
+    async def _execute_opportunity_spider(
             self,
             request: WebIntelligenceRequest
     ) -> Optional[Any]:
         """
-        Execute Competitor Research Spider (Use Case 2).
+        Execute Opportunity Research Spider (Use Case 2).
+
+        Scrapes grantmaking nonprofit websites (United Way, community foundations, etc.)
+        to discover grant opportunities.
 
         TODO: Implement when spider is ready.
         """
-        raise NotImplementedError("Competitor Research spider not yet implemented")
+        raise NotImplementedError("Opportunity Research spider not yet implemented")
 
     async def _execute_foundation_spider(
             self,
@@ -365,7 +368,7 @@ async def main():
     parser.add_argument('--name', required=True, help='Organization name')
     parser.add_argument('--url', help='Organization website URL (optional)')
     parser.add_argument('--use-case', default='PROFILE_BUILDER',
-                        choices=['PROFILE_BUILDER', 'COMPETITOR_RESEARCH', 'FOUNDATION_RESEARCH'],
+                        choices=['PROFILE_BUILDER', 'OPPORTUNITY_RESEARCH', 'FOUNDATION_RESEARCH'],
                         help='Use case to execute')
 
     args = parser.parse_args()

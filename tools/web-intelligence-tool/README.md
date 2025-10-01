@@ -4,7 +4,7 @@
 
 ## Overview
 
-Tool 25 is a 12-factor compliant web intelligence gathering tool that uses the Scrapy framework to extract structured data from nonprofit organization, competitor, and foundation websites.
+Tool 25 is a 12-factor compliant web intelligence gathering tool that uses the Scrapy framework to extract structured data from nonprofit organization websites, grantmaking organizations, and private foundations.
 
 ### Three Strategic Use Cases
 
@@ -14,11 +14,12 @@ Tool 25 is a 12-factor compliant web intelligence gathering tool that uses the S
    - **Integration**: `POST /api/profiles/fetch-ein`
    - **Cost**: $0.05-0.10 per organization
 
-2. **Competitor Research** (Use Case 2)
-   - **Purpose**: Data mine peer nonprofit websites for competitive intelligence
-   - **Targets**: Grants received, funding sources, programs, partnerships, impact metrics
+2. **Opportunity Research** (Use Case 2)
+   - **Purpose**: Discover grant opportunities from grantmaking nonprofits
+   - **Targets**: Grant programs, funding priorities, application requirements, deadlines
+   - **Examples**: United Way chapters, community foundations, nonprofit grantmakers
    - **Integration**: Tool 2 (Deep Intelligence Tool)
-   - **Cost**: $0.15-0.25 per nonprofit
+   - **Cost**: $0.15-0.25 per organization
 
 3. **Foundation Research** (Use Case 3)
    - **Purpose**: Discover grant opportunities and application details
@@ -70,7 +71,7 @@ tools/web-intelligence-tool/
 │   │
 │   ├── scrapy_spiders/
 │   │   ├── organization_profile_spider.py  # Use Case 1
-│   │   ├── nonprofit_competitor_spider.py  # Use Case 2 (TODO)
+│   │   ├── opportunity_research_spider.py  # Use Case 2 (TODO)
 │   │   └── foundation_website_spider.py    # Use Case 3 (TODO)
 │   │
 │   ├── scrapy_middlewares/
@@ -85,12 +86,12 @@ tools/web-intelligence-tool/
 ├── baml_src/
 │   ├── web_intelligence_input.baml         # Input schema
 │   ├── organization_intelligence.baml      # Output schema (Use Case 1)
-│   ├── competitor_intelligence.baml        # Output schema (Use Case 2)
+│   ├── opportunity_intelligence.baml       # Output schema (Use Case 2)
 │   └── foundation_intelligence.baml        # Output schema (Use Case 3)
 │
 └── tests/
     ├── test_profile_spider.py
-    ├── test_competitor_spider.py
+    ├── test_opportunity_spider.py
     └── test_foundation_spider.py
 ```
 
@@ -171,11 +172,11 @@ target_pages = ["about", "mission", "programs", "board", "staff", "contact"]
 max_pages_per_site = 10
 verification_required = true  # Must verify against 990
 
-[tool.config.use_case_2_competitor_research]
+[tool.config.use_case_2_opportunity_research]
 enabled = true
-target_pages = ["grants", "funding", "press", "news", "impact"]
+target_pages = ["grants", "funding", "apply", "giving", "how-to-apply"]
 max_pages_per_site = 15
-verification_required = false
+verification_required = true  # Verify against 990 Schedule I
 
 [tool.config.use_case_3_foundation_research]
 enabled = true
@@ -251,14 +252,14 @@ if intelligence_response.success:
 # In Deep Intelligence Tool - Enhanced depth mode
 from tools.web_intelligence_tool.app.web_intelligence_tool import WebIntelligenceTool, UseCase
 
-# For competitor analysis
-competitor_tool = WebIntelligenceTool()
-competitor_request = WebIntelligenceRequest(
-    ein=competitor_ein,
-    organization_name=competitor_name,
-    use_case=UseCase.COMPETITOR_RESEARCH
+# For opportunity research (grantmaking nonprofits)
+opportunity_tool = WebIntelligenceTool()
+opportunity_request = WebIntelligenceRequest(
+    ein=grantmaker_ein,
+    organization_name=grantmaker_name,
+    use_case=UseCase.OPPORTUNITY_RESEARCH
 )
-competitor_intel = await competitor_tool.execute(competitor_request)
+opportunity_intel = await opportunity_tool.execute(opportunity_request)
 ```
 
 ### 3. Foundation Analysis Integration (Tool 13)
@@ -299,7 +300,7 @@ foundation_intel = await foundation_tool.execute(foundation_request)
 | Use Case | Pages Scraped | Execution Time | Cost Estimate |
 |----------|--------------|----------------|---------------|
 | Profile Builder | 2-10 | 10-30s | $0.05-0.10 |
-| Competitor Research | 5-15 | 30-60s | $0.15-0.25 |
+| Opportunity Research | 5-15 | 30-60s | $0.15-0.25 |
 | Foundation Research | 3-12 | 20-45s | $0.10-0.20 |
 
 **Cost Breakdown:**
@@ -338,10 +339,10 @@ python app/web_intelligence_tool.py \
   - Contact and financial data extraction
   - 990 verification integration
 
-- ⏸️ **Phase 3 Pending**: Use Case 2 (Competitor Research)
-  - NonprofitCompetitorSpider (TODO)
-  - Grant history extraction (TODO)
-  - Partnership network mapping (TODO)
+- ⏸️ **Phase 3 Pending**: Use Case 2 (Opportunity Research)
+  - OpportunityResearchSpider (TODO)
+  - Grant program extraction (TODO)
+  - Application requirement parsing (TODO)
 
 - ⏸️ **Phase 4 Pending**: Use Case 3 (Foundation Research)
   - FoundationWebsiteSpider (TODO)

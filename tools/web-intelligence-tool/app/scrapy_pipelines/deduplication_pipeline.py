@@ -77,7 +77,7 @@ class DeduplicationPipeline:
                     f"({original_count - final_count} duplicates removed)"
                 )
 
-            # Deduplicate grants (for competitor/foundation research)
+            # Deduplicate grants (for opportunity/foundation research)
             if 'grants_received' in item and item['grants_received']:
                 original_count = len(item['grants_received'])
                 item['grants_received'] = self._deduplicate_grants(item['grants_received'])

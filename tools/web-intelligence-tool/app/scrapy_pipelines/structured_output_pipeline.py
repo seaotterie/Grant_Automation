@@ -8,9 +8,9 @@ This is the KEY to 12-Factor compliance:
 - Factor 6: Stateless execution (outputs are self-contained)
 
 Converts raw Scrapy items → Pydantic models matching BAML schemas:
-- OrganizationIntelligence
-- CompetitorIntelligence
-- FoundationIntelligence
+- OrganizationIntelligence (Use Case 1: Profile Builder)
+- OpportunityIntelligence (Use Case 2: Opportunity Research - grantmaking nonprofits)
+- FoundationIntelligence (Use Case 3: Foundation Research)
 """
 
 import logging
@@ -171,9 +171,9 @@ class StructuredOutputPipeline:
 
             if use_case == 'profile_builder':
                 structured_output = self._convert_to_organization_intelligence(item, spider)
-            elif use_case == 'competitor_research':
-                # TODO: Implement CompetitorIntelligence conversion
-                logger.warning("CompetitorIntelligence conversion not yet implemented")
+            elif use_case == 'opportunity_research':
+                # TODO: Implement OpportunityIntelligence conversion
+                logger.warning("OpportunityIntelligence conversion not yet implemented")
                 return item
             elif use_case == 'foundation_research':
                 # TODO: Implement FoundationIntelligence conversion
