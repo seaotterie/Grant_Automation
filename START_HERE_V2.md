@@ -1,9 +1,9 @@
 # START HERE V2 - Phase 8 Continuation Guide
 
 **Date**: 2025-10-02
-**Session**: Context Window #4 (Tasks 12-16 Complete)
+**Session**: Context Window #5 (Tasks 12-18 Complete)
 **Phase**: Phase 8 - Nonprofit Workflow Solidification (Week 9 of 11)
-**Progress**: 16/20 tasks complete (80%)
+**Progress**: 18/20 tasks complete (90%)
 
 ---
 
@@ -380,6 +380,115 @@ Created comprehensive test suite (`test_bmf_discovery.py`) with 5 tests:
 **Files Created**:
 - `docs/PROFILE_ENHANCEMENT_DATA_FLOW.md` (700+ lines) - Complete architectural specification
 - Ready for Task 17: Implement profile enhancement orchestration
+
+### Part 8: Profile Enhancement Orchestration & Quality Scoring (Tasks 17-18) ✅
+
+**Achievement**: Multi-step workflow orchestration engine with comprehensive quality scoring system
+
+**Task 17 Accomplishments** - Profile Enhancement Orchestration:
+
+**Orchestration Engine Created** (`src/profiles/orchestration.py`):
+1. **ProfileEnhancementOrchestrator**: Multi-step workflow engine
+   - Step 1: BMF Discovery (REQUIRED) - Organization validation
+   - Step 2: Form 990 Query (HIGH PRIORITY) - Financial intelligence
+   - Step 3: Tool 25 Web Intelligence (MEDIUM PRIORITY) - Web scraping
+   - Step 4: Tool 2 AI Analysis (OPTIONAL) - Deep AI insights
+
+2. **QualityGate Class**: Data quality validation between workflow steps
+   - BMF quality: Required fields (EIN, name, state) + optional (NTEE code)
+   - Form 990 quality: Critical financial fields (revenue, expenses, assets)
+   - Tool 25 quality: Confidence-based web intelligence scoring
+   - Pass/fail gates prevent low-quality data from propagating
+
+3. **Workflow Features**:
+   - Quality gates enforce data requirements between steps
+   - Graceful degradation: continues with optional step failures
+   - Configurable Tool 25/Tool 2 execution
+   - Quality threshold (0.70) gates AI analysis
+   - Complete profile building from aggregated data
+   - Cost tracking: $0.00 (BMF/990) -> $0.10 (Tool 25) -> $0.75 (Tool 2)
+   - Performance monitoring: Sub-second BMF/990 queries
+
+4. **StepResult & WorkflowResult**: Structured execution tracking
+   - Per-step success/failure status
+   - Duration and cost tracking per step
+   - Quality scores per step
+   - Error collection and recommendations
+   - Complete execution history
+
+**Test Suite** (`test_orchestration.py` - 310+ lines):
+- Test 1: Multi-step workflow execution (UPMC, Quality: 1.00 with all sources)
+- Test 2: Graceful degradation with missing 990 (Quality: 0.16 BMF only)
+- Test 3: Quality gate enforcement (blocks Tool 2 when quality < 0.70)
+- Test 4: Cost tracking validation ($0.75 for Tool 2, $0.10 for Tool 25)
+- Test 5: Performance benchmarks (<1s for BMF/990 queries)
+- All 5 tests passed ✅
+
+**Task 18 Accomplishments** - Data Quality Scoring System:
+
+**Quality Scoring Module Created** (`src/profiles/quality_scoring.py` - 850+ lines):
+
+1. **ProfileQualityScorer**: Profile data quality across all sources
+   - **BMF Scoring**: Required fields (20% weight) + optional fields
+   - **Form 990 Scoring**: Critical (50%) + important (35%) + optional (15%)
+   - **Tool 25 Scoring**: Confidence-based with critical/important/optional fields
+   - **Tool 2 Scoring**: Binary completeness (has AI analysis or not)
+   - **Overall Profile Quality**: BMF(20%) + 990(35%) + Tool25(25%) + Tool2(20%)
+   - **Quality Ratings**: EXCELLENT (≥0.85), GOOD (0.70-0.84), FAIR (0.50-0.69), POOR (<0.50)
+
+2. **OpportunityQualityScorer**: Opportunity matching quality
+   - **Funding Opportunity Score**: Mission(30%) + Geography(20%) + GrantSize(25%) + Recipients(15%) + Feasibility(10%)
+   - **Networking Opportunity Score**: Mission(25%) + Board(25%) + Funders(30%) + Collaboration(20%)
+   - **Funding Ratings**: EXCELLENT (≥0.80), GOOD (0.65-0.79), FAIR (0.50-0.64), POOR (<0.50)
+   - **Networking Ratings**: HIGH (≥0.70), MEDIUM (0.50-0.69), LOW (<0.50)
+
+3. **DataCompletenessValidator**: Data completeness metrics
+   - Source presence/absence tracking
+   - Weighted completeness scoring
+   - Field count metrics per source
+   - Priority recommendations (CRITICAL, HIGH, MEDIUM, OPTIONAL)
+
+4. **QualityScore Dataclass**: Structured quality results
+   - Overall score (0.0-1.0)
+   - Quality rating (enum)
+   - Component scores breakdown
+   - Missing fields list
+   - Validation errors
+   - Confidence levels
+   - Actionable recommendations
+
+**Test Suite** (`test_quality_scoring.py` - 645+ lines):
+- Test 1: BMF data quality scoring (complete, partial, incomplete)
+- Test 2: Form 990 data quality scoring (complete, minimal, negative margin)
+- Test 3: Tool 25 web intelligence quality scoring (high/low confidence)
+- Test 4: Tool 2 AI analysis quality scoring (complete, partial, missing)
+- Test 5: Overall profile quality calculation (excellent, good, fair)
+- Test 6: Funding opportunity scoring (excellent, good, poor matches)
+- Test 7: Networking opportunity scoring (high, medium, low value peers)
+- Test 8: Data completeness validation (complete, partial, minimal profiles)
+- All 8 tests passed ✅
+
+**Key Features**:
+- Reusable quality scoring across the system
+- Comprehensive recommendations for each score
+- Confidence-based web data evaluation
+- Financial health checks (negative margins, low margins)
+- NTEE code gap handling (35% of orgs lack NTEE codes)
+- Graceful handling of missing optional data
+- Weighted scoring aligned with PROFILE_ENHANCEMENT_DATA_FLOW.md spec
+
+**Architecture Benefits**:
+- Decoupled quality scoring from orchestration logic
+- Reusable across API endpoints, workflows, and tests
+- Comprehensive metrics for decision-making
+- Clear quality thresholds for automation gates
+- Actionable recommendations for users
+
+**Files Created**:
+- `src/profiles/orchestration.py` (530+ lines) - Multi-step workflow engine
+- `test_orchestration.py` (310+ lines) - Comprehensive orchestration tests
+- `src/profiles/quality_scoring.py` (850+ lines) - Quality scoring system
+- `test_quality_scoring.py` (645+ lines) - Comprehensive quality tests
 
 ---
 
