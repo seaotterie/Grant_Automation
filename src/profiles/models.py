@@ -676,7 +676,11 @@ class UnifiedProfile(BaseModel):
     ntee_codes: List[str] = Field(default=[], description="NTEE codes")
     created_at: Optional[str] = Field(default=None, description="ISO timestamp of creation")
     updated_at: Optional[str] = Field(default=None, description="ISO timestamp of last update")
-    
+
+    # Discovery Status
+    discovery_status: Optional[str] = Field(default=None, description="Discovery status: in_progress, completed, failed")
+    last_discovery_at: Optional[str] = Field(default=None, description="ISO timestamp of last discovery session")
+
     # Embedded Analytics - Computed from Opportunities
     analytics: ProfileAnalytics = Field(default_factory=ProfileAnalytics, description="Real-time analytics")
     

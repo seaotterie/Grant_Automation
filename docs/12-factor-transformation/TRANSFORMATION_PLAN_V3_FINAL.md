@@ -1319,6 +1319,7 @@ class ReportSection(BaseModel):
 - **Atomic Tools Complete**: All individual capabilities proven before orchestration
 - **Reduced Risk**: Workflow UI is last layer, depends on stable tool foundation
 
+
 ### 9.1 Unified Intelligence Workflow
 
 **Create**: `workflows/intelligence_analysis.yaml`

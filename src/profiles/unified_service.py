@@ -15,10 +15,11 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from .models import (
-    UnifiedProfile, UnifiedOpportunity, ProfileAnalytics, 
+    UnifiedProfile, UnifiedOpportunity, ProfileAnalytics,
     PipelineStage, ScoringResult, StageAnalysis, UserAssessment,
-    PromotionEvent, StageTransition, RecentActivity
+    PromotionEvent, StageTransition, RecentActivity, DiscoverySession
 )
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -188,7 +189,222 @@ class UnifiedProfileService:
         except Exception as e:
             logger.error(f"Error getting opportunities for {profile_id}: {e}")
             return []
-    
+
+    # ============================================================================
+    # DISCOVERY SESSION MANAGEMENT - NO LOCKING NEEDED
+    # ============================================================================
+
+    def start_discovery_session(
+        self,
+        profile_id: str,
+        tracks: List[str] = None,
+        session_params: Dict[str, Any] = None
+    ) -> Optional[str]:
+        """Start a new discovery session (no locking - single user app)"""
+        try:
+            # Check for active sessions (no locking needed)
+            active_sessions = self.get_profile_sessions(profile_id, status_filter="in_progress")
+
+            if active_sessions:
+                logger.warning(f"Profile {profile_id} has {len(active_sessions)} active sessions")
+                # Mark as failed (abandoned in single-user app)
+                for session in active_sessions:
+                    self.fail_discovery_session(
+                        session.session_id,
+                        errors=["Session abandoned - new session started"]
+                    )
+
+            # Create new session
+            session_id = f"session_{uuid.uuid4().hex[:12]}"
+            now = datetime.now()
+
+            session = DiscoverySession(
+                session_id=session_id,
+                profile_id=profile_id,
+                started_at=now,
+                status="in_progress",
+                tracks_executed=tracks or []
+            )
+
+            # Save session
+            sessions_dir = self.data_dir / profile_id / "sessions"
+            sessions_dir.mkdir(parents=True, exist_ok=True)
+
+            session_file = sessions_dir / f"{session_id}.json"
+            with open(session_file, 'w', encoding='utf-8') as f:
+                # Use model_dump with mode='json' to serialize datetime
+                json.dump(session.model_dump(mode='json'), f, indent=2, ensure_ascii=False)
+
+            # Update profile discovery status
+            profile = self.get_profile(profile_id)
+            if profile:
+                profile.discovery_status = "in_progress"
+                profile.last_discovery_at = now.isoformat()
+                self.save_profile(profile)
+
+            logger.info(f"Started discovery session {session_id} for profile {profile_id}")
+            return session_id
+
+        except Exception as e:
+            logger.error(f"Error starting discovery session: {e}")
+            return None
+
+    def complete_discovery_session(
+        self,
+        session_id: str,
+        opportunities_found: Dict[str, int] = None,
+        total_opportunities: int = 0
+    ) -> bool:
+        """Mark discovery session as completed"""
+        try:
+            session = self.get_session(session_id)
+            if not session:
+                logger.error(f"Session {session_id} not found")
+                return False
+
+            # Update session
+            now = datetime.now()
+            session.status = "completed"
+            session.completed_at = now
+            session.total_opportunities = total_opportunities
+            if opportunities_found:
+                session.opportunities_found = opportunities_found
+
+            # Calculate duration
+            if session.started_at:
+                duration = (now - session.started_at).total_seconds()
+                session.execution_time_seconds = int(duration)
+
+            # Save session
+            sessions_dir = self.data_dir / session.profile_id / "sessions"
+            session_file = sessions_dir / f"{session_id}.json"
+
+            with open(session_file, 'w', encoding='utf-8') as f:
+                json.dump(session.model_dump(mode='json'), f, indent=2, ensure_ascii=False)
+
+            # Update profile
+            profile = self.get_profile(session.profile_id)
+            if profile:
+                profile.discovery_status = "completed"
+                profile.last_discovery_at = now.isoformat()
+                self.save_profile(profile)
+
+            logger.info(f"Completed discovery session {session_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error completing discovery session: {e}")
+            return False
+
+    def fail_discovery_session(
+        self,
+        session_id: str,
+        errors: List[str] = None
+    ) -> bool:
+        """Mark discovery session as failed"""
+        try:
+            session = self.get_session(session_id)
+            if not session:
+                logger.error(f"Session {session_id} not found")
+                return False
+
+            # Update session
+            now = datetime.now()
+            session.status = "failed"
+            session.completed_at = now
+            session.error_messages = errors or []
+
+            # Calculate duration
+            if session.started_at:
+                duration = (now - session.started_at).total_seconds()
+                session.execution_time_seconds = int(duration)
+
+            # Save session
+            sessions_dir = self.data_dir / session.profile_id / "sessions"
+            session_file = sessions_dir / f"{session_id}.json"
+
+            with open(session_file, 'w', encoding='utf-8') as f:
+                json.dump(session.model_dump(mode='json'), f, indent=2, ensure_ascii=False)
+
+            # Update profile
+            profile = self.get_profile(session.profile_id)
+            if profile:
+                profile.discovery_status = "failed"
+                profile.last_discovery_at = now.isoformat()
+                self.save_profile(profile)
+
+            logger.info(f"Failed discovery session {session_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error failing discovery session: {e}")
+            return False
+
+    def get_session(self, session_id: str) -> Optional[DiscoverySession]:
+        """Get single discovery session by ID"""
+        try:
+            # Search all profiles for the session
+            for profile_dir in self.data_dir.iterdir():
+                if not profile_dir.is_dir():
+                    continue
+
+                sessions_dir = profile_dir / "sessions"
+                if not sessions_dir.exists():
+                    continue
+
+                session_file = sessions_dir / f"{session_id}.json"
+                if session_file.exists():
+                    with open(session_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    return DiscoverySession(**data)
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error getting session {session_id}: {e}")
+            return None
+
+    def get_profile_sessions(
+        self,
+        profile_id: str,
+        status_filter: Optional[str] = None,
+        limit: int = 10
+    ) -> List[DiscoverySession]:
+        """Get discovery sessions for a profile"""
+        try:
+            sessions_dir = self.data_dir / profile_id / "sessions"
+            if not sessions_dir.exists():
+                return []
+
+            sessions = []
+
+            for session_file in sessions_dir.glob("session_*.json"):
+                try:
+                    with open(session_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+
+                    session = DiscoverySession(**data)
+
+                    # Apply status filter
+                    if status_filter is None or session.status == status_filter:
+                        sessions.append(session)
+
+                except Exception as e:
+                    logger.error(f"Error loading session {session_file}: {e}")
+                    continue
+
+            # Sort by started_at (newest first)
+            sessions.sort(
+                key=lambda x: x.started_at or "1900-01-01",
+                reverse=True
+            )
+
+            return sessions[:limit]
+
+        except Exception as e:
+            logger.error(f"Error getting sessions for profile {profile_id}: {e}")
+            return []
+
     # ============================================================================
     # STAGE MANAGEMENT - SINGLE SOURCE OF TRUTH
     # ============================================================================

@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 from .scoring_service import get_scoring_service
 from src.scoring.promotion_engine import get_promotion_engine
-from src.profiles.service import get_profile_service
+from src.profiles.unified_service import get_unified_profile_service
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class AutomatedPromotionService:
     def __init__(self):
         self.scoring_service = get_scoring_service()
         self.promotion_engine = get_promotion_engine()
-        self.profile_service = get_profile_service()
+        self.profile_service = get_unified_profile_service()
         
         # Default configuration
         self.config = AutoPromotionConfig()
