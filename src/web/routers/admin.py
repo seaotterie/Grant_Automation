@@ -15,6 +15,7 @@ from src.auth.jwt_auth import get_current_user_dependency, User
 from src.core.workflow_engine import get_workflow_engine
 from src.core.entity_cache_manager import get_entity_cache_manager
 from src.profiles.unified_service import get_unified_profile_service
+from src.web.middleware.deprecation import get_deprecation_stats, reset_deprecation_stats
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -251,6 +252,66 @@ async def submit_feedback(feedback_data: Dict[str, Any]) -> Dict[str, Any]:
         
     except Exception as e:
         logger.error(f"Failed to submit feedback: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/deprecated-usage")
+async def get_deprecated_endpoint_usage() -> Dict[str, Any]:
+    """
+    Get usage statistics for deprecated API endpoints.
+
+    This endpoint helps monitor API migration progress by tracking
+    how often deprecated endpoints are being accessed.
+
+    Returns:
+        Dictionary with usage statistics including:
+        - total_calls: Total deprecated endpoint calls
+        - unique_endpoints_used: Number of unique deprecated endpoints accessed
+        - total_deprecated_endpoints: Total number of deprecated endpoints
+        - by_endpoint: Usage count per endpoint
+        - by_phase: Usage count per migration phase
+        - top_10: Top 10 most-used deprecated endpoints
+        - last_updated: Timestamp of stats
+    """
+    try:
+        stats = get_deprecation_stats()
+        return {
+            "success": True,
+            "data": stats,
+            "migration_progress": {
+                "phase_1_complete": stats.get("by_phase", {}).get(1, 0) == 0,
+                "phase_2_complete": stats.get("by_phase", {}).get(2, 0) == 0,
+                "phase_3_complete": stats.get("by_phase", {}).get(3, 0) == 0,
+                "overall_progress": f"{stats['unique_endpoints_used']}/{stats['total_deprecated_endpoints']} endpoints still in use"
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get deprecation stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/deprecated-usage/reset")
+async def reset_deprecated_stats(
+    current_user: User = Depends(get_current_user_dependency)
+) -> Dict[str, str]:
+    """
+    Reset deprecation usage statistics.
+
+    Requires authentication. Use this to reset counters after reviewing stats.
+    """
+    try:
+        reset_deprecation_stats()
+        logger.info(f"Deprecation stats reset by user: {current_user.username if hasattr(current_user, 'username') else 'unknown'}")
+
+        return {
+            "success": True,
+            "message": "Deprecation usage statistics reset successfully",
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to reset deprecation stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

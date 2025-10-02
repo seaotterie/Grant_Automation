@@ -409,6 +409,10 @@ app.add_middleware(XSSProtectionMiddleware)
 app.add_middleware(InputValidationMiddleware)
 app.add_middleware(RateLimitingMiddleware, requests_per_minute=60)
 
+# Add deprecation middleware for Phase 9 API consolidation
+from src.web.middleware.deprecation import add_deprecation_headers
+app.middleware("http")(add_deprecation_headers)
+
 # Include authentication routes
 app.include_router(auth_router)
 
@@ -427,6 +431,10 @@ app.include_router(tools_router)
 
 # Include modernized profile routes (Phase 8 - Task 19)
 app.include_router(profiles_v2_router)
+
+# Include admin routes (Phase 9 - deprecation monitoring)
+from src.web.routers.admin import router as admin_router
+app.include_router(admin_router)
 
 # Include Enhanced Scraping routes
 # Include enhanced scraping router only if available
