@@ -243,6 +243,28 @@ class WebIntelligenceTool:
         """
         logger.info(f"Executing Profile Builder spider for {request.organization_name}")
 
+        # NEW: Resolve URL BEFORE creating spider (in main process where imports work)
+        from src.core.smart_url_resolution_service import SmartURLResolutionService
+
+        url_service = SmartURLResolutionService()
+        resolution = await url_service.resolve_organization_url(
+            ein=request.ein,
+            organization_name=request.organization_name,
+            user_provided_url=request.user_provided_url
+        )
+
+        start_url = None
+        if resolution and resolution.primary_url:
+            start_url = resolution.primary_url.url
+            logger.info(
+                f"Resolved URL for {request.organization_name}:\n"
+                f"  URL: {start_url}\n"
+                f"  Source: {resolution.primary_url.source}\n"
+                f"  Confidence: {resolution.primary_url.confidence_score:.2f}"
+            )
+        else:
+            logger.warning(f"Failed to resolve URL for {request.organization_name} - spider may fail")
+
         # Configure Scrapy settings
         settings = get_project_settings()
 
@@ -250,11 +272,12 @@ class WebIntelligenceTool:
         if request.max_depth:
             settings['DEPTH_LIMIT'] = request.max_depth
 
-        # Create spider instance
+        # Create spider instance WITH pre-resolved URL
         spider = OrganizationProfileSpider(
             ein=request.ein,
             organization_name=request.organization_name,
-            user_provided_url=request.user_provided_url
+            user_provided_url=request.user_provided_url,
+            start_url=start_url  # ← Pass resolved URL
         )
 
         # Run spider and collect results
@@ -289,7 +312,10 @@ class WebIntelligenceTool:
 
     async def _run_spider(self, spider, settings) -> Optional[Any]:
         """
-        Run a Scrapy spider and return the result.
+        Run a Scrapy spider in a separate process to avoid Twisted reactor conflicts.
+
+        When running in FastAPI, the Twisted reactor is already installed, so we
+        can't use CrawlerProcess directly. Instead, we run the spider in a subprocess.
 
         Args:
             spider: Spider instance
@@ -298,27 +324,84 @@ class WebIntelligenceTool:
         Returns:
             Structured intelligence data or None
         """
-        # This is a simplified synchronous approach
-        # For production, you might want to use scrapyd or scrapy-playwright for async
+        import subprocess
+        import json
+        import tempfile
+        import asyncio
+        from pathlib import Path
 
-        from scrapy.crawler import CrawlerRunner
-        from twisted.internet import defer
+        try:
+            # Create temp file for spider output
+            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
+                result_file = Path(f.name)
 
-        runner = CrawlerRunner(settings)
+            logger.info(f"Running spider {spider.name} in subprocess for EIN {spider.ein}")
 
-        @defer.inlineCallbacks
-        def crawl():
-            yield runner.crawl(spider)
+            # Build scrapy command
+            cmd = [
+                'scrapy', 'crawl', spider.name,
+                '-a', f'ein={spider.ein}',
+                '-a', f'organization_name={spider.organization_name}',
+                '-o', str(result_file),
+                '--logfile', str(result_file.with_suffix('.log'))
+            ]
 
-        # Run the spider
-        crawl()
+            # Add user URL if provided (legacy)
+            if spider.user_provided_url:
+                cmd.extend(['-a', f'user_provided_url={spider.user_provided_url}'])
 
-        # Wait for completion (simplified)
-        # In production, you'd want proper async handling
+            # NEW: Add start_url if spider has it (from URL resolution)
+            if hasattr(spider, 'start_urls') and spider.start_urls:
+                cmd.extend(['-a', f'start_url={spider.start_urls[0]}'])
+                logger.info(f"Passing start_url to subprocess: {spider.start_urls[0]}")
 
-        # For now, return a placeholder
-        # The actual implementation would need to properly integrate Scrapy's async
-        logger.warning("Spider execution is a placeholder. Full integration pending.")
+            # Run spider in subprocess with timeout
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                cwd=str(self.tool_dir),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=60.0
+                )
+
+                if process.returncode == 0:
+                    # Read scraped data from output file
+                    if result_file.exists() and result_file.stat().st_size > 0:
+                        with open(result_file, 'r') as f:
+                            data = json.load(f)
+                            logger.info(f"Spider completed successfully, scraped {len(data) if isinstance(data, list) else 1} items")
+                            # Return first item (should be OrganizationIntelligence)
+                            return data[0] if isinstance(data, list) and data else data
+                    else:
+                        logger.warning(f"Spider completed but output file is empty")
+                else:
+                    logger.error(f"Spider failed with return code {process.returncode}")
+                    if stderr:
+                        logger.error(f"Spider stderr: {stderr.decode()[:500]}")
+
+            except asyncio.TimeoutError:
+                logger.warning("Spider execution timed out after 60 seconds")
+                process.kill()
+                await process.wait()
+
+        except Exception as e:
+            logger.error(f"Error running spider in subprocess: {e}", exc_info=True)
+
+        finally:
+            # Cleanup temp files
+            try:
+                if result_file.exists():
+                    result_file.unlink()
+                log_file = result_file.with_suffix('.log')
+                if log_file.exists():
+                    log_file.unlink()
+            except Exception:
+                pass
 
         return None
 

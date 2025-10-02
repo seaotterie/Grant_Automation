@@ -56,14 +56,15 @@ class OrganizationProfileSpider(scrapy.Spider):
         'financial': ['financials', 'annual-report', 'transparency', '990', 'financial-info']
     }
 
-    def __init__(self, ein: str, organization_name: str, user_provided_url: Optional[str] = None, *args, **kwargs):
+    def __init__(self, ein: str, organization_name: str, user_provided_url: Optional[str] = None, start_url: Optional[str] = None, *args, **kwargs):
         """
         Initialize spider.
 
         Args:
             ein: Organization EIN
             organization_name: Organization name
-            user_provided_url: Optional user-provided URL (SmartURLMiddleware will resolve)
+            user_provided_url: Optional user-provided URL (legacy - for reference)
+            start_url: Optional pre-resolved URL to start scraping (NEW)
         """
         super().__init__(*args, **kwargs)
 
@@ -71,6 +72,13 @@ class OrganizationProfileSpider(scrapy.Spider):
         self.organization_name = organization_name
         self.user_provided_url = user_provided_url
         self.use_case = 'profile_builder'
+
+        # NEW: Set start_urls directly if provided (bypasses SmartURLMiddleware)
+        if start_url:
+            self.start_urls = [start_url]
+            logger.info(f"Spider initialized with start_url: {start_url}")
+        else:
+            logger.warning(f"Spider initialized without start_url - will rely on SmartURLMiddleware")
 
         # Initialize data collection
         self.scraped_data = {
@@ -92,6 +100,9 @@ class OrganizationProfileSpider(scrapy.Spider):
 
         # Track pages we've visited
         self.visited_urls = set()
+
+        # Track pending requests for final yield
+        self.requests_pending = 1  # Start with homepage request
 
         logger.info(f"Initialized OrganizationProfileSpider for {organization_name} (EIN: {ein})")
 
@@ -159,12 +170,26 @@ class OrganizationProfileSpider(scrapy.Spider):
 
         for link, page_type in target_links:
             if link not in self.visited_urls:
+                # Mark as visited BEFORE yielding to avoid duplicate filtering issues
+                self.visited_urls.add(link)
+                self.requests_pending += 1  # Track pending request
+                logger.debug(f"Queued {page_type} page, requests_pending now: {self.requests_pending}")
                 yield scrapy.Request(
                     url=link,
                     callback=self.parse_target_page,
                     errback=self.handle_error,
-                    meta={'page_type': page_type}
+                    meta={'page_type': page_type},
+                    dont_filter=True  # We're already tracking visited URLs manually
                 )
+
+        # Decrement for completed homepage
+        self.requests_pending -= 1
+        logger.info(f"Homepage complete, requests_pending now: {self.requests_pending}")
+        if self.requests_pending == 0:
+            # All pages processed - calculate quality and yield final data
+            self.scraped_data['data_quality_score'] = self._calculate_data_quality()
+            logger.info("All pages processed, yielding final scraped data")
+            yield self.scraped_data
 
     def parse_target_page(self, response: Response):
         """
@@ -206,6 +231,15 @@ class OrganizationProfileSpider(scrapy.Spider):
             financial = self._extract_financial_info(soup, response.url)
             if financial:
                 self.scraped_data['financial_info'].update(financial)
+
+        # Decrement pending requests counter
+        self.requests_pending -= 1
+        logger.info(f"{page_type} page complete, requests_pending now: {self.requests_pending}")
+        if self.requests_pending == 0:
+            # All pages processed - calculate quality and yield final data
+            self.scraped_data['data_quality_score'] = self._calculate_data_quality()
+            logger.info("All pages processed, yielding final scraped data")
+            yield self.scraped_data
 
     def _discover_target_pages(self, response: Response) -> List[tuple]:
         """
@@ -391,23 +425,17 @@ class OrganizationProfileSpider(scrapy.Spider):
         """
         Called when spider closes.
 
-        Yields final scraped data item to pipeline.
+        Final cleanup and logging (data already yielded from parse methods).
         """
         logger.info(
             f"Spider closed for {self.organization_name}:\n"
             f"  Reason: {reason}\n"
             f"  Pages scraped: {self.scraped_data['pages_scraped']}\n"
-            f"  Mission: {'✓' if self.scraped_data['mission_statement'] else '✗'}\n"
+            f"  Mission: {'Yes' if self.scraped_data['mission_statement'] else 'No'}\n"
             f"  Programs: {len(self.scraped_data['programs'])}\n"
             f"  Leadership: {len(self.scraped_data['leadership'])}\n"
-            f"  Contact: {'✓' if self.scraped_data['contact_info'] else '✗'}"
+            f"  Contact: {'Yes' if self.scraped_data['contact_info'] else 'No'}"
         )
-
-        # Calculate data quality score
-        self.scraped_data['data_quality_score'] = self._calculate_data_quality()
-
-        # Yield final item to pipeline
-        yield self.scraped_data
 
     def _calculate_data_quality(self) -> float:
         """Calculate overall data quality score (0.0-1.0)."""
@@ -445,3 +473,12 @@ class OrganizationProfileSpider(scrapy.Spider):
         """Handle request errors."""
         logger.error(f"Request failed: {failure.request.url} - {failure.value}")
         self.scraped_data['extraction_errors'].append(f"Request error: {str(failure.value)}")
+
+        # Decrement pending requests counter (failed requests count too!)
+        self.requests_pending -= 1
+        logger.info(f"Error handler: requests_pending now: {self.requests_pending}")
+        if self.requests_pending == 0:
+            # All pages processed (including failures) - calculate quality and yield final data
+            self.scraped_data['data_quality_score'] = self._calculate_data_quality()
+            logger.info("All pages processed (with errors), yielding final scraped data")
+            return self.scraped_data

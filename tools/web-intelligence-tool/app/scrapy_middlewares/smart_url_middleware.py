@@ -67,6 +67,14 @@ class SmartURLMiddleware:
         """
         logger.info(f"SmartURLMiddleware: Spider opened - {spider.name}")
 
+        # NEW: Skip if spider already has start_urls (URL was pre-resolved)
+        if hasattr(spider, 'start_urls') and spider.start_urls:
+            logger.info(
+                f"SmartURLMiddleware: Spider already has start_urls ({spider.start_urls[0]}). "
+                "Skipping URL resolution."
+            )
+            return
+
         # Check if spider has required attributes
         if not hasattr(spider, 'ein') or not hasattr(spider, 'organization_name'):
             logger.warning(

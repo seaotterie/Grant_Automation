@@ -54,9 +54,10 @@ from src.processors.registry import get_processor_summary
 from src.processors.lookup.ein_lookup import EINLookupProcessor
 from src.processors.analysis.ai_service_manager import get_ai_service_manager
 from src.web.services.scoring_service import (
-    get_scoring_service, ScoreRequest, ScoreResponse, 
+    get_scoring_service, ScoreRequest, ScoreResponse,
     PromotionRequest, PromotionResponse, BulkPromotionRequest, BulkPromotionResponse
 )
+from src.web.services.tool25_profile_builder import get_tool25_profile_builder
 
 # Security and Authentication imports
 from src.middleware.security import (
@@ -2040,262 +2041,41 @@ async def fetch_ein_data(request: dict):
                         logger.warning(f"GPT URL discovery failed for EIN {ein}: {gpt_error}")
                         predicted_urls = []
                     
-                    # Step 2: XML + Enhanced Web Intelligence with VerificationEnhancedScraper
-                    logger.info("DEBUG: ENTRY POINT - Starting VerificationEnhancedScraper section")
+                    # Step 2: Tool 25 Profile Builder (Scrapy-powered with 990 verification)
+                    logger.info(f"Starting Tool 25 Profile Builder for EIN {ein}")
 
-                    try:
-                        # Use existing VerificationEnhancedScraper that combines XML + web scraping
-                        from src.core.verification_enhanced_scraper import VerificationEnhancedScraper
+                    tool25_service = get_tool25_profile_builder()
+                    org_name = org_data.get('name', '')
 
-                        # Initialize the comprehensive scraper
-                        scraper = VerificationEnhancedScraper()
-                        org_name = org_data.get('name', '')
-
-                        logger.info(f"Starting comprehensive XML + web scraping for {org_name} (EIN: {ein})")
-
-                        # Execute comprehensive scraping (includes XML baseline + web verification)
-                        verification_result = await scraper.scrape_with_verification(
-                            ein=ein,
-                            organization_name=org_name,
-                            user_provided_url=predicted_urls[0] if predicted_urls else None
-                        )
-
-                        logger.info(f"DEBUG: VerificationResult object: {verification_result is not None}")
-                        logger.info(f"DEBUG: Verification result type: {type(verification_result)}")
-
-                        if verification_result:
-                            logger.info(f"DEBUG: VerificationEnhancedScraper SUCCESS - confidence: {verification_result.verification_confidence:.2f}")
-                            logger.info(f"DEBUG: Verified leadership count: {len(verification_result.verified_leadership)}")
-                            logger.info(f"DEBUG: Verified website: {verification_result.verified_website}")
-                            logger.info(f"DEBUG: Verified mission: {verification_result.verified_mission[:50] if verification_result.verified_mission else None}...")
-
-                            # Convert VerificationResult to expected format for frontend compatibility
-                            scraped_data = {
-                                "organization_name": org_name,
-                                "ein": ein,
-                                "successful_scrapes": [],
-                                "failed_scrapes": [],
-                                "extracted_info": {
-                                    "mission_statements": [],
-                                    "contact_info": [],
-                                    "programs": [],
-                                    "leadership": []
-                                },
-                                "source_breakdown": {
-                                    "xml_baseline_available": verification_result.tax_baseline is not None,
-                                    "scrapy_success_count": len(verification_result.verified_leadership),
-                                    "mcp_success_count": 0,  # MCP disabled
-                                    "total_sources_tried": 1,
-                                    "verification_confidence": verification_result.verification_confidence
-                                }
-                            }
-
-                            # Add successful scrape entry (prioritize verified website, fallback to tax filing data)
-                            if verification_result.verified_website:
-                                scraped_data["successful_scrapes"].append({
-                                    "url": verification_result.verified_website,
-                                    "title": f"{org_name} - Verified Website",
-                                    "content_length": 0,  # VerificationResult doesn't track content length
-                                    "source": "XML + Web Verification"
-                                })
-                            elif verification_result.tax_baseline:
-                                # Ensure we have a successful scrape entry even when only tax filing data is available
-                                website_url = verification_result.tax_baseline.declared_website or "Tax Filing Data Only"
-                                scraped_data["successful_scrapes"].append({
-                                    "url": website_url,
-                                    "title": f"{org_name} - Tax Filing Data",
-                                    "content_length": 0,
-                                    "source": "990 Tax Filing"
-                                })
-
-                            # Process verified leadership data (XML + web verification) - PRIORITIZE THIS DATA
-                            verified_leadership_count = 0
-                            for leader in verification_result.verified_leadership:
-                                if hasattr(leader, 'name') and leader.name:
-                                    leader_entry = {
-                                        "name": leader.name,
-                                        "title": getattr(leader, 'title', ''),
-                                        "source": leader.source,
-                                        "confidence": getattr(leader, 'confidence_score', 0.8)
-                                    }
-                                    scraped_data["extracted_info"]["leadership"].append(leader_entry)
-                                    verified_leadership_count += 1
-
-                            logger.info(f"DEBUG: Added {verified_leadership_count} verified leadership entries to scraped_data")
-
-                            # Add verified mission if available
-                            if verification_result.verified_mission:
-                                scraped_data["extracted_info"]["mission_statements"].append({
-                                    "content": verification_result.verified_mission,
-                                    "source": "XML Baseline",
-                                    "confidence": 0.95
-                                })
-
-                            # Add verified programs if available
-                            for program in verification_result.verified_programs:
-                                if isinstance(program, str) and len(program.strip()) > 5:
-                                    scraped_data["extracted_info"]["programs"].append({
-                                        "name": program.strip(),
-                                        "source": "XML + Web Verification",
-                                        "confidence": 0.85
-                                    })
-
-                            # DEBUG: Log the complete scraped_data structure
-                            logger.info(f"DEBUG: scraped_data structure created:")
-                            logger.info(f"DEBUG: - successful_scrapes count: {len(scraped_data.get('successful_scrapes', []))}")
-                            logger.info(f"DEBUG: - leadership count: {len(scraped_data.get('extracted_info', {}).get('leadership', []))}")
-                            logger.info(f"DEBUG: - mission_statements count: {len(scraped_data.get('extracted_info', {}).get('mission_statements', []))}")
-
-                            # Ensure we always have at least one successful scrape entry for valid data
-                            if not scraped_data["successful_scrapes"]:
-                                # This should not happen given the logic above, but add fallback
-                                scraped_data["successful_scrapes"].append({
-                                    "url": "VerificationEnhancedScraper",
-                                    "title": f"{org_name} - Tax Filing Verification",
-                                    "content_length": 0,
-                                    "source": "Verification System"
-                                })
-                                logger.warning("DEBUG: Added fallback successful_scrapes entry")
-
-                            logger.info(f"XML + web intelligence extraction successful - {len(verification_result.verified_leadership)} verified leaders")
-                        else:
-                            logger.warning("DEBUG: VerificationEnhancedScraper returned None or empty result")
-                            scraped_data = None
-
-                    except Exception as verification_error:
-                        logger.error(f"DEBUG: VerificationEnhancedScraper EXCEPTION: {verification_error}")
-                        import traceback
-                        logger.error(f"DEBUG: Full traceback: {traceback.format_exc()}")
-                        scraped_data = None
-                    
-                    # DEBUG: Critical condition check
-                    logger.info(f"DEBUG: Checking scraped_data condition:")
-                    logger.info(f"DEBUG: - scraped_data exists: {scraped_data is not None}")
-                    logger.info(f"DEBUG: - successful_scrapes exists: {scraped_data.get('successful_scrapes') if scraped_data else 'N/A'}")
-                    logger.info(f"DEBUG: - successful_scrapes length: {len(scraped_data.get('successful_scrapes', [])) if scraped_data else 0}")
-
-                    # Check if we have meaningful extracted content, not just successful scrapes
-                    extracted_info = scraped_data.get('extracted_info', {}) if scraped_data else {}
-                    has_content = (
-                        len(extracted_info.get('leadership', [])) > 0 or
-                        len(extracted_info.get('programs', [])) > 0 or
-                        len(extracted_info.get('contact_info', [])) > 0 or
-                        len(extracted_info.get('mission_statements', [])) > 0
+                    # Execute Tool 25 with Smart URL Resolution (User → 990 → GPT priority)
+                    success, tool25_data = await tool25_service.execute_profile_builder(
+                        ein=ein,
+                        organization_name=org_name,
+                        user_provided_url=request.get('user_provided_url'),  # User URL if provided
+                        filing_url=extracted_website,  # From 990 tax filing
+                        gpt_predicted_url=predicted_urls[0] if predicted_urls else None,  # GPT fallback
+                        require_990_verification=True,
+                        min_confidence_score=0.7
                     )
 
-                    if scraped_data and scraped_data.get('successful_scrapes') and has_content:
-                        logger.info(f"DEBUG: CONDITION PASSED - Using VerificationEnhancedScraper data with meaningful content")
-                        logger.info(f"Successfully scraped {len(scraped_data['successful_scrapes'])} websites for EIN {ein}")
-                        
-                        # DEBUG: Log the final scraped_data content before structuring
-                        logger.info(f"DEBUG: Final scraped_data leadership count: {len(scraped_data.get('extracted_info', {}).get('leadership', []))}")
-                        leadership_sources = [leader.get('source', 'unknown') for leader in scraped_data.get('extracted_info', {}).get('leadership', [])]
-                        logger.info(f"DEBUG: Leadership sources in scraped_data: {set(leadership_sources)}")
-
-                        # Structure web scraping data with source attribution and extracted_info
-                        web_scraping_data = {
-                            "successful_scrapes": scraped_data.get('successful_scrapes', []),
-                            "failed_scrapes": scraped_data.get('failed_scrapes', []),
-                            "extracted_info": scraped_data.get('extracted_info', {}),
-                            "source_breakdown": scraped_data.get('source_breakdown', {
-                                "mcp_success_count": 0,
-                                "scrapy_success_count": 0,
-                                "total_sources_tried": 0
-                            })
-                        }
-
-                        # DEBUG: Log the final web_scraping_data structure
-                        logger.info(f"DEBUG: Final web_scraping_data leadership count: {len(web_scraping_data.get('extracted_info', {}).get('leadership', []))}")
-                        final_sources = [leader.get('source', 'unknown') for leader in web_scraping_data.get('extracted_info', {}).get('leadership', [])]
-                        logger.info(f"DEBUG: Final leadership sources: {set(final_sources)}")
-                        response_data["web_scraping_data"] = web_scraping_data
-                        response_data["enhanced_with_web_data"] = True
-                        
-                        # Enhanced data integration with XML + web verification
-                        extracted_info = scraped_data.get('extracted_info', {})
-
-                        # Enhance website URL with verified data (XML takes priority)
-                        if verification_result and verification_result.verified_website:
-                            verified_url = verification_result.verified_website
-                            response_data["website"] = verified_url
-                            response_data["website_url"] = verified_url
-                            logger.info(f"Enhanced website URL from XML baseline: {verified_url}")
-
-                        # Enhance mission statement with verified data (XML takes priority)
-                        if verification_result and verification_result.verified_mission:
-                            if not response_data["mission_statement"] or len(response_data["mission_statement"]) < 50:
-                                response_data["mission_statement"] = verification_result.verified_mission
-                                logger.info(f"Enhanced mission statement from XML baseline for EIN {ein}")
-                        elif extracted_info.get('mission_statements'):
-                            # Fallback to web-scraped mission if no XML mission
-                            mission_statements = extracted_info['mission_statements']
-                            best_mission = ""
-                            source = "Unknown"
-
-                            for mission_obj in mission_statements:
-                                if isinstance(mission_obj, dict):
-                                    mission_content = mission_obj.get("content", "")
-                                    mission_source = mission_obj.get("source", "Unknown")
-                                    mission_confidence = mission_obj.get("confidence", 0.5)
-                                else:
-                                    mission_content = str(mission_obj)
-                                    mission_source = "Legacy"
-                                    mission_confidence = 0.3
-
-                                # Prioritize by confidence and length
-                                if (len(mission_content) > len(best_mission) and mission_confidence > 0.7):
-                                    best_mission = mission_content
-                                    source = mission_source
-
-                            if len(best_mission) > len(response_data["mission_statement"]):
-                                response_data["mission_statement"] = best_mission
-                                logger.info(f"Enhanced mission statement from {source} web verification for EIN {ein}")
-
-                        # Add verified data for Enhanced Data tab
-                        response_data["programs"] = extracted_info.get('programs', [])[:8]  # Top 8 programs
-                        response_data["leadership"] = extracted_info.get('leadership', [])[:15]  # Top 15 leadership entries
-                        response_data["contact_info"] = extracted_info.get('contact_info', [])[:5]  # Top 5 contact entries
-                        response_data["verification_confidence"] = verification_result.verification_confidence if verification_result else 0.0
-                        
+                    if success:
+                        # Merge Tool 25 data with 990 data
+                        response_data = tool25_service.merge_with_990_data(
+                            base_data=response_data,
+                            tool_25_data=tool25_data,
+                            confidence_threshold=0.7
+                        )
+                        logger.info(f"Tool 25 SUCCESS: {org_name} enhanced with web intelligence")
                     else:
-                        logger.warning(f"DEBUG: CONDITION FAILED - VerificationEnhancedScraper data not used")
-                        logger.warning(f"DEBUG: scraped_data = {scraped_data}")
-                        logger.warning(f"No successful web scraping results for EIN {ein} - trying fallback data generation")
+                        # Graceful degradation - return 990 data only
+                        logger.warning(f"Tool 25 failed for {ein}, using 990 data only")
+                        response_data["enhanced_with_web_data"] = False
+                        response_data["tool_25_error"] = tool25_data.get("tool_25_error", "Unknown error")
 
-                        # Try to generate enhanced data from available sources
-                        try:
-                            from src.core.enhanced_data_fallback import EnhancedDataFallbackService
-                            fallback_service = EnhancedDataFallbackService(database_service)
-
-                            # Get profile ID from request
-                            profile_id = request_data.get("profile_id")
-                            if profile_id:
-                                fallback_data = fallback_service.generate_enhanced_data(profile_id)
-                                if fallback_data.get("extracted_info"):
-                                    leadership_count = len(fallback_data["extracted_info"].get("leadership", []))
-                                    programs_count = len(fallback_data["extracted_info"].get("programs", []))
-                                    logger.info(f"Fallback data generated: {leadership_count} leadership, {programs_count} programs")
-                                    response_data["web_scraping_data"] = fallback_data
-                                    response_data["enhanced_with_web_data"] = True
-                                else:
-                                    raise Exception("Fallback service returned empty data")
-                            else:
-                                raise Exception("No profile_id provided for fallback generation")
-
-                        except Exception as fallback_error:
-                            logger.warning(f"Fallback data generation failed: {fallback_error}")
-                            response_data["web_scraping_data"] = {
-                                "message": "VerificationEnhancedScraper failed - fallback generation also failed",
-                                "debug_info": {
-                                    "scraped_data_exists": scraped_data is not None,
-                                "successful_scrapes_exists": scraped_data.get('successful_scrapes') if scraped_data else None,
-                                "successful_scrapes_length": len(scraped_data.get('successful_scrapes', [])) if scraped_data else 0
-                            }
-                        }
-                        
                 except Exception as web_error:
                     logger.error(f"Web scraping error for EIN {ein}: {web_error}")
                     response_data["web_scraping_data"] = {"error": str(web_error)}
+                    response_data["enhanced_with_web_data"] = False
                     # Don't fail the entire request if web scraping fails
             
             # Always check for stored intelligence data (regardless of web scraping setting)

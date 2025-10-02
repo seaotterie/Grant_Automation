@@ -11,10 +11,10 @@ from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime
 import logging
 
-from .service import ProfileService
+from .unified_service import UnifiedProfileService
 from .models import (
-    OrganizationProfile, 
-    OpportunityLead, 
+    OrganizationProfile,
+    OpportunityLead,
     ProfileSearchParams,
     ProfileStatus,
     PipelineStage,
@@ -29,7 +29,7 @@ from ..database.database_manager import DatabaseManager, Opportunity
 logger = logging.getLogger(__name__)
 
 
-class EntityProfileService(ProfileService):
+class EntityProfileService(UnifiedProfileService):
     """
     Enhanced profile service that integrates with entity-based architecture.
     
