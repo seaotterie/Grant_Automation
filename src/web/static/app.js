@@ -3465,75 +3465,86 @@ function catalynxApp() {
         async loadVerifiedIntelligenceData(profile) {
             // Load verified intelligence data using tax-data-first approach for Enhanced Data tab
             console.log('[VERIFIED INTELLIGENCE] Loading tax-data-first verified intelligence');
-            
+
             if (!profile || !profile.profile_id) {
                 this.webScrapingResults = null;
                 return;
             }
-            
+
             const profileId = profile.profile_id;
-            
+            const ein = profile.ein;
+
+            if (!ein) {
+                console.warn('[VERIFIED INTELLIGENCE] No EIN available for profile, skipping');
+                this.webScrapingResults = null;
+                return;
+            }
+
             try {
-                console.log(`[VERIFIED INTELLIGENCE] Loading tax-data-first intelligence for profile: ${profileId}`);
-                
-                // Call new verified intelligence API endpoint
-                const response = await fetch(`/api/profiles/${profileId}/verified-intelligence`);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    if (data.success && data.data?.web_scraping_data) {
-                        // Use verified intelligence data with source attribution
-                        this.webScrapingResults = data.data.web_scraping_data;
-                        
-                        console.log('[SUCCESS] Loaded verified intelligence data with tax baseline verification:', {
-                            programs: this.webScrapingResults.extracted_info?.programs?.length || 0,
-                            leadership: this.webScrapingResults.extracted_info?.leadership?.length || 0,
-                            missions: this.webScrapingResults.extracted_info?.mission_statements?.length || 0,
-                            overall_confidence: data.data.verified_intelligence?.overall_confidence || 0,
-                            has_990_baseline: data.data.verified_intelligence?.has_990_baseline || false,
-                            data_sources_used: data.data.verified_intelligence?.data_sources_used || [],
-                            source: 'tax_data_first_verified'
+                console.log(`[VERIFIED INTELLIGENCE] Loading intelligence for EIN: ${ein} (Profile: ${profileId})`);
+
+                // Phase 9: Migrate to V2 Profile Build API
+                const buildResult = await buildProfileV2(ein, true, false, 0.70);
+
+                if (buildResult.success || buildResult.workflow_result?.success) {
+                    // Extract web intelligence data from workflow result
+                    const tool25Data = buildResult.workflow_result?.steps_completed?.tool_25?.data;
+                    const qualityScore = buildResult.quality_score;
+
+                    if (tool25Data) {
+                        // Use Tool 25 web intelligence data
+                        this.webScrapingResults = tool25Data;
+
+                        console.log('✅ [SUCCESS] Loaded verified intelligence (V2 API, Tool 25):', {
+                            programs: tool25Data.extracted_info?.programs?.length || 0,
+                            leadership: tool25Data.extracted_info?.leadership?.length || 0,
+                            missions: tool25Data.extracted_info?.mission_statements?.length || 0,
+                            overall_quality: qualityScore?.overall || 0,
+                            source: 'v2_profile_build_tool25',
+                            cost: buildResult.workflow_result?.cost || 0
                         });
-                        
+
                         // Store verification details for display
-                        this.verificationDetails = data.data.web_scraping_data.verification_details || {};
+                        this.verificationDetails = tool25Data.verification_details || {};
                         this.enableWebScraping = true;
-                        
-                        // Show notification about verification quality
-                        const confidence = data.data.verified_intelligence?.overall_confidence || 0;
-                        const has990 = data.data.verified_intelligence?.has_990_baseline || false;
-                        
-                        if (has990 && confidence > 0.8) {
-                            this.showNotification('Verified Intelligence', 
-                                `High-confidence data loaded with 990 tax filing verification (${(confidence * 100).toFixed(0)}% confidence)`, 
+
+                        // Show notification about quality
+                        const quality = qualityScore?.overall || 0;
+
+                        if (quality > 0.8) {
+                            this.showNotification('Profile Built',
+                                `High-quality profile loaded (${(quality * 100).toFixed(0)}% quality)`,
                                 'success');
-                        } else if (has990) {
-                            this.showNotification('Verified Intelligence', 
-                                `Data loaded with 990 tax filing baseline (${(confidence * 100).toFixed(0)}% confidence)`, 
+                        } else if (quality > 0.6) {
+                            this.showNotification('Profile Built',
+                                `Good quality profile loaded (${(quality * 100).toFixed(0)}% quality)`,
                                 'info');
                         } else {
-                            this.showNotification('Verified Intelligence', 
-                                'Data loaded without 990 verification - web scraping only', 
+                            this.showNotification('Profile Built',
+                                `Profile loaded with basic data (${(quality * 100).toFixed(0)}% quality)`,
                                 'warning');
                         }
-                        
+
                     } else {
-                        console.log('No verified intelligence data found for profile:', profileId);
+                        console.log('No web intelligence data in build result for profile:', profileId);
                         this.webScrapingResults = null;
-                        this.enableWebScraping = true; // Keep enabled to allow fetching
+                        this.enableWebScraping = true;
                         this.verificationDetails = {};
-                        
-                        this.showNotification('Enhanced Data', 
-                            'No verified intelligence data available - may need to run analysis first', 
+
+                        this.showNotification('Profile Built',
+                            'Profile built successfully (web intelligence not available)',
                             'info');
                     }
                 } else {
-                    console.warn('Failed to load verified intelligence:', response.status);
-                    
+                    console.warn('Failed to build profile:', buildResult.error);
+
                     this.webScrapingResults = null;
-                    this.enableWebScraping = true; // Keep enabled to allow fetching
+                    this.enableWebScraping = true;
                     this.verificationDetails = {};
+
+                    this.showNotification('Profile Build Failed',
+                        buildResult.error || 'Unknown error',
+                        'error');
                 }
                 
             } catch (error) {
@@ -4855,20 +4866,25 @@ function catalynxApp() {
             }
 
             try {
-                const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/opportunity-scores`, {
+                // Phase 9: Migrate to V2 Profiles API
+                const response = await fetch(`/api/v2/profiles/${this.selectedProfile.profile_id}/opportunities/score`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        opportunity_id: opportunityId,
-                        ...scoreData
+                        opportunities: [{
+                            id: opportunityId,
+                            ...scoreData
+                        }]
                     })
                 });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Scoring failed');
                 }
 
-                console.log(`Saved score for opportunity ${opportunityId}`);
+                console.log(`✅ Saved score for opportunity ${opportunityId} (using V2 API)`);
                 return true;
 
             } catch (error) {

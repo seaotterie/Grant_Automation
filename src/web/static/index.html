@@ -9198,8 +9198,12 @@
             console.log('📋 Hybrid pagination: Using built-in pagination system');
         }
     </script>
+
+    <!-- Phase 9: API Helper Utilities for V2/Tool-based APIs -->
+    <script src="/static/api-helpers.js?v=PHASE9_MIGRATION" onerror="console.error('Failed to load api-helpers.js')"></script>
+
     <script src="/static/app.js?v=BACKEND_FIXES_COMPLETE" onerror="console.error('Failed to load app.js')"></script>
-    
+
     <!-- INLINE FIX: Override getOrganizationTypeColor for PROFILER and DISCOVER cache issue -->
     <script>
         // Wait for Alpine.js to initialize, then override the function
@@ -9269,40 +9273,47 @@
                                 }
                                 
                                 this.researchPlatform.running = true;
-                                
+
                                 try {
-                                    const requestData = {
-                                        include_research: this.researchPlatform.analysisMode !== 'scoring_only',
-                                        report_type: this.researchPlatform.reportType,
-                                        stage_filter: this.analyzeStageFilter || 'candidates'
-                                    };
-                                    
-                                    const response = await fetch(`/api/profiles/${this.selectedProfile.profile_id}/research/batch-analyze`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify(requestData)
+                                    // Phase 9: Migrate to Workflow API
+                                    const include_research = this.researchPlatform.analysisMode !== 'scoring_only';
+                                    const mode = include_research ? 'thorough' : 'fast';
+
+                                    // Use workflow API helper
+                                    const workflowResult = await executeWorkflow('screen-opportunities', {
+                                        profile_id: this.selectedProfile.profile_id,
+                                        opportunities: [], // Get from current stage
+                                        config: {
+                                            fast_mode_threshold: 0.50,
+                                            thorough_mode_threshold: 0.60,
+                                            stage_filter: this.analyzeStageFilter || 'candidates'
+                                        }
                                     });
-                                    
-                                    if (!response.ok) {
-                                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                                    }
-                                    
-                                    const data = await response.json();
-                                    
+
+                                    // Map workflow result to expected format
+                                    const data = {
+                                        batch_id: workflowResult.execution_id,
+                                        batch_summary: {
+                                            successful_analyses: workflowResult.result?.screened || 0,
+                                            total_cost: workflowResult.cost || 0
+                                        },
+                                        ...workflowResult.result
+                                    };
+
                                     // Update research platform stats
                                     this.researchPlatform.analysisCount += data.batch_summary.successful_analyses;
                                     this.researchPlatform.totalCost += data.batch_summary.total_cost;
-                                    if (requestData.include_research) {
+                                    if (include_research) {
                                         this.researchPlatform.reportsGenerated += data.batch_summary.successful_analyses;
                                     }
                                     this.researchPlatform.lastBatchId = data.batch_id;
                                     this.researchPlatform.lastResults = data;
-                                    
-                                    this.showNotification('Research Analysis', 
-                                        `Completed analysis of ${data.batch_summary.successful_analyses} opportunities. Cost: $${data.batch_summary.total_cost.toFixed(4)}`, 
+
+                                    this.showNotification('Research Analysis',
+                                        `Completed analysis of ${data.batch_summary.successful_analyses} opportunities. Cost: $${data.batch_summary.total_cost.toFixed(4)}`,
                                         'success');
-                                    
-                                    console.log('Integrated analysis completed:', data);
+
+                                    console.log('✅ Integrated analysis completed (using Workflow API):', data);
                                     
                                 } catch (error) {
                                     console.error('Research analysis failed:', error);
@@ -9321,28 +9332,23 @@
                                 }
                                 
                                 try {
-                                    const requestData = {
-                                        batch_id: this.researchPlatform.lastBatchId,
-                                        format: 'json'
-                                    };
-                                    
-                                    const response = await fetch('/api/research/export-results', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify(requestData)
-                                    });
-                                    
-                                    if (!response.ok) {
-                                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                                    }
-                                    
-                                    const data = await response.json();
-                                    
-                                    this.showNotification('Export', 
-                                        `Research results exported: ${data.export_id}`, 
+                                    // Phase 9: Migrate to Data Export Tool
+                                    const exportResult = await exportData(
+                                        this.researchPlatform.lastResults || [],
+                                        'research_results',
+                                        'json'  // format
+                                    );
+
+                                    this.showNotification('Export',
+                                        `Research results exported successfully`,
                                         'success');
-                                    
-                                    console.log('Export completed:', data);
+
+                                    // Download if URL provided
+                                    if (exportResult.data && exportResult.data.download_url) {
+                                        window.location.href = exportResult.data.download_url;
+                                    }
+
+                                    console.log('✅ Export completed (using Data Export Tool):', exportResult);
                                     
                                 } catch (error) {
                                     console.error('Export failed:', error);
