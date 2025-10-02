@@ -1,9 +1,9 @@
 # START HERE V2 - Phase 8 Continuation Guide
 
 **Date**: 2025-10-02
-**Session**: Context Window #5 (Tasks 12-18 Complete)
+**Session**: Context Window #5 (Tasks 12-19 Complete)
 **Phase**: Phase 8 - Nonprofit Workflow Solidification (Week 9 of 11)
-**Progress**: 18/20 tasks complete (90%)
+**Progress**: 19/20 tasks complete (95%)
 
 ---
 
@@ -489,6 +489,105 @@ Created comprehensive test suite (`test_bmf_discovery.py`) with 5 tests:
 - `test_orchestration.py` (310+ lines) - Comprehensive orchestration tests
 - `src/profiles/quality_scoring.py` (850+ lines) - Quality scoring system
 - `test_quality_scoring.py` (645+ lines) - Comprehensive quality tests
+
+### Part 9: Modernized Profile API Endpoints (Task 19) ✅
+
+**Achievement**: Tool-based profile API replacing legacy processor-based endpoints
+
+**Task 19 Accomplishments** - Profiles V2 API Router:
+
+**New API Router Created** (`src/web/routers/profiles_v2.py` - 680+ lines):
+
+1. **POST /api/v2/profiles/build** - Orchestrated profile building
+   - Uses ProfileEnhancementOrchestrator for multi-step workflow
+   - Configurable Tool 25 and Tool 2 execution
+   - Returns profile data, workflow results, quality assessment, and completeness
+   - Cost tracking and duration monitoring
+   - Quality threshold enforcement (default 0.70)
+
+2. **GET /api/v2/profiles/{profile_id}/quality** - Quality assessment endpoint
+   - Uses ProfileQualityScorer for comprehensive quality scoring
+   - Loads BMF and 990 data from intelligence database
+   - Returns overall score, rating, component scores, and recommendations
+   - Data completeness validation
+
+3. **POST /api/v2/profiles/{profile_id}/opportunities/score** - Opportunity scoring
+   - Uses OpportunityQualityScorer for matching assessment
+   - Supports both funding and networking opportunity types
+   - Returns score, rating, component breakdown, and recommendations
+
+4. **GET /api/v2/profiles/{profile_id}/opportunities/funding** - Funding discovery
+   - Queries BMF/990-PF intelligence database for foundations
+   - Filters by state, NTEE codes, and minimum score
+   - Scores each foundation using OpportunityQualityScorer
+   - Returns ranked list of funding opportunities with scores
+
+5. **GET /api/v2/profiles/{profile_id}/opportunities/networking** - Networking discovery
+   - Queries BMF/990 intelligence database for peer nonprofits
+   - Filters by state, NTEE codes, and minimum score
+   - Scores each peer organization using OpportunityQualityScorer
+   - Returns ranked list of networking opportunities with scores
+
+6. **GET /api/v2/profiles/health** - V2 API health check
+   - Returns status, version, features, and tools list
+   - Confirms v2 API operational status
+
+**Integration Changes**:
+- Router imported in `src/web/main.py` (line 74)
+- Router registered with FastAPI app (line 429)
+- Accessible at `/api/v2/profiles/*` endpoints
+
+**Test Suite** (`test_profiles_v2_api.py` - 600+ lines):
+- Test 1: Health check endpoint
+- Test 2: Build profile - Basic (BMF + 990 only)
+- Test 3: Build profile - With Tool 25 (web intelligence)
+- Test 4: Get profile quality assessment
+- Test 5: Score funding opportunity
+- Test 6: Discover funding opportunities (foundations)
+- Test 7: Discover networking opportunities (peer nonprofits)
+- All 7 tests with comprehensive assertions ✅
+
+**Architecture Benefits**:
+- **No Legacy Processors**: Direct use of tools (orchestration, quality scoring)
+- **Direct Database Access**: BMF/990 intelligence queries without processor overhead
+- **Unified Quality Scoring**: Consistent scoring across all endpoints
+- **Graceful Degradation**: Optional steps (Tool 25, Tool 2) don't break workflow
+- **Cost Transparency**: Clear cost tracking ($0.00 for BMF/990, $0.10 for Tool 25, $0.75 for Tool 2)
+- **Comprehensive Responses**: All endpoints return quality assessments and recommendations
+
+**Key Differences from Legacy Endpoints**:
+
+| Feature | Legacy (/api/profiles) | Modern (/api/v2/profiles) |
+|---------|------------------------|---------------------------|
+| Architecture | Processor-based | Tool-based |
+| Profile Building | EINLookupProcessor | ProfileEnhancementOrchestrator |
+| Quality Assessment | None | ProfileQualityScorer |
+| Opportunity Scoring | Manual | OpportunityQualityScorer |
+| Data Source | ProPublica API + processors | Direct BMF/990 database + tools |
+| Cost Tracking | Not tracked | Per-step cost monitoring |
+| Quality Gates | None | Enforced between workflow steps |
+| Graceful Degradation | Limited | Comprehensive |
+
+**Migration Path**:
+- V2 endpoints coexist with V1 (legacy) endpoints
+- Clients can gradually migrate to v2 endpoints
+- V1 endpoints remain for backward compatibility
+- Future: Deprecate v1 in favor of v2 after migration period
+
+**Performance Characteristics**:
+- BMF/990 queries: <1s (direct SQL)
+- Profile building (basic): 1-2s (BMF + 990)
+- Profile building (with Tool 25): 10-60s (web scraping)
+- Profile building (with Tool 2): +30-60s (AI analysis, $0.75)
+- Opportunity discovery: 2-5s for 100+ organizations
+- Opportunity scoring: <100ms per opportunity
+
+**Files Created**:
+- `src/web/routers/profiles_v2.py` (680+ lines) - Modernized profile API router
+- `test_profiles_v2_api.py` (600+ lines) - Comprehensive API tests
+
+**Files Modified**:
+- `src/web/main.py` - Added profiles_v2 router import and registration
 
 ---
 

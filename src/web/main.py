@@ -71,6 +71,7 @@ from src.web.auth_routes import router as auth_router
 from src.web.routers.ai_processing import router as ai_processing_router
 from src.web.routers.intelligence import router as intelligence_router
 from src.web.routers.workflows import router as workflows_router
+from src.web.routers.profiles_v2 import router as profiles_v2_router
 # Optional enhanced scraping router (requires scrapy)
 try:
     from src.web.routers.enhanced_scraping import router as enhanced_scraping_router
@@ -423,6 +424,9 @@ app.include_router(workflows_router)
 # Include unified tool execution routes (Phase 6)
 from src.web.routers.tools import router as tools_router
 app.include_router(tools_router)
+
+# Include modernized profile routes (Phase 8 - Task 19)
+app.include_router(profiles_v2_router)
 
 # Include Enhanced Scraping routes
 # Include enhanced scraping router only if available
