@@ -118,3 +118,7 @@ session_*.json
 *.cache
 processing_*.json
 analytics_*.json
+
+# Scrapy cache files
+.scrapy/
+**/.scrapy/
