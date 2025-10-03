@@ -252,79 +252,110 @@
             <!-- Workflow-Based Navigation -->
             <nav class="mt-6">
 
-                <!-- Stage 0: WELCOME (Getting Started) -->
+                <!-- SIMPLIFIED 3-STAGE NAVIGATION (Phase 9 Week 2) -->
+
+                <!-- Stage 1: PROFILES (Replaces: WELCOME, PROFILER, SETTINGS) -->
                 <div class="px-2 mb-4 relative">
-                    <a href="#" @click.prevent="switchStage('welcome')"
-                       :class="{'bg-indigo-600 text-white shadow-lg': activeStage === 'welcome', 'text-gray-300 hover:bg-gray-700 hover:text-white border-indigo-500/30': activeStage !== 'welcome'}"
+                    <a href="#" @click.prevent="switchStage('profiles')"
+                       :class="{'bg-purple-600 text-white shadow-lg': activeStage === 'profiles', 'text-gray-300 hover:bg-gray-700 hover:text-white border-purple-500/30': activeStage !== 'profiles'}"
                        class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
-                        WELCOME
+                        PROFILES
+                        <div class="text-xs font-normal opacity-80 mt-1">Profile Management</div>
                     </a>
                 </div>
 
-                <!-- Stage 1: PROFILER (Central Hub) -->
+                <!-- Stage 2: SCREENING (Replaces: DISCOVER, PLAN, ANALYZE) -->
                 <div class="px-2 mb-4 relative">
-                    <a href="#" @click.prevent="switchStage('profiler')"
-                       :class="{'bg-purple-600 text-white shadow-lg': activeStage === 'profiler', 'text-gray-300 hover:bg-gray-700 hover:text-white border-purple-500/30': activeStage !== 'profiler'}"
+                    <a href="#" @click.prevent="switchStage('screening')"
+                       :class="{'bg-teal-600 text-white shadow-lg': activeStage === 'screening', 'text-gray-300 hover:bg-gray-700 hover:text-white border-teal-500/30': activeStage !== 'screening'}"
                        class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
-                        PROFILER
+                        SCREENING
+                        <div class="text-xs font-normal opacity-80 mt-1">Discovery & Screening</div>
                     </a>
                 </div>
 
-                <!-- Stage 2: DISCOVER (PROSPECTS) -->
+                <!-- Stage 3: INTELLIGENCE (Replaces: EXAMINE, APPROACH) -->
                 <div class="px-2 mb-4 relative">
-                    <a href="#" @click.prevent="switchStage('discover')"
-                       :class="{'bg-teal-600 text-white shadow-lg': activeStage === 'discover', 'text-gray-300 hover:bg-gray-700 hover:text-white border-teal-500/30': activeStage !== 'discover'}"
+                    <a href="#" @click.prevent="switchStage('intelligence')"
+                       :class="{'bg-blue-600 text-white shadow-lg': activeStage === 'intelligence', 'text-gray-300 hover:bg-gray-700 hover:text-white border-blue-500/30': activeStage !== 'intelligence'}"
                        class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
-                        DISCOVER
+                        INTELLIGENCE
+                        <div class="text-xs font-normal opacity-80 mt-1">Deep Analysis & Reports</div>
                     </a>
                 </div>
 
-                <!-- Stage 3: PLAN (QUALIFIED PROSPECTS) -->
-                <div class="px-2 mb-4 relative">
-                    <a href="#" @click.prevent="switchStage('plan')"
-                       :class="{'bg-yellow-600 text-white shadow-lg': activeStage === 'plan', 'text-gray-300 hover:bg-gray-700 hover:text-white border-yellow-500/30': activeStage !== 'plan'}"
-                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
-                        PLAN
-                    </a>
+                <!-- Legacy Navigation Toggle (for backward compatibility) -->
+                <div class="px-2 mt-8">
+                    <button @click="showLegacyNav = !showLegacyNav"
+                            class="w-full px-4 py-2 text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded transition-colors">
+                        <span x-show="!showLegacyNav">▼ Show Legacy Stages</span>
+                        <span x-show="showLegacyNav">▲ Hide Legacy Stages</span>
+                    </button>
                 </div>
 
-                <!-- Stage 4: ANALYZE (CANDIDATES) -->
-                <div class="px-2 mb-4 relative">
-                    <a href="#" @click.prevent="switchStage('analyze')"
-                       :class="{'bg-orange-600 text-white shadow-lg': activeStage === 'analyze', 'text-gray-300 hover:bg-gray-700 hover:text-white border-orange-500/30': activeStage !== 'analyze'}"
-                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
-                        ANALYZE
-                    </a>
+                <!-- Legacy 8-Stage Navigation (Hidden by default) -->
+                <div x-show="showLegacyNav" x-transition class="border-t border-gray-700 mt-4 pt-4">
+                    <div class="px-2 text-xs text-gray-400 mb-2">LEGACY STAGES (Deprecated)</div>
+
+                    <div class="px-2 mb-2">
+                        <a href="#" @click.prevent="switchStage('welcome')"
+                           :class="{'bg-indigo-500 text-white': activeStage === 'welcome', 'text-gray-400 hover:bg-gray-700': activeStage !== 'welcome'}"
+                           class="block px-4 py-2 text-sm rounded transition-all">
+                            WELCOME
+                        </a>
+                    </div>
+                    <div class="px-2 mb-2">
+                        <a href="#" @click.prevent="switchStage('profiler')"
+                           :class="{'bg-purple-500 text-white': activeStage === 'profiler', 'text-gray-400 hover:bg-gray-700': activeStage !== 'profiler'}"
+                           class="block px-4 py-2 text-sm rounded transition-all">
+                            PROFILER
+                        </a>
+                    </div>
+                    <div class="px-2 mb-2">
+                        <a href="#" @click.prevent="switchStage('discover')"
+                           :class="{'bg-teal-500 text-white': activeStage === 'discover', 'text-gray-400 hover:bg-gray-700': activeStage !== 'discover'}"
+                           class="block px-4 py-2 text-sm rounded transition-all">
+                            DISCOVER
+                        </a>
+                    </div>
+                    <div class="px-2 mb-2">
+                        <a href="#" @click.prevent="switchStage('plan')"
+                           :class="{'bg-yellow-500 text-white': activeStage === 'plan', 'text-gray-400 hover:bg-gray-700': activeStage !== 'plan'}"
+                           class="block px-4 py-2 text-sm rounded transition-all">
+                            PLAN
+                        </a>
+                    </div>
+                    <div class="px-2 mb-2">
+                        <a href="#" @click.prevent="switchStage('analyze')"
+                           :class="{'bg-orange-500 text-white': activeStage === 'analyze', 'text-gray-400 hover:bg-gray-700': activeStage !== 'analyze'}"
+                           class="block px-4 py-2 text-sm rounded transition-all">
+                            ANALYZE
+                        </a>
+                    </div>
+                    <div class="px-2 mb-2">
+                        <a href="#" @click.prevent="switchStage('examine')"
+                           :class="{'bg-blue-500 text-white': activeStage === 'examine', 'text-gray-400 hover:bg-gray-700': activeStage !== 'examine'}"
+                           class="block px-4 py-2 text-sm rounded transition-all">
+                            EXAMINE
+                        </a>
+                    </div>
+                    <div class="px-2 mb-2">
+                        <a href="#" @click.prevent="switchStage('approach')"
+                           :class="{'bg-green-500 text-white': activeStage === 'approach', 'text-gray-400 hover:bg-gray-700': activeStage !== 'approach'}"
+                           class="block px-4 py-2 text-sm rounded transition-all">
+                            APPROACH
+                        </a>
+                    </div>
+                    <div class="px-2 mb-2">
+                        <a href="#" @click.prevent="switchStage('settings')"
+                           :class="{'bg-gray-500 text-white': activeStage === 'settings', 'text-gray-400 hover:bg-gray-700': activeStage !== 'settings'}"
+                           class="block px-4 py-2 text-sm rounded transition-all">
+                            SETTINGS
+                        </a>
+                    </div>
                 </div>
 
-                <!-- Stage 5: EXAMINE (TARGETS) -->
-                <div class="px-2 mb-4 relative">
-                    <a href="#" @click.prevent="switchStage('examine')"
-                       :class="{'bg-blue-600 text-white shadow-lg': activeStage === 'examine', 'text-gray-300 hover:bg-gray-700 hover:text-white border-blue-500/30': activeStage !== 'examine'}"
-                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
-                        EXAMINE
-                    </a>
-                </div>
 
-                <!-- Stage 6: APPROACH (OPPORTUNITIES) -->
-                <div class="px-2 mb-4 relative">
-                    <a href="#" @click.prevent="switchStage('approach')"
-                       :class="{'bg-green-600 text-white shadow-lg': activeStage === 'approach', 'text-gray-300 hover:bg-gray-700 hover:text-white border-green-500/30': activeStage !== 'approach'}"
-                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
-                        APPROACH
-                    </a>
-                </div>
-
-                <!-- Stage 7: SETTINGS (System Configuration) -->
-                <div class="px-2 mb-4 relative">
-                    <a href="#" @click.prevent="switchStage('settings')"
-                       :class="{'bg-gray-600 text-white shadow-lg': activeStage === 'settings', 'text-gray-300 hover:bg-gray-700 hover:text-white border-gray-500/30': activeStage !== 'settings'}"
-                       class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
-                        SETTINGS
-                    </a>
-                </div>
-                
-                
                 <!-- Simple Footer -->
                 <div class="mt-auto px-2 py-4 border-t border-gray-700">
                     <div class="text-center">
@@ -430,7 +461,78 @@
             
             <!-- Stage Content Container -->
             <div class="flex-1 p-4 lg:p-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 overflow-auto relative">
-                
+
+                <!-- ============================================================ -->
+                <!-- NEW 3-STAGE ARCHITECTURE (Phase 9 Week 2)                   -->
+                <!-- ============================================================ -->
+
+                <!-- STAGE 1: PROFILES (Profile Management) -->
+                <div x-show="activeStage === 'profiles'" class="space-y-6">
+                    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg p-6 text-white">
+                        <h3 class="text-2xl font-bold">Profile Management</h3>
+                        <p class="text-purple-100 mt-2">Create, manage, and analyze organization profiles</p>
+                    </div>
+
+                    <!-- Profile content powered by profiles-module.js -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                        <p class="text-gray-600 dark:text-gray-300">
+                            🚧 <strong>Under Construction</strong> - New modular profile interface coming soon.
+                        </p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                            This will use <code>profiles-module.js</code> (465 lines) for complete V2 Profile API integration.
+                        </p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                            <strong>For now:</strong> Use legacy PROFILER stage below (click "Show Legacy Stages" in sidebar).
+                        </p>
+                    </div>
+                </div>
+
+                <!-- STAGE 2: SCREENING (Discovery & Screening) -->
+                <div x-show="activeStage === 'screening'" class="space-y-6">
+                    <div class="bg-gradient-to-r from-teal-600 to-green-600 rounded-lg p-6 text-white">
+                        <h3 class="text-2xl font-bold">Discovery & Screening</h3>
+                        <p class="text-teal-100 mt-2">Find and screen opportunities using Tool 10</p>
+                    </div>
+
+                    <!-- Screening content powered by screening-module.js -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                        <p class="text-gray-600 dark:text-gray-300">
+                            🚧 <strong>Under Construction</strong> - New screening interface coming soon.
+                        </p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                            This will use <code>screening-module.js</code> (529 lines) for V2 Discovery API + Tool 10 screening.
+                        </p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                            <strong>For now:</strong> Use legacy DISCOVER/PLAN/ANALYZE stages below (click "Show Legacy Stages" in sidebar).
+                        </p>
+                    </div>
+                </div>
+
+                <!-- STAGE 3: INTELLIGENCE (Deep Analysis & Reports) -->
+                <div x-show="activeStage === 'intelligence'" class="space-y-6">
+                    <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+                        <h3 class="text-2xl font-bold">Deep Intelligence Analysis</h3>
+                        <p class="text-blue-100 mt-2">Comprehensive analysis using Tool 2, reports, and packages</p>
+                    </div>
+
+                    <!-- Intelligence content powered by intelligence-module.js -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                        <p class="text-gray-600 dark:text-gray-300">
+                            🚧 <strong>Under Construction</strong> - New intelligence interface coming soon.
+                        </p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                            This will use <code>intelligence-module.js</code> (556 lines) for Tool 2/18/19/21 integration.
+                        </p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                            <strong>For now:</strong> Use legacy EXAMINE/APPROACH stages below (click "Show Legacy Stages" in sidebar).
+                        </p>
+                    </div>
+                </div>
+
+                <!-- ============================================================ -->
+                <!-- LEGACY 8-STAGE CONTENT (Backward Compatibility)             -->
+                <!-- ============================================================ -->
+
                 <!-- STAGE 0: WELCOME (Getting Started) -->
                 <div x-show="activeStage === 'welcome'" class="space-y-6">
                     <!-- Welcome Header -->
@@ -9201,6 +9303,13 @@
 
     <!-- Phase 9: API Helper Utilities for V2/Tool-based APIs -->
     <script src="/static/api-helpers.js?v=PHASE9_MIGRATION" onerror="console.error('Failed to load api-helpers.js')"></script>
+
+    <!-- Phase 9 Week 2: Modular Architecture - 5 Modules (1,920 lines) -->
+    <script src="/static/modules/state-module.js?v=PHASE9_MODULAR" onerror="console.error('Failed to load state-module.js')"></script>
+    <script src="/static/modules/shared-module.js?v=PHASE9_MODULAR" onerror="console.error('Failed to load shared-module.js')"></script>
+    <script src="/static/modules/profiles-module.js?v=PHASE9_MODULAR" onerror="console.error('Failed to load profiles-module.js')"></script>
+    <script src="/static/modules/screening-module.js?v=PHASE9_MODULAR" onerror="console.error('Failed to load screening-module.js')"></script>
+    <script src="/static/modules/intelligence-module.js?v=PHASE9_MODULAR" onerror="console.error('Failed to load intelligence-module.js')"></script>
 
     <script src="/static/app.js?v=BACKEND_FIXES_COMPLETE" onerror="console.error('Failed to load app.js')"></script>
 
