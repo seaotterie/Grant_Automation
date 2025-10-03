@@ -635,6 +635,23 @@ function catalynxApp() {
         itemsPerPage: 10,
         sortColumn: null,
         sortDirection: 'asc',
+
+        // ====================================================================
+        // PHASE 9 WEEK 2: MODULAR ARCHITECTURE INTEGRATION
+        // ====================================================================
+        // Initialize 5 modules (1,920 lines total)
+        // These modules handle profiles, screening, and intelligence operations
+
+        // Module instances (initialized in init())
+        stateModule: null,
+        sharedModule: null,
+        profilesModule: null,
+        screeningModule: null,
+        intelligenceModule: null,
+
+        // Module integration flag
+        modulesReady: false,
+        showLegacyNav: false, // Toggle for legacy 8-stage navigation
         
         // Research and Filtering
         researchPlatform: {
@@ -719,7 +736,70 @@ function catalynxApp() {
                 status: 'available'
             }
         ],
-        
+
+        // ====================================================================
+        // PHASE 9 WEEK 2: MODULE INITIALIZATION
+        // ====================================================================
+
+        /**
+         * Initialize all 5 modular components
+         * Called automatically by Alpine.js on mount via x-init
+         */
+        initModules() {
+            console.log('🚀 Phase 9: Initializing modular architecture...');
+
+            try {
+                // Check if module functions are available
+                if (typeof stateModule !== 'function') {
+                    console.warn('⚠️ Module functions not loaded yet. Modules will initialize when available.');
+                    return;
+                }
+
+                // Initialize each module
+                this.stateModule = stateModule();
+                this.sharedModule = sharedModule();
+                this.profilesModule = profilesModule();
+                this.screeningModule = screeningModule();
+                this.intelligenceModule = intelligenceModule();
+
+                // Set initial stage from state module (defaults to 'profiles')
+                if (this.stateModule) {
+                    this.activeStage = this.stateModule.activeStage || 'welcome';
+                }
+
+                this.modulesReady = true;
+
+                console.log('✅ Modular architecture initialized:');
+                console.log('   - State Module (89 lines)');
+                console.log('   - Shared Module (281 lines)');
+                console.log('   - Profiles Module (465 lines)');
+                console.log('   - Screening Module (529 lines)');
+                console.log('   - Intelligence Module (556 lines)');
+                console.log('   - Total: 1,920 lines of modular code');
+
+            } catch (error) {
+                console.error('❌ Failed to initialize modules:', error);
+                this.modulesReady = false;
+            }
+        },
+
+        /**
+         * Switch between workflow stages (supports both legacy and new 3-stage navigation)
+         * @param {string} stage - Stage identifier
+         */
+        switchStage(stage) {
+            console.log(`Switching to stage: ${stage}`);
+            this.activeStage = stage;
+
+            // Update state module if available
+            if (this.stateModule && this.stateModule.switchStage) {
+                this.stateModule.switchStage(stage);
+            }
+
+            // Dispatch event for other components
+            this.$dispatch('stage-changed', { stage });
+        },
+
         // Alpine.js Functions - Foundation and 990 Analysis
         getFoundationCount(code = null) {
             // Return 0 as placeholder - can be enhanced later
