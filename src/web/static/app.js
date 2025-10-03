@@ -746,12 +746,12 @@ function catalynxApp() {
          * Called automatically by Alpine.js on mount via x-init
          */
         initModules() {
-            console.log('🚀 Phase 9: Initializing modular architecture...');
+            console.log('[Phase 9] Initializing modular architecture...');
 
             try {
                 // Check if module functions are available
                 if (typeof stateModule !== 'function') {
-                    console.warn('⚠️ Module functions not loaded yet. Modules will initialize when available.');
+                    console.warn('[WARNING] Module functions not loaded yet. Modules will initialize when available.');
                     return;
                 }
 
@@ -769,7 +769,7 @@ function catalynxApp() {
 
                 this.modulesReady = true;
 
-                console.log('✅ Modular architecture initialized:');
+                console.log('[SUCCESS] Modular architecture initialized:');
                 console.log('   - State Module (89 lines)');
                 console.log('   - Shared Module (281 lines)');
                 console.log('   - Profiles Module (465 lines)');
@@ -778,7 +778,7 @@ function catalynxApp() {
                 console.log('   - Total: 1,920 lines of modular code');
 
             } catch (error) {
-                console.error('❌ Failed to initialize modules:', error);
+                console.error('[ERROR] Failed to initialize modules:', error);
                 this.modulesReady = false;
             }
         },
