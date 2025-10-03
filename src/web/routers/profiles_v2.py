@@ -543,6 +543,289 @@ async def discover_networking_opportunities(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("", status_code=201)
+async def create_profile(request: Dict[str, Any]):
+    """
+    Create a new profile manually (without EIN-based building).
+
+    Request:
+    {
+        "name": "Organization Name",
+        "ein": "123456789",  # Optional
+        "description": "...",
+        "ntee_codes": ["P20"],
+        "geographic_scope": {"states": ["VA"]},
+        ...
+    }
+    """
+    try:
+        name = request.get('name', '').strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Organization name is required")
+
+        # Create UnifiedProfile
+        profile = UnifiedProfile(
+            ein=request.get('ein'),
+            name=name,
+            description=request.get('description'),
+            ntee_codes=request.get('ntee_codes', []),
+            geographic_scope=request.get('geographic_scope', {}),
+            contact_info=request.get('contact_info', {}),
+            mission_statement=request.get('mission_statement'),
+            programs=request.get('programs', []),
+            board_members=request.get('board_members', []),
+            created_at=datetime.utcnow().isoformat()
+        )
+
+        # Save to database
+        success = profile_service.create_profile(profile)
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to create profile")
+
+        logger.info(f"Created profile: {profile.profile_id}")
+
+        return {
+            "success": True,
+            "profile_id": profile.profile_id,
+            "profile": profile.__dict__
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create profile: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("")
+async def list_profiles(
+    page: int = 1,
+    limit: int = 50,
+    sort: str = "name",
+    order: str = "asc",
+    search: Optional[str] = None
+):
+    """
+    List all profiles with pagination and filtering.
+
+    Query Parameters:
+    - page: Page number (default 1)
+    - limit: Results per page (default 50, max 200)
+    - sort: Sort field (name, created_at, updated_at)
+    - order: Sort order (asc, desc)
+    - search: Search term for name/EIN
+    """
+    try:
+        limit = min(limit, 200)  # Cap at 200
+        offset = (page - 1) * limit
+
+        # Get all profiles (UnifiedProfileService doesn't have list method, so query directly)
+        profiles = profile_service.list_profiles(limit=limit, offset=offset, search=search)
+
+        # Sort profiles
+        reverse = (order == "desc")
+        if sort == "name":
+            profiles.sort(key=lambda p: p.get('name', ''), reverse=reverse)
+        elif sort == "created_at":
+            profiles.sort(key=lambda p: p.get('created_at', ''), reverse=reverse)
+        elif sort == "updated_at":
+            profiles.sort(key=lambda p: p.get('updated_at', ''), reverse=reverse)
+
+        return {
+            "success": True,
+            "page": page,
+            "limit": limit,
+            "total": len(profiles),
+            "profiles": profiles
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to list profiles: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{profile_id}")
+async def get_profile_details(profile_id: str):
+    """Get detailed profile information."""
+    try:
+        profile = profile_service.get_profile(profile_id)
+
+        if not profile:
+            raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+
+        return {
+            "success": True,
+            "profile": profile.__dict__ if hasattr(profile, '__dict__') else profile
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/{profile_id}")
+async def update_profile(profile_id: str, updates: Dict[str, Any]):
+    """
+    Update profile fields.
+
+    Request:
+    {
+        "name": "New Name",
+        "description": "Updated description",
+        ...
+    }
+    """
+    try:
+        # Get existing profile
+        existing_profile = profile_service.get_profile(profile_id)
+        if not existing_profile:
+            raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+
+        # Update fields
+        for key, value in updates.items():
+            if hasattr(existing_profile, key) and key not in ['profile_id', 'created_at']:
+                setattr(existing_profile, key, value)
+
+        # Update timestamp
+        existing_profile.updated_at = datetime.utcnow().isoformat()
+
+        # Save
+        success = profile_service.update_profile(existing_profile)
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update profile")
+
+        logger.info(f"Updated profile: {profile_id}")
+
+        return {
+            "success": True,
+            "profile_id": profile_id,
+            "profile": existing_profile.__dict__
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{profile_id}")
+async def delete_profile(profile_id: str):
+    """Delete a profile."""
+    try:
+        success = profile_service.delete_profile(profile_id)
+
+        if not success:
+            raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+
+        logger.info(f"Deleted profile: {profile_id}")
+
+        return {
+            "success": True,
+            "profile_id": profile_id,
+            "message": "Profile deleted successfully"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{profile_id}/analytics")
+async def get_profile_analytics(profile_id: str):
+    """
+    Get consolidated analytics for a profile.
+
+    Combines metrics, funnel data, and session information.
+    """
+    try:
+        profile = profile_service.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+
+        # Get analytics from profile service
+        analytics = profile_service.get_profile_analytics(profile_id)
+
+        return {
+            "success": True,
+            "profile_id": profile_id,
+            "analytics": analytics
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get analytics for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{profile_id}/export")
+async def export_profile_data(profile_id: str, export_config: Dict[str, Any]):
+    """
+    Export profile data in various formats.
+
+    Request:
+    {
+        "format": "json",  # or "csv", "excel", "pdf"
+        "fields": ["name", "ein", "revenue"],  # Optional
+        "include_opportunities": true
+    }
+
+    Uses Tool 18 (Data Export Tool)
+    """
+    try:
+        from src.core.tool_registry import ToolRegistry
+
+        profile = profile_service.get_profile(profile_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+
+        # Prepare data for export
+        export_data = profile.__dict__ if hasattr(profile, '__dict__') else profile
+
+        # Get opportunities if requested
+        if export_config.get('include_opportunities', False):
+            # Would query opportunities from database
+            export_data['opportunities'] = []
+
+        # Filter fields if specified
+        if 'fields' in export_config:
+            export_data = {k: v for k, v in export_data.items() if k in export_config['fields']}
+
+        # Use Tool 18 (Data Export Tool)
+        tool_registry = ToolRegistry()
+        export_result = await tool_registry.execute_tool(
+            tool_name="data-export-tool",
+            inputs={
+                "data": export_data,
+                "format": export_config.get('format', 'json'),
+                "filename": f"profile_{profile_id}"
+            }
+        )
+
+        if not export_result.success:
+            raise HTTPException(status_code=500, detail="Export failed")
+
+        return {
+            "success": True,
+            "profile_id": profile_id,
+            "format": export_config.get('format', 'json'),
+            "export_result": export_result.data
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to export profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/health")
 async def health_check():
     """Health check endpoint for v2 profile API."""
@@ -553,7 +836,10 @@ async def health_check():
             "orchestrated_profile_building",
             "quality_scoring",
             "funding_opportunity_discovery",
-            "networking_opportunity_discovery"
+            "networking_opportunity_discovery",
+            "crud_operations",
+            "analytics",
+            "export"
         ],
         "tools": [
             "ProfileEnhancementOrchestrator",

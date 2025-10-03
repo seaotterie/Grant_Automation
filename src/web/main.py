@@ -72,6 +72,7 @@ from src.web.routers.ai_processing import router as ai_processing_router
 from src.web.routers.intelligence import router as intelligence_router
 from src.web.routers.workflows import router as workflows_router
 from src.web.routers.profiles_v2 import router as profiles_v2_router
+from src.web.routers.discovery_v2 import router as discovery_v2_router
 # Optional enhanced scraping router (requires scrapy)
 try:
     from src.web.routers.enhanced_scraping import router as enhanced_scraping_router
@@ -431,6 +432,9 @@ app.include_router(tools_router)
 
 # Include modernized profile routes (Phase 8 - Task 19)
 app.include_router(profiles_v2_router)
+
+# Include V2 discovery routes (Phase 9 - Week 2)
+app.include_router(discovery_v2_router)
 
 # Include admin routes (Phase 9 - deprecation monitoring)
 from src.web.routers.admin import router as admin_router

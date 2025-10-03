@@ -80,23 +80,176 @@ class UnifiedProfileService:
             logger.error(f"Error saving profile {profile.profile_id}: {e}")
             return False
     
-    def list_profiles(self) -> List[str]:
-        """List all available profile IDs"""
+    def list_profiles(self, limit: int = 50, offset: int = 0, search: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        List all available profiles with pagination and search.
+
+        Args:
+            limit: Maximum number of profiles to return
+            offset: Number of profiles to skip
+            search: Search term for name/EIN
+
+        Returns:
+            List of profile dictionaries
+        """
         profiles = []
-        
+
         try:
             for profile_dir in self.data_dir.iterdir():
-                if profile_dir.is_dir() and profile_dir.name.startswith('profile_'):
+                if profile_dir.is_dir():
                     profile_file = profile_dir / "profile.json"
                     if profile_file.exists():
-                        profiles.append(profile_dir.name)
-            
-            return sorted(profiles)
-            
+                        try:
+                            with open(profile_file, 'r', encoding='utf-8') as f:
+                                data = json.load(f)
+
+                            # Apply search filter
+                            if search:
+                                search_lower = search.lower()
+                                name = data.get('name', '').lower()
+                                ein = data.get('ein', '').lower()
+                                if search_lower not in name and search_lower not in ein:
+                                    continue
+
+                            profiles.append(data)
+                        except Exception as e:
+                            logger.error(f"Error loading profile from {profile_file}: {e}")
+                            continue
+
+            # Sort by name
+            profiles.sort(key=lambda p: p.get('name', ''))
+
+            # Apply pagination
+            return profiles[offset:offset + limit]
+
         except Exception as e:
             logger.error(f"Error listing profiles: {e}")
             return []
-    
+
+    def create_profile(self, profile: UnifiedProfile) -> bool:
+        """
+        Create a new profile (alias for save_profile for API consistency).
+
+        Args:
+            profile: UnifiedProfile object to create
+
+        Returns:
+            True if successful, False otherwise
+        """
+        return self.save_profile(profile)
+
+    def update_profile(self, profile: UnifiedProfile) -> bool:
+        """
+        Update an existing profile.
+
+        Args:
+            profile: UnifiedProfile object with updated data
+
+        Returns:
+            True if successful, False otherwise
+        """
+        # Check if profile exists
+        existing = self.get_profile(profile.profile_id)
+        if not existing:
+            logger.warning(f"Cannot update non-existent profile {profile.profile_id}")
+            return False
+
+        # Update timestamp
+        profile.updated_at = datetime.now().isoformat()
+
+        return self.save_profile(profile)
+
+    def delete_profile(self, profile_id: str) -> bool:
+        """
+        Delete a profile and all associated data.
+
+        Args:
+            profile_id: Profile ID to delete
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            profile_dir = self.data_dir / profile_id
+
+            if not profile_dir.exists():
+                logger.warning(f"Profile {profile_id} not found for deletion")
+                return False
+
+            # Delete entire profile directory
+            import shutil
+            shutil.rmtree(profile_dir)
+
+            logger.info(f"Profile {profile_id} deleted successfully")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error deleting profile {profile_id}: {e}")
+            return False
+
+    def get_profile_analytics(self, profile_id: str) -> Dict[str, Any]:
+        """
+        Get consolidated analytics for a profile.
+
+        Combines:
+        - Profile metrics (opportunities by stage, success rates)
+        - Funnel data (conversion rates, timeline)
+        - Session information (discovery sessions, recent activity)
+
+        Args:
+            profile_id: Profile ID
+
+        Returns:
+            Dictionary with consolidated analytics
+        """
+        try:
+            profile = self.get_profile(profile_id)
+            if not profile:
+                return {}
+
+            # Get all opportunities for this profile
+            opportunities = self.get_profile_opportunities(profile_id)
+
+            # Calculate stage distribution
+            stage_distribution = {}
+            for opp in opportunities:
+                stage = opp.current_stage or 'DISCOVER'
+                stage_distribution[stage] = stage_distribution.get(stage, 0) + 1
+
+            # Calculate conversion metrics
+            total_opps = len(opportunities)
+            approach_stage = sum(1 for o in opportunities if o.current_stage == 'APPROACH')
+            conversion_rate = (approach_stage / total_opps * 100) if total_opps > 0 else 0
+
+            # Get recent activity
+            recent_updates = sorted(
+                opportunities,
+                key=lambda o: o.last_updated or '',
+                reverse=True
+            )[:10]
+
+            return {
+                "total_opportunities": total_opps,
+                "stage_distribution": stage_distribution,
+                "conversion_rate": conversion_rate,
+                "recent_activity": [
+                    {
+                        "opportunity_id": o.opportunity_id,
+                        "name": o.organization_name,
+                        "stage": o.current_stage,
+                        "last_updated": o.last_updated
+                    }
+                    for o in recent_updates
+                ],
+                "analytics": profile.analytics.model_dump() if profile.analytics else {},
+                "created_at": profile.created_at,
+                "updated_at": profile.updated_at
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting analytics for profile {profile_id}: {e}")
+            return {}
+
     # ============================================================================
     # OPPORTUNITY OPERATIONS
     # ============================================================================
