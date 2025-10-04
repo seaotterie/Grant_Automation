@@ -1,0 +1,218 @@
+<!-- ============================================================ -->
+<!-- GOVERNMENT CRITERIA SELECTION MODAL (Nested Modal)          -->
+<!-- ============================================================ -->
+<!--
+    This modal opens from the Edit Profile Modal (Government Criteria tab).
+    Layout: Left sidebar (criteria categories) + Right panel (available criteria)
+
+    Based on: 090525_Catalynx Screens/100325_Select Government Criteria.jpg
+-->
+
+<div x-data="{
+        modalOpen: false,
+        selectedCategory: null,
+        tempSelectedCriteria: [],
+        searchQuery: '',
+        criteriaData: {}
+     }"
+     x-init="fetch('/static/data/government-criteria.js').then(r => r.text()).then(data => { eval(data); criteriaData = GOVERNMENT_CRITERIA; console.log('Government criteria loaded:', Object.keys(criteriaData).length, 'categories'); });"
+     x-show="modalOpen"
+     x-cloak
+     @open-government-criteria-modal.window="
+        modalOpen = true;
+        tempSelectedCriteria = [...($event.detail.profile.government_criteria || [])];
+        selectedCategory = 'agencies'; // Default to Federal Agencies
+     "
+     @close-government-criteria-modal.window="modalOpen = false"
+     class="fixed inset-0 z-[60] overflow-y-auto"
+     style="display: none;">
+
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-black bg-opacity-60 transition-opacity"
+         @click="modalOpen = false"
+         x-show="modalOpen"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"></div>
+
+    <!-- Modal Container -->
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-5xl w-full max-h-[85vh] overflow-hidden"
+             @click.stop
+             x-show="modalOpen"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform scale-95"
+             x-transition:enter-end="opacity-100 transform scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 transform scale-100"
+             x-transition:leave-end="opacity-0 transform scale-95">
+
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Select Government Criteria</h3>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        Select the federal and state funding criteria that align with your organization's grant preferences and capabilities.
+                    </p>
+                </div>
+                <button @click="modalOpen = false"
+                        class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors">
+                    <span class="text-2xl">&times;</span>
+                </button>
+            </div>
+
+            <!-- Modal Body: Two Column Layout -->
+            <div class="flex" style="height: calc(85vh - 180px);">
+
+                <!-- LEFT SIDEBAR: Criteria Categories -->
+                <div class="w-80 border-r border-gray-200 dark:border-gray-700 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+                    <div class="p-4">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Criteria Categories</h4>
+
+                        <!-- Category List -->
+                        <div class="space-y-1">
+                            <template x-for="(categoryObj, categoryKey) in criteriaData" :key="categoryKey">
+                                <button @click="selectedCategory = categoryKey"
+                                        :class="selectedCategory === categoryKey ? 'bg-purple-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                                        class="w-full text-left px-4 py-3 rounded-lg transition-colors border border-gray-200 dark:border-gray-600">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-sm font-semibold" x-text="categoryObj.category"></span>
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                              :class="selectedCategory === categoryKey ? 'bg-purple-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'"
+                                              x-text="categoryObj.criteria?.length || 0"></span>
+                                    </div>
+                                    <p class="text-xs"
+                                       :class="selectedCategory === categoryKey ? 'text-purple-100' : 'text-gray-500 dark:text-gray-400'"
+                                       x-text="categoryObj.description"></p>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT PANEL: Available Criteria -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    <template x-if="selectedCategory && criteriaData[selectedCategory]">
+                        <div>
+                            <!-- Category Header -->
+                            <div class="mb-6">
+                                <h4 class="text-xl font-semibold text-gray-900 dark:text-white mb-2"
+                                    x-text="criteriaData[selectedCategory].category"></h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400"
+                                   x-text="criteriaData[selectedCategory].description"></p>
+                            </div>
+
+                            <!-- Search within category -->
+                            <div class="mb-4">
+                                <input type="text"
+                                       x-model="searchQuery"
+                                       placeholder="Search criteria..."
+                                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white text-sm">
+                            </div>
+
+                            <!-- Criteria List -->
+                            <div class="space-y-2">
+                                <template x-for="criteria in criteriaData[selectedCategory].criteria?.filter(c =>
+                                    !searchQuery ||
+                                    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    c.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    c.id.toLowerCase().includes(searchQuery.toLowerCase())
+                                )" :key="criteria.id">
+                                    <label class="flex items-start p-4 bg-white dark:bg-gray-700 rounded-lg border-2 transition-all cursor-pointer hover:border-purple-300 dark:hover:border-purple-600"
+                                           :class="tempSelectedCriteria.some(c => c.id === criteria.id) ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' : 'border-gray-200 dark:border-gray-600'">
+                                        <input type="checkbox"
+                                               :checked="tempSelectedCriteria.some(c => c.id === criteria.id)"
+                                               @change="
+                                                   if ($event.target.checked) {
+                                                       tempSelectedCriteria.push({
+                                                           id: criteria.id,
+                                                           name: criteria.name,
+                                                           category: selectedCategory,
+                                                           source: criteria.sources[0] // Default to first source
+                                                       });
+                                                   } else {
+                                                       tempSelectedCriteria = tempSelectedCriteria.filter(c => c.id !== criteria.id);
+                                                   }
+                                               "
+                                               class="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                                        <div class="ml-3 flex-1">
+                                            <div class="flex items-start justify-between mb-1">
+                                                <span class="text-sm font-semibold text-gray-900 dark:text-white"
+                                                      x-text="criteria.name"></span>
+                                                <div class="flex flex-wrap gap-1 ml-2">
+                                                    <template x-for="source in criteria.sources" :key="source">
+                                                        <span class="px-2 py-0.5 text-xs font-medium rounded-full"
+                                                              :class="{
+                                                                  'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': source === 'Federal',
+                                                                  'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200': source === 'State',
+                                                                  'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200': source === 'Local'
+                                                              }"
+                                                              x-text="source"></span>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                            <p class="text-sm text-gray-600 dark:text-gray-400"
+                                               x-text="criteria.description"></p>
+                                        </div>
+                                    </label>
+                                </template>
+                            </div>
+
+                            <!-- No results message -->
+                            <div x-show="searchQuery && criteriaData[selectedCategory].criteria?.filter(c =>
+                                    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    c.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    c.id.toLowerCase().includes(searchQuery.toLowerCase())
+                                ).length === 0"
+                                 class="text-center py-12">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                                    No criteria match "<span x-text="searchQuery"></span>"
+                                </p>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- No category selected -->
+                    <div x-show="!selectedCategory"
+                         class="flex items-center justify-center h-full text-center">
+                        <div>
+                            <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                            </svg>
+                            <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">Select a Category</h3>
+                            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                Choose a category from the left sidebar to view criteria
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+                <div class="text-sm text-gray-600 dark:text-gray-400">
+                    <span x-text="tempSelectedCriteria.length"></span> criteria selected
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button @click="modalOpen = false"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors">
+                        Cancel
+                    </button>
+                    <button @click="
+                        $dispatch('government-criteria-selected', { criteria: tempSelectedCriteria });
+                        modalOpen = false;
+                    "
+                            class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                        Save Selection
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

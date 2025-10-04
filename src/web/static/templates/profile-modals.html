@@ -1,0 +1,444 @@
+<!-- ============================================================ -->
+<!-- PROFILE MODALS - Phase 9 Week 4                             -->
+<!-- ============================================================ -->
+<!--
+    This file contains all profile-related modal templates.
+    To integrate: Insert before </body> tag in index.html
+
+    Modals included:
+    1. Edit Profile Modal (5 tabs)
+    2. NTEE Code Selection Modal (nested)
+    3. Government Criteria Selection Modal (nested)
+    4. Create Profile Modal (2 modes)
+    5. Delete Profile Modal (confirmation)
+-->
+
+<!-- ============================================================ -->
+<!-- 1. EDIT PROFILE MODAL (5 TABS)                              -->
+<!-- ============================================================ -->
+<div x-data="{
+        modalOpen: false,
+        activeTab: 'basic',
+        profile: {},
+        loading: false,
+        error: null
+     }"
+     x-show="modalOpen"
+     x-cloak
+     @open-edit-profile-modal.window="modalOpen = true; profile = $event.detail.profile; activeTab = 'basic'"
+     @close-edit-profile-modal.window="modalOpen = false"
+     class="fixed inset-0 z-50 overflow-y-auto"
+     style="display: none;">
+
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+         @click="modalOpen = false"
+         x-show="modalOpen"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"></div>
+
+    <!-- Modal Container -->
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden"
+             @click.stop
+             x-show="modalOpen"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform scale-95"
+             x-transition:enter-end="opacity-100 transform scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 transform scale-100"
+             x-transition:leave-end="opacity-0 transform scale-95">
+
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Edit Organization Profile</h3>
+                <button @click="modalOpen = false"
+                        class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors">
+                    <span class="text-2xl">&times;</span>
+                </button>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                <div class="flex overflow-x-auto">
+                    <button @click="activeTab = 'basic'"
+                            :class="activeTab === 'basic' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="px-6 py-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors">
+                        Basic Information
+                    </button>
+                    <button @click="activeTab = 'ntee'"
+                            :class="activeTab === 'ntee' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="px-6 py-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors flex items-center">
+                        NTEE Codes
+                        <span x-show="profile.ntee_codes && profile.ntee_codes.length > 0"
+                              class="ml-2 px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full"
+                              x-text="'Phase 2'"></span>
+                    </button>
+                    <button @click="activeTab = 'government'"
+                            :class="activeTab === 'government' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="px-6 py-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors flex items-center">
+                        Government Criteria
+                        <span x-show="profile.government_criteria && profile.government_criteria.length > 0"
+                              class="ml-2 px-2 py-0.5 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 rounded-full"
+                              x-text="'Phase 3'"></span>
+                    </button>
+                    <button @click="activeTab = 'enhanced'"
+                            :class="activeTab === 'enhanced' ? 'border-green-500 text-green-600 dark:text-green-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="px-6 py-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors">
+                        Enhanced Data
+                    </button>
+                    <button @click="activeTab = 'userspecific'"
+                            :class="activeTab === 'userspecific' ? 'border-orange-500 text-orange-600 dark:text-orange-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                            class="px-6 py-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors">
+                        User Specific
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 180px);">
+
+                <!-- TAB 1: BASIC INFORMATION -->
+                <div x-show="activeTab === 'basic'" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Organization Name -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Organization Name <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text"
+                                   x-model="profile.name"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white">
+                        </div>
+
+                        <!-- EIN -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                EIN (Tax ID) <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text"
+                                   x-model="profile.ein"
+                                   disabled
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 cursor-not-allowed">
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">EIN cannot be changed</p>
+                        </div>
+
+                        <!-- Profile's NTEE Code (from 990) -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Profile's NTEE Code
+                            </label>
+                            <div class="flex items-center space-x-2">
+                                <input type="text"
+                                       x-model="profile.ntee_code_990"
+                                       disabled
+                                       placeholder="From 990 filing"
+                                       class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 cursor-not-allowed text-sm">
+                                <button @click="$dispatch('research-profile', { ein: profile.ein })"
+                                        :disabled="!profile.ein"
+                                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+                                    Research
+                                </button>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Auto-populated from 990 filing data
+                            </p>
+                        </div>
+
+                        <!-- Organization Type -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Organization Type
+                            </label>
+                            <select x-model="profile.organization_type"
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white">
+                                <option value="">Select Type</option>
+                                <option value="nonprofit">Nonprofit</option>
+                                <option value="501c3">501(c)(3) Public Charity</option>
+                                <option value="foundation">Private Foundation</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Mission Statement -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Mission Statement
+                            </label>
+                            <span class="text-xs text-gray-500 dark:text-gray-400"
+                                  x-text="(profile.mission_statement || '').length + '/1000 characters'"></span>
+                        </div>
+                        <textarea x-model="profile.mission_statement"
+                                  rows="4"
+                                  maxlength="1000"
+                                  placeholder="Providing healthcare services to underserved communities"
+                                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"></textarea>
+                    </div>
+
+                    <!-- Keywords -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Keywords
+                        </label>
+                        <textarea x-model="profile.keywords"
+                                  rows="3"
+                                  placeholder="Key terms and phrases that describe your work"
+                                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"></textarea>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Comma-separated keywords to improve opportunity matching
+                        </p>
+                    </div>
+                </div>
+
+                <!-- TAB 2: NTEE CODES -->
+                <div x-show="activeTab === 'ntee'" class="space-y-4">
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                        <h4 class="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                            NTEE Code Selection
+                        </h4>
+                        <p class="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                            Select the NTEE categories that best represent your organization's activities and focus areas.
+                        </p>
+                        <button @click="$dispatch('open-ntee-selection-modal', { profile })"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                                Select NTEE Codes
+                        </button>
+                    </div>
+
+                    <!-- Selected Codes Display -->
+                    <div x-show="profile.ntee_codes && profile.ntee_codes.length > 0">
+                        <h5 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                            Selected Codes (<span x-text="profile.ntee_codes ? profile.ntee_codes.length : 0"></span>)
+                        </h5>
+                        <div class="space-y-2">
+                            <template x-for="code in profile.ntee_codes" :key="code">
+                                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400"
+                                              x-text="code"></span>
+                                        <span class="text-sm text-gray-700 dark:text-gray-300"
+                                              x-text="getNteeCodeName(code)"></span>
+                                    </div>
+                                    <button @click="removeNteeCode(code)"
+                                            class="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div x-show="!profile.ntee_codes || profile.ntee_codes.length === 0"
+                         class="text-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <h3 class="mt-4 text-sm font-medium text-gray-900 dark:text-white">No NTEE Codes Selected</h3>
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            Click "Select NTEE Codes" to add categories
+                        </p>
+                    </div>
+                </div>
+
+                <!-- TAB 3: GOVERNMENT CRITERIA -->
+                <div x-show="activeTab === 'government'" class="space-y-4">
+                    <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4 mb-4">
+                        <h4 class="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-2">
+                            Government Funding Criteria
+                        </h4>
+                        <p class="text-sm text-purple-700 dark:text-purple-300 mb-3">
+                            Select the federal and state funding criteria that align with your organization's grant preferences and capabilities.
+                        </p>
+                        <button @click="$dispatch('open-government-criteria-modal', { profile })"
+                                class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                                Select Criteria
+                        </button>
+                    </div>
+
+                    <!-- Selected Criteria Display -->
+                    <div x-show="profile.government_criteria && profile.government_criteria.length > 0">
+                        <h5 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                            Selected Criteria (<span x-text="profile.government_criteria ? profile.government_criteria.length : 0"></span>)
+                        </h5>
+                        <div class="space-y-2">
+                            <template x-for="criteria in profile.government_criteria" :key="criteria.id">
+                                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                                    <div class="flex items-center space-x-3 flex-1">
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                              :class="getCriteriaSourceBadgeClass(criteria.source)"
+                                              x-text="criteria.source"></span>
+                                        <span class="text-sm text-gray-700 dark:text-gray-300 font-medium"
+                                              x-text="criteria.name"></span>
+                                    </div>
+                                    <button @click="removeGovernmentCriteria(criteria.id)"
+                                            class="ml-3 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div x-show="!profile.government_criteria || profile.government_criteria.length === 0"
+                         class="text-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                        </svg>
+                        <h3 class="mt-4 text-sm font-medium text-gray-900 dark:text-white">No Criteria Selected</h3>
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            Click "Select Criteria" to add government funding preferences
+                        </p>
+                    </div>
+                </div>
+
+                <!-- TAB 4: ENHANCED DATA (Tool 25 - Scrapy) -->
+                <div x-show="activeTab === 'enhanced'" class="space-y-4">
+                    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
+                        <h4 class="text-sm font-semibold text-green-900 dark:text-green-100 mb-2">
+                            Web Intelligence (Tool 25)
+                        </h4>
+                        <p class="text-sm text-green-700 dark:text-green-300 mb-3">
+                            Data automatically scraped from your organization's website and IRS filings using Tool 25.
+                        </p>
+                    </div>
+
+                    <!-- Enhanced Data Display -->
+                    <div x-show="profile.enhanced_data" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website</label>
+                                <a :href="profile.enhanced_data?.website" target="_blank"
+                                   class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                                   x-text="profile.enhanced_data?.website"></a>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                                <p class="text-sm text-gray-900 dark:text-white" x-text="profile.enhanced_data?.phone"></p>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                                <p class="text-sm text-gray-900 dark:text-white" x-text="profile.enhanced_data?.description"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- No Enhanced Data State -->
+                    <div x-show="!profile.enhanced_data"
+                         class="text-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        </svg>
+                        <h3 class="mt-4 text-sm font-medium text-gray-900 dark:text-white">No Enhanced Data</h3>
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            Run Tool 25 to scrape organization website and IRS data
+                        </p>
+                        <button @click="$dispatch('run-tool-25', { ein: profile.ein })"
+                                class="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
+                            Run Web Scraping
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TAB 5: USER SPECIFIC -->
+                <div x-show="activeTab === 'userspecific'" class="space-y-4">
+                    <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 mb-4">
+                        <h4 class="text-sm font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                            Custom Profile Configuration
+                        </h4>
+                        <p class="text-sm text-orange-700 dark:text-orange-300">
+                            Add reference files, notes, and custom tags specific to this profile.
+                        </p>
+                    </div>
+
+                    <!-- Custom Notes -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Internal Notes
+                        </label>
+                        <textarea x-model="profile.user_notes"
+                                  rows="4"
+                                  placeholder="Add internal notes, reminders, or strategy notes..."
+                                  class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 dark:bg-gray-700 dark:text-white"></textarea>
+                    </div>
+
+                    <!-- Custom Tags -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Custom Tags
+                        </label>
+                        <input type="text"
+                               x-model="profile.custom_tags"
+                               placeholder="high-priority, board-connection, recurring-grant"
+                               class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 dark:bg-gray-700 dark:text-white">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Comma-separated tags for organization and filtering
+                        </p>
+                    </div>
+
+                    <!-- Reference Files -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Reference Files
+                        </label>
+                        <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                Drag and drop files or click to upload
+                            </p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                PDFs, Word docs, Excel files up to 10MB
+                            </p>
+                            <button class="mt-3 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm">
+                                Browse Files
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Display -->
+                <div x-show="error"
+                     class="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4"
+                     x-transition>
+                    <p class="text-red-600 dark:text-red-400 text-sm" x-text="error"></p>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-end space-x-3 px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+                <button @click="modalOpen = false"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors">
+                    Cancel
+                </button>
+                <button @click="saveProfile()"
+                        :disabled="loading"
+                        class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium">
+                    <span x-show="!loading">Update Profile</span>
+                    <span x-show="loading" class="flex items-center">
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Saving...
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Note: NTEE Selection Modal and Government Criteria Modal will be in separate files -->
+<!-- See ntee-selection-modal.html and government-criteria-modal.html -->

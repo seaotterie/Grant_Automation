@@ -25,6 +25,7 @@ from src.profiles.quality_scoring import (
     QualityScore
 )
 from src.profiles.models import UnifiedProfile
+from src.database.database_manager import DatabaseManager, Opportunity
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ orchestrator = ProfileEnhancementOrchestrator()
 profile_scorer = ProfileQualityScorer()
 opportunity_scorer = OpportunityQualityScorer()
 completeness_validator = DataCompletenessValidator()
+database_manager = DatabaseManager("data/catalynx.db")
 
 
 # Helper Functions for SCREENING Stage
@@ -1379,6 +1381,58 @@ async def discover_nonprofit_opportunities(profile_id: str, request: Dict[str, A
         }
 
         logger.info(f"Discovery complete: {len(bmf_results)} BMF → {len(scored_results)} scored → {len(qualified_results)} qualified in {execution_time:.2f}s ({performance['orgs_per_second']} orgs/sec)")
+
+        # Step 4: Save discovered opportunities to database
+        saved_count = 0
+        import hashlib
+        import time as time_module
+
+        for opp_data in opportunities:
+            try:
+                # Generate unique opportunity ID: opp_discovery_{timestamp}_{ein_hash}
+                timestamp_ms = int(time_module.time() * 1000)
+                ein_hash = hashlib.md5((opp_data.get('ein', '') or '').encode()).hexdigest()[:8]
+                opportunity_id = f"opp_discovery_{timestamp_ms}_{ein_hash}"
+
+                # Create Opportunity object
+                opportunity = Opportunity(
+                    id=opportunity_id,
+                    profile_id=profile_id,
+                    organization_name=opp_data['organization_name'],
+                    ein=opp_data.get('ein'),
+                    current_stage='discovery',  # Initial stage for discovered opportunities
+                    overall_score=opp_data.get('overall_score', 0.0),
+                    confidence_level=0.8 if opp_data.get('confidence') == 'high' else 0.6,
+                    scored_at=datetime.now(),
+                    scorer_version='multi_dimensional_v1.0',
+                    analysis_discovery={
+                        'dimensional_scores': opp_data.get('dimensional_scores', {}),
+                        'stage_category': opp_data.get('stage_category'),
+                        '990_data': opp_data.get('990_data'),
+                        'grant_history': opp_data.get('grant_history'),
+                        'location': opp_data.get('location')
+                    },
+                    source='nonprofit',  # Discovery source
+                    discovery_date=datetime.now(),
+                    processing_status='discovered',
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+
+                # Save to database
+                success = database_manager.create_opportunity(opportunity)
+                if success:
+                    saved_count += 1
+                    # Add ID to response for frontend reference
+                    opp_data['opportunity_id'] = opportunity_id
+                else:
+                    logger.warning(f"Failed to save opportunity {opportunity_id}")
+
+            except Exception as e:
+                logger.error(f"Error saving opportunity {opp_data.get('organization_name')}: {e}")
+
+        logger.info(f"Saved {saved_count}/{len(opportunities)} opportunities to database")
+        summary['saved_to_database'] = saved_count
 
         return {
             "status": "success",

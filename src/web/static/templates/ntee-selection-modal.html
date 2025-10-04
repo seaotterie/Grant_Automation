@@ -1,0 +1,210 @@
+<!-- ============================================================ -->
+<!-- NTEE CODE SELECTION MODAL (Nested Modal)                    -->
+<!-- ============================================================ -->
+<!--
+    This modal opens from the Edit Profile Modal (NTEE Codes tab).
+    Layout: Left sidebar (categories) + Right panel (subcategories)
+
+    Based on: 090525_Catalynx Screens/100325_Selec NTEE Codes.jpg
+-->
+
+<div x-data="{
+        modalOpen: false,
+        selectedCategory: null,
+        tempSelectedCodes: [],
+        searchQuery: '',
+        nteeCodes: {} // Loaded from ntee-codes.js
+     }"
+     x-init="
+        // Load NTEE codes data
+        fetch('/static/data/ntee-codes.js')
+            .then(r => r.text())
+            .then(data => {
+                // Extract NTEE_CODES object from JS file
+                eval(data);
+                nteeCodes = NTEE_CODES;
+                console.log('NTEE codes loaded:', Object.keys(nteeCodes).length, 'categories');
+            });
+     "
+     x-show="modalOpen"
+     x-cloak
+     @open-ntee-selection-modal.window="
+        modalOpen = true;
+        tempSelectedCodes = [...($event.detail.profile.ntee_codes || [])];
+        selectedCategory = 'A'; // Default to Arts
+     "
+     @close-ntee-selection-modal.window="modalOpen = false"
+     class="fixed inset-0 z-[60] overflow-y-auto"
+     style="display: none;">
+
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-black bg-opacity-60 transition-opacity"
+         @click="modalOpen = false"
+         x-show="modalOpen"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"></div>
+
+    <!-- Modal Container -->
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-5xl w-full max-h-[85vh] overflow-hidden"
+             @click.stop
+             x-show="modalOpen"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform scale-95"
+             x-transition:enter-end="opacity-100 transform scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 transform scale-100"
+             x-transition:leave-end="opacity-0 transform scale-95">
+
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Select NTEE Codes</h3>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        Select the NTEE categories that best represent your organization's activities and focus areas.
+                    </p>
+                </div>
+                <button @click="modalOpen = false"
+                        class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors">
+                    <span class="text-2xl">&times;</span>
+                </button>
+            </div>
+
+            <!-- Modal Body: Two Column Layout -->
+            <div class="flex" style="height: calc(85vh - 180px);">
+
+                <!-- LEFT SIDEBAR: Main Categories -->
+                <div class="w-80 border-r border-gray-200 dark:border-gray-700 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+                    <div class="p-4">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Main Categories</h4>
+
+                        <!-- Category List -->
+                        <div class="space-y-1">
+                            <template x-for="(categoryData, categoryKey) in nteeCodes" :key="categoryKey">
+                                <button @click="selectedCategory = categoryKey"
+                                        :class="selectedCategory === categoryKey ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                                        class="w-full text-left px-4 py-3 rounded-lg transition-colors border border-gray-200 dark:border-gray-600 flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <span class="font-mono text-lg font-bold"
+                                              :class="selectedCategory === categoryKey ? 'text-white' : 'text-blue-600 dark:text-blue-400'"
+                                              x-text="categoryKey"></span>
+                                        <div class="flex-1">
+                                            <div class="text-sm font-medium" x-text="categoryData.category"></div>
+                                        </div>
+                                    </div>
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                          :class="selectedCategory === categoryKey ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'"
+                                          x-text="categoryData.count || categoryData.subcategories?.length || 0"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT PANEL: Subcategories -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    <template x-if="selectedCategory && nteeCodes[selectedCategory]">
+                        <div>
+                            <!-- Category Header -->
+                            <div class="mb-6">
+                                <div class="flex items-center space-x-3 mb-2">
+                                    <span class="text-3xl font-mono font-bold text-blue-600 dark:text-blue-400"
+                                          x-text="selectedCategory"></span>
+                                    <h4 class="text-xl font-semibold text-gray-900 dark:text-white"
+                                        x-text="nteeCodes[selectedCategory].category"></h4>
+                                </div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400"
+                                   x-text="`${nteeCodes[selectedCategory].subcategories?.length || 0} subcategories available`"></p>
+                            </div>
+
+                            <!-- Search within category -->
+                            <div class="mb-4">
+                                <input type="text"
+                                       x-model="searchQuery"
+                                       placeholder="Search within category..."
+                                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm">
+                            </div>
+
+                            <!-- Subcategory List -->
+                            <div class="space-y-2">
+                                <template x-for="subcategory in nteeCodes[selectedCategory].subcategories?.filter(sub =>
+                                    !searchQuery ||
+                                    sub.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    sub.name.toLowerCase().includes(searchQuery.toLowerCase())
+                                )" :key="subcategory.code">
+                                    <label class="flex items-start p-3 bg-white dark:bg-gray-700 rounded-lg border-2 transition-all cursor-pointer hover:border-blue-300 dark:hover:border-blue-600"
+                                           :class="tempSelectedCodes.includes(subcategory.code) ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600'">
+                                        <input type="checkbox"
+                                               :value="subcategory.code"
+                                               x-model="tempSelectedCodes"
+                                               class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <div class="ml-3 flex-1">
+                                            <div class="flex items-center space-x-2">
+                                                <span class="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400"
+                                                      x-text="subcategory.code"></span>
+                                                <span class="text-sm font-medium text-gray-900 dark:text-white"
+                                                      x-text="subcategory.name"></span>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </template>
+                            </div>
+
+                            <!-- No results message -->
+                            <div x-show="searchQuery && nteeCodes[selectedCategory].subcategories?.filter(sub =>
+                                    sub.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    sub.name.toLowerCase().includes(searchQuery.toLowerCase())
+                                ).length === 0"
+                                 class="text-center py-12">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                                    No codes match "<span x-text="searchQuery"></span>"
+                                </p>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- No category selected -->
+                    <div x-show="!selectedCategory"
+                         class="flex items-center justify-center h-full text-center">
+                        <div>
+                            <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">Select a Category</h3>
+                            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                Choose a category from the left sidebar to view subcategories
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+                <div class="text-sm text-gray-600 dark:text-gray-400">
+                    <span x-text="tempSelectedCodes.length"></span> codes selected
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button @click="modalOpen = false"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-500 transition-colors">
+                        Cancel
+                    </button>
+                    <button @click="
+                        $dispatch('ntee-codes-selected', { codes: tempSelectedCodes });
+                        modalOpen = false;
+                    "
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                        Save Selection
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
