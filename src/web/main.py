@@ -436,6 +436,10 @@ app.include_router(profiles_v2_router)
 # Include V2 discovery routes (Phase 9 - Week 2)
 app.include_router(discovery_v2_router)
 
+# Include opportunities routes (Phase 9 - SCREENING stage)
+from src.web.routers.opportunities import router as opportunities_router
+app.include_router(opportunities_router)
+
 # Include admin routes (Phase 9 - deprecation monitoring)
 from src.web.routers.admin import router as admin_router
 app.include_router(admin_router)

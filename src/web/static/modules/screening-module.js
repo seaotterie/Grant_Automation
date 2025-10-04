@@ -17,6 +17,14 @@ function screeningModule() {
         discoveryLoading: false,
         currentDiscoveryTrack: 'nonprofit',
         discoverySession: null,
+        summaryCounts: {
+            total_found: 0,
+            auto_qualified: 0,
+            review: 0,
+            consider: 0,
+            low_priority: 0,
+            scrapy_completed: 0
+        },
 
         // Screening State
         screeningResults: [],
@@ -44,13 +52,75 @@ function screeningModule() {
         showCriteriaModal: false,
         showSelectionPanel: false,
         viewMode: 'grid', // 'grid' or 'list'
+        showDetailsModal: false,
+        selectedOpportunity: null,
+        detailsModalTab: 'scores' // 'scores', 'details', 'grants', 'website'
 
         // =================================================================
         // DISCOVERY OPERATIONS
         // =================================================================
 
         /**
-         * Execute discovery across different tracks
+         * Execute nonprofit discovery using new unified endpoint
+         * Calls: POST /api/v2/profiles/{profileId}/discover
+         * Returns: BMF + 990 + Multi-Dimensional Scores
+         *
+         * @param {string} profileId - Profile ID with Target NTEE Codes
+         * @param {Object} options - Discovery options (max_results, auto_scrapy_count)
+         */
+        async executeNonprofitDiscovery(profileId, options = {}) {
+            this.discoveryLoading = true;
+            this.discoveryResults = [];
+
+            try {
+                const requestData = {
+                    max_results: options.max_results || 200,
+                    auto_scrapy_count: options.auto_scrapy_count || 20
+                };
+
+                console.log(`Starting nonprofit discovery for profile ${profileId}...`);
+
+                const response = await fetch(`/api/v2/profiles/${profileId}/discover`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Discovery failed');
+                }
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    this.discoveryResults = data.opportunities || [];
+                    this.summaryCounts = data.summary;
+
+                    console.log(`Discovery complete: ${data.summary.total_found} organizations found`);
+                    console.log(`Auto-Qualified: ${data.summary.auto_qualified}, Review: ${data.summary.review}`);
+
+                    this.showNotification?.(
+                        `Found ${data.summary.total_found} opportunities (${data.summary.auto_qualified} auto-qualified)`,
+                        'success'
+                    );
+
+                    return data;
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+
+            } catch (error) {
+                console.error('Nonprofit discovery failed:', error);
+                this.showNotification?.(error.message, 'error');
+                throw error;
+            } finally {
+                this.discoveryLoading = false;
+            }
+        },
+
+        /**
+         * Execute discovery across different tracks (LEGACY - for other tracks)
          * @param {string} track - nonprofit, federal, state, commercial, bmf
          * @param {Object} criteria - Search/filter criteria
          * @param {string} profileId - Optional profile context
@@ -519,6 +589,84 @@ function screeningModule() {
                 withNotes,
                 ready: total > 0
             };
+        },
+
+        /**
+         * View opportunity details modal
+         * @param {Object} opportunity
+         */
+        viewOpportunityDetails(opportunity) {
+            this.selectedOpportunity = opportunity;
+            this.detailsModalTab = 'scores';
+            this.showDetailsModal = true;
+        },
+
+        /**
+         * Close details modal
+         */
+        closeDetailsModal() {
+            this.showDetailsModal = false;
+            this.selectedOpportunity = null;
+        },
+
+        /**
+         * Switch details modal tab
+         * @param {string} tab - 'scores', 'details', 'grants', 'website'
+         */
+        switchDetailsTab(tab) {
+            this.detailsModalTab = tab;
+        },
+
+        /**
+         * Run web research for selected opportunity
+         */
+        async runWebResearch() {
+            if (!this.selectedOpportunity) return;
+
+            try {
+                const response = await fetch(`/api/v2/opportunities/${this.selectedOpportunity.ein}/research`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    this.selectedOpportunity.web_search_complete = true;
+                    this.selectedOpportunity.web_data = data.web_data;
+                    this.showNotification?.('Web research complete', 'success');
+                } else {
+                    throw new Error('Web research failed');
+                }
+            } catch (error) {
+                console.error('Web research error:', error);
+                this.showNotification?.(error.message, 'error');
+            }
+        },
+
+        /**
+         * Promote opportunity to INTELLIGENCE stage
+         */
+        async promoteToIntelligence() {
+            if (!this.selectedOpportunity) return;
+
+            try {
+                const response = await fetch(`/api/v2/opportunities/${this.selectedOpportunity.ein}/promote`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notes: '' })
+                });
+
+                if (response.ok) {
+                    this.showNotification?.('Promoted to INTELLIGENCE stage', 'success');
+                    this.closeDetailsModal();
+                    this.$dispatch?.('opportunity-promoted', this.selectedOpportunity);
+                } else {
+                    throw new Error('Promotion failed');
+                }
+            } catch (error) {
+                console.error('Promotion error:', error);
+                this.showNotification?.(error.message, 'error');
+            }
         }
     };
 }
@@ -527,3 +675,6 @@ function screeningModule() {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = screeningModule;
 }
+
+// CRITICAL: Attach to window for Alpine.js to see it
+window.screeningModule = screeningModule;

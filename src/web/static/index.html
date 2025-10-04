@@ -7,10 +7,7 @@
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Alpine.js for reactivity -->
-    <script defer src="/static/alpine.min.js"></script>
-    
+
     <!-- Chart.js for data visualization -->
     <script src="/static/chart.min.js"></script>
     
@@ -467,7 +464,7 @@
                 <!-- ============================================================ -->
 
                 <!-- STAGE 1: PROFILES (Profile Management) -->
-                <div x-show="activeStage === 'profiles'" class="space-y-6" x-data="profilesModule()" x-init="init()">
+                <div x-show="activeStage === 'profiles'" class="space-y-6" x-data="window.profilesModule ? window.profilesModule() : {}" x-init="init && init()">
                     <!-- Header -->
                     <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg p-6 text-white">
                         <div class="flex items-center justify-between">
@@ -508,44 +505,93 @@
                         </div>
                     </div>
 
-                    <!-- Profile List -->
-                    <div x-show="!loading && profiles.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <template x-for="profile in profiles" :key="profile.profile_id">
-                            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow cursor-pointer"
-                                 @click="selectProfile(profile); switchStage('screening')">
-                                <div class="flex items-start justify-between mb-4">
-                                    <div class="flex-1">
-                                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="profile.name"></h4>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1" x-text="profile.ein"></p>
-                                    </div>
-                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
-                                        Active
-                                    </span>
-                                </div>
-
-                                <div class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                                    <div x-show="profile.organization_type">
-                                        <span class="font-medium">Type:</span>
-                                        <span x-text="profile.organization_type"></span>
-                                    </div>
-                                    <div x-show="profile.mission_statement" class="line-clamp-2">
-                                        <span class="font-medium">Mission:</span>
-                                        <span x-text="profile.mission_statement"></span>
-                                    </div>
-                                </div>
-
-                                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                                    <button @click.stop="openEditModal(profile)"
-                                            class="text-sm text-purple-600 hover:text-purple-700 font-medium">
-                                        Edit
-                                    </button>
-                                    <button @click.stop="openDeleteModal(profile)"
-                                            class="text-sm text-red-600 hover:text-red-700 font-medium">
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>
-                        </template>
+                    <!-- Profile Table -->
+                    <div x-show="!loading && profiles.length > 0" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Organization
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            EIN
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Type
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Opportunities
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Status
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Researched On
+                                        </th>
+                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                    <template x-for="profile in profiles" :key="profile.profile_id">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                                            :class="selectedProfile?.profile_id === profile.profile_id ? 'bg-blue-100 dark:bg-blue-900' : ''"
+                                            @click="selectProfile(profile); switchStage('screening')">
+                                            <!-- Organization -->
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="profile.organization_name || profile.name"></div>
+                                            </td>
+                                            <!-- EIN -->
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-600 dark:text-gray-400" x-text="profile.ein || 'N/A'"></div>
+                                            </td>
+                                            <!-- Type -->
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                                      :class="{
+                                                          'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': (profile.organization_type || 'nonprofit') === 'nonprofit',
+                                                          'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200': (profile.organization_type || '') === '501c3',
+                                                          'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200': (profile.organization_type || '') === 'foundation',
+                                                          'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200': !profile.organization_type
+                                                      }"
+                                                      x-text="profile.organization_type || 'nonprofit'"></span>
+                                            </td>
+                                            <!-- Opportunities -->
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-900 dark:text-white" x-text="(profile.analytics?.opportunity_count || 0) + ' leads'"></div>
+                                            </td>
+                                            <!-- Status -->
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                                      :class="{
+                                                          'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200': (profile.status || 'active') === 'active',
+                                                          'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200': (profile.status || 'active') === 'inactive'
+                                                      }"
+                                                      x-text="profile.status || 'active'"></span>
+                                            </td>
+                                            <!-- Researched On -->
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-600 dark:text-gray-400"
+                                                     x-text="profile.updated_at ? new Date(profile.updated_at).toLocaleDateString() : 'Not run'"></div>
+                                            </td>
+                                            <!-- Actions -->
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button @click.stop="openEditModal(profile)"
+                                                        class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">
+                                                    Edit
+                                                </button>
+                                                <button @click.stop="openDeleteModal(profile)"
+                                                        class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
+                                                    Delete
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- Empty State -->
@@ -568,7 +614,7 @@
                 </div>
 
                 <!-- STAGE 2: SCREENING (Discovery & Screening) -->
-                <div x-show="activeStage === 'screening'" class="space-y-6" x-data="screeningModule()">
+                <div x-show="activeStage === 'screening'" class="space-y-6" x-data="window.screeningModule ? window.screeningModule() : {}">
                     <!-- Header -->
                     <div class="bg-gradient-to-r from-teal-600 to-green-600 rounded-lg p-6 text-white">
                         <div class="flex items-center justify-between">
@@ -633,40 +679,137 @@
                         </button>
                     </div>
 
-                    <!-- Discovery Results -->
+                    <!-- Stage Summary Badges -->
                     <div x-show="discoveryResults.length > 0"
-                         class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                        <div class="flex items-center justify-between mb-4">
+                         class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 mb-4">
+                        <div class="flex items-center gap-4 flex-wrap">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Results:</span>
+                                <span class="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-sm font-semibold">
+                                    Total: <span x-text="summaryCounts.total_found"></span>
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-sm font-semibold">
+                                    🟢 Auto-Qualified: <span x-text="summaryCounts.auto_qualified"></span>
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-3 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full text-sm font-semibold">
+                                    🟡 Review: <span x-text="summaryCounts.review"></span>
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-3 py-1 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 rounded-full text-sm font-semibold">
+                                    🟠 Consider: <span x-text="summaryCounts.consider"></span>
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-3 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-full text-sm font-semibold">
+                                    ⚪ Low Priority: <span x-text="summaryCounts.low_priority"></span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Discovery Results - 7-Column Table -->
+                    <div x-show="discoveryResults.length > 0"
+                         class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                             <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
-                                Discovery Results (<span x-text="discoveryResults.length"></span> found)
+                                Nonprofit Opportunities
                             </h4>
-                            <button @click="screenOpportunities()"
-                                    :disabled="screeningLoading"
-                                    class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50">
-                                <span x-show="!screeningLoading">Screen All</span>
-                                <span x-show="screeningLoading">Screening...</span>
-                            </button>
                         </div>
 
-                        <div class="space-y-2 max-h-96 overflow-y-auto">
-                            <template x-for="result in discoveryResults.slice(0, 10)" :key="result.id">
-                                <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                    <div class="flex-1">
-                                        <div class="font-medium text-gray-900 dark:text-white" x-text="result.organization_name"></div>
-                                        <div class="text-sm text-gray-500 dark:text-gray-400" x-text="result.ein"></div>
-                                    </div>
-                                    <button @click="selectForIntelligence(result)"
-                                            :class="isSelected(result) ? 'bg-teal-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-300'"
-                                            class="px-3 py-1 rounded text-sm font-medium">
-                                        <span x-show="isSelected(result)">Selected</span>
-                                        <span x-show="!isSelected(result)">Select</span>
-                                    </button>
-                                </div>
-                            </template>
-                        </div>
+                        <!-- Scrollable Table Container -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Organization
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Location
+                                        </th>
+                                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Revenue
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Overall Score
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Confidence
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Web Search
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    <template x-for="(opp, index) in discoveryResults" :key="opp.ein">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                            <!-- Organization -->
+                                            <td class="px-4 py-3">
+                                                <div class="font-medium text-gray-900 dark:text-white" x-text="opp.organization_name"></div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400" x-text="'EIN: ' + opp.ein"></div>
+                                            </td>
 
-                        <div x-show="discoveryResults.length > 10" class="mt-4 text-sm text-gray-500 dark:text-gray-400 text-center">
-                            Showing 10 of <span x-text="discoveryResults.length"></span> results
+                                            <!-- Location -->
+                                            <td class="px-4 py-3">
+                                                <div class="text-sm text-gray-900 dark:text-white" x-text="opp.location.city + ', ' + opp.location.state"></div>
+                                            </td>
+
+                                            <!-- Revenue -->
+                                            <td class="px-4 py-3 text-right">
+                                                <div class="text-sm font-medium text-gray-900 dark:text-white"
+                                                     x-text="'$' + (opp.revenue || 0).toLocaleString()"></div>
+                                            </td>
+
+                                            <!-- Overall Score -->
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold"
+                                                      :class="{
+                                                          'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200': opp.stage_category === 'auto_qualified',
+                                                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200': opp.stage_category === 'review',
+                                                          'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200': opp.stage_category === 'consider',
+                                                          'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200': opp.stage_category === 'low_priority'
+                                                      }">
+                                                    <span x-text="Math.round(opp.overall_score * 100) + '%'"></span>
+                                                </span>
+                                            </td>
+
+                                            <!-- Confidence -->
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+                                                      :class="{
+                                                          'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': opp.confidence === 'high',
+                                                          'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200': opp.confidence === 'medium',
+                                                          'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200': opp.confidence === 'low'
+                                                      }">
+                                                    <span x-text="opp.confidence.charAt(0).toUpperCase() + opp.confidence.slice(1)"></span>
+                                                </span>
+                                            </td>
+
+                                            <!-- Web Search -->
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="text-2xl" x-text="opp.web_search_complete ? '✅' : '❌'"></span>
+                                            </td>
+
+                                            <!-- Actions -->
+                                            <td class="px-4 py-3 text-center">
+                                                <button @click="viewOpportunityDetails(opp)"
+                                                        class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium">
+                                                    View Details
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
@@ -717,10 +860,294 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Opportunity Details Modal (4 Tabs) -->
+                    <div x-show="showDetailsModal"
+                         x-cloak
+                         @click.self="closeDetailsModal()"
+                         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+                             @click.stop>
+                            <!-- Modal Header -->
+                            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                                <div>
+                                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white"
+                                        x-text="selectedOpportunity?.organization_name"></h3>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                        EIN: <span x-text="selectedOpportunity?.ein"></span> |
+                                        <span x-text="selectedOpportunity?.location?.city + ', ' + selectedOpportunity?.location?.state"></span>
+                                    </p>
+                                </div>
+                                <button @click="closeDetailsModal()"
+                                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Tab Navigation -->
+                            <div class="flex border-b border-gray-200 dark:border-gray-700 px-6">
+                                <button @click="switchDetailsTab('scores')"
+                                        :class="detailsModalTab === 'scores' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
+                                    Score Breakdown
+                                </button>
+                                <button @click="switchDetailsTab('details')"
+                                        :class="detailsModalTab === 'details' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
+                                    Organization Details
+                                </button>
+                                <button @click="switchDetailsTab('grants')"
+                                        :class="detailsModalTab === 'grants' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
+                                    Grant History
+                                </button>
+                                <button @click="switchDetailsTab('website')"
+                                        :class="detailsModalTab === 'website' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
+                                    Website Data
+                                </button>
+                            </div>
+
+                            <!-- Tab Content -->
+                            <div class="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+                                <!-- Tab 1: Score Breakdown -->
+                                <div x-show="detailsModalTab === 'scores'" class="space-y-4">
+                                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Overall Score</span>
+                                            <span class="text-2xl font-bold"
+                                                  :class="{
+                                                      'text-green-600': selectedOpportunity?.stage_category === 'auto_qualified',
+                                                      'text-yellow-600': selectedOpportunity?.stage_category === 'review',
+                                                      'text-orange-600': selectedOpportunity?.stage_category === 'consider',
+                                                      'text-gray-600': selectedOpportunity?.stage_category === 'low_priority'
+                                                  }"
+                                                  x-text="Math.round((selectedOpportunity?.overall_score || 0) * 100) + '%'"></span>
+                                        </div>
+                                    </div>
+
+                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Dimensional Scores</h4>
+
+                                    <!-- Mission Alignment -->
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between text-sm">
+                                            <span class="font-medium text-gray-700 dark:text-gray-300">Mission Alignment (30%)</span>
+                                            <span class="font-semibold" x-text="Math.round((selectedOpportunity?.dimensional_scores?.mission_alignment?.raw_score || 0) * 100) + '%'"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div class="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                                                 :style="'width: ' + ((selectedOpportunity?.dimensional_scores?.mission_alignment?.raw_score || 0) * 100) + '%'"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Geographic Fit -->
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between text-sm">
+                                            <span class="font-medium text-gray-700 dark:text-gray-300">Geographic Fit (25%)</span>
+                                            <span class="font-semibold" x-text="Math.round((selectedOpportunity?.dimensional_scores?.geographic_fit?.raw_score || 0) * 100) + '%'"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                                 :style="'width: ' + ((selectedOpportunity?.dimensional_scores?.geographic_fit?.raw_score || 0) * 100) + '%'"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Financial Match -->
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between text-sm">
+                                            <span class="font-medium text-gray-700 dark:text-gray-300">Financial Match (20%)</span>
+                                            <span class="font-semibold" x-text="Math.round((selectedOpportunity?.dimensional_scores?.financial_match?.raw_score || 0) * 100) + '%'"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div class="bg-green-600 h-2 rounded-full transition-all duration-300"
+                                                 :style="'width: ' + ((selectedOpportunity?.dimensional_scores?.financial_match?.raw_score || 0) * 100) + '%'"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Eligibility -->
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between text-sm">
+                                            <span class="font-medium text-gray-700 dark:text-gray-300">Eligibility (15%)</span>
+                                            <span class="font-semibold" x-text="Math.round((selectedOpportunity?.dimensional_scores?.eligibility?.raw_score || 0) * 100) + '%'"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div class="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                                                 :style="'width: ' + ((selectedOpportunity?.dimensional_scores?.eligibility?.raw_score || 0) * 100) + '%'"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Timing -->
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between text-sm">
+                                            <span class="font-medium text-gray-700 dark:text-gray-300">Timing (10%)</span>
+                                            <span class="font-semibold" x-text="Math.round((selectedOpportunity?.dimensional_scores?.timing?.raw_score || 0) * 100) + '%'"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div class="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                                                 :style="'width: ' + ((selectedOpportunity?.dimensional_scores?.timing?.raw_score || 0) * 100) + '%'"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Confidence Badge -->
+                                    <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Data Quality Confidence</span>
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                                                  :class="{
+                                                      'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': selectedOpportunity?.confidence === 'high',
+                                                      'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200': selectedOpportunity?.confidence === 'medium',
+                                                      'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200': selectedOpportunity?.confidence === 'low'
+                                                  }"
+                                                  x-text="selectedOpportunity?.confidence?.charAt(0).toUpperCase() + selectedOpportunity?.confidence?.slice(1)"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tab 2: Organization Details -->
+                                <div x-show="detailsModalTab === 'details'" class="space-y-4">
+                                    <template x-if="selectedOpportunity?.['990_data']">
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Financial Summary (IRS Form 990)</h4>
+                                            <div class="grid grid-cols-2 gap-4">
+                                                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400">Revenue</div>
+                                                    <div class="text-xl font-bold text-gray-900 dark:text-white"
+                                                         x-text="'$' + (selectedOpportunity['990_data'].revenue || 0).toLocaleString()"></div>
+                                                </div>
+                                                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400">Expenses</div>
+                                                    <div class="text-xl font-bold text-gray-900 dark:text-white"
+                                                         x-text="'$' + (selectedOpportunity['990_data'].expenses || 0).toLocaleString()"></div>
+                                                </div>
+                                                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400">Assets</div>
+                                                    <div class="text-xl font-bold text-gray-900 dark:text-white"
+                                                         x-text="'$' + (selectedOpportunity['990_data'].assets || 0).toLocaleString()"></div>
+                                                </div>
+                                                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400">Program Ratio</div>
+                                                    <div class="text-xl font-bold text-gray-900 dark:text-white"
+                                                         x-text="selectedOpportunity['990_data'].program_ratio ? selectedOpportunity['990_data'].program_ratio.toFixed(1) + '%' : 'N/A'"></div>
+                                                </div>
+                                            </div>
+                                            <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                                                Form Type: <span class="font-medium" x-text="selectedOpportunity['990_data'].form_type"></span> |
+                                                Tax Year: <span class="font-medium" x-text="selectedOpportunity['990_data'].tax_year"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedOpportunity?.['990_data']">
+                                        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                            No 990 financial data available for this organization.
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Tab 3: Grant History (990-PF only) -->
+                                <div x-show="detailsModalTab === 'grants'" class="space-y-4">
+                                    <template x-if="selectedOpportunity?.grant_history">
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Foundation Grant-Making (Schedule I)</h4>
+                                            <div class="grid grid-cols-2 gap-4">
+                                                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400">Total Grants Paid</div>
+                                                    <div class="text-xl font-bold text-gray-900 dark:text-white"
+                                                         x-text="'$' + (selectedOpportunity.grant_history.grants_paid || 0).toLocaleString()"></div>
+                                                </div>
+                                                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400">Grants to Organizations</div>
+                                                    <div class="text-xl font-bold text-gray-900 dark:text-white"
+                                                         x-text="'$' + (selectedOpportunity.grant_history.grants_to_orgs || 0).toLocaleString()"></div>
+                                                </div>
+                                                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400">Grants to Individuals</div>
+                                                    <div class="text-xl font-bold text-gray-900 dark:text-white"
+                                                         x-text="'$' + (selectedOpportunity.grant_history.grants_to_individuals || 0).toLocaleString()"></div>
+                                                </div>
+                                                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400">Tax Year</div>
+                                                    <div class="text-xl font-bold text-gray-900 dark:text-white"
+                                                         x-text="selectedOpportunity.grant_history.tax_year"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedOpportunity?.grant_history">
+                                        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                            No grant-making history available. This organization may not be a 990-PF filer (private foundation).
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Tab 4: Website Data -->
+                                <div x-show="detailsModalTab === 'website'" class="space-y-4">
+                                    <template x-if="selectedOpportunity?.web_search_complete && selectedOpportunity?.web_data">
+                                        <div>
+                                            <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Web Intelligence (Scrapy)</h4>
+                                            <div class="space-y-4">
+                                                <div>
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400">Website</div>
+                                                    <a :href="'https://' + selectedOpportunity.web_data.website"
+                                                       target="_blank"
+                                                       class="text-teal-600 hover:text-teal-700 font-medium"
+                                                       x-text="selectedOpportunity.web_data.website"></a>
+                                                </div>
+                                                <template x-if="selectedOpportunity.web_data.leadership?.length > 0">
+                                                    <div>
+                                                        <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Leadership Team</div>
+                                                        <div class="space-y-2">
+                                                            <template x-for="leader in selectedOpportunity.web_data.leadership" :key="leader.name">
+                                                                <div class="bg-gray-50 dark:bg-gray-900 rounded p-3">
+                                                                    <div class="font-medium text-gray-900 dark:text-white" x-text="leader.name"></div>
+                                                                    <div class="text-sm text-gray-500 dark:text-gray-400" x-text="leader.title"></div>
+                                                                </div>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <template x-if="selectedOpportunity.web_data.contact">
+                                                    <div>
+                                                        <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Contact Information</div>
+                                                        <div class="bg-gray-50 dark:bg-gray-900 rounded p-3 space-y-1">
+                                                            <div class="text-sm" x-text="selectedOpportunity.web_data.contact.email"></div>
+                                                            <div class="text-sm" x-text="selectedOpportunity.web_data.contact.phone"></div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedOpportunity?.web_search_complete">
+                                        <div class="text-center py-8">
+                                            <p class="text-gray-500 dark:text-gray-400 mb-4">Website data not yet collected.</p>
+                                            <button @click="runWebResearch()"
+                                                    class="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium">
+                                                Run Web Research
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Modal Footer -->
+                            <div class="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700">
+                                <button @click="closeDetailsModal()"
+                                        class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                                    Close
+                                </button>
+                                <button @click="promoteToIntelligence()"
+                                        class="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium">
+                                    Promote to Intelligence
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- STAGE 3: INTELLIGENCE (Deep Analysis & Reports) -->
-                <div x-show="activeStage === 'intelligence'" class="space-y-6" x-data="intelligenceModule()" x-init="init(selectedOpportunities, selectionNotes)">
+                <div x-show="activeStage === 'intelligence'" class="space-y-6" x-data="window.intelligenceModule ? window.intelligenceModule() : {}" x-init="init && init(selectedOpportunities, selectionNotes)">
                     <!-- Header -->
                     <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
                         <div class="flex items-center justify-between">
@@ -9617,16 +10044,62 @@
     </script>
 
     <!-- Phase 9: API Helper Utilities for V2/Tool-based APIs -->
-    <script src="/static/api-helpers.js?v=PHASE9_MIGRATION" onerror="console.error('Failed to load api-helpers.js')"></script>
+    <script src="/static/api-helpers.js?v=ALPINE_DEFER_FIX" onerror="console.error('Failed to load api-helpers.js')"></script>
 
     <!-- Phase 9 Week 2: Modular Architecture - 5 Modules (1,920 lines) -->
-    <script src="/static/modules/state-module.js?v=PHASE9_MODULAR" onerror="console.error('Failed to load state-module.js')"></script>
-    <script src="/static/modules/shared-module.js?v=PHASE9_MODULAR" onerror="console.error('Failed to load shared-module.js')"></script>
-    <script src="/static/modules/profiles-module.js?v=PHASE9_MODULAR" onerror="console.error('Failed to load profiles-module.js')"></script>
-    <script src="/static/modules/screening-module.js?v=PHASE9_MODULAR" onerror="console.error('Failed to load screening-module.js')"></script>
-    <script src="/static/modules/intelligence-module.js?v=PHASE9_MODULAR" onerror="console.error('Failed to load intelligence-module.js')"></script>
+    <!-- IMPORTANT: These must load BEFORE Alpine.js initializes -->
+    <script src="/static/modules/state-module.js?v=ALPINE_DEFER_FIX" onerror="console.error('Failed to load state-module.js')"></script>
+    <script src="/static/modules/shared-module.js?v=ALPINE_DEFER_FIX" onerror="console.error('Failed to load shared-module.js')"></script>
+    <script src="/static/modules/profiles-module.js?v=TABLE_VIEW_v1" onerror="console.error('Failed to load profiles-module.js')"></script>
+    <script src="/static/modules/screening-module.js?v=ALPINE_DEFER_FIX" onerror="console.error('Failed to load screening-module.js')"></script>
+    <script src="/static/modules/intelligence-module.js?v=ALPINE_DEFER_FIX" onerror="console.error('Failed to load intelligence-module.js')"></script>
 
-    <script src="/static/app.js?v=BACKEND_FIXES_COMPLETE" onerror="console.error('Failed to load app.js')"></script>
+    <!-- app.js contains catalynxApp() - must load before Alpine -->
+    <script src="/static/app.js?v=ALPINE_DEFER_FIX" onerror="console.error('Failed to load app.js')"></script>
+
+    <!-- Verify modules are defined BEFORE loading Alpine -->
+    <script>
+        console.log('[LOAD ORDER CHECK - BEFORE ALPINE] Modules defined:', {
+            profilesModule: typeof profilesModule,
+            screeningModule: typeof screeningModule,
+            intelligenceModule: typeof intelligenceModule,
+            catalynxApp: typeof catalynxApp
+        });
+
+        // CRITICAL FIX: Explicitly ensure functions are on window object
+        // This handles cases where the module files didn't attach properly
+        if (typeof profilesModule !== 'undefined' && typeof window.profilesModule === 'undefined') {
+            console.warn('Fixing: profilesModule exists but not on window');
+            window.profilesModule = profilesModule;
+        }
+        if (typeof screeningModule !== 'undefined' && typeof window.screeningModule === 'undefined') {
+            console.warn('Fixing: screeningModule exists but not on window');
+            window.screeningModule = screeningModule;
+        }
+        if (typeof intelligenceModule !== 'undefined' && typeof window.intelligenceModule === 'undefined') {
+            console.warn('Fixing: intelligenceModule exists but not on window');
+            window.intelligenceModule = intelligenceModule;
+        }
+
+        // Verify the fix worked
+        console.log('[WINDOW CHECK] Window objects:', {
+            'window.profilesModule': typeof window.profilesModule,
+            'window.screeningModule': typeof window.screeningModule,
+            'window.intelligenceModule': typeof window.intelligenceModule
+        });
+
+        // Final check
+        if (typeof window.profilesModule === 'undefined') {
+            console.error('CRITICAL: profilesModule still not on window after fix!');
+        }
+    </script>
+
+    <!-- Alpine.js loads LAST after all modules are confirmed ready -->
+    <script src="/static/alpine.min.js" defer></script>
+
+    <script>
+        console.log('[LOAD ORDER CHECK - AFTER ALPINE] Alpine loaded:', typeof Alpine);
+    </script>
 
     <!-- INLINE FIX: Override getOrganizationTypeColor for PROFILER and DISCOVER cache issue -->
     <script>
@@ -10583,6 +11056,23 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Modal System (Phase 9 Week 4) -->
+    <script src="/static/data/ntee-codes.js?v=PROFILES_MODALS_v1"></script>
+    <script src="/static/data/government-criteria.js?v=PROFILES_MODALS_v1"></script>
+    <script src="/static/modules/modal-component.js?v=PROFILES_MODALS_v1"></script>
+    <script src="/static/modules/modal-loader.js?v=PROFILES_MODALS_v1"></script>
+
+    <!-- Debug: Verify modules are loaded -->
+    <script>
+        console.log('=== MODULE LOADING DEBUG ===');
+        console.log('profilesModule defined:', typeof profilesModule);
+        console.log('screeningModule defined:', typeof screeningModule);
+        console.log('intelligenceModule defined:', typeof intelligenceModule);
+        console.log('NTEE_CODES defined:', typeof NTEE_CODES);
+        console.log('GOVERNMENT_CRITERIA defined:', typeof GOVERNMENT_CRITERIA);
+        console.log('===========================');
+    </script>
+
 </body>
 </html>
