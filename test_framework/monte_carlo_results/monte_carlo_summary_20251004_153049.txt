@@ -1,0 +1,231 @@
+======================================================================
+MONTE CARLO OPTIMIZATION RESULTS
+======================================================================
+
+Input CSV: test_framework\monte_carlo_data\discovery_profile_f3adef3b653c_20251004_152551.csv
+Total iterations: 1,000
+Timestamp: 20251004_153049
+
+TOP 10 PARAMETER SETS:
+----------------------------------------------------------------------
+
+Rank #1:
+  Fitness Score: 0.9156
+  Qualified Count: 18
+  Intelligence Cost: $135.00
+  Breakdown: Auto=0, Review=18, Consider=0
+
+  Weights:
+    mission_alignment: 0.230
+    geographic_fit: 0.108
+    financial_match: 0.156
+    grant_making_capacity: 0.358
+    eligibility: 0.069
+    timing: 0.078
+
+  Thresholds:
+    min_score: 0.696
+    auto_qualified: 0.878
+    review: 0.657
+    consider: 0.746
+
+----------------------------------------------------------------------
+
+Rank #2:
+  Fitness Score: 0.8428
+  Qualified Count: 19
+  Intelligence Cost: $142.50
+  Breakdown: Auto=0, Review=12, Consider=0
+
+  Weights:
+    mission_alignment: 0.210
+    geographic_fit: 0.174
+    financial_match: 0.165
+    grant_making_capacity: 0.371
+    eligibility: 0.049
+    timing: 0.031
+
+  Thresholds:
+    min_score: 0.697
+    auto_qualified: 0.817
+    review: 0.731
+    consider: 0.747
+
+----------------------------------------------------------------------
+
+Rank #3:
+  Fitness Score: 0.7143
+  Qualified Count: 19
+  Intelligence Cost: $142.50
+  Breakdown: Auto=0, Review=0, Consider=0
+
+  Weights:
+    mission_alignment: 0.209
+    geographic_fit: 0.122
+    financial_match: 0.121
+    grant_making_capacity: 0.394
+    eligibility: 0.118
+    timing: 0.036
+
+  Thresholds:
+    min_score: 0.697
+    auto_qualified: 0.813
+    review: 0.762
+    consider: 0.747
+
+----------------------------------------------------------------------
+
+Rank #4:
+  Fitness Score: 0.7132
+  Qualified Count: 19
+  Intelligence Cost: $142.50
+  Breakdown: Auto=0, Review=0, Consider=0
+
+  Weights:
+    mission_alignment: 0.166
+    geographic_fit: 0.154
+    financial_match: 0.132
+    grant_making_capacity: 0.419
+    eligibility: 0.121
+    timing: 0.009
+
+  Thresholds:
+    min_score: 0.692
+    auto_qualified: 0.869
+    review: 0.777
+    consider: 0.742
+
+----------------------------------------------------------------------
+
+Rank #5:
+  Fitness Score: 0.5092
+  Qualified Count: 140
+  Intelligence Cost: $1050.00
+  Breakdown: Auto=0, Review=140, Consider=0
+
+  Weights:
+    mission_alignment: 0.180
+    geographic_fit: 0.165
+    financial_match: 0.200
+    grant_making_capacity: 0.328
+    eligibility: 0.051
+    timing: 0.076
+
+  Thresholds:
+    min_score: 0.685
+    auto_qualified: 0.824
+    review: 0.683
+    consider: 0.735
+
+----------------------------------------------------------------------
+
+Rank #6:
+  Fitness Score: 0.5077
+  Qualified Count: 140
+  Intelligence Cost: $1050.00
+  Breakdown: Auto=0, Review=140, Consider=0
+
+  Weights:
+    mission_alignment: 0.150
+    geographic_fit: 0.192
+    financial_match: 0.220
+    grant_making_capacity: 0.325
+    eligibility: 0.095
+    timing: 0.018
+
+  Thresholds:
+    min_score: 0.699
+    auto_qualified: 0.827
+    review: 0.710
+    consider: 0.749
+
+----------------------------------------------------------------------
+
+Rank #7:
+  Fitness Score: 0.4570
+  Qualified Count: 208
+  Intelligence Cost: $1560.00
+  Breakdown: Auto=0, Review=208, Consider=0
+
+  Weights:
+    mission_alignment: 0.205
+    geographic_fit: 0.213
+    financial_match: 0.159
+    grant_making_capacity: 0.321
+    eligibility: 0.098
+    timing: 0.004
+
+  Thresholds:
+    min_score: 0.686
+    auto_qualified: 0.855
+    review: 0.665
+    consider: 0.736
+
+----------------------------------------------------------------------
+
+Rank #8:
+  Fitness Score: 0.4533
+  Qualified Count: 202
+  Intelligence Cost: $1515.00
+  Breakdown: Auto=0, Review=202, Consider=0
+
+  Weights:
+    mission_alignment: 0.190
+    geographic_fit: 0.242
+    financial_match: 0.141
+    grant_making_capacity: 0.334
+    eligibility: 0.051
+    timing: 0.041
+
+  Thresholds:
+    min_score: 0.695
+    auto_qualified: 0.803
+    review: 0.668
+    consider: 0.745
+
+----------------------------------------------------------------------
+
+Rank #9:
+  Fitness Score: 0.4493
+  Qualified Count: 208
+  Intelligence Cost: $1560.00
+  Breakdown: Auto=0, Review=202, Consider=0
+
+  Weights:
+    mission_alignment: 0.219
+    geographic_fit: 0.224
+    financial_match: 0.122
+    grant_making_capacity: 0.318
+    eligibility: 0.079
+    timing: 0.038
+
+  Thresholds:
+    min_score: 0.686
+    auto_qualified: 0.859
+    review: 0.698
+    consider: 0.736
+
+----------------------------------------------------------------------
+
+Rank #10:
+  Fitness Score: 0.4491
+  Qualified Count: 206
+  Intelligence Cost: $1545.00
+  Breakdown: Auto=0, Review=206, Consider=0
+
+  Weights:
+    mission_alignment: 0.150
+    geographic_fit: 0.224
+    financial_match: 0.103
+    grant_making_capacity: 0.344
+    eligibility: 0.131
+    timing: 0.048
+
+  Thresholds:
+    min_score: 0.693
+    auto_qualified: 0.813
+    review: 0.660
+    consider: 0.743
+
+----------------------------------------------------------------------
+

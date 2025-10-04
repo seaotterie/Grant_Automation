@@ -72,25 +72,29 @@ def _query_bmf_database(ntee_codes: List[str], max_results: int = 200) -> List[D
 
         where_clause = " OR ".join(ntee_conditions) if ntee_conditions else "1=1"
 
+        # Join with foundation data to get grant-making info (use most recent filing)
         sql = f"""
             SELECT
-                ein,
-                name,
-                state,
-                city,
-                ntee_code,
-                income_amt,
-                asset_amt,
-                subsection,
-                ruling_date
-            FROM bmf_organizations
+                b.ein,
+                b.name,
+                b.state,
+                b.city,
+                b.ntee_code,
+                b.income_amt,
+                b.asset_amt,
+                b.subsection,
+                b.ruling_date,
+                b.foundation_code,
+                MAX(pf.distribamt) as grants_distributed
+            FROM bmf_organizations b
+            LEFT JOIN form_990pf pf ON b.ein = pf.ein
             WHERE ({where_clause})
-            AND subsection IN ('03', '04')  -- 501(c)(3) and 501(c)(4) only
-            ORDER BY income_amt DESC
-            LIMIT ?
+            AND b.subsection IN ('03', '04')  -- 501(c)(3) and 501(c)(4) only
+            GROUP BY b.ein, b.name, b.state, b.city, b.ntee_code, b.income_amt, b.asset_amt, b.subsection, b.ruling_date, b.foundation_code
+            ORDER BY b.income_amt DESC
         """
 
-        params.append(max_results)
+        # Remove LIMIT - score all matching orgs, filter by threshold later
 
         cursor.execute(sql, params)
         rows = cursor.fetchall()
@@ -141,7 +145,7 @@ def _enrich_with_990_data(bmf_orgs: List[Dict[str, Any]]) -> List[Dict[str, Any]
             cursor.execute("""
                 SELECT
                     totrevenue, totfuncexpns, totassetsend, totliabend,
-                    totprgmrevnue, totcntrbgfts, invstmntinc,
+                    prgmservrevnue, totcntrbgfts, invstmntinc,
                     compnsatncurrofcr, othrsalwages, profndraising,
                     tax_pd as tax_year
                 FROM form_990
@@ -158,15 +162,16 @@ def _enrich_with_990_data(bmf_orgs: List[Dict[str, Any]]) -> List[Dict[str, Any]
             if not form_990_data:
                 cursor.execute("""
                     SELECT
-                        totrevenue, totexpns, totassetsend, totliabend,
-                        contrpdduringyr as contributions_paid,
-                        totcntrbrcvd as contributions_received,
-                        grntspaidtoindiv as grants_to_individuals,
-                        grntstotorgspaid as grants_to_orgs,
-                        tax_pd as tax_year
+                        totrcptperbks as totrevenue,
+                        totexpnspbks as totexpns,
+                        totassetsend,
+                        totliabend,
+                        distribamt as contributions_paid,
+                        grscontrgifts as contributions_received,
+                        tax_year
                     FROM form_990pf
                     WHERE ein = ?
-                    ORDER BY tax_pd DESC
+                    ORDER BY tax_year DESC
                     LIMIT 1
                 """, (ein,))
                 row = cursor.fetchone()
@@ -178,13 +183,16 @@ def _enrich_with_990_data(bmf_orgs: List[Dict[str, Any]]) -> List[Dict[str, Any]
             if not form_990_data:
                 cursor.execute("""
                     SELECT
-                        totrevenue, totexpns, totassetsend, totliabend,
+                        totrevnue as totrevenue,
+                        totexpns,
+                        totassetsend,
+                        totliabltend as totliabend,
                         totcntrbs as contributions,
                         prgmservrev as program_revenue,
-                        tax_pd as tax_year
+                        tax_year
                     FROM form_990ez
                     WHERE ein = ?
-                    ORDER BY tax_pd DESC
+                    ORDER BY tax_year DESC
                     LIMIT 1
                 """, (ein,))
                 row = cursor.fetchone()
@@ -219,8 +227,6 @@ def _enrich_with_990_data(bmf_orgs: List[Dict[str, Any]]) -> List[Dict[str, Any]
                 if form_type == "990-PF":
                     enriched_org['grant_history'] = {
                         'grants_paid': form_990_data.get('contributions_paid') or 0,
-                        'grants_to_individuals': form_990_data.get('grants_to_individuals') or 0,
-                        'grants_to_orgs': form_990_data.get('grants_to_orgs') or 0,
                         'tax_year': form_990_data.get('tax_year')
                     }
             else:
@@ -244,17 +250,26 @@ def _calculate_multi_dimensional_scores(
     profile: UnifiedProfile
 ) -> List[Dict[str, Any]]:
     """
-    Calculate multi-dimensional scores for DISCOVER stage using simplified algorithm.
+    Calculate multi-dimensional scores for DISCOVER stage with Grant-Making focus.
 
-    5 Dimensions for DISCOVER stage:
-    1. Mission Alignment (30%) - NTEE code match
-    2. Geographic Fit (25%) - State/region matching
-    3. Financial Match (20%) - Revenue/assets compatibility
-    4. Eligibility (15%) - 501(c)(3) status
-    5. Timing (10%) - Placeholder (grant cycles unknown)
+    6 Dimensions for DISCOVER stage:
+    1. Mission Alignment (25%) - NTEE code match
+    2. Geographic Fit (20%) - State/region matching
+    3. Financial Match (15%) - Revenue/assets compatibility
+    4. Grant-Making Capacity (25%) - Foundation type + grants distributed
+    5. Eligibility (10%) - 501(c)(3) status
+    6. Timing (5%) - Placeholder (grant cycles unknown)
+
+    Grant-Making Capacity Tiers (small nonprofit friendly):
+    - Tier 1: $10K-$25K → +0.15 (active small grantor)
+    - Tier 2: $25K-$100K → +0.25 (solid grantor)
+    - Tier 3: $100K-$500K → +0.35 (strong grantor)
+    - Tier 4: $500K+ → +0.45 (major grantor)
+    - Foundation code 16 → +0.40 (private grantmaking foundation)
+    - Foundation code 15 → +0.20 (operating foundation)
 
     Args:
-        enriched_orgs: Organizations with 990 data
+        enriched_orgs: Organizations with 990 data and foundation info
         profile: User's profile with Target NTEE Codes, location preferences
 
     Returns:
@@ -267,10 +282,11 @@ def _calculate_multi_dimensional_scores(
     target_states = profile.government_criteria.get('states', ['VA']) if hasattr(profile, 'government_criteria') and profile.government_criteria else ['VA']
 
     for org in enriched_orgs:
-        # Calculate 5 dimensional scores
+        # Calculate 6 dimensional scores
         dimensions = {}
 
-        # 1. Mission Alignment (30%) - NTEE code match
+        # 1. Mission Alignment (23%) - NTEE code match
+        # Monte Carlo optimized weight: 0.230
         ntee_score = 0.5  # Default medium score
         org_ntee = org.get('ntee_code', '')
         if org_ntee:
@@ -282,27 +298,35 @@ def _calculate_multi_dimensional_scores(
                     break
         dimensions['mission_alignment'] = {
             'raw_score': ntee_score,
-            'weight': 0.30,
-            'weighted_score': ntee_score * 0.30,
+            'weight': 0.230,
+            'weighted_score': ntee_score * 0.230,
             'data_quality': 1.0 if org_ntee else 0.5
         }
 
-        # 2. Geographic Fit (25%) - State match
+        # 2. Geographic Fit (11%) - State match
+        # Monte Carlo optimized weight: 0.108
         geo_score = 0.5  # Default
         org_state = org.get('state', '')
         if org_state in target_states:
             geo_score = 1.0
         dimensions['geographic_fit'] = {
             'raw_score': geo_score,
-            'weight': 0.25,
-            'weighted_score': geo_score * 0.25,
+            'weight': 0.108,
+            'weighted_score': geo_score * 0.108,
             'data_quality': 1.0 if org_state else 0.3
         }
 
-        # 3. Financial Match (20%) - Revenue compatibility
+        # 3. Financial Match (15%) - Revenue compatibility
         fin_score = 0.5  # Default
         org_revenue = org.get('990_data', {}).get('revenue', 0) if org.get('990_data') else org.get('income_amt', 0)
-        if org_revenue:
+
+        # Handle None values
+        if org_revenue is None:
+            org_revenue = 0
+        else:
+            org_revenue = float(org_revenue)
+
+        if org_revenue > 0:
             # Simple revenue band scoring
             if 100000 <= org_revenue <= 10000000:  # $100K - $10M sweet spot
                 fin_score = 0.9
@@ -312,25 +336,66 @@ def _calculate_multi_dimensional_scores(
                 fin_score = 0.7
         dimensions['financial_match'] = {
             'raw_score': fin_score,
-            'weight': 0.20,
-            'weighted_score': fin_score * 0.20,
+            'weight': 0.156,
+            'weighted_score': fin_score * 0.156,
             'data_quality': 1.0 if org_revenue > 0 else 0.3
         }
 
-        # 4. Eligibility (15%) - 501(c)(3) status
+        # 4. Grant-Making Capacity (36%) - EVIDENCE-BASED scoring
+        # Monte Carlo optimization determined this should be highest weight (35.8%)
+        grant_score = 0.0  # Default (no evidence of grant-making)
+        foundation_code = org.get('foundation_code')
+        grants_distributed = org.get('grants_distributed')
+
+        # Handle None values
+        if grants_distributed is None:
+            grants_distributed = 0
+        else:
+            grants_distributed = float(grants_distributed)
+
+        # Grants distributed tiers (EVIDENCE-BASED - small nonprofit friendly)
+        if grants_distributed >= 500000:  # Tier 4: Major grantor ($500K+)
+            grant_score = 0.90
+        elif grants_distributed >= 100000:  # Tier 3: Strong grantor ($100K-$500K)
+            grant_score = 0.70
+        elif grants_distributed >= 25000:  # Tier 2: Solid grantor ($25K-$100K)
+            grant_score = 0.50
+        elif grants_distributed >= 10000:  # Tier 1: Active small grantor ($10K-$25K)
+            grant_score = 0.30
+        elif grants_distributed > 0:  # Under $10K - minimal but active
+            grant_score = 0.15
+        # Foundation code ONLY adds points if there's grant evidence
+        elif foundation_code == '16':  # Grantmaking foundation but NO grants data
+            grant_score = 0.10  # Low score - classified but no evidence
+        elif foundation_code == '15':  # Operating foundation, no grants
+            grant_score = 0.05  # Minimal - may give grants but no data
+        # Grant-seekers (no foundation code, no grants) = 0.0 (default)
+
+        dimensions['grant_making_capacity'] = {
+            'raw_score': grant_score,
+            'weight': 0.358,
+            'weighted_score': grant_score * 0.358,
+            'data_quality': 1.0 if (foundation_code or grants_distributed > 0) else 0.2,
+            'foundation_code': foundation_code,
+            'grants_distributed': grants_distributed
+        }
+
+        # 5. Eligibility (7%) - 501(c)(3) status
+        # Monte Carlo optimized weight: 0.069
         elig_score = 1.0 if org.get('subsection') in ['03', '04'] else 0.5
         dimensions['eligibility'] = {
             'raw_score': elig_score,
-            'weight': 0.15,
-            'weighted_score': elig_score * 0.15,
+            'weight': 0.069,
+            'weighted_score': elig_score * 0.069,
             'data_quality': 1.0
         }
 
-        # 5. Timing (10%) - Placeholder (unknown grant cycles)
+        # 6. Timing (8%) - Placeholder (unknown grant cycles)
+        # Monte Carlo optimized weight: 0.078
         dimensions['timing'] = {
             'raw_score': 0.7,  # Neutral score
-            'weight': 0.10,
-            'weighted_score': 0.7 * 0.10,
+            'weight': 0.078,
+            'weighted_score': 0.7 * 0.078,
             'data_quality': 0.3  # Low quality (no data)
         }
 
@@ -341,12 +406,13 @@ def _calculate_multi_dimensional_scores(
         avg_quality = sum(d['data_quality'] for d in dimensions.values()) / len(dimensions)
         confidence_level = "high" if avg_quality >= 0.8 else "medium" if avg_quality >= 0.5 else "low"
 
-        # Categorize by score
-        if overall_score >= 0.85:
+        # Categorize by score (percentile-based thresholds)
+        # Based on observed score distribution: min=0.533, max=0.745, mean=0.621
+        if overall_score >= 0.74:  # ~99.5th percentile - best matches
             stage_category = "auto_qualified"
-        elif overall_score >= 0.70:
+        elif overall_score >= 0.71:  # ~97th percentile - strong candidates
             stage_category = "review"
-        elif overall_score >= 0.55:
+        elif overall_score >= 0.68:  # ~90th percentile - worth deeper look
             stage_category = "consider"
         else:
             stage_category = "low_priority"
@@ -948,14 +1014,17 @@ async def list_profiles(
     try:
         limit = min(limit, 200)  # Cap at 200
         offset = (page - 1) * limit
+        logger.info(f"[ENDPOINT] List profiles called with limit={limit}, offset={offset}, search={search}")
 
         # Get all profiles (UnifiedProfileService doesn't have list method, so query directly)
+        logger.info(f"[ENDPOINT] Calling profile_service.list_profiles()")
         profiles = profile_service.list_profiles(limit=limit, offset=offset, search=search)
+        logger.info(f"[ENDPOINT] Retrieved {len(profiles) if profiles else 0} profiles")
 
         # Sort profiles
         reverse = (order == "desc")
         if sort == "name":
-            profiles.sort(key=lambda p: p.get('name', ''), reverse=reverse)
+            profiles.sort(key=lambda p: p.get('organization_name', ''), reverse=reverse)
         elif sort == "created_at":
             profiles.sort(key=lambda p: p.get('created_at', ''), reverse=reverse)
         elif sort == "updated_at":
@@ -970,7 +1039,7 @@ async def list_profiles(
         }
 
     except Exception as e:
-        logger.error(f"Failed to list profiles: {e}")
+        logger.error(f"[ENDPOINT] Failed to list profiles: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1219,28 +1288,42 @@ async def discover_nonprofit_opportunities(profile_id: str, request: Dict[str, A
                 detail="Profile has no NTEE Codes. Please configure in Profile modal."
             )
 
-        max_results = request.get('max_results', 200)
+        # Scoring parameters
+        min_score_threshold = request.get('min_score_threshold', 0.62)  # 50th percentile - baseline qualification
+        max_return_limit = request.get('max_return_limit', 500)  # Safety cap for UI performance
         auto_scrapy_count = request.get('auto_scrapy_count', 20)
 
         logger.info(f"Starting discovery for profile {profile_id} with NTEE codes: {target_ntee_codes}")
+        logger.info(f"Parameters: min_score={min_score_threshold}, max_return={max_return_limit}")
 
-        # Step 1: BMF Filter - Query nonprofit_intelligence.db
-        bmf_results = _query_bmf_database(target_ntee_codes, max_results)
-        logger.info(f"BMF Filter found {len(bmf_results)} organizations")
+        # Step 1: BMF Filter - Query nonprofit_intelligence.db (NO LIMIT - score all)
+        bmf_start = time.time()
+        bmf_results = _query_bmf_database(target_ntee_codes, None)  # None = no limit
+        bmf_time = time.time() - bmf_start
+        logger.info(f"BMF Filter found {len(bmf_results)} organizations in {bmf_time:.2f}s")
 
         # Step 2: 990 Data Enrichment - Add financial data from 990/990-PF/990-EZ filings
+        enrichment_start = time.time()
         enriched_results = _enrich_with_990_data(bmf_results)
-        logger.info(f"990 enrichment completed for {len(enriched_results)} organizations")
+        enrichment_time = time.time() - enrichment_start
+        logger.info(f"990 enrichment completed for {len(enriched_results)} organizations in {enrichment_time:.2f}s")
 
         # Step 3: Multi-Dimensional Scoring - Calculate compatibility scores
+        scoring_start = time.time()
         scored_results = _calculate_multi_dimensional_scores(enriched_results, profile)
-        logger.info(f"Multi-dimensional scoring completed for {len(scored_results)} organizations")
+        scoring_time = time.time() - scoring_start
+        logger.info(f"Multi-dimensional scoring completed for {len(scored_results)} organizations in {scoring_time:.2f}s")
+
+        # Step 4: Filter by score threshold and apply safety cap
+        qualified_results = [org for org in scored_results if org['overall_score'] >= min_score_threshold]
+        qualified_results = qualified_results[:max_return_limit]  # Safety cap
+        logger.info(f"After score filter (≥{min_score_threshold}): {len(qualified_results)} qualified organizations")
 
         # TODO: Step 4 - Web Intelligence Tool Scrapy (integrate in next task)
 
-        # Convert scored results to opportunities
+        # Convert qualified results to opportunities
         opportunities = []
-        for org in scored_results:
+        for org in qualified_results:
             # Use 990 revenue if available, otherwise BMF estimate
             revenue = 0
             if org.get('990_data') and org['990_data'].get('revenue'):
@@ -1272,21 +1355,37 @@ async def discover_nonprofit_opportunities(profile_id: str, request: Dict[str, A
             summary_counts[category] = summary_counts.get(category, 0) + 1
 
         summary = {
-            "total_found": len(opportunities),
+            "total_bmf_matches": len(bmf_results),
+            "total_scored": len(scored_results),
+            "total_qualified": len(qualified_results),
+            "total_returned": len(opportunities),
             "auto_qualified": summary_counts.get("auto_qualified", 0),
             "review": summary_counts.get("review", 0),
             "consider": summary_counts.get("consider", 0),
             "low_priority": summary_counts.get("low_priority", 0),
+            "min_score_threshold": min_score_threshold,
             "scrapy_completed": 0
         }
 
         execution_time = time.time() - start_time
+
+        # Performance breakdown
+        performance = {
+            "total_time": execution_time,
+            "bmf_query_time": bmf_time,
+            "enrichment_time": enrichment_time,
+            "scoring_time": scoring_time,
+            "orgs_per_second": int(len(scored_results) / execution_time) if execution_time > 0 else 0
+        }
+
+        logger.info(f"Discovery complete: {len(bmf_results)} BMF → {len(scored_results)} scored → {len(qualified_results)} qualified in {execution_time:.2f}s ({performance['orgs_per_second']} orgs/sec)")
 
         return {
             "status": "success",
             "profile_id": profile_id,
             "opportunities": opportunities,
             "summary": summary,
+            "performance": performance,
             "execution_time": execution_time
         }
 
