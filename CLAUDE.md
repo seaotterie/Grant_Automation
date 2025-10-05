@@ -115,18 +115,19 @@
 - Priority ranking and focus area selection
 
 **Tool 2: Deep Intelligence Tool** ✅
-- Quick depth: $0.75, 5-10 min (CURRENT tier equivalent)
-- Standard depth: $7.50, 15-20 min (STANDARD tier equivalent)
-- Enhanced depth: $22.00, 30-45 min (ENHANCED tier equivalent)
-- Complete depth: $42.00, 45-60 min (COMPLETE tier equivalent)
+- Essentials depth: $2.00 user ($0.05 AI), 15-20 min - **includes network intelligence**
+- Premium depth: $8.00 user ($0.10 AI), 30-40 min - enhanced features + dossier
+- Network analysis included in base tier (was $6.50 add-on)
 - Comprehensive analysis: ~10 selected opportunities
 - Replaces: 6 processors (ai_heavy_deep, ai_heavy_researcher, 4 tier processors)
+- **New**: True AI cost transparency with 40-80x platform value markup
 
-**Pipeline Economics**:
-- Stage 1: $0.68 for 200 opportunities
-- Stage 2: $50-100 typical (variable depth)
-- Total: ~$50-100 vs. manual research
-- Result: 87.5% processor reduction with better architecture
+**Pipeline Economics** (NEW TRUE-COST PRICING):
+- Stage 1: $0.68 for 200 opportunities (screening)
+- Stage 2: $20-80 typical (10 opportunities × $2-8/each)
+- Total: ~$21-81 vs. $800-1,600 manual research
+- **Savings**: 97-99% vs consultant rates
+- Result: 87.5% processor reduction + 73-81% cost reduction for users
 
 **Phase 3 Achievement - Supporting Intelligence Tools**:
 
@@ -274,11 +275,11 @@
 
 ## CORE SYSTEM CAPABILITIES
 
-### 4-Tier Intelligence System (Business Packages)
-- **CURRENT ($0.75)**: 4-stage AI analysis, strategic recommendations (5-10 min)
-- **STANDARD ($7.50)**: + Historical funding analysis, geographic patterns (15-20 min)  
-- **ENHANCED ($22.00)**: + Document analysis, network intelligence, decision maker profiles (30-45 min)
-- **COMPLETE ($42.00)**: + Policy analysis, monitoring, strategic consulting (45-60 min)
+### 2-Tier Intelligence System (TRUE COST PRICING)
+- **ESSENTIALS ($2.00)**: Complete 4-stage AI analysis + **network intelligence** + historical/geographic insights (15-20 min) | AI Cost: $0.05
+- **PREMIUM ($8.00)**: + Enhanced network pathways + policy analysis + strategic consulting + comprehensive dossier (30-40 min) | AI Cost: $0.10
+
+**Why 2 Tiers?** Previous 4-tier system ($0.75 → $7.50 → $22 → $42) based on consultant rates, not AI costs. New pricing reflects true AI API costs ($0.05-0.10) with transparent platform value markup (40-80x). Network intelligence now INCLUDED in base tier (was $6.50 add-on). See [TIER_CONSOLIDATION_RATIONALE.md](docs/TIER_CONSOLIDATION_RATIONALE.md) for full analysis.
 
 ### Dual Architecture Design
 - **Tab Processors**: 18 granular components for custom workflows ($0.0004-$0.20 each)

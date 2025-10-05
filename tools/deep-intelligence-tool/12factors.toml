@@ -3,9 +3,9 @@
 
 [tool]
 name = "Deep Intelligence Tool"
-version = "1.0.0"
-description = "Comprehensive deep intelligence analysis with 4 configurable depth levels ($0.75-$42.00)"
-purpose = "Stage 2: Detailed analysis of ~10 selected opportunities from screening tool"
+version = "2.0.0"
+description = "Comprehensive deep intelligence with TRUE COST 2-tier system ($2-$8 user, $0.05-$0.10 AI)"
+purpose = "Stage 2: Detailed analysis of ~10 selected opportunities - network intelligence included in base tier"
 replaces_processors = [
     "ai_heavy_deep_researcher",
     "ai_heavy_researcher",
@@ -15,6 +15,7 @@ replaces_processors = [
     "complete_tier_processor",
     "enhanced_ai_lite_processor"
 ]
+pricing_model = "True AI cost + platform value (40-80x markup transparency)"
 
 # Factor 1: One codebase tracked in revision control
 codebase_tracked = true
@@ -85,68 +86,73 @@ api_first = true
 programmatic_interface = true
 human_interface = "Secondary (via web UI integration)"
 
-# Depth Level Configurations
+# Depth Level Configurations - TRUE COST 2-TIER SYSTEM
 
-[tool.depths.quick]
-cost_usd = 0.75
-time_minutes = [5, 10]
-equivalent_to = "CURRENT tier"
+[tool.depths.essentials]
+user_price_usd = 2.00
+ai_cost_usd = 0.05
+markup = "40x (platform value)"
+time_minutes = [15, 20]
+equivalent_to = "ESSENTIALS tier - complete intelligence + network"
 analysis_stages = ["PLAN", "ANALYZE", "EXAMINE", "APPROACH"]
 features = [
     "strategic_fit",
     "financial_viability",
     "operational_readiness",
-    "risk_assessment"
+    "risk_assessment",
+    "network_intelligence",      # INCLUDED in base tier!
+    "historical_intelligence",   # $0 AI cost (algorithmic)
+    "geographic_analysis"        # $0 AI cost (algorithmic)
 ]
+competitive_advantage = "Network intelligence at $2 = market first"
+
+[tool.depths.premium]
+user_price_usd = 8.00
+ai_cost_usd = 0.10
+markup = "80x (strategic consulting value)"
+time_minutes = [30, 40]
+equivalent_to = "PREMIUM tier - strategic advantage package"
+analysis_stages = ["PLAN", "ANALYZE", "EXAMINE", "APPROACH"]
+features = [
+    "strategic_fit",
+    "financial_viability",
+    "operational_readiness",
+    "risk_assessment",
+    "network_intelligence",
+    "historical_intelligence",
+    "geographic_analysis",
+    "enhanced_network_pathways",  # Warm introductions
+    "decision_maker_profiling",
+    "policy_analysis",
+    "strategic_consulting",
+    "comprehensive_dossier"
+]
+report_pages = "20+"
+
+# DEPRECATED Depths (30-day sunset, auto-mapped)
+[tool.depths.quick]
+deprecated = true
+maps_to = "essentials"
+user_price_usd = 2.00
+sunset_date = "2025-11-04"
 
 [tool.depths.standard]
-cost_usd = 7.50
-time_minutes = [15, 20]
-equivalent_to = "STANDARD tier"
-analysis_stages = ["PLAN", "ANALYZE", "EXAMINE", "APPROACH"]
-features = [
-    "strategic_fit",
-    "financial_viability",
-    "operational_readiness",
-    "risk_assessment",
-    "historical_intelligence",
-    "geographic_analysis"
-]
+deprecated = true
+maps_to = "essentials"
+user_price_usd = 2.00
+sunset_date = "2025-11-04"
 
 [tool.depths.enhanced]
-cost_usd = 22.00
-time_minutes = [30, 45]
-equivalent_to = "ENHANCED tier"
-analysis_stages = ["PLAN", "ANALYZE", "EXAMINE", "APPROACH"]
-features = [
-    "strategic_fit",
-    "financial_viability",
-    "operational_readiness",
-    "risk_assessment",
-    "historical_intelligence",
-    "geographic_analysis",
-    "network_intelligence",
-    "relationship_mapping"
-]
+deprecated = true
+maps_to = "premium"
+user_price_usd = 8.00
+sunset_date = "2025-11-04"
 
 [tool.depths.complete]
-cost_usd = 42.00
-time_minutes = [45, 60]
-equivalent_to = "COMPLETE tier"
-analysis_stages = ["PLAN", "ANALYZE", "EXAMINE", "APPROACH"]
-features = [
-    "strategic_fit",
-    "financial_viability",
-    "operational_readiness",
-    "risk_assessment",
-    "historical_intelligence",
-    "geographic_analysis",
-    "network_intelligence",
-    "relationship_mapping",
-    "policy_analysis",
-    "strategic_consulting"
-]
-report_pages = "26+"
+deprecated = true
+maps_to = "premium"
+user_price_usd = 8.00
+sunset_date = "2025-11-04"
 
 # Analysis Components
 

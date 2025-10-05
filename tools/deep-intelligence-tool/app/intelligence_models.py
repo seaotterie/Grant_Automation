@@ -10,11 +10,16 @@ from datetime import datetime
 
 
 class AnalysisDepth(Enum):
-    """Analysis depth levels matching 4-tier business packages"""
-    QUICK = "quick"          # $0.75, 5-10 min - CURRENT tier
-    STANDARD = "standard"    # $7.50, 15-20 min - STANDARD tier
-    ENHANCED = "enhanced"    # $22.00, 30-45 min - ENHANCED tier
-    COMPLETE = "complete"    # $42.00, 45-60 min - COMPLETE tier
+    """Analysis depth levels - TRUE COST 2-tier system"""
+    # Current 2-tier system (October 2025)
+    ESSENTIALS = "essentials"  # $2.00 user, $0.05 AI, 15-20 min - includes network intelligence
+    PREMIUM = "premium"        # $8.00 user, $0.10 AI, 30-40 min - enhanced features + dossier
+
+    # DEPRECATED (30-day sunset, auto-mapped to new tiers)
+    QUICK = "quick"          # → ESSENTIALS
+    STANDARD = "standard"    # → ESSENTIALS
+    ENHANCED = "enhanced"    # → PREMIUM
+    COMPLETE = "complete"    # → PREMIUM
 
 
 class RiskLevel(Enum):
@@ -324,60 +329,82 @@ class DeepIntelligenceOutput:
 # Depth Configuration
 
 DEPTH_FEATURES = {
-    AnalysisDepth.QUICK: {
-        "cost": 0.75,
-        "time_minutes": (5, 10),
-        "features": [
-            "strategic_fit",
-            "financial_viability",
-            "operational_readiness",
-            "risk_assessment"
-        ],
-        "equivalent_to": "CURRENT tier ($0.75)"
-    },
-    AnalysisDepth.STANDARD: {
-        "cost": 7.50,
+    # Current 2-tier TRUE COST system
+    AnalysisDepth.ESSENTIALS: {
+        "user_price": 2.00,
+        "ai_cost": 0.05,
         "time_minutes": (15, 20),
         "features": [
             "strategic_fit",
             "financial_viability",
             "operational_readiness",
             "risk_assessment",
-            "historical_intelligence",
-            "geographic_analysis"
+            "network_intelligence",      # INCLUDED in base!
+            "historical_intelligence",   # $0 AI (algorithmic)
+            "geographic_analysis"        # $0 AI (algorithmic)
         ],
-        "equivalent_to": "STANDARD tier ($7.50)"
+        "equivalent_to": "ESSENTIALS tier - network intelligence included"
+    },
+    AnalysisDepth.PREMIUM: {
+        "user_price": 8.00,
+        "ai_cost": 0.10,
+        "time_minutes": (30, 40),
+        "features": [
+            "strategic_fit",
+            "financial_viability",
+            "operational_readiness",
+            "risk_assessment",
+            "network_intelligence",
+            "historical_intelligence",
+            "geographic_analysis",
+            "enhanced_network_pathways",
+            "decision_maker_profiling",
+            "policy_analysis",
+            "strategic_consulting",
+            "comprehensive_dossier"
+        ],
+        "equivalent_to": "PREMIUM tier - strategic advantage"
+    },
+
+    # DEPRECATED (auto-mapped, 30-day sunset)
+    AnalysisDepth.QUICK: {
+        "user_price": 2.00,  # → ESSENTIALS
+        "ai_cost": 0.05,
+        "time_minutes": (15, 20),
+        "features": ["strategic_fit", "financial_viability", "operational_readiness", "risk_assessment"],
+        "equivalent_to": "DEPRECATED - use ESSENTIALS",
+        "maps_to": "ESSENTIALS"
+    },
+    AnalysisDepth.STANDARD: {
+        "user_price": 2.00,  # → ESSENTIALS
+        "ai_cost": 0.05,
+        "time_minutes": (15, 20),
+        "features": ["strategic_fit", "financial_viability", "operational_readiness", "risk_assessment", "historical_intelligence", "geographic_analysis"],
+        "equivalent_to": "DEPRECATED - use ESSENTIALS",
+        "maps_to": "ESSENTIALS"
     },
     AnalysisDepth.ENHANCED: {
-        "cost": 22.00,
-        "time_minutes": (30, 45),
-        "features": [
-            "strategic_fit",
-            "financial_viability",
-            "operational_readiness",
-            "risk_assessment",
-            "historical_intelligence",
-            "geographic_analysis",
-            "network_intelligence",
-            "relationship_mapping"
-        ],
-        "equivalent_to": "ENHANCED tier ($22.00)"
+        "user_price": 8.00,  # → PREMIUM
+        "ai_cost": 0.10,
+        "time_minutes": (30, 40),
+        "features": ["strategic_fit", "financial_viability", "operational_readiness", "risk_assessment", "historical_intelligence", "geographic_analysis", "network_intelligence", "relationship_mapping"],
+        "equivalent_to": "DEPRECATED - use PREMIUM",
+        "maps_to": "PREMIUM"
     },
     AnalysisDepth.COMPLETE: {
-        "cost": 42.00,
-        "time_minutes": (45, 60),
-        "features": [
-            "strategic_fit",
-            "financial_viability",
-            "operational_readiness",
-            "risk_assessment",
-            "historical_intelligence",
-            "geographic_analysis",
-            "network_intelligence",
-            "relationship_mapping",
-            "policy_analysis",
-            "strategic_consulting"
-        ],
-        "equivalent_to": "COMPLETE tier ($42.00)"
+        "user_price": 8.00,  # → PREMIUM
+        "ai_cost": 0.10,
+        "time_minutes": (30, 40),
+        "features": ["strategic_fit", "financial_viability", "operational_readiness", "risk_assessment", "historical_intelligence", "geographic_analysis", "network_intelligence", "relationship_mapping", "policy_analysis", "strategic_consulting"],
+        "equivalent_to": "DEPRECATED - use PREMIUM",
+        "maps_to": "PREMIUM"
     }
+}
+
+# Tier migration mapping
+TIER_MIGRATION = {
+    "quick": "essentials",
+    "standard": "essentials",
+    "enhanced": "premium",
+    "complete": "premium"
 }
