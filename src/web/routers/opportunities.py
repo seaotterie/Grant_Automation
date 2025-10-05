@@ -196,31 +196,124 @@ async def research_opportunity(opportunity_id: str, profile_id: Optional[str] = 
 
         logger.info(f"Starting web research for opportunity {opportunity_id} (EIN: {ein})")
 
-        # TODO: Integrate Tool 25 Web Intelligence
-        # from tools.web_intelligence_tool.app.web_intelligence_tool import WebIntelligenceTool, WebIntelligenceRequest, UseCase
-        #
-        # tool = WebIntelligenceTool()
-        # request = WebIntelligenceRequest(
-        #     ein=ein,
-        #     organization_name=opportunity.organization_name,
-        #     use_case=UseCase.OPPORTUNITY_RESEARCH
-        # )
-        # result = await tool.execute(request)
-        #
-        # # Update opportunity with web data
-        # opportunity.analysis_discovery['web_data'] = result.data
-        # opportunity.updated_at = datetime.now()
-        # database_manager.update_opportunity(opportunity)
+        # Integrate Tool 25 Web Intelligence
+        try:
+            import sys
+            from pathlib import Path
 
-        # Placeholder response
-        return {
-            "success": False,
-            "opportunity_id": opportunity_id,
-            "message": "Web Intelligence Tool (Tool 25) integration pending",
-            "note": "This endpoint will call Tool 25 to scrape organization website for additional intelligence",
-            "ein": ein,
-            "organization_name": opportunity.organization_name
-        }
+            # Add tools directory to path for imports
+            tools_dir = Path(__file__).parent.parent.parent / 'tools' / 'web-intelligence-tool'
+            sys.path.insert(0, str(tools_dir))
+
+            logger.info(f"Tool 25 path: {tools_dir}")
+            logger.info(f"Tool 25 exists: {tools_dir.exists()}")
+
+            from app.web_intelligence_tool import WebIntelligenceTool, WebIntelligenceRequest, UseCase
+
+            # Create Tool 25 instance and request
+            tool = WebIntelligenceTool()
+            request = WebIntelligenceRequest(
+                ein=ein,
+                organization_name=opportunity.organization_name,
+                use_case=UseCase.OPPORTUNITY_RESEARCH  # Use Case 2: Opportunity Research
+            )
+
+            logger.info(f"Executing Tool 25 for EIN {ein}")
+
+            # Execute Tool 25 web scraping
+            result = await tool.execute(request)
+
+            logger.info(f"Tool 25 result: success={result.success}, errors={result.errors if hasattr(result, 'errors') else 'N/A'}")
+
+            if result.success and result.intelligence_data:
+                # Convert OrganizationIntelligence to dict for storage
+                intelligence = result.intelligence_data
+
+                web_data = {
+                    "website": intelligence.website_url,
+                    "website_verified": intelligence.scraping_metadata.verification_confidence > 0.7,
+                    "leadership": [
+                        {
+                            "name": leader.name,
+                            "title": leader.title,
+                            "email": leader.email,
+                            "phone": leader.phone,
+                            "bio": leader.bio,
+                            "matches_990": leader.matches_990
+                        }
+                        for leader in intelligence.leadership
+                    ],
+                    "leadership_cross_validated": any(leader.matches_990 for leader in intelligence.leadership),
+                    "contact": {
+                        "email": intelligence.contact_info.email if intelligence.contact_info else None,
+                        "phone": intelligence.contact_info.phone if intelligence.contact_info else None,
+                        "address": intelligence.contact_info.mailing_address if intelligence.contact_info else None
+                    } if intelligence.contact_info else None,
+                    "social_media": intelligence.contact_info.social_media_links if intelligence.contact_info else {},
+                    "mission": intelligence.mission_statement,
+                    "programs": [
+                        {
+                            "name": program.name,
+                            "description": program.description,
+                            "target_population": program.target_population
+                        }
+                        for program in intelligence.programs
+                    ],
+                    "grant_application_url": None,  # Would need custom detection logic
+                    "recent_news": [],  # Would need news extraction spider
+                    "data_quality_score": result.data_quality_score,
+                    "pages_scraped": result.pages_scraped,
+                    "execution_time": result.execution_time_seconds
+                }
+
+                # Update opportunity in database with web data
+                conn = database_manager.get_connection()
+                cursor = conn.cursor()
+
+                # Get current opportunity data
+                cursor.execute("SELECT analysis_discovery FROM opportunities WHERE id = ?", (opportunity_id,))
+                row = cursor.fetchone()
+
+                if row and row[0]:
+                    import json
+                    analysis_discovery = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+                    analysis_discovery['web_data'] = web_data
+                    analysis_discovery['web_search_complete'] = True
+
+                    # Update database
+                    cursor.execute(
+                        "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                        (json.dumps(analysis_discovery), datetime.now().isoformat(), opportunity_id)
+                    )
+                    conn.commit()
+
+                conn.close()
+
+                logger.info(f"Web research completed successfully for {opportunity_id} - scraped {result.pages_scraped} pages in {result.execution_time_seconds:.2f}s")
+
+                return {
+                    "success": True,
+                    "opportunity_id": opportunity_id,
+                    "web_data": web_data,
+                    "web_search_complete": True,
+                    "execution_time": result.execution_time_seconds,
+                    "pages_scraped": result.pages_scraped,
+                    "data_quality_score": result.data_quality_score,
+                    "ein": ein,
+                    "organization_name": opportunity.organization_name
+                }
+            else:
+                # Tool 25 failed - return error
+                error_msg = "; ".join(result.errors) if result.errors else "Unknown error"
+                logger.error(f"Tool 25 web research failed for {opportunity_id}: {error_msg}")
+                raise HTTPException(status_code=500, detail=f"Web intelligence tool failed: {error_msg}")
+
+        except ImportError as e:
+            logger.error(f"Failed to import Tool 25: {e}")
+            raise HTTPException(status_code=500, detail=f"Tool 25 import error: {str(e)}")
+        except Exception as e:
+            logger.error(f"Tool 25 execution error for {opportunity_id}: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Web research failed: {str(e)}")
 
     except HTTPException:
         raise
@@ -449,6 +542,238 @@ async def promote_to_intelligence(opportunity_id: str, request: Dict[str, Any], 
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/{opportunity_id}/promote")
+async def promote_category_level(opportunity_id: str):
+    """
+    Promote opportunity to next category_level or to intelligence stage.
+
+    Promotion ladder:
+    - low_priority → consider
+    - consider → review
+    - review → qualified
+    - qualified → intelligence stage (workflow change)
+
+    Returns updated opportunity with new category_level or current_stage.
+    """
+    try:
+        # Get opportunity from database
+        conn = database_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM opportunities WHERE id = ?", (opportunity_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail=f"Opportunity {opportunity_id} not found")
+
+        # Parse current state
+        opportunity_dict = dict(zip([col[0] for col in cursor.description], row))
+        current_category = opportunity_dict.get('category_level', 'low_priority')
+        current_stage = opportunity_dict.get('current_stage', 'discovery')
+
+        # Determine promotion action
+        new_category = current_category
+        new_stage = current_stage
+        action_taken = None
+
+        if current_category == 'low_priority':
+            new_category = 'consider'
+            action_taken = 'promoted_to_consider'
+        elif current_category == 'consider':
+            new_category = 'review'
+            action_taken = 'promoted_to_review'
+        elif current_category == 'review':
+            new_category = 'qualified'
+            action_taken = 'promoted_to_qualified'
+        elif current_category == 'qualified':
+            # Already qualified - promote to intelligence stage
+            new_stage = 'intelligence'
+            action_taken = 'promoted_to_intelligence'
+        else:
+            conn.close()
+            raise HTTPException(status_code=400, detail=f"Cannot promote from {current_category}")
+
+        # Update database
+        timestamp = datetime.now().isoformat()
+        cursor.execute("""
+            UPDATE opportunities
+            SET category_level = ?,
+                current_stage = ?,
+                updated_at = ?
+            WHERE id = ?
+        """, (new_category, new_stage, timestamp, opportunity_id))
+
+        conn.commit()
+        conn.close()
+
+        logger.info(f"Promoted opportunity {opportunity_id}: {current_category} → {new_category}, stage: {current_stage} → {new_stage}")
+
+        return {
+            "success": True,
+            "opportunity_id": opportunity_id,
+            "action": action_taken,
+            "previous_category": current_category,
+            "new_category": new_category,
+            "previous_stage": current_stage,
+            "new_stage": new_stage,
+            "message": f"Promoted from {current_category} to {new_category}" if new_category != current_category else f"Promoted to {new_stage} stage"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to promote opportunity {opportunity_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{opportunity_id}/demote")
+async def demote_category_level(opportunity_id: str):
+    """
+    Demote opportunity to previous category_level.
+
+    Demotion ladder:
+    - qualified → review
+    - review → consider
+    - consider → low_priority
+    - low_priority → (cannot demote further)
+
+    Cannot demote if current_stage != 'discovery' (already promoted to intelligence/approach).
+
+    Returns updated opportunity with new category_level.
+    """
+    try:
+        # Get opportunity from database
+        conn = database_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM opportunities WHERE id = ?", (opportunity_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail=f"Opportunity {opportunity_id} not found")
+
+        # Parse current state
+        opportunity_dict = dict(zip([col[0] for col in cursor.description], row))
+        current_category = opportunity_dict.get('category_level', 'low_priority')
+        current_stage = opportunity_dict.get('current_stage', 'discovery')
+
+        # Cannot demote if already moved past discovery
+        if current_stage not in ['discovery', 'screening']:
+            conn.close()
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot demote opportunity in {current_stage} stage. Only discovery/screening stage opportunities can be demoted."
+            )
+
+        # Determine demotion action
+        new_category = current_category
+        action_taken = None
+
+        if current_category == 'qualified':
+            new_category = 'review'
+            action_taken = 'demoted_to_review'
+        elif current_category == 'review':
+            new_category = 'consider'
+            action_taken = 'demoted_to_consider'
+        elif current_category == 'consider':
+            new_category = 'low_priority'
+            action_taken = 'demoted_to_low_priority'
+        elif current_category == 'low_priority':
+            conn.close()
+            raise HTTPException(status_code=400, detail="Cannot demote below low_priority")
+        else:
+            conn.close()
+            raise HTTPException(status_code=400, detail=f"Unknown category level: {current_category}")
+
+        # Update database
+        timestamp = datetime.now().isoformat()
+        cursor.execute("""
+            UPDATE opportunities
+            SET category_level = ?,
+                updated_at = ?
+            WHERE id = ?
+        """, (new_category, timestamp, opportunity_id))
+
+        conn.commit()
+        conn.close()
+
+        logger.info(f"Demoted opportunity {opportunity_id}: {current_category} → {new_category}")
+
+        return {
+            "success": True,
+            "opportunity_id": opportunity_id,
+            "action": action_taken,
+            "previous_category": current_category,
+            "new_category": new_category,
+            "message": f"Demoted from {current_category} to {new_category}"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to demote opportunity {opportunity_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/{opportunity_id}/notes")
+async def update_opportunity_notes(opportunity_id: str, request: Dict[str, Any]):
+    """
+    Update notes field for an opportunity.
+
+    Request body:
+    {
+        "notes": "User notes text (max 2000 characters)"
+    }
+
+    Returns updated opportunity with new notes.
+    """
+    try:
+        # Extract notes from request
+        notes = request.get('notes', '')
+
+        # Validate max 2000 characters
+        if len(notes) > 2000:
+            raise HTTPException(status_code=400, detail="Notes cannot exceed 2000 characters")
+
+        # Get opportunity from database
+        conn = database_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM opportunities WHERE id = ?", (opportunity_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail=f"Opportunity {opportunity_id} not found")
+
+        # Update notes
+        timestamp = datetime.now().isoformat()
+        cursor.execute("""
+            UPDATE opportunities
+            SET notes = ?,
+                updated_at = ?
+            WHERE id = ?
+        """, (notes, timestamp, opportunity_id))
+
+        conn.commit()
+        conn.close()
+
+        logger.info(f"Updated notes for opportunity {opportunity_id} ({len(notes)} characters)")
+
+        return {
+            "success": True,
+            "opportunity_id": opportunity_id,
+            "notes": notes,
+            "updated_at": timestamp,
+            "character_count": len(notes)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update notes for opportunity {opportunity_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/health")
 async def health_check():
     """Health check for opportunities API."""
@@ -458,6 +783,8 @@ async def health_check():
         "endpoints": [
             "GET /api/v2/opportunities/{id}/details",
             "POST /api/v2/opportunities/{id}/research",
-            "POST /api/v2/opportunities/{id}/promote"
+            "POST /api/v2/opportunities/{id}/promote",
+            "POST /api/v2/opportunities/{id}/demote",
+            "PATCH /api/v2/opportunities/{id}/notes"
         ]
     }

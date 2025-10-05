@@ -12,6 +12,10 @@ function screeningModule() {
         // STATE
         // =================================================================
 
+        // Selected Profile (updated via event)
+        currentProfileId: null,
+        selectedProfile: null,
+
         // Discovery State
         discoveryResults: [],
         discoveryLoading: false,
@@ -19,7 +23,7 @@ function screeningModule() {
         discoverySession: null,
         summaryCounts: {
             total_found: 0,
-            auto_qualified: 0,
+            qualified: 0,
             review: 0,
             consider: 0,
             low_priority: 0,
@@ -54,7 +58,62 @@ function screeningModule() {
         viewMode: 'grid', // 'grid' or 'list'
         showDetailsModal: false,
         selectedOpportunity: null,
-        detailsModalTab: 'scores' // 'scores', 'details', 'grants', 'website'
+        detailsModalTab: 'scores', // 'scores', 'details', 'grants', 'website', 'notes'
+
+        // Notes State
+        opportunityNotes: '',
+        notesSaving: false,
+        notesSaved: false,
+        notesDebounceTimer: null,
+
+        // =================================================================
+        // LIFECYCLE & INITIALIZATION
+        // =================================================================
+
+        /**
+         * Initialize screening module - load saved opportunities if profile exists
+         */
+        async init() {
+            console.log('Screening module initialized');
+
+            // Load saved opportunities if we have a currentProfileId
+            if (this.currentProfileId) {
+                await this.loadSavedOpportunities(this.currentProfileId);
+            }
+        },
+
+        /**
+         * Load saved opportunities from database for current profile
+         */
+        async loadSavedOpportunities(profileId) {
+            if (!profileId) return;
+
+            try {
+                console.log(`Loading saved opportunities for profile ${profileId}...`);
+
+                const response = await fetch(`/api/v2/profiles/${profileId}/opportunities?stage=discovery`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to load saved opportunities');
+                }
+
+                const data = await response.json();
+
+                if (data.status === 'success' && data.opportunities?.length > 0) {
+                    this.discoveryResults = data.opportunities;
+                    this.summaryCounts = data.summary;
+
+                    console.log(`Loaded ${data.opportunities.length} saved opportunities from database`);
+                    this.showNotification?.(`Loaded ${data.opportunities.length} saved opportunities`, 'info');
+                } else {
+                    console.log('No saved opportunities found for this profile');
+                }
+
+            } catch (error) {
+                console.error('Failed to load saved opportunities:', error);
+                // Don't show error notification - it's normal to have no saved opportunities
+            }
+        },
 
         // =================================================================
         // DISCOVERY OPERATIONS
@@ -98,10 +157,10 @@ function screeningModule() {
                     this.summaryCounts = data.summary;
 
                     console.log(`Discovery complete: ${data.summary.total_found} organizations found`);
-                    console.log(`Auto-Qualified: ${data.summary.auto_qualified}, Review: ${data.summary.review}`);
+                    console.log(`Qualified: ${data.summary.qualified}, Review: ${data.summary.review}`);
 
                     this.showNotification?.(
-                        `Found ${data.summary.total_found} opportunities (${data.summary.auto_qualified} auto-qualified)`,
+                        `Found ${data.summary.total_found} opportunities (${data.summary.qualified} qualified)`,
                         'success'
                     );
 
@@ -599,6 +658,11 @@ function screeningModule() {
             this.selectedOpportunity = opportunity;
             this.detailsModalTab = 'scores';
             this.showDetailsModal = true;
+
+            // Load notes for this opportunity
+            this.opportunityNotes = opportunity.notes || '';
+            this.notesSaved = false;
+            this.notesSaving = false;
         },
 
         /**
@@ -607,6 +671,17 @@ function screeningModule() {
         closeDetailsModal() {
             this.showDetailsModal = false;
             this.selectedOpportunity = null;
+
+            // Clear notes state
+            this.opportunityNotes = '';
+            this.notesSaved = false;
+            this.notesSaving = false;
+
+            // Clear any pending debounce timer
+            if (this.notesDebounceTimer) {
+                clearTimeout(this.notesDebounceTimer);
+                this.notesDebounceTimer = null;
+            }
         },
 
         /**
@@ -618,54 +693,204 @@ function screeningModule() {
         },
 
         /**
-         * Run web research for selected opportunity
+         * Run web research for selected opportunity (Tool 25 - Web Intelligence)
          */
         async runWebResearch() {
             if (!this.selectedOpportunity) return;
 
+            this.showNotification?.('🕷️ Starting web research with Scrapy (Tool 25)...', 'info');
+
             try {
-                const response = await fetch(`/api/v2/opportunities/${this.selectedOpportunity.ein}/research`, {
+                const response = await fetch(`/api/v2/opportunities/${this.selectedOpportunity.opportunity_id}/research`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    this.selectedOpportunity.web_search_complete = true;
-                    this.selectedOpportunity.web_data = data.web_data;
-                    this.showNotification?.('Web research complete', 'success');
+
+                    if (data.success) {
+                        // Update opportunity with web data
+                        this.selectedOpportunity.web_search_complete = data.web_search_complete;
+                        this.selectedOpportunity.web_data = data.web_data;
+
+                        // Show success notification with stats
+                        const leadershipCount = data.web_data?.leadership?.length || 0;
+                        const executionTime = data.execution_time?.toFixed(1) || '?';
+
+                        this.showNotification?.(
+                            `✅ Web research complete! Found ${leadershipCount} leadership members (${data.pages_scraped} pages in ${executionTime}s)`,
+                            'success'
+                        );
+
+                        // Auto-switch to Website Data tab to show results
+                        this.detailsModalTab = 'website';
+                    } else {
+                        // Log full response for debugging
+                        console.error('Web research response:', data);
+                        throw new Error(`Web research returned no data: ${JSON.stringify(data)}`);
+                    }
                 } else {
-                    throw new Error('Web research failed');
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    console.error('Web research HTTP error:', response.status, errorData);
+                    throw new Error(errorData.detail || `Web research failed (HTTP ${response.status})`);
                 }
             } catch (error) {
                 console.error('Web research error:', error);
-                this.showNotification?.(error.message, 'error');
+                this.showNotification?.(
+                    `❌ Web research failed: ${error.message}`,
+                    'error'
+                );
             }
         },
 
         /**
-         * Promote opportunity to INTELLIGENCE stage
+         * Promote opportunity to next category_level or intelligence stage
          */
-        async promoteToIntelligence() {
+        async promoteOpportunity() {
             if (!this.selectedOpportunity) return;
 
             try {
-                const response = await fetch(`/api/v2/opportunities/${this.selectedOpportunity.ein}/promote`, {
+                const response = await fetch(`/api/v2/opportunities/${this.selectedOpportunity.opportunity_id}/promote`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ notes: '' })
+                    headers: { 'Content-Type': 'application/json' }
                 });
 
                 if (response.ok) {
-                    this.showNotification?.('Promoted to INTELLIGENCE stage', 'success');
-                    this.closeDetailsModal();
-                    this.$dispatch?.('opportunity-promoted', this.selectedOpportunity);
+                    const data = await response.json();
+
+                    // Update selected opportunity with new state
+                    this.selectedOpportunity.category_level = data.new_category;
+                    this.selectedOpportunity.current_stage = data.new_stage;
+
+                    // Show success notification
+                    this.showNotification?.(data.message, 'success');
+
+                    // If promoted to intelligence stage, close modal and reload
+                    if (data.new_stage === 'intelligence') {
+                        this.closeDetailsModal();
+                        this.$dispatch?.('opportunity-promoted', this.selectedOpportunity);
+                        // Reload opportunities to update counts
+                        await this.loadOpportunities();
+                    } else {
+                        // Just update the display for category level changes
+                        // Reload opportunities to update counts
+                        await this.loadOpportunities();
+                    }
                 } else {
-                    throw new Error('Promotion failed');
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    throw new Error(errorData.detail || 'Promotion failed');
                 }
             } catch (error) {
                 console.error('Promotion error:', error);
-                this.showNotification?.(error.message, 'error');
+                this.showNotification?.(`❌ Promotion failed: ${error.message}`, 'error');
+            }
+        },
+
+        /**
+         * Demote opportunity to previous category_level
+         */
+        async demoteOpportunity() {
+            if (!this.selectedOpportunity) return;
+
+            // Don't demote if already at low_priority
+            if (this.selectedOpportunity.category_level === 'low_priority') {
+                this.showNotification?.('⚠️ Cannot demote below low_priority', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/v2/opportunities/${this.selectedOpportunity.opportunity_id}/demote`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // Update selected opportunity with new state
+                    this.selectedOpportunity.category_level = data.new_category;
+
+                    // Show success notification
+                    this.showNotification?.(data.message, 'success');
+
+                    // Reload opportunities to update counts
+                    await this.loadOpportunities();
+                } else {
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    throw new Error(errorData.detail || 'Demotion failed');
+                }
+            } catch (error) {
+                console.error('Demotion error:', error);
+                this.showNotification?.(`❌ Demotion failed: ${error.message}`, 'error');
+            }
+        },
+
+        /**
+         * Legacy method - kept for backward compatibility
+         */
+        async promoteToIntelligence() {
+            return this.promoteOpportunity();
+        },
+
+        /**
+         * Auto-save notes with debouncing (saves 1 second after user stops typing)
+         */
+        autoSaveNotes() {
+            // Clear existing timer
+            if (this.notesDebounceTimer) {
+                clearTimeout(this.notesDebounceTimer);
+            }
+
+            // Reset saved indicator
+            this.notesSaved = false;
+
+            // Set new timer to save after 1 second of inactivity
+            this.notesDebounceTimer = setTimeout(async () => {
+                await this.saveNotesToDatabase();
+            }, 1000);
+        },
+
+        /**
+         * Save notes to database
+         */
+        async saveNotesToDatabase() {
+            if (!this.selectedOpportunity) return;
+
+            this.notesSaving = true;
+            this.notesSaved = false;
+
+            try {
+                const response = await fetch(`/api/v2/opportunities/${this.selectedOpportunity.opportunity_id}/notes`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notes: this.opportunityNotes })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // Update selected opportunity with saved notes
+                    this.selectedOpportunity.notes = data.notes;
+
+                    // Show saved indicator
+                    this.notesSaved = true;
+                    this.notesSaving = false;
+
+                    // Hide saved indicator after 2 seconds
+                    setTimeout(() => {
+                        this.notesSaved = false;
+                    }, 2000);
+
+                    console.log(`Notes saved: ${data.character_count} characters`);
+                } else {
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    throw new Error(errorData.detail || 'Failed to save notes');
+                }
+            } catch (error) {
+                console.error('Notes save error:', error);
+                this.notesSaving = false;
+                this.showNotification?.(`❌ Failed to save notes: ${error.message}`, 'error');
             }
         }
     };
