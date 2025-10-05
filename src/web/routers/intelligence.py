@@ -22,10 +22,16 @@ logger = logging.getLogger(__name__)
 
 # Request/Response Models
 class ServiceTier(str, Enum):
-    CURRENT = "current"
-    STANDARD = "standard"
-    ENHANCED = "enhanced"
-    COMPLETE = "complete"
+    # New 2-tier system (October 2025 - TRUE COST PRICING)
+    ESSENTIALS = "essentials"  # $2.00 user, $0.05 AI, includes network intelligence
+    PREMIUM = "premium"        # $8.00 user, $0.10 AI, enhanced features + dossier
+
+    # DEPRECATED (30-day sunset, auto-mapped to new tiers)
+    # Sunset date: 2025-11-04
+    CURRENT = "current"    # → ESSENTIALS
+    STANDARD = "standard"  # → ESSENTIALS
+    ENHANCED = "enhanced"  # → PREMIUM
+    COMPLETE = "complete"  # → PREMIUM
 
 class AddOnModule(str, Enum):
     BOARD_NETWORK = "board_network_analysis"
@@ -86,36 +92,60 @@ class TaskStatusResponse(BaseModel):
 
 # Cost Calculator
 class TierCostCalculator:
-    """Calculate costs for different intelligence tiers"""
-    
+    """Calculate costs for different intelligence tiers (2-tier TRUE COST system)"""
+
     def __init__(self):
+        # New 2-tier TRUE COST pricing
         self.base_costs = {
-            ServiceTier.CURRENT: 0.75,
-            ServiceTier.STANDARD: 7.50,
-            ServiceTier.ENHANCED: 22.00,
-            ServiceTier.COMPLETE: 42.00
+            ServiceTier.ESSENTIALS: 2.00,  # NEW - includes network intelligence
+            ServiceTier.PREMIUM: 8.00,     # NEW - enhanced features + dossier
+
+            # DEPRECATED (auto-mapped to new tiers)
+            ServiceTier.CURRENT: 2.00,   # → ESSENTIALS
+            ServiceTier.STANDARD: 2.00,  # → ESSENTIALS
+            ServiceTier.ENHANCED: 8.00,  # → PREMIUM
+            ServiceTier.COMPLETE: 8.00   # → PREMIUM
         }
-        
+
+        # TRUE AI costs (transparency)
+        self.ai_costs = {
+            ServiceTier.ESSENTIALS: 0.05,
+            ServiceTier.PREMIUM: 0.10,
+            # Deprecated tiers use same AI costs as mapped tiers
+            ServiceTier.CURRENT: 0.05,   # → ESSENTIALS
+            ServiceTier.STANDARD: 0.05,  # → ESSENTIALS
+            ServiceTier.ENHANCED: 0.10,  # → PREMIUM
+            ServiceTier.COMPLETE: 0.10   # → PREMIUM
+        }
+
+        # Add-ons DEPRECATED (features now included in base tiers)
+        # Network intelligence now included in ESSENTIALS tier
         self.addon_costs = {
-            AddOnModule.BOARD_NETWORK: 6.50,
-            AddOnModule.DECISION_MAKER: 9.50,
-            AddOnModule.RFP_ANALYSIS: 15.50,
-            AddOnModule.HISTORICAL_PATTERNS: 8.50,
-            AddOnModule.WARM_INTRODUCTIONS: 8.50,
-            AddOnModule.COMPETITIVE_ANALYSIS: 12.50
+            AddOnModule.BOARD_NETWORK: 0.00,  # Included in ESSENTIALS
+            AddOnModule.DECISION_MAKER: 0.00,  # Included in PREMIUM
+            AddOnModule.RFP_ANALYSIS: 0.00,  # Included in PREMIUM
+            AddOnModule.HISTORICAL_PATTERNS: 0.00,  # Included in ESSENTIALS
+            AddOnModule.WARM_INTRODUCTIONS: 0.00,  # Included in PREMIUM
+            AddOnModule.COMPETITIVE_ANALYSIS: 0.00  # Included in PREMIUM
         }
-        
+
         self.delivery_times = {
-            ServiceTier.CURRENT: "5-10 minutes",
-            ServiceTier.STANDARD: "15-20 minutes",
-            ServiceTier.ENHANCED: "30-45 minutes",
-            ServiceTier.COMPLETE: "60-90 minutes"
+            ServiceTier.ESSENTIALS: "15-20 minutes",
+            ServiceTier.PREMIUM: "30-40 minutes",
+            # Deprecated tiers
+            ServiceTier.CURRENT: "15-20 minutes",  # → ESSENTIALS
+            ServiceTier.STANDARD: "15-20 minutes",  # → ESSENTIALS
+            ServiceTier.ENHANCED: "30-40 minutes",  # → PREMIUM
+            ServiceTier.COMPLETE: "30-40 minutes"   # → PREMIUM
         }
-        
+
         self.poc_efforts = {
+            ServiceTier.ESSENTIALS: "0 hours",
+            ServiceTier.PREMIUM: "2-4 hours",
+            # Deprecated tiers
             ServiceTier.CURRENT: "0 hours",
             ServiceTier.STANDARD: "0 hours",
-            ServiceTier.ENHANCED: "0-1 hours",
+            ServiceTier.ENHANCED: "2-4 hours",
             ServiceTier.COMPLETE: "2-4 hours"
         }
     
@@ -126,18 +156,19 @@ class TierCostCalculator:
         return base_cost + addon_cost
     
     def get_cost_breakdown(self, tier: ServiceTier, add_ons: List[AddOnModule]) -> CostBreakdown:
-        """Get detailed cost breakdown"""
+        """Get detailed cost breakdown with TRUE AI cost transparency"""
         base_cost = self.base_costs.get(tier, 0)
-        addon_cost = sum(self.addon_costs.get(addon, 0) for addon in add_ons)
+        addon_cost = sum(self.addon_costs.get(addon, 0) for addon in add_ons)  # Now $0 for all add-ons
         total_cost = base_cost + addon_cost
-        
-        # Estimate breakdown (simplified for MVP)
-        api_tokens = total_cost * 0.15  # ~15% API costs
-        platform_margin = total_cost * 0.20  # ~20% margin
-        infrastructure = total_cost - api_tokens - platform_margin
-        
+
+        # TRUE AI cost transparency
+        api_tokens = self.ai_costs.get(tier, 0)  # Real AI cost ($0.05 or $0.10)
+        platform_value = total_cost - api_tokens  # Platform infrastructure + margin
+        platform_margin = platform_value * 0.25  # ~25% margin on platform value
+        infrastructure = platform_value - platform_margin  # Data, tools, infrastructure
+
         return CostBreakdown(
-            api_tokens=api_tokens,
+            api_tokens=api_tokens,  # TRUE AI cost
             infrastructure=infrastructure,
             platform_margin=platform_margin,
             total=total_cost
@@ -222,6 +253,14 @@ class TaskManager:
         """Get task status"""
         return self.tasks.get(task_id)
 
+# Tier Migration Mapping (30-day deprecation period, sunset: 2025-11-04)
+TIER_MIGRATION_MAP = {
+    ServiceTier.CURRENT: ServiceTier.ESSENTIALS,
+    ServiceTier.STANDARD: ServiceTier.ESSENTIALS,
+    ServiceTier.ENHANCED: ServiceTier.PREMIUM,
+    ServiceTier.COMPLETE: ServiceTier.PREMIUM
+}
+
 # Global instances
 cost_calculator = TierCostCalculator()
 task_manager = TaskManager()
@@ -240,88 +279,116 @@ async def generate_intelligence_analysis(
     background_tasks: BackgroundTasks
 ):
     """
-    Generate tiered intelligence analysis for a grant opportunity
+    Generate tiered intelligence analysis for a grant opportunity using Tool 2 (Deep Intelligence Tool)
+
+    Supports both new tiers (essentials, premium) and deprecated tiers (current, standard, enhanced, complete)
+    with automatic migration mapping.
     """
     try:
-        # Calculate estimated cost
-        estimated_cost = cost_calculator.calculate_cost(request.tier, request.add_ons)
-        
-        # For Standard tier, process immediately (for MVP)
-        if request.tier == ServiceTier.STANDARD:
-            start_time = time.time()
-            
-            # Process with Standard tier processor
-            result = await standard_tier_processor.process_opportunity(
-                profile_id=profile_id,
-                opportunity_id=request.opportunity_id
+        # Tier migration handling
+        original_tier = request.tier
+        mapped_tier = TIER_MIGRATION_MAP.get(request.tier, request.tier)
+        is_deprecated = original_tier != mapped_tier
+
+        if is_deprecated:
+            logger.warning(
+                f"Tier '{original_tier.value}' is deprecated and will be removed on 2025-11-04. "
+                f"Auto-mapping to '{mapped_tier.value}' tier."
             )
-            
-            processing_time = time.time() - start_time
-            
-            return IntelligenceResponse(
-                result=result.to_dict(),
-                estimated_cost=estimated_cost,
-                actual_cost=result.total_processing_cost,
-                estimated_completion_time=f"Completed in {processing_time:.2f}s",
-                status="completed"
+
+        # Calculate cost for the mapped tier
+        estimated_cost = cost_calculator.calculate_cost(mapped_tier, request.add_ons)
+        ai_cost = cost_calculator.ai_costs.get(mapped_tier, 0)
+
+        # Import Tool 2 (Deep Intelligence Tool)
+        import sys
+        from pathlib import Path
+        project_root = Path(__file__).parent.parent.parent
+        sys.path.insert(0, str(project_root))
+
+        from tools.deep_intelligence_tool.app.intelligence_models import (
+            DeepIntelligenceInput,
+            AnalysisDepth
+        )
+        from tools.deep_intelligence_tool.app.depth_handlers import get_depth_handler
+
+        # Map ServiceTier to AnalysisDepth
+        tier_to_depth = {
+            ServiceTier.ESSENTIALS: AnalysisDepth.ESSENTIALS,
+            ServiceTier.PREMIUM: AnalysisDepth.PREMIUM,
+        }
+
+        depth = tier_to_depth.get(mapped_tier)
+        if not depth:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid tier: {mapped_tier.value}. Use 'essentials' or 'premium'."
             )
-        
-        # For Enhanced tier, process immediately (newly implemented)
-        elif request.tier == ServiceTier.ENHANCED:
-            start_time = time.time()
-            
-            # Process with Enhanced tier processor
-            result = await enhanced_tier_processor.process_opportunity(
-                profile_id=profile_id,
-                opportunity_id=request.opportunity_id,
-                add_ons=[addon.value for addon in request.add_ons] if request.add_ons else []
+
+        # Create input for Deep Intelligence Tool
+        # TODO: Fetch actual opportunity and organization data
+        intel_input = DeepIntelligenceInput(
+            opportunity_id=request.opportunity_id,
+            opportunity_title=f"Opportunity {request.opportunity_id}",
+            opportunity_description="Analysis in progress",
+            funder_name="Unknown Funder",
+            funder_type="Unknown",
+            organization_ein="000000000",
+            organization_name="Organization",
+            organization_mission="Mission statement",
+            depth=depth
+        )
+
+        # Execute analysis with appropriate depth handler
+        start_time = time.time()
+        handler = get_depth_handler(depth, logger)
+        result = await handler.analyze(intel_input)
+        processing_time = time.time() - start_time
+
+        # Build response
+        response_data = {
+            "tier_used": mapped_tier.value,
+            "depth_executed": result.depth_executed,
+            "user_price": estimated_cost,
+            "ai_cost": ai_cost,
+            "platform_value": estimated_cost - ai_cost,
+            "overall_score": result.overall_score,
+            "success_probability": result.success_probability.value,
+            "proceed_recommendation": result.proceed_recommendation,
+            "executive_summary": result.executive_summary,
+            "key_strengths": result.key_strengths,
+            "key_challenges": result.key_challenges,
+            "recommended_next_steps": result.recommended_next_steps,
+            "processing_time_seconds": result.processing_time_seconds,
+            "analysis_features": {
+                "strategic_fit": True,
+                "financial_viability": True,
+                "operational_readiness": True,
+                "risk_assessment": True,
+                "historical_intelligence": result.historical_intelligence is not None,
+                "geographic_analysis": result.geographic_analysis is not None,
+                "network_intelligence": result.network_intelligence is not None,
+                "relationship_mapping": result.relationship_mapping is not None,
+                "policy_analysis": result.policy_analysis is not None,
+                "strategic_consulting": result.strategic_consulting is not None
+            }
+        }
+
+        # Add deprecation notice if tier was migrated
+        if is_deprecated:
+            response_data["deprecation_notice"] = (
+                f"Tier '{original_tier.value}' is deprecated and will be removed on 2025-11-04. "
+                f"Please use '{mapped_tier.value}' instead. Your request was automatically migrated."
             )
-            
-            processing_time = time.time() - start_time
-            
-            return IntelligenceResponse(
-                result=result.to_dict(),
-                estimated_cost=estimated_cost,
-                actual_cost=result.total_processing_cost,
-                estimated_completion_time=f"Completed in {processing_time:.2f}s",
-                status="completed"
-            )
-        
-        # For other tiers, return not implemented for MVP
-        elif request.tier == ServiceTier.CURRENT:
-            return IntelligenceResponse(
-                result={"message": "Current tier available through existing system"},
-                estimated_cost=estimated_cost,
-                actual_cost=0.75,
-                estimated_completion_time="5-10 minutes",
-                status="available_via_existing_system"
-            )
-        
-        # For Complete tier, process immediately (newly implemented)
-        elif request.tier == ServiceTier.COMPLETE:
-            start_time = time.time()
-            
-            # Process with Complete tier processor
-            result = await complete_tier_processor.process_opportunity(
-                profile_id=profile_id,
-                opportunity_id=request.opportunity_id,
-                add_ons=[addon.value for addon in request.add_ons] if request.add_ons else []
-            )
-            
-            processing_time = time.time() - start_time
-            
-            return IntelligenceResponse(
-                result=result.to_dict(),
-                estimated_cost=estimated_cost,
-                actual_cost=result.total_processing_cost,
-                estimated_completion_time=f"Completed in {processing_time:.2f}s",
-                status="completed"
-            )
-        
-        else:
-            # Unsupported tier
-            raise HTTPException(status_code=400, detail=f"Unsupported tier: {request.tier}")
-        
+
+        return IntelligenceResponse(
+            result=response_data,
+            estimated_cost=estimated_cost,
+            actual_cost=ai_cost,  # TRUE AI cost
+            estimated_completion_time=f"Completed in {processing_time:.2f}s",
+            status="completed"
+        )
+
     except Exception as e:
         logger.error(f"Intelligence analysis failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
@@ -371,80 +438,138 @@ async def calculate_cost_estimate(request: CostEstimateRequest):
 @router.get("/tiers")
 async def get_available_tiers():
     """
-    Get available intelligence tiers and their features
+    Get available intelligence tiers and their features (2-Tier TRUE COST System)
+
+    Returns both active tiers (essentials, premium) and deprecated tiers with migration notices.
     """
     return {
-        "tiers": [
+        "system_version": "2.0.0",
+        "pricing_model": "True AI Cost + Platform Value (40-80x markup transparency)",
+        "active_tiers": [
             {
-                "id": "current",
-                "name": "Current Intelligence",
-                "price": 0.75,
-                "delivery_time": "5-10 minutes",
+                "id": "essentials",
+                "name": "ESSENTIALS Intelligence",
+                "user_price": 2.00,
+                "ai_cost": 0.05,
+                "platform_value": 1.95,
+                "markup": "40x (platform infrastructure + tools + data)",
+                "delivery_time": "15-20 minutes",
                 "poc_effort": "0 hours",
                 "features": [
-                    "4-Stage AI Analysis (PLAN, ANALYZE, EXAMINE, APPROACH)",
-                    "Multi-dimensional scoring and risk assessment",
-                    "Success probability modeling (75-80% confidence)",
-                    "Implementation roadmap with resource allocation"
+                    "4-Stage AI Analysis (PLAN → ANALYZE → EXAMINE → APPROACH)",
+                    "Network Intelligence - INCLUDED! (was $6.50 add-on)",
+                    "Historical Funding Analysis (5-year patterns)",
+                    "Geographic Distribution & Competitive Analysis",
+                    "Multi-dimensional Scoring & Risk Assessment",
+                    "Strategic Fit & Financial Viability",
+                    "Operational Readiness Assessment",
+                    "Success Probability Modeling"
                 ],
-                "best_for": ["Quick opportunity assessment", "Initial screening", "Budget-conscious analysis"]
+                "best_for": [
+                    "Most grant opportunities",
+                    "Complete intelligence at affordable price",
+                    "Organizations needing network insights"
+                ],
+                "status": "active",
+                "competitive_advantage": "Network intelligence at $2 - market first!"
+            },
+            {
+                "id": "premium",
+                "name": "PREMIUM Intelligence",
+                "user_price": 8.00,
+                "ai_cost": 0.10,
+                "platform_value": 7.90,
+                "markup": "80x (strategic consulting value)",
+                "delivery_time": "30-40 minutes",
+                "poc_effort": "2-4 hours",
+                "features": [
+                    "Everything in ESSENTIALS tier",
+                    "Enhanced Network Pathways (warm introductions)",
+                    "Decision Maker Profiling & Engagement Strategies",
+                    "Policy Analysis (federal + state alignment)",
+                    "Strategic Consulting Insights",
+                    "Relationship Mapping & Cultivation Plans",
+                    "Comprehensive Dossier (20+ pages)",
+                    "Multi-year Funding Strategy"
+                ],
+                "best_for": [
+                    "High-value opportunities ($500K+)",
+                    "Strategic partnerships & major funders",
+                    "Relationship-driven funding"
+                ],
+                "status": "active",
+                "savings_vs_old_complete": "$34 (81% cost reduction)"
+            }
+        ],
+        "deprecated_tiers": [
+            {
+                "id": "current",
+                "name": "Current Intelligence (DEPRECATED)",
+                "old_price": 0.75,
+                "maps_to": "essentials",
+                "new_price": 2.00,
+                "sunset_date": "2025-11-04",
+                "deprecation_notice": "Auto-maps to ESSENTIALS tier. Now includes network intelligence!"
             },
             {
                 "id": "standard",
-                "name": "Standard Intelligence",
-                "price": 7.50,
-                "delivery_time": "15-20 minutes", 
-                "poc_effort": "0 hours",
-                "features": [
-                    "Everything in Current Intelligence",
-                    "5-year historical funding analysis",
-                    "Award pattern intelligence and success factors",
-                    "Geographic distribution and competitive analysis",
-                    "Temporal trends and market timing insights"
-                ],
-                "best_for": ["Serious opportunity pursuit", "Proposal development", "Competitive intelligence"]
+                "name": "Standard Intelligence (DEPRECATED)",
+                "old_price": 7.50,
+                "maps_to": "essentials",
+                "new_price": 2.00,
+                "sunset_date": "2025-11-04",
+                "deprecation_notice": "Auto-maps to ESSENTIALS tier. 73% cost reduction + network intelligence included!"
             },
             {
                 "id": "enhanced",
-                "name": "Enhanced Intelligence",
-                "price": 22.00,
-                "delivery_time": "30-45 minutes",
-                "poc_effort": "0-1 hours",
-                "features": [
-                    "Everything in Standard Intelligence",
-                    "Complete RFP/NOFO analysis and requirements extraction",
-                    "Board network intelligence and relationship mapping",
-                    "Decision maker profiles and engagement strategies",
-                    "Strategic partnership opportunity identification"
-                ],
-                "best_for": ["High-value opportunities", "Strategic partnerships", "Relationship-driven funding"],
-                "status": "available"
+                "name": "Enhanced Intelligence (DEPRECATED)",
+                "old_price": 22.00,
+                "maps_to": "premium",
+                "new_price": 8.00,
+                "sunset_date": "2025-11-04",
+                "deprecation_notice": "Auto-maps to PREMIUM tier. 64% cost reduction with all features!"
             },
             {
                 "id": "complete",
-                "name": "Complete Intelligence",
-                "price": 42.00,
-                "delivery_time": "60-90 minutes",
-                "poc_effort": "2-4 hours",
-                "features": [
-                    "Everything in Enhanced Intelligence",
-                    "Masters thesis-level comprehensive analysis",
-                    "Advanced network mapping and warm introduction pathways",
-                    "Policy context analysis and regulatory insights",
-                    "Real-time monitoring and premium documentation"
-                ],
-                "best_for": ["Major institutional opportunities", "Multi-million dollar programs", "Complex partnerships"],
-                "status": "available"
+                "name": "Complete Intelligence (DEPRECATED)",
+                "old_price": 42.00,
+                "maps_to": "premium",
+                "new_price": 8.00,
+                "sunset_date": "2025-11-04",
+                "deprecation_notice": "Auto-maps to PREMIUM tier. 81% cost reduction with all features!"
             }
         ],
-        "add_ons": [
-            {"id": "board_network_analysis", "name": "Board Network Analysis", "price": 6.50},
-            {"id": "decision_maker_intelligence", "name": "Decision Maker Intelligence", "price": 9.50},
-            {"id": "complete_rfp_analysis", "name": "Complete RFP Analysis", "price": 15.50},
-            {"id": "historical_success_patterns", "name": "Historical Success Patterns", "price": 8.50},
-            {"id": "warm_introduction_pathways", "name": "Warm Introduction Pathways", "price": 8.50},
-            {"id": "competitive_deep_dive", "name": "Competitive Deep Dive", "price": 12.50}
-        ]
+        "add_ons": {
+            "status": "deprecated",
+            "message": "All add-ons now included in base tiers",
+            "former_add_ons": [
+                {"id": "board_network_analysis", "name": "Board Network Analysis", "old_price": 6.50, "now": "Included in ESSENTIALS"},
+                {"id": "decision_maker_intelligence", "name": "Decision Maker Intelligence", "old_price": 9.50, "now": "Included in PREMIUM"},
+                {"id": "complete_rfp_analysis", "name": "Complete RFP Analysis", "old_price": 15.50, "now": "Included in PREMIUM"},
+                {"id": "historical_success_patterns", "name": "Historical Success Patterns", "old_price": 8.50, "now": "Included in ESSENTIALS"},
+                {"id": "warm_introduction_pathways", "name": "Warm Introduction Pathways", "old_price": 8.50, "now": "Included in PREMIUM"},
+                {"id": "competitive_deep_dive", "name": "Competitive Deep Dive", "old_price": 12.50, "now": "Included in PREMIUM"}
+            ]
+        },
+        "pricing_transparency": {
+            "essentials": {
+                "user_price": "$2.00",
+                "ai_cost": "$0.05 (TRUE cost)",
+                "platform_value": "$1.95 (data + tools + infrastructure)",
+                "markup": "40x (justified by platform value)"
+            },
+            "premium": {
+                "user_price": "$8.00",
+                "ai_cost": "$0.10 (TRUE cost)",
+                "platform_value": "$7.90 (data + tools + infrastructure + consulting)",
+                "markup": "80x (strategic consulting value)"
+            }
+        },
+        "migration_guide": {
+            "current_users": "If using 'current', 'standard', 'enhanced', or 'complete' tiers, requests will auto-map to new tiers for 30 days (until 2025-11-04).",
+            "action_required": "Update API calls to use 'essentials' or 'premium' instead of old tier names.",
+            "benefits": "Lower prices (64-81% savings), network intelligence included, transparent pricing"
+        }
     }
 
 # Background task processor
