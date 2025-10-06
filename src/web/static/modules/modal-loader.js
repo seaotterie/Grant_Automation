@@ -8,7 +8,7 @@
 (function() {
     'use strict';
 
-    console.log('Modal Loader: Initializing...');
+    console.log('Modal Loader: Initializing... VERSION: NO_DUPLICATE_MODALS_20251006');
 
     /**
      * Load modal templates into DOM
@@ -19,12 +19,14 @@
 
         try {
             // Load all modal templates
+            // NOTE: ntee-selection-modal.html and government-criteria-modal.html are NOT loaded
+            // because NTEE and Gov Criteria UIs are now embedded directly in profile-modals.html tabs
             const templates = [
                 '/static/templates/profile-modals.html',
-                '/static/templates/ntee-selection-modal.html',
-                '/static/templates/government-criteria-modal.html',
                 '/static/templates/create-delete-modals.html'
             ];
+
+            console.log('Modal Loader: Loading ONLY these templates:', templates);
 
             for (const templateUrl of templates) {
                 try {
