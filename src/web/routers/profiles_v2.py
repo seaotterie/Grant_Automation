@@ -26,6 +26,7 @@ from src.profiles.quality_scoring import (
 )
 from src.profiles.models import UnifiedProfile
 from src.database.database_manager import DatabaseManager, Opportunity
+from src.config.database_config import get_nonprofit_intelligence_db, get_catalynx_db
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ orchestrator = ProfileEnhancementOrchestrator()
 profile_scorer = ProfileQualityScorer()
 opportunity_scorer = OpportunityQualityScorer()
 completeness_validator = DataCompletenessValidator()
-database_manager = DatabaseManager("data/catalynx.db")
+database_manager = DatabaseManager(get_catalynx_db())
 
 
 # Helper Functions for SCREENING Stage
@@ -53,7 +54,7 @@ def _query_bmf_database(ntee_codes: List[str], max_results: int = 200) -> List[D
     Returns:
         List of organization dictionaries with EIN, name, state, city, revenue, assets
     """
-    db_path = "data/nonprofit_intelligence.db"
+    db_path = get_nonprofit_intelligence_db()
 
     try:
         conn = sqlite3.connect(db_path)
@@ -124,7 +125,7 @@ def _enrich_with_990_data(bmf_orgs: List[Dict[str, Any]]) -> List[Dict[str, Any]
     Returns:
         List of organizations enriched with 990 data (revenue, expenses, program ratios, etc.)
     """
-    db_path = "data/nonprofit_intelligence.db"
+    db_path = get_nonprofit_intelligence_db()
 
     try:
         conn = sqlite3.connect(db_path)
@@ -411,19 +412,19 @@ def _calculate_multi_dimensional_scores(
         # Categorize by score (percentile-based thresholds)
         # Based on observed score distribution: min=0.533, max=0.745, mean=0.621
         if overall_score >= 0.74:  # ~99.5th percentile - best matches
-            stage_category = "auto_qualified"
+            category_level = "qualified"
         elif overall_score >= 0.71:  # ~97th percentile - strong candidates
-            stage_category = "review"
+            category_level = "review"
         elif overall_score >= 0.68:  # ~90th percentile - worth deeper look
-            stage_category = "consider"
+            category_level = "consider"
         else:
-            stage_category = "low_priority"
+            category_level = "low_priority"
 
         # Add scoring data to org
         scored_org = org.copy()
         scored_org['overall_score'] = round(overall_score, 3)
         scored_org['confidence'] = confidence_level
-        scored_org['stage_category'] = stage_category
+        scored_org['category_level'] = category_level
         scored_org['dimensional_scores'] = dimensions
 
         scored_orgs.append(scored_org)
@@ -562,7 +563,7 @@ async def get_profile_quality(profile_id: str):
 
         if profile.ein:
             # Query BMF data
-            db_path = "data/nonprofit_intelligence.db"
+            db_path = get_nonprofit_intelligence_db()
             conn = sqlite3.connect(db_path)
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
@@ -725,7 +726,7 @@ async def discover_funding_opportunities(
             raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
 
         # Query BMF for foundations
-        db_path = "data/nonprofit_intelligence.db"
+        db_path = get_nonprofit_intelligence_db()
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -845,7 +846,7 @@ async def discover_networking_opportunities(
             raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
 
         # Query BMF for peer nonprofits
-        db_path = "data/nonprofit_intelligence.db"
+        db_path = get_nonprofit_intelligence_db()
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -1043,6 +1044,30 @@ async def list_profiles(
     except Exception as e:
         logger.error(f"[ENDPOINT] Failed to list profiles: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/health")
+async def health_check():
+    """Health check endpoint for v2 profile API."""
+    return {
+        "status": "healthy",
+        "version": "2.0",
+        "features": [
+            "orchestrated_profile_building",
+            "quality_scoring",
+            "funding_opportunity_discovery",
+            "networking_opportunity_discovery",
+            "crud_operations",
+            "analytics",
+            "export"
+        ],
+        "tools": [
+            "ProfileEnhancementOrchestrator",
+            "ProfileQualityScorer",
+            "OpportunityQualityScorer",
+            "DataCompletenessValidator"
+        ]
+    }
 
 
 @router.get("/{profile_id}")
@@ -1255,7 +1280,7 @@ async def discover_nonprofit_opportunities(profile_id: str, request: Dict[str, A
                 "revenue": 0,
                 "overall_score": 0.89,
                 "confidence": "high",
-                "stage_category": "auto_qualified",  # auto_qualified, review, consider, low_priority
+                "category_level": "qualified",  # qualified, review, consider, low_priority
                 "dimensional_scores": {...},
                 "web_search_complete": true,
                 "990_data": {...},
@@ -1343,7 +1368,7 @@ async def discover_nonprofit_opportunities(profile_id: str, request: Dict[str, A
                 "revenue": revenue,
                 "overall_score": org.get("overall_score", 0.0),
                 "confidence": org.get("confidence", "low"),
-                "stage_category": org.get("stage_category", "low_priority"),
+                "category_level": org.get("category_level", "low_priority"),
                 "dimensional_scores": org.get("dimensional_scores", {}),
                 "web_search_complete": False,
                 "990_data": org.get("990_data"),
@@ -1351,17 +1376,18 @@ async def discover_nonprofit_opportunities(profile_id: str, request: Dict[str, A
             })
 
         # Calculate summary statistics
-        summary_counts = {"auto_qualified": 0, "review": 0, "consider": 0, "low_priority": 0}
+        summary_counts = {"qualified": 0, "review": 0, "consider": 0, "low_priority": 0}
         for opp in opportunities:
-            category = opp["stage_category"]
+            category = opp["category_level"]
             summary_counts[category] = summary_counts.get(category, 0) + 1
 
         summary = {
+            "total_found": len(opportunities),  # Total opportunities returned to UI
             "total_bmf_matches": len(bmf_results),
             "total_scored": len(scored_results),
             "total_qualified": len(qualified_results),
             "total_returned": len(opportunities),
-            "auto_qualified": summary_counts.get("auto_qualified", 0),
+            "qualified": summary_counts.get("qualified", 0),
             "review": summary_counts.get("review", 0),
             "consider": summary_counts.get("consider", 0),
             "low_priority": summary_counts.get("low_priority", 0),
@@ -1407,7 +1433,7 @@ async def discover_nonprofit_opportunities(profile_id: str, request: Dict[str, A
                     scorer_version='multi_dimensional_v1.0',
                     analysis_discovery={
                         'dimensional_scores': opp_data.get('dimensional_scores', {}),
-                        'stage_category': opp_data.get('stage_category'),
+                        'category_level': opp_data.get('category_level'),
                         '990_data': opp_data.get('990_data'),
                         'grant_history': opp_data.get('grant_history'),
                         'location': opp_data.get('location')
@@ -1450,25 +1476,90 @@ async def discover_nonprofit_opportunities(profile_id: str, request: Dict[str, A
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/health")
-async def health_check():
-    """Health check endpoint for v2 profile API."""
-    return {
-        "status": "healthy",
-        "version": "2.0",
-        "features": [
-            "orchestrated_profile_building",
-            "quality_scoring",
-            "funding_opportunity_discovery",
-            "networking_opportunity_discovery",
-            "crud_operations",
-            "analytics",
-            "export"
-        ],
-        "tools": [
-            "ProfileEnhancementOrchestrator",
-            "ProfileQualityScorer",
-            "OpportunityQualityScorer",
-            "DataCompletenessValidator"
-        ]
+@router.get("/{profile_id}/opportunities")
+async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None):
+    """
+    Get all saved opportunities for a profile from the database.
+
+    Query params:
+    - stage: Optional filter by current_stage (discovery, screening, intelligence, etc.)
+
+    Returns:
+    {
+        "status": "success",
+        "profile_id": "...",
+        "opportunities": [...],
+        "total_count": 42,
+        "summary": {
+            "auto_qualified": 18,
+            "review": 22,
+            ...
+        }
     }
+    """
+    try:
+        from src.database.query_interface import DatabaseQueryInterface, QueryFilter
+
+        db_query = DatabaseQueryInterface()
+
+        # Build filter
+        query_filter = QueryFilter(profile_ids=[profile_id])
+
+        # Get all opportunities for this profile
+        opportunities_raw, total_count = db_query.filter_opportunities(query_filter)
+
+        # Filter by stage if specified
+        if stage:
+            opportunities_raw = [opp for opp in opportunities_raw if opp.get('current_stage') == stage]
+
+        # Convert to frontend format
+        opportunities = []
+        summary_counts = {"qualified": 0, "review": 0, "consider": 0, "low_priority": 0}
+
+        for opp_raw in opportunities_raw:
+            # Extract analysis_discovery data
+            discovery_data = opp_raw.get('analysis_discovery', {})
+            if isinstance(discovery_data, str):
+                import json
+                discovery_data = json.loads(discovery_data)
+
+            category_level = discovery_data.get('category_level', 'low_priority')
+            summary_counts[category_level] = summary_counts.get(category_level, 0) + 1
+
+            opportunities.append({
+                "opportunity_id": opp_raw.get('id'),
+                "organization_name": opp_raw.get('organization_name'),
+                "ein": opp_raw.get('ein'),
+                "location": discovery_data.get('location', {}),
+                "overall_score": opp_raw.get('overall_score', 0.0),
+                "confidence": "high" if opp_raw.get('confidence_level', 0) >= 0.75 else "medium",
+                "category_level": category_level,
+                "dimensional_scores": discovery_data.get('dimensional_scores', {}),
+                "990_data": discovery_data.get('990_data'),
+                "grant_history": discovery_data.get('grant_history'),
+                "current_stage": opp_raw.get('current_stage'),
+                "discovery_date": opp_raw.get('discovery_date')
+            })
+
+        summary = {
+            "total_found": len(opportunities),
+            "qualified": summary_counts.get("qualified", 0),
+            "review": summary_counts.get("review", 0),
+            "consider": summary_counts.get("consider", 0),
+            "low_priority": summary_counts.get("low_priority", 0),
+            "scrapy_completed": 0
+        }
+
+        logger.info(f"Retrieved {len(opportunities)} opportunities for profile {profile_id}")
+
+        return {
+            "status": "success",
+            "profile_id": profile_id,
+            "opportunities": opportunities,
+            "total_count": len(opportunities),
+            "summary": summary
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to retrieve opportunities for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

@@ -65,12 +65,20 @@ class TestEntityCacheManager:
         }
         
         # Set data in cache
-        self.cache_manager.set_entity_data(test_entity_id, test_data)
+        self.cache_manager.store_entity_data(test_entity_id, test_data)
         
         # Retrieve data (should be cache hit)
         result = self.cache_manager.get_entity_data(test_entity_id)
-        
-        assert result == test_data
+
+        # Check that original data is preserved (cache adds cached_at and ttl)
+        assert result is not None
+        assert result["organization_name"] == test_data["organization_name"]
+        assert result["ein"] == test_data["ein"]
+        assert result["revenue"] == test_data["revenue"]
+        assert result["assets"] == test_data["assets"]
+        assert result["ntee_code"] == test_data["ntee_code"]
+        assert "cached_at" in result
+        assert "ttl" in result
         assert self.cache_manager._stats["cache_hits"] == 1
         assert self.cache_manager._stats["cache_misses"] == 0
         
@@ -78,8 +86,8 @@ class TestEntityCacheManager:
     async def test_cache_stats_with_data(self):
         """Test cache statistics with actual data"""
         # Add some test data
-        self.cache_manager.set_entity_data("entity1", {"data": "test1"})
-        self.cache_manager.set_entity_data("entity2", {"data": "test2"})
+        self.cache_manager.store_entity_data("entity1", {"data": "test1"})
+        self.cache_manager.store_entity_data("entity2", {"data": "test2"})
         
         # Create some hits and misses
         self.cache_manager.get_entity_data("entity1")  # hit
@@ -99,7 +107,7 @@ class TestEntityCacheManager:
         large_data = {"large_field": "x" * 10000}  # 10KB of data
         
         for i in range(10):
-            self.cache_manager.set_entity_data(f"entity_{i}", large_data)
+            self.cache_manager.store_entity_data(f"entity_{i}", large_data)
             
         # Cache should have some measurable size
         cache_size = len(str(self.cache_manager._cache)) / (1024 * 1024)
@@ -140,7 +148,7 @@ class TestEntityCachePerformance:
                 "propublica_data": {"filing_year": 2023, "total_revenue": 1000000 + i * 100000},
                 "board_members": [f"Member {j}" for j in range(5)]
             }
-            self.cache_manager.set_entity_data(entity_id, entities[entity_id])
+            self.cache_manager.store_entity_data(entity_id, entities[entity_id])
             
         # Simulate realistic access patterns (some entities accessed more frequently)
         access_pattern = []
@@ -187,7 +195,7 @@ class TestEntityCachePerformance:
                 "organization_name": f"Organization {i}",
                 "revenue": 1000000 + i * 10000
             }
-            self.cache_manager.set_entity_data(f"entity_{i}", entity_data)
+            self.cache_manager.store_entity_data(f"entity_{i}", entity_data)
             
         # Simulate concurrent access
         async def access_cache():
@@ -245,11 +253,19 @@ class TestEntityCacheIntegration:
         }
         
         entity_id = "nonprofit_123456789"
-        self.cache_manager.set_entity_data(entity_id, nonprofit_data)
+        self.cache_manager.store_entity_data(entity_id, nonprofit_data)
         
         retrieved_data = self.cache_manager.get_entity_data(entity_id)
-        assert retrieved_data == nonprofit_data
+
+        # Check that original data is preserved (cache adds cached_at and ttl)
+        assert retrieved_data is not None
         assert retrieved_data["entity_type"] == EntityType.NONPROFIT.value
+        assert retrieved_data["ein"] == nonprofit_data["ein"]
+        assert retrieved_data["organization_name"] == nonprofit_data["organization_name"]
+        assert retrieved_data["ntee_code"] == nonprofit_data["ntee_code"]
+        assert retrieved_data["revenue"] == nonprofit_data["revenue"]
+        assert "cached_at" in retrieved_data
+        assert "ttl" in retrieved_data
         
     def test_government_opportunity_caching(self):
         """Test caching of government opportunity data"""
@@ -268,11 +284,18 @@ class TestEntityCacheIntegration:
         }
         
         entity_id = "gov_HRSA-25-001"
-        self.cache_manager.set_entity_data(entity_id, government_data)
+        self.cache_manager.store_entity_data(entity_id, government_data)
         
         retrieved_data = self.cache_manager.get_entity_data(entity_id)
-        assert retrieved_data == government_data
+
+        # Check that original data is preserved (cache adds cached_at and ttl)
+        assert retrieved_data is not None
         assert retrieved_data["entity_type"] == EntityType.GOVERNMENT.value
+        assert retrieved_data["opportunity_id"] == government_data["opportunity_id"]
+        assert retrieved_data["agency"] == government_data["agency"]
+        assert retrieved_data["total_funding"] == government_data["total_funding"]
+        assert "cached_at" in retrieved_data
+        assert "ttl" in retrieved_data
         
     def test_foundation_entity_caching(self):
         """Test caching of foundation entity data"""
@@ -290,11 +313,19 @@ class TestEntityCacheIntegration:
         }
         
         entity_id = "foundation_456789"
-        self.cache_manager.set_entity_data(entity_id, foundation_data)
+        self.cache_manager.store_entity_data(entity_id, foundation_data)
         
         retrieved_data = self.cache_manager.get_entity_data(entity_id)
-        assert retrieved_data == foundation_data
+
+        # Check that original data is preserved (cache adds cached_at and ttl)
+        assert retrieved_data is not None
         assert retrieved_data["entity_type"] == EntityType.FOUNDATION.value
+        assert retrieved_data["foundation_id"] == foundation_data["foundation_id"]
+        assert retrieved_data["foundation_name"] == foundation_data["foundation_name"]
+        assert retrieved_data["assets"] == foundation_data["assets"]
+        assert retrieved_data["grants_paid"] == foundation_data["grants_paid"]
+        assert "cached_at" in retrieved_data
+        assert "ttl" in retrieved_data
         
 
 class TestEntityCacheErrorHandling:
@@ -317,7 +348,7 @@ class TestEntityCacheErrorHandling:
     def test_none_entity_data(self):
         """Test setting None as entity data"""
         entity_id = "test_entity"
-        self.cache_manager.set_entity_data(entity_id, None)
+        self.cache_manager.store_entity_data(entity_id, None)
         
         result = self.cache_manager.get_entity_data(entity_id)
         assert result is None
@@ -331,7 +362,7 @@ class TestEntityCacheErrorHandling:
             """Task that writes to cache"""
             for i in range(100):
                 data = {"iteration": i, "data": f"value_{i}"}
-                self.cache_manager.set_entity_data(f"{entity_id}_{i}", data)
+                self.cache_manager.store_entity_data(f"{entity_id}_{i}", data)
                 
         async def reader_task():
             """Task that reads from cache"""

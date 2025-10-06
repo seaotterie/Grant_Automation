@@ -13,17 +13,24 @@ Tests:
 """
 
 import logging
-import requests
 import json
+import sys
+from pathlib import Path
 from typing import Dict, Any
+
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
+
+from fastapi.testclient import TestClient
+from src.web.main import app
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
-# API base URL (assuming server is running on localhost:8000)
-BASE_URL = "http://localhost:8000"
-API_V2_BASE = f"{BASE_URL}/api/v2/profiles"
+# Create TestClient
+client = TestClient(app)
+API_V2_BASE = "/api/v2/profiles"
 
 def print_section(title: str):
     """Print section header"""
@@ -31,7 +38,7 @@ def print_section(title: str):
     print(title)
     print("="*60 + "\n")
 
-def print_response(response: requests.Response, label: str):
+def print_response(response, label: str):
     """Print API response details"""
     print(f"{label}:")
     print(f"  Status Code: {response.status_code}")
@@ -86,7 +93,7 @@ def test_health_check():
     """Test 1: Health Check"""
     print_section("TEST 1: Health Check")
 
-    response = requests.get(f"{API_V2_BASE}/health")
+    response = client.get(f"{API_V2_BASE}/health")
     print_response(response, "Health Check")
 
     assert response.status_code == 200, "Health check should return 200"
@@ -111,7 +118,7 @@ def test_build_profile_basic():
         "quality_threshold": 0.70
     }
 
-    response = requests.post(
+    response = client.post(
         f"{API_V2_BASE}/build",
         json=request_data
     )
@@ -153,7 +160,7 @@ def test_build_profile_with_tool25():
         "quality_threshold": 0.70
     }
 
-    response = requests.post(
+    response = client.post(
         f"{API_V2_BASE}/build",
         json=request_data
     )
@@ -186,7 +193,7 @@ def test_get_profile_quality():
 
     # First, build a profile
     print("Building profile first...")
-    build_response = requests.post(
+    build_response = client.post(
         f"{API_V2_BASE}/build",
         json={
             "ein": "208295721",
@@ -207,7 +214,7 @@ def test_get_profile_quality():
         return
 
     # Now get quality assessment
-    response = requests.get(f"{API_V2_BASE}/{profile_id}/quality")
+    response = client.get(f"{API_V2_BASE}/{profile_id}/quality")
     print_response(response, "Get Profile Quality")
 
     if response.status_code == 200:
@@ -230,7 +237,7 @@ def test_score_funding_opportunity():
 
     # First, build a profile
     print("Building profile first...")
-    build_response = requests.post(
+    build_response = client.post(
         f"{API_V2_BASE}/build",
         json={
             "ein": "208295721",
@@ -267,7 +274,7 @@ def test_score_funding_opportunity():
         "opportunity_data": foundation_data
     }
 
-    response = requests.post(
+    response = client.post(
         f"{API_V2_BASE}/{profile_id}/opportunities/score",
         json=request_data
     )
@@ -294,7 +301,7 @@ def test_discover_funding_opportunities():
 
     # First, build a profile
     print("Building profile first...")
-    build_response = requests.post(
+    build_response = client.post(
         f"{API_V2_BASE}/build",
         json={
             "ein": "208295721",
@@ -321,7 +328,7 @@ def test_discover_funding_opportunities():
         "limit": 20
     }
 
-    response = requests.get(
+    response = client.get(
         f"{API_V2_BASE}/{profile_id}/opportunities/funding",
         params=params
     )
@@ -356,7 +363,7 @@ def test_discover_networking_opportunities():
 
     # First, build a profile
     print("Building profile first...")
-    build_response = requests.post(
+    build_response = client.post(
         f"{API_V2_BASE}/build",
         json={
             "ein": "208295721",
@@ -383,7 +390,7 @@ def test_discover_networking_opportunities():
         "limit": 20
     }
 
-    response = requests.get(
+    response = client.get(
         f"{API_V2_BASE}/{profile_id}/opportunities/networking",
         params=params
     )
@@ -418,21 +425,8 @@ def main():
     print("Testing profiles_v2 router with tool-based architecture")
     print("="*60)
 
-    print("\n[INFO] These tests require the FastAPI server to be running!")
-    print("[INFO] Start server with: python src/web/main.py")
-    print("[INFO] Server should be at: http://localhost:8000\n")
-
-    # Check if server is running
-    try:
-        health_response = requests.get(f"{BASE_URL}/health", timeout=2)
-        if health_response.status_code != 200:
-            print("[ERROR] Server is running but health check failed")
-            print("[ERROR] Please ensure server is fully initialized")
-            return
-    except requests.exceptions.RequestException:
-        print("[ERROR] Cannot connect to server at http://localhost:8000")
-        print("[ERROR] Please start the server first")
-        return
+    print("\n[INFO] Tests now use FastAPI TestClient - no server required!")
+    print("[INFO] Running tests with TestClient...\n")
 
     # Run tests
     try:
