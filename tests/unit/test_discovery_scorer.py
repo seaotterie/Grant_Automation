@@ -26,20 +26,44 @@ except ImportError:
 
 class TestDiscoveryScorer:
     """Test suite for Discovery Scorer functionality"""
-    
+
     @pytest.fixture
     def scorer(self):
         """Create a discovery scorer instance"""
         return DiscoveryScorer()
-    
+
+    def create_test_profile(self, **kwargs):
+        """Helper to create test profiles with required fields"""
+        from src.profiles.models import OrganizationType
+
+        # Set defaults for required fields
+        defaults = {
+            'profile_id': f"test_profile_{hash(str(kwargs)) % 10000}",
+            'name': kwargs.pop('organization_name', 'Test Organization'),
+            'organization_type': OrganizationType.NONPROFIT,
+            'focus_areas': ['general'],
+        }
+
+        # Map legacy field names to new field names
+        if 'revenue' in kwargs:
+            kwargs['annual_revenue'] = kwargs.pop('revenue')
+        if 'state' in kwargs:
+            kwargs['location'] = kwargs.pop('state')
+
+        # Merge defaults with provided kwargs
+        defaults.update(kwargs)
+
+        return OrganizationProfile(**defaults)
+
     @pytest.fixture
     def valid_profile(self):
         """Valid organization profile for testing"""
-        return OrganizationProfile(
+        return self.create_test_profile(
             organization_name="Test Education Foundation",
+            focus_areas=["education", "youth development"],
             ntee_codes=["B25"],
-            revenue=1000000,
-            state="VA",
+            annual_revenue=1000000,
+            location="Richmond, VA",
             mission_statement="Supporting educational excellence"
         )
     
@@ -77,8 +101,9 @@ class TestDiscoveryScorer:
     @pytest.mark.asyncio
     async def test_perfect_match_scoring(self, scorer):
         """Test scoring with perfect match data"""
-        perfect_profile = OrganizationProfile(
+        perfect_profile = self.create_test_profile(
             organization_name="Perfect Education Foundation",
+            focus_areas=["education"],
             ntee_codes=["B25"],
             revenue=1000000,
             state="VA"
@@ -101,7 +126,7 @@ class TestDiscoveryScorer:
     @pytest.mark.asyncio
     async def test_poor_match_scoring(self, scorer):
         """Test scoring with poor match data"""
-        poor_profile = OrganizationProfile(
+        poor_profile = self.create_test_profile(
             organization_name="Education Foundation",
             ntee_codes=["B25"],
             revenue=1000000,
@@ -124,9 +149,9 @@ class TestDiscoveryScorer:
     @pytest.mark.asyncio
     async def test_missing_data_handling(self, scorer):
         """Test handling of missing data"""
-        minimal_profile = OrganizationProfile(
+        minimal_profile = self.create_test_profile(
             organization_name="Minimal Foundation"
-            # Missing most fields
+            # create_test_profile adds required fields automatically
         )
         
         minimal_opportunity = {
@@ -143,7 +168,7 @@ class TestDiscoveryScorer:
     @pytest.mark.asyncio
     async def test_ntee_code_matching(self, scorer):
         """Test NTEE code matching logic"""
-        profile = OrganizationProfile(
+        profile = self.create_test_profile(
             organization_name="Education Foundation",
             ntee_codes=["B25", "B28"],
             revenue=1000000,
@@ -174,7 +199,7 @@ class TestDiscoveryScorer:
     @pytest.mark.asyncio
     async def test_geographic_scoring(self, scorer):
         """Test geographic advantage scoring"""
-        profile = OrganizationProfile(
+        profile = self.create_test_profile(
             organization_name="Virginia Foundation",
             state="VA",
             ntee_codes=["B25"]
@@ -203,13 +228,13 @@ class TestDiscoveryScorer:
     @pytest.mark.asyncio
     async def test_revenue_compatibility(self, scorer):
         """Test revenue-based compatibility scoring"""
-        small_org = OrganizationProfile(
+        small_org = self.create_test_profile(
             organization_name="Small Foundation",
             revenue=100000,
             ntee_codes=["B25"]
         )
-        
-        large_org = OrganizationProfile(
+
+        large_org = self.create_test_profile(
             organization_name="Large Foundation",
             revenue=10000000,
             ntee_codes=["B25"]
@@ -279,10 +304,10 @@ class TestDiscoveryScorer:
         # Enhanced opportunity should score higher due to boost factors
         assert enhanced_result.overall_score >= base_result.overall_score
     
-    @pytest.mark.asyncio 
+    @pytest.mark.asyncio
     async def test_edge_case_handling(self, scorer):
         """Test handling of edge cases"""
-        profile = OrganizationProfile(organization_name="Test Foundation")
+        profile = self.create_test_profile(organization_name="Test Foundation")
         
         edge_cases = [
             {},  # Empty opportunity
@@ -314,7 +339,7 @@ class TestDiscoveryScorer:
         for opportunity in opportunities:
             for profile in profiles:
                 # Convert dict to profile object
-                profile_obj = OrganizationProfile(**profile)
+                profile_obj = self.create_test_profile(**profile)
                 result = await scorer.score_opportunity(opportunity, profile_obj)
                 results.append(result)
         
@@ -383,7 +408,7 @@ class TestDiscoveryScorer:
     @pytest.mark.asyncio
     async def test_error_handling(self, scorer):
         """Test error handling in scorer"""
-        profile = OrganizationProfile(organization_name="Test")
+        profile = self.create_test_profile(organization_name="Test")
         
         # Test with invalid data that might cause errors
         invalid_opportunity = {
@@ -424,7 +449,7 @@ class TestDiscoveryScorerIntegration:
             "ntee_codes": ["C32", "B25"]
         }
         
-        realistic_profile = OrganizationProfile(
+        realistic_profile = self.create_test_profile(
             organization_name="Environmental Education Foundation",
             ntee_codes=["C32"],
             revenue=750000,

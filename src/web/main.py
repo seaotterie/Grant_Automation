@@ -51,8 +51,10 @@ from src.discovery.discovery_engine import discovery_engine
 from src.pipeline.pipeline_engine import ProcessingPriority
 from src.pipeline.resource_allocator import resource_allocator
 from src.processors.registry import get_processor_summary
-from src.processors.lookup.ein_lookup import EINLookupProcessor
-from src.processors.analysis.ai_service_manager import get_ai_service_manager
+# EINLookupProcessor deprecated - use EIN Validator Tool instead
+# from src.processors.lookup.ein_lookup import EINLookupProcessor
+# Legacy AI service manager - removed in 12-factor migration
+# from src.processors.analysis.ai_service_manager import get_ai_service_manager
 from src.web.services.scoring_service import (
     get_scoring_service, ScoreRequest, ScoreResponse,
     PromotionRequest, PromotionResponse, BulkPromotionRequest, BulkPromotionResponse
@@ -68,7 +70,8 @@ from src.middleware.security import (
 )
 from src.auth.jwt_auth import get_current_user_dependency, User
 from src.web.auth_routes import router as auth_router
-from src.web.routers.ai_processing import router as ai_processing_router
+# AI Processing router deprecated - uses old processors
+# from src.web.routers.ai_processing import router as ai_processing_router
 from src.web.routers.intelligence import router as intelligence_router
 from src.web.routers.workflows import router as workflows_router
 from src.web.routers.profiles_v2 import router as profiles_v2_router
@@ -354,15 +357,17 @@ async def lifespan(app: FastAPI):
     """Initialize and cleanup services."""
     # Startup
     logger.info("Starting Catalynx Web Interface...")
-    logger.info("Registering processors...")
+    logger.info("Initializing 12-factor tool architecture...")
 
-    # Auto-register processors
+    # Initialize 12-factor tool registry
     try:
-        from src.processors.registry import register_all_processors
-        registered_count = register_all_processors()
-        logger.info(f"Registered {registered_count} processors")
+        from src.core.tool_registry import get_registry
+        tool_registry = get_registry()
+        operational_tools = tool_registry.get_operational_tools()
+        logger.info(f"Loaded {len(operational_tools)} operational 12-factor tools")
+        logger.info(f"Tool architecture: Phase 8 - Nonprofit Workflow Solidification")
     except Exception as e:
-        logger.warning(f"Failed to auto-register processors: {e}")
+        logger.warning(f"Failed to initialize tool registry: {e}")
 
     logger.info("Catalynx API ready!")
 
@@ -417,8 +422,8 @@ app.middleware("http")(add_deprecation_headers)
 # Include authentication routes
 app.include_router(auth_router)
 
-# Include AI processing routes
-app.include_router(ai_processing_router)
+# Include AI processing routes - DEPRECATED (moved to intelligence and workflows routers)
+# app.include_router(ai_processing_router)
 
 # Include Intelligence (Tiered Analysis) routes
 app.include_router(intelligence_router)
@@ -2468,23 +2473,52 @@ async def fetch_ein_data(request: dict):
 
 @app.post("/api/profiles")
 async def create_profile(
-    profile_data: Dict[str, Any],
-    current_user: User = Depends(get_current_user_dependency)
+    profile_data: Dict[str, Any]
+    # Removed authentication: single-user desktop application
 ):
     """Create a new organization profile."""
     try:
         # Debug: Log the profile data received
-        logger.info(f"Creating profile with data: ntee_codes={profile_data.get('ntee_codes')}, government_criteria={profile_data.get('government_criteria')}, keywords={profile_data.get('keywords')}")
-        
-        profile = profile_service.create_profile(profile_data)
-        
-        # Debug: Log the profile after creation
-        logger.info(f"Profile after creation: ntee_codes={profile.ntee_codes}, government_criteria={profile.government_criteria}, keywords={profile.keywords}")
-        
-        return {"profile": profile.model_dump(), "message": "Profile created successfully"}
-        
+        logger.info(f"Creating profile with data: ntee_codes={profile_data.get('ntee_codes')}, name={profile_data.get('name')}")
+
+        # Generate profile_id if not provided
+        import uuid
+        if 'profile_id' not in profile_data:
+            profile_data['profile_id'] = f"profile-{uuid.uuid4().hex[:12]}"
+
+        # Ensure organization_name is set (required field for UnifiedProfile)
+        if 'organization_name' not in profile_data and 'name' in profile_data:
+            profile_data['organization_name'] = profile_data['name']
+
+        # Set timestamps
+        now = datetime.now().isoformat()
+        if 'created_at' not in profile_data:
+            profile_data['created_at'] = now
+        if 'updated_at' not in profile_data:
+            profile_data['updated_at'] = now
+
+        # Create UnifiedProfile object
+        from src.profiles.models import UnifiedProfile
+        profile = UnifiedProfile(**profile_data)
+
+        # Save profile using service
+        success = profile_service.create_profile(profile)
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to save profile to database")
+
+        # Return profile as dict
+        profile_dict = profile.model_dump() if hasattr(profile, 'model_dump') else profile.dict()
+        logger.info(f"Profile created successfully: {profile.profile_id}")
+
+        return {
+            "profile_id": profile.profile_id,  # Include at root level for test compatibility
+            "profile": profile_dict,
+            "message": "Profile created successfully"
+        }
+
     except Exception as e:
-        logger.error(f"Failed to create profile: {e}")
+        logger.error(f"Failed to create profile: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/profiles/{profile_id}")
@@ -9476,11 +9510,15 @@ async def ai_lite_profile_analysis(profile_id: str, request_data: Dict[str, Any]
         if not profile:
             raise HTTPException(status_code=404, detail="Profile not found")
         
-        # Import AI-Lite services
-        from src.processors.analysis.ai_service_manager import get_ai_service_manager
+        # Legacy AI-Lite services - migrated to Tool 1 (Opportunity Screening)
+        # from src.processors.analysis.ai_service_manager import get_ai_service_manager
         from src.analytics.cost_tracker import get_cost_tracker
-        
-        ai_service = get_ai_service_manager()
+
+        # ai_service = get_ai_service_manager()
+        raise HTTPException(
+            status_code=410,
+            detail="Legacy AI-Lite endpoint deprecated. Use Tool 1 (Opportunity Screening Tool) via /api/v1/tools/opportunity-screening-tool/execute"
+        )
         cost_tracker = get_cost_tracker()
         
         # Transform profile data for AI service compatibility
