@@ -96,19 +96,21 @@ module.exports = defineConfig({
       },
     },
 
-    // Mobile Testing
-    {
-      name: 'mobile-chrome',
-      use: { 
-        ...devices['Pixel 5']
-      },
-    },
-    {
-      name: 'mobile-safari',
-      use: { 
-        ...devices['iPhone 13']
-      },
-    },
+    // Mobile Testing - DEPRECATED (October 7, 2025)
+    // Catalynx is a desktop web application, not a mobile app
+    // Mobile tests moved to tests/_mobile_deprecated/
+    // {
+    //   name: 'mobile-chrome',
+    //   use: {
+    //     ...devices['Pixel 5']
+    //   },
+    // },
+    // {
+    //   name: 'mobile-safari',
+    //   use: {
+    //     ...devices['iPhone 13']
+    //   },
+    // },
 
     // High DPI Testing
     {

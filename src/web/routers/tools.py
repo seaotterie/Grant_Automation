@@ -76,14 +76,12 @@ async def list_tools(
     - status: Filter by status (e.g., 'operational', 'deprecated')
     """
     try:
-        all_tools = tool_registry.list_tools()
+        # Use list_tools_as_dicts which returns proper dictionary format
+        all_tools = tool_registry.list_tools_as_dicts(status=status)
 
-        # Apply filters
+        # Apply category filter if provided
         if category:
             all_tools = [t for t in all_tools if t.get('category') == category]
-
-        if status:
-            all_tools = [t for t in all_tools if t.get('status') == status]
 
         operational = [t for t in all_tools if t.get('status') == 'operational']
 
@@ -231,7 +229,7 @@ async def list_categories():
     Returns a list of unique categories across all tools
     """
     try:
-        all_tools = tool_registry.list_tools()
+        all_tools = tool_registry.list_tools_as_dicts()
         categories = set(t.get('category', 'uncategorized') for t in all_tools)
 
         return {
@@ -252,7 +250,7 @@ async def health_check():
     Returns operational status and tool counts
     """
     try:
-        all_tools = tool_registry.list_tools()
+        all_tools = tool_registry.list_tools_as_dicts()
         operational = [t for t in all_tools if t.get('status') == 'operational']
         deprecated = [t for t in all_tools if t.get('status') == 'deprecated']
 

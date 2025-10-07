@@ -1,5 +1,5 @@
 [tool]
-name = "form990-propublica"
+name = "Form 990 ProPublica Tool"
 version = "1.0.0"
 description = "ProPublica API enrichment for comprehensive nonprofit intelligence - 12-Factor Agents implementation"
 intent = "propublica_enrichment"

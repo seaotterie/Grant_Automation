@@ -1,5 +1,5 @@
 [tool]
-name = "propublica-api-enrichment"
+name = "ProPublica API Enrichment Tool"
 version = "1.0.0"
 description = "ProPublica API-only enrichment for organization profiles - 12-Factor Agents implementation"
 intent = "api_enrichment"

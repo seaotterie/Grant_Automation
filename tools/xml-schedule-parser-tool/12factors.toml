@@ -1,5 +1,5 @@
 [tool]
-name = "xml-schedule-parser"
+name = "XML Schedule Parser Tool"
 version = "1.0.0"
 description = "XML download and schedule parsing for detailed 990 filing data - 12-Factor Agents implementation"
 intent = "xml_schedule_extraction"

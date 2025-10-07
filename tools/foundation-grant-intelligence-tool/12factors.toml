@@ -1,5 +1,5 @@
 [tool]
-name = "foundation-grant-intelligence"
+name = "Foundation Grant Intelligence Tool"
 version = "1.0.0"
 description = "990-PF foundation analysis and grant-making capacity assessment - 12-Factor Agents implementation"
 intent = "foundation_intelligence"

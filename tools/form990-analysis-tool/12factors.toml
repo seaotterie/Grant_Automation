@@ -1,5 +1,5 @@
 [tool]
-name = "form990-analysis"
+name = "Form 990 Analysis Tool"
 version = "1.0.0"
 description = "Deep financial analysis using Form 990 database - 12-Factor Agents implementation"
 intent = "form990_analysis"

@@ -225,6 +225,150 @@ class ToolRegistry:
             if keyword_lower in tool.single_responsibility.lower()
         ]
 
+    def get_tool_metadata(self, tool_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get tool metadata as a dictionary (for API responses).
+
+        Args:
+            tool_name: Name of the tool
+
+        Returns:
+            Dictionary with tool metadata, or None if not found
+        """
+        tool = self.get_tool(tool_name)
+        if not tool:
+            return None
+
+        # Convert ToolMetadata to dictionary
+        return {
+            "name": tool.name,
+            "version": tool.version,
+            "description": tool.description,
+            "status": tool.status.value,
+            "category": self._extract_category(tool),
+            "single_responsibility": tool.single_responsibility,
+            "structured_output_format": tool.structured_output_format,
+            "dependencies": tool.dependencies,
+            "cost_per_operation": tool.cost_per_execution or 0.0,
+            "avg_execution_time_ms": tool.avg_execution_time_ms,
+            "tool_path": str(tool.tool_path),
+            "replaces_processors": tool.replaces_processors,
+            "inputs": tool.config.get("inputs", {}),
+            "outputs": tool.config.get("outputs", {})
+        }
+
+    def get_tool_instance(self, tool_name: str, config: Optional[Dict[str, Any]] = None):
+        """
+        Get an executable instance of a tool.
+
+        Args:
+            tool_name: Name of the tool
+            config: Optional configuration overrides
+
+        Returns:
+            Tool instance ready for execution, or None if not found
+        """
+        tool = self.get_tool(tool_name)
+        if not tool:
+            return None
+
+        # Import the tool module dynamically
+        import importlib.util
+        import sys
+
+        # Look for main.py in the tool directory
+        tool_main = tool.tool_path / "main.py"
+        if not tool_main.exists():
+            return None
+
+        # Load the tool module
+        spec = importlib.util.spec_from_file_location(f"{tool_name}.main", tool_main)
+        if spec and spec.loader:
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[f"{tool_name}.main"] = module
+            spec.loader.exec_module(module)
+
+            # Look for a tool class (usually named Tool or similar)
+            # Try common naming patterns
+            for attr_name in dir(module):
+                attr = getattr(module, attr_name)
+                if isinstance(attr, type) and attr_name.endswith('Tool'):
+                    # Found a tool class, instantiate it
+                    if config:
+                        return attr(**config)
+                    else:
+                        return attr()
+
+        return None
+
+    def list_tools_as_dicts(self, status: Optional[str] = None) -> List[Dict[str, str]]:
+        """
+        List all tools as dictionaries (for API responses).
+
+        Args:
+            status: Filter by status string (optional)
+
+        Returns:
+            List of tool info dictionaries
+        """
+        tools = list(self._tools.values())
+
+        # Filter by status if provided
+        if status:
+            tools = [t for t in tools if t.status.value == status]
+
+        # Convert to dictionaries with essential info
+        result = []
+        for tool in sorted(tools, key=lambda t: t.name):
+            result.append({
+                "name": tool.name,
+                "version": tool.version,
+                "status": tool.status.value,
+                "category": self._extract_category(tool),
+                "description": tool.description,
+                "single_responsibility": tool.single_responsibility
+            })
+
+        return result
+
+    def _extract_category(self, tool: ToolMetadata) -> str:
+        """
+        Extract category from tool path or config.
+
+        Args:
+            tool: ToolMetadata object
+
+        Returns:
+            Category string
+        """
+        # Try to get category from config first
+        if "category" in tool.config.get("tool", {}):
+            return tool.config["tool"]["category"]
+
+        # Infer from tool path (e.g., tools/parsing/xml-990-parser -> parsing)
+        path_parts = tool.tool_path.parts
+        if len(path_parts) > 1:
+            parent_dir = path_parts[-2]
+            if parent_dir != "tools":
+                return parent_dir
+
+        # Default categories based on tool name patterns
+        name_lower = tool.name.lower()
+        if "parser" in name_lower or "parsing" in name_lower:
+            return "parsing"
+        elif "analysis" in name_lower or "analyzer" in name_lower:
+            return "analysis"
+        elif "intelligence" in name_lower:
+            return "intelligence"
+        elif "scorer" in name_lower or "scoring" in name_lower:
+            return "scoring"
+        elif "validator" in name_lower or "validation" in name_lower:
+            return "validation"
+        elif "export" in name_lower or "generator" in name_lower:
+            return "utilities"
+        else:
+            return "uncategorized"
+
     def generate_inventory_report(self) -> str:
         """
         Generate a comprehensive inventory report of all tools.

@@ -1,5 +1,5 @@
 [tool]
-name = "bmf-filter"
+name = "BMF Discovery Tool"
 version = "1.0.0"
 description = "Filter IRS nonprofit data by criteria - 12-Factor implementation"
 intent = "bmf_filter"

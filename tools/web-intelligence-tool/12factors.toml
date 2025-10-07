@@ -2,7 +2,7 @@
 # Scrapy-powered web scraping for nonprofit intelligence gathering
 
 [tool]
-name = "web-intelligence-tool"
+name = "Web Intelligence Tool"
 version = "1.0.0"
 description = "Web scraping and intelligence gathering for nonprofit profiles, grantmaking organizations, and private foundations"
 status = "operational"
