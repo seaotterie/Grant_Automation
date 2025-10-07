@@ -8,11 +8,12 @@ This package contains processors responsible for collecting data from external s
 """
 
 from .propublica_fetch import ProPublicaFetchProcessor
-from .xml_downloader import XMLDownloaderProcessor
+# XMLDownloaderProcessor deprecated - XML tools handle downloads
+# from .xml_downloader import XMLDownloaderProcessor
 from .pdf_downloader import PDFDownloaderProcessor
 
 __all__ = [
     "ProPublicaFetchProcessor",
-    "XMLDownloaderProcessor", 
+    # "XMLDownloaderProcessor",  # Deprecated - XML tools handle downloads
     "PDFDownloaderProcessor"
 ]
