@@ -18,15 +18,17 @@
         modalContainer.id = 'modal-templates-container';
 
         try {
-            // Load all modal templates
+            // Load all modal templates with cache-busting version
             // NOTE: ntee-selection-modal.html and government-criteria-modal.html are NOT loaded
             // because NTEE and Gov Criteria UIs are now embedded directly in profile-modals.html tabs
+            const version = 'RESEARCH_REACTIVITY_FIX_v3';
             const templates = [
-                '/static/templates/profile-modals.html',
-                '/static/templates/create-delete-modals.html'
+                `/static/templates/profile-modals.html?v=${version}`,
+                `/static/templates/create-delete-modals.html?v=${version}`
             ];
 
-            console.log('Modal Loader: Loading ONLY these templates:', templates);
+            console.log('Modal Loader: Loading templates with version:', version);
+            console.log('Modal Loader: Templates:', templates);
 
             for (const templateUrl of templates) {
                 try {
