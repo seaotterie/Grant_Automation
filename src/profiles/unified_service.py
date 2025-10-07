@@ -39,45 +39,149 @@ class UnifiedProfileService:
     # ============================================================================
     
     def get_profile(self, profile_id: str) -> Optional[UnifiedProfile]:
-        """Get profile with real-time analytics"""
-        profile_dir = self.data_dir / profile_id
-        profile_file = profile_dir / "profile.json"
-        
-        if not profile_file.exists():
-            logger.warning(f"Profile {profile_id} not found at {profile_file}")
-            return None
-        
+        """Get profile with real-time analytics (from database for backward compatibility)"""
+        import sqlite3
+
         try:
-            with open(profile_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            
-            # Convert to UnifiedProfile model
-            return UnifiedProfile(**data)
-            
+            # Read from SQLite database (backward compatibility)
+            # Use absolute path relative to project root
+            import os
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            db_path = os.path.join(project_root, "data", "catalynx.db")
+            logger.info(f"[GET_PROFILE] Looking up profile_id={profile_id} in {db_path}")
+
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            query = "SELECT * FROM profiles WHERE id = ?"
+            logger.info(f"[GET_PROFILE] Executing query: {query} with params: {(profile_id,)}")
+
+            cursor.execute(query, (profile_id,))
+            row = cursor.fetchone()
+
+            if not row:
+                logger.warning(f"[GET_PROFILE] Profile {profile_id} not found in database")
+                # Debug: List all profile IDs to help diagnose
+                cursor.execute("SELECT id, name FROM profiles LIMIT 10")
+                all_profiles = cursor.fetchall()
+                logger.warning(f"[GET_PROFILE] Available profiles (first 10): {[(r['id'], r['name']) for r in all_profiles]}")
+                conn.close()
+                return None
+
+            logger.info(f"[GET_PROFILE] Found profile: id={row['id']}, name={row['name']}")
+
+            # Convert to UnifiedProfile model with mapped field names
+            try:
+                profile_data = {
+                    'profile_id': row['id'],
+                    'organization_name': row['name'],
+                    'ein': row['ein'],
+                    'organization_type': row['organization_type'],
+                    'ntee_codes': json.loads(row['ntee_codes']) if row['ntee_codes'] else [],
+                    'focus_areas': json.loads(row['focus_areas']) if row['focus_areas'] else [],
+                    'geographic_scope': json.loads(row['geographic_scope']) if row['geographic_scope'] else {},
+                    'government_criteria': json.loads(row['government_criteria']) if row['government_criteria'] else [],
+                    'created_at': row['created_at'],
+                    'updated_at': row['updated_at'],
+                    'status': row['status'] or 'active',
+                    'discovery_status': None,
+                    'last_discovery_at': row['last_discovery_date'],
+                    'analytics': {
+                        'opportunity_count': row['opportunities_count'] or 0,
+                        'stages_distribution': {},
+                        'scoring_stats': {},
+                        'discovery_stats': {},
+                        'promotion_stats': {}
+                    },
+                    'recent_activity': [],
+                    'tags': [],
+                    'notes': None
+                }
+
+                logger.info(f"[GET_PROFILE] Profile data prepared: {list(profile_data.keys())}")
+                unified_profile = UnifiedProfile(**profile_data)
+                logger.info(f"[GET_PROFILE] UnifiedProfile created successfully for {profile_id}")
+
+                conn.close()
+                return unified_profile
+
+            except Exception as conversion_error:
+                logger.error(f"[GET_PROFILE] Error converting row to UnifiedProfile: {conversion_error}", exc_info=True)
+                logger.error(f"[GET_PROFILE] Row keys: {list(row.keys())}")
+                conn.close()
+                raise
+
         except Exception as e:
-            logger.error(f"Error loading profile {profile_id}: {e}")
+            logger.error(f"[GET_PROFILE] Error loading profile {profile_id} from database: {e}", exc_info=True)
             return None
     
     def save_profile(self, profile: UnifiedProfile) -> bool:
-        """Save profile to storage"""
+        """Save profile to database (primary storage) with upsert logic"""
         try:
-            profile_dir = self.data_dir / profile.profile_id
-            profile_dir.mkdir(parents=True, exist_ok=True)
-            
-            profile_file = profile_dir / "profile.json"
-            
+            from src.database.database_manager import DatabaseManager, Profile as DBProfile
+
             # Update timestamp
             profile.updated_at = datetime.now().isoformat()
-            
-            # Save profile
-            with open(profile_file, 'w', encoding='utf-8') as f:
-                json.dump(profile.model_dump(), f, indent=2, ensure_ascii=False)
-            
-            logger.info(f"Profile {profile.profile_id} saved successfully")
-            return True
-            
+
+            # Convert UnifiedProfile to DatabaseManager Profile model
+            db_profile = DBProfile(
+                id=profile.profile_id,
+                name=profile.organization_name,
+                organization_type=profile.organization_type,
+                ein=profile.ein,
+                website_url=getattr(profile, 'website_url', None),
+                location=getattr(profile, 'location', None),
+                mission_statement=getattr(profile, 'mission_statement', None),
+                status=profile.status or 'active',
+                keywords=getattr(profile, 'keywords', None),
+                focus_areas=profile.focus_areas,
+                program_areas=getattr(profile, 'program_areas', None),
+                target_populations=getattr(profile, 'target_populations', None),
+                ntee_codes=profile.ntee_codes,
+                government_criteria=profile.government_criteria if isinstance(profile.government_criteria, list) else None,
+                geographic_scope=profile.geographic_scope,
+                service_areas=getattr(profile, 'service_areas', None),
+                funding_preferences=getattr(profile, 'funding_preferences', None),
+                annual_revenue=getattr(profile, 'annual_revenue', None),
+                form_type=getattr(profile, 'form_type', None),
+                foundation_grants=getattr(profile, 'foundation_grants', None),
+                board_members=getattr(profile, 'board_members', None),
+                discovery_count=getattr(profile, 'discovery_count', 0),
+                opportunities_count=profile.analytics.opportunity_count if profile.analytics else 0,
+                last_discovery_date=profile.last_discovery_at,
+                performance_metrics=getattr(profile, 'performance_metrics', None),
+                created_at=profile.created_at,
+                updated_at=profile.updated_at,
+                processing_history=getattr(profile, 'processing_history', None),
+                verification_data=getattr(profile, 'verification_data', None),
+                web_enhanced_data=getattr(profile, 'web_enhanced_data', None)
+            )
+
+            # Save to database with upsert logic
+            db_manager = DatabaseManager("data/catalynx.db")
+
+            # Check if profile exists
+            existing = db_manager.get_profile(profile.profile_id)
+
+            if existing:
+                # Update existing profile
+                success = db_manager.update_profile(db_profile)
+                action = "updated"
+            else:
+                # Create new profile
+                success = db_manager.create_profile(db_profile)
+                action = "created"
+
+            if success:
+                logger.info(f"Profile {profile.profile_id} {action} in database successfully")
+            else:
+                logger.error(f"Failed to {action} profile {profile.profile_id} in database")
+
+            return success
+
         except Exception as e:
-            logger.error(f"Error saving profile {profile.profile_id}: {e}")
+            logger.error(f"Error saving profile {profile.profile_id}: {e}", exc_info=True)
             return False
     
     def list_profiles(self, limit: int = 50, offset: int = 0, search: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -92,38 +196,67 @@ class UnifiedProfileService:
         Returns:
             List of profile dictionaries
         """
+        import sqlite3
+
         profiles = []
 
         try:
-            for profile_dir in self.data_dir.iterdir():
-                if profile_dir.is_dir():
-                    profile_file = profile_dir / "profile.json"
-                    if profile_file.exists():
-                        try:
-                            with open(profile_file, 'r', encoding='utf-8') as f:
-                                data = json.load(f)
+            # Read from SQLite database (backward compatibility)
+            db_path = "data/catalynx.db"
+            logger.info(f"[LIST_PROFILES] Reading from database: {db_path}")
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row  # Return rows as dictionaries
+            cursor = conn.cursor()
 
-                            # Apply search filter
-                            if search:
-                                search_lower = search.lower()
-                                name = data.get('name', '').lower()
-                                ein = data.get('ein', '').lower()
-                                if search_lower not in name and search_lower not in ein:
-                                    continue
+            # Build query with optional search
+            query = "SELECT * FROM profiles WHERE status != 'deleted'"
+            params = []
 
-                            profiles.append(data)
-                        except Exception as e:
-                            logger.error(f"Error loading profile from {profile_file}: {e}")
-                            continue
+            if search:
+                query += " AND (name LIKE ? OR ein LIKE ? OR id LIKE ?)"
+                search_pattern = f"%{search}%"
+                params.extend([search_pattern, search_pattern, search_pattern])
 
-            # Sort by name
-            profiles.sort(key=lambda p: p.get('name', ''))
+            query += " ORDER BY name LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
 
-            # Apply pagination
-            return profiles[offset:offset + limit]
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            # Convert to dictionaries with mapped field names
+            for row in rows:
+                profile = {
+                    'profile_id': row['id'],
+                    'organization_name': row['name'],
+                    'ein': row['ein'],
+                    'organization_type': row['organization_type'],
+                    'ntee_codes': json.loads(row['ntee_codes']) if row['ntee_codes'] else [],
+                    'focus_areas': json.loads(row['focus_areas']) if row['focus_areas'] else [],
+                    'geographic_scope': json.loads(row['geographic_scope']) if row['geographic_scope'] else {},
+                    'government_criteria': json.loads(row['government_criteria']) if row['government_criteria'] else [],
+                    'created_at': row['created_at'],
+                    'updated_at': row['updated_at'],
+                    'status': row['status'] or 'active',
+                    'discovery_status': None,
+                    'last_discovery_at': row['last_discovery_date'],
+                    'analytics': {
+                        'opportunity_count': row['opportunities_count'] or 0,
+                        'stages_distribution': {},
+                        'scoring_stats': {},
+                        'discovery_stats': {},
+                        'promotion_stats': {}
+                    },
+                    'recent_activity': [],
+                    'tags': [],
+                    'notes': None
+                }
+                profiles.append(profile)
+
+            conn.close()
+            return profiles
 
         except Exception as e:
-            logger.error(f"Error listing profiles: {e}")
+            logger.error(f"Error listing profiles from database: {e}")
             return []
 
     def create_profile(self, profile: UnifiedProfile) -> bool:
@@ -161,7 +294,7 @@ class UnifiedProfileService:
 
     def delete_profile(self, profile_id: str) -> bool:
         """
-        Delete a profile and all associated data.
+        Delete a profile from database (primary storage).
 
         Args:
             profile_id: Profile ID to delete
@@ -170,18 +303,18 @@ class UnifiedProfileService:
             True if successful, False otherwise
         """
         try:
-            profile_dir = self.data_dir / profile_id
+            from src.database.database_manager import DatabaseManager
 
-            if not profile_dir.exists():
-                logger.warning(f"Profile {profile_id} not found for deletion")
-                return False
+            # Delete from database
+            db_manager = DatabaseManager("data/catalynx.db")
+            success = db_manager.delete_profile(profile_id)
 
-            # Delete entire profile directory
-            import shutil
-            shutil.rmtree(profile_dir)
+            if success:
+                logger.info(f"Profile {profile_id} deleted from database successfully")
+            else:
+                logger.warning(f"Profile {profile_id} not found in database for deletion")
 
-            logger.info(f"Profile {profile_id} deleted successfully")
-            return True
+            return success
 
         except Exception as e:
             logger.error(f"Error deleting profile {profile_id}: {e}")

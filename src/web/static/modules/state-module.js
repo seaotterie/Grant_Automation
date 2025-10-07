@@ -8,7 +8,7 @@
 function stateModule() {
     return {
         // Navigation State
-        activeStage: 'profiles', // Current active stage: profiles, screening, intelligence
+        activeStage: 'welcome', // Current active stage: welcome, profiler, screening, intelligence
         previousStage: null,
 
         // Profile State

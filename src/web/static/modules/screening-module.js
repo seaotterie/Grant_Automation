@@ -74,7 +74,10 @@ function screeningModule() {
          * Initialize screening module - load saved opportunities if profile exists
          */
         async init() {
-            console.log('Screening module initialized');
+            // Try to get profile ID from window global (set by profiles-module.js)
+            if (!this.currentProfileId && window.currentProfileId) {
+                this.currentProfileId = window.currentProfileId;
+            }
 
             // Load saved opportunities if we have a currentProfileId
             if (this.currentProfileId) {
@@ -89,12 +92,16 @@ function screeningModule() {
             if (!profileId) return;
 
             try {
-                console.log(`Loading saved opportunities for profile ${profileId}...`);
-
                 const response = await fetch(`/api/v2/profiles/${profileId}/opportunities?stage=discovery`);
 
+                // 404 is OK - means no saved opportunities yet
+                if (response.status === 404) {
+                    return;
+                }
+
                 if (!response.ok) {
-                    throw new Error('Failed to load saved opportunities');
+                    console.warn(`Failed to load opportunities: ${response.status} ${response.statusText}`);
+                    return;
                 }
 
                 const data = await response.json();
@@ -103,10 +110,7 @@ function screeningModule() {
                     this.discoveryResults = data.opportunities;
                     this.summaryCounts = data.summary;
 
-                    console.log(`Loaded ${data.opportunities.length} saved opportunities from database`);
                     this.showNotification?.(`Loaded ${data.opportunities.length} saved opportunities`, 'info');
-                } else {
-                    console.log('No saved opportunities found for this profile');
                 }
 
             } catch (error) {
@@ -131,13 +135,14 @@ function screeningModule() {
             this.discoveryLoading = true;
             this.discoveryResults = [];
 
+            // Show initial progress message
+            this.showNotification?.('🔍 Starting discovery... Searching nonprofits in database', 'info');
+
             try {
                 const requestData = {
                     max_results: options.max_results || 200,
                     auto_scrapy_count: options.auto_scrapy_count || 20
                 };
-
-                console.log(`Starting nonprofit discovery for profile ${profileId}...`);
 
                 const response = await fetch(`/api/v2/profiles/${profileId}/discover`, {
                     method: 'POST',
@@ -150,17 +155,17 @@ function screeningModule() {
                     throw new Error(errorData.detail || 'Discovery failed');
                 }
 
+                // Show progress: enriching data
+                this.showNotification?.('📊 Enriching with 990 data and calculating scores...', 'info');
+
                 const data = await response.json();
 
                 if (data.status === 'success') {
                     this.discoveryResults = data.opportunities || [];
                     this.summaryCounts = data.summary;
 
-                    console.log(`Discovery complete: ${data.summary.total_found} organizations found`);
-                    console.log(`Qualified: ${data.summary.qualified}, Review: ${data.summary.review}`);
-
                     this.showNotification?.(
-                        `Found ${data.summary.total_found} opportunities (${data.summary.qualified} qualified)`,
+                        `✅ Found ${data.summary.total_found} opportunities (${data.summary.qualified} qualified, ${data.summary.review} for review)`,
                         'success'
                     );
 
@@ -659,6 +664,9 @@ function screeningModule() {
             this.detailsModalTab = 'scores';
             this.showDetailsModal = true;
 
+            // Lock body scroll when modal opens
+            document.body.style.overflow = 'hidden';
+
             // Load notes for this opportunity
             this.opportunityNotes = opportunity.notes || '';
             this.notesSaved = false;
@@ -671,6 +679,9 @@ function screeningModule() {
         closeDetailsModal() {
             this.showDetailsModal = false;
             this.selectedOpportunity = null;
+
+            // Restore body scroll when modal closes
+            document.body.style.overflow = '';
 
             // Clear notes state
             this.opportunityNotes = '';

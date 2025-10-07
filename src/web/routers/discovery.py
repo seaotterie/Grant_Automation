@@ -16,7 +16,8 @@ from src.discovery.unified_discovery_adapter import get_unified_discovery_adapte
 from src.discovery.entity_discovery_service import get_entity_discovery_service
 from src.core.entity_cache_manager import get_entity_cache_manager
 from src.processors.registry import get_processor_summary
-from src.processors.filtering.bmf_filter import BMFFilterProcessor
+# BMFFilterProcessor deprecated - use BMF Filter Tool instead
+# from src.processors.filtering.bmf_filter import BMFFilterProcessor
 from src.profiles.unified_service import get_unified_profile_service
 
 # Configure logging

@@ -26,6 +26,7 @@ import sqlite3
 
 from src.core.tool_registry import ToolRegistry
 from src.profiles.unified_service import UnifiedProfileService
+from src.config.database_config import get_nonprofit_intelligence_db
 
 logger = logging.getLogger(__name__)
 
@@ -416,7 +417,7 @@ async def analyze_results(request: Dict[str, Any]):
 async def discover_nonprofit_foundations(criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Discover nonprofit foundations (990-PF) based on criteria."""
     try:
-        db_path = "data/nonprofit_intelligence.db"
+        db_path = get_nonprofit_intelligence_db()
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
@@ -484,7 +485,7 @@ async def discover_commercial_foundations(criteria: Dict[str, Any]) -> List[Dict
 async def search_bmf(query: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Search BMF organizations by name."""
     try:
-        db_path = "data/nonprofit_intelligence.db"
+        db_path = get_nonprofit_intelligence_db()
         conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()

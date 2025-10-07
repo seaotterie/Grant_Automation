@@ -78,6 +78,7 @@
      x-cloak
      @open-edit-profile-modal.window="modalOpen = true; profile = $event.detail.profile; activeTab = 'basic'"
      @close-edit-profile-modal.window="modalOpen = false"
+     @profile-research-complete.window="profile = $event.detail.profile"
      class="fixed inset-0 z-50 overflow-y-auto"
      style="display: none;">
 

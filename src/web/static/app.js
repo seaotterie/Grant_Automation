@@ -784,6 +784,18 @@ function catalynxApp() {
         },
 
         /**
+         * Open edit modal for a profile
+         * Proxy method to make profilesModule.openEditModal accessible to Alpine.js templates
+         */
+        openEditModal(profile) {
+            if (this.profilesModule && this.profilesModule.openEditModal) {
+                this.profilesModule.openEditModal(profile);
+            } else {
+                console.error('[ERROR] profilesModule.openEditModal not available');
+            }
+        },
+
+        /**
          * Switch between workflow stages (supports both legacy and new 3-stage navigation)
          * @param {string} stage - Stage identifier
          */
@@ -3117,65 +3129,17 @@ function catalynxApp() {
         },
 
         async editProfile(profile) {
-            console.log('DATABASE-FIRST EDIT: Starting profile edit with database priority approach');
-            console.log('Passed profile data:', profile);
-            console.log('Profile ID:', profile.profile_id);
+            console.log('[TABBED MODAL] Opening edit modal for profile:', profile.profile_id);
 
             if (!profile.profile_id) {
                 this.showNotification('Error', 'Profile ID is missing. Cannot edit profile.', 'error');
                 return;
             }
 
-            this.isEditingProfile = true;
-            this.currentEditingProfile = profile.profile_id;
-
-            // Set only the profile ID initially - everything else comes from database
-            this.profileForm.profile_id = profile.profile_id;
-
-            // DATABASE-FIRST APPROACH: Database is the single source of truth
-            console.log('PRIORITY 1: Loading authoritative data from database...');
-            const databaseLoadSuccess = await this.loadFreshProfileData(profile);
-
-            if (!databaseLoadSuccess) {
-                // Critical error: Database loading failed completely
-                console.error('DATABASE-FIRST FAILURE: Could not load profile data from database');
-                console.warn('EMERGENCY FALLBACK: Using passed profile data (may be stale)');
-
-                // Only use passed data in extreme emergency
-                if (profile.name) {
-                    console.log('Emergency fallback: Using passed profile data due to database failure');
-                    this.populateFormWithProfile(profile);
-
-                    // Load intelligence data even in fallback mode (may use stale data)
-                    console.log('ENHANCED DATA: Loading verified intelligence with fallback profile data');
-                    this.loadVerifiedIntelligenceData(profile);
-                } else {
-                    this.showNotification('Error', 'Could not load profile data. Database may be unavailable.', 'error');
-                    return;
-                }
-            } else {
-                console.log('DATABASE-FIRST SUCCESS: Profile loaded from authoritative database');
-
-                // NEVER overwrite database data with passed data - database is authoritative
-                // The passed profile parameter is only used for identification, not data
-                console.log('PROTECTION: Ignoring passed profile data - database is authoritative source');
-            }
-
-            // Log comprehensive data loading summary
-            console.log('PROFILE EDIT INITIALIZATION SUMMARY:', {
-                profile_id: this.profileForm.profile_id,
-                data_source: databaseLoadSuccess ? 'database (authoritative)' : 'passed_data (emergency)',
-                form_populated: Boolean(this.profileForm.name),
-                critical_fields_present: {
-                    name: Boolean(this.profileForm.name),
-                    mission_statement: Boolean(this.profileForm.mission_statement),
-                    website_url: Boolean(this.profileForm.website_url),
-                    location: Boolean(this.profileForm.location),
-                    annual_revenue: Boolean(this.profileForm.annual_revenue)
-                }
-            });
-
-            this.showProfileModal = true;
+            // Dispatch event to open the new tabbed modal
+            window.dispatchEvent(new CustomEvent('open-edit-profile-modal', {
+                detail: { profile }
+            }));
         },
 
         async loadFreshProfileData(profile) {

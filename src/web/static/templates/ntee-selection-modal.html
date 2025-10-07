@@ -136,8 +136,10 @@
                                     sub.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
                                     sub.name.toLowerCase().includes(searchQuery.toLowerCase())
                                 )" :key="subcategory.code">
-                                    <label class="flex items-start p-3 bg-white dark:bg-gray-700 rounded-lg border-2 transition-all cursor-pointer hover:border-blue-300 dark:hover:border-blue-600"
-                                           :class="tempSelectedCodes.includes(subcategory.code) ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-600'">
+                                    <label class="flex items-start p-3 rounded-lg border-2 transition-all cursor-pointer"
+                                           :class="tempSelectedCodes.includes(subcategory.code) ?
+                                                   'border-blue-500 bg-blue-50 dark:bg-blue-900/20' :
+                                                   'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-600'">
                                         <input type="checkbox"
                                                :value="subcategory.code"
                                                x-model="tempSelectedCodes"

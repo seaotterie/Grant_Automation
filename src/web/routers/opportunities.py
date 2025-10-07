@@ -12,13 +12,14 @@ import json
 from datetime import datetime
 
 from src.database.database_manager import DatabaseManager
+from src.config.database_config import get_nonprofit_intelligence_db, get_catalynx_db
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v2/opportunities", tags=["opportunities"])
 
 # Initialize database manager
-database_manager = DatabaseManager("data/catalynx.db")
+database_manager = DatabaseManager(get_catalynx_db())
 
 
 @router.get("/{opportunity_id}/details")

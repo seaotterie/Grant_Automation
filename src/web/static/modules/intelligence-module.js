@@ -86,8 +86,6 @@ function intelligenceModule() {
             this.selectedOpportunities = opportunities || [];
             this.selectionNotes = notes || {};
 
-            console.log(`Intelligence module initialized with ${this.selectedOpportunities.length} opportunities`);
-
             // Auto-select first opportunity
             if (this.selectedOpportunities.length > 0) {
                 this.currentOpportunityIndex = 0;
@@ -135,11 +133,6 @@ function intelligenceModule() {
 
                     this.analysisProgress[oppId] = { status: 'complete', progress: 100 };
 
-                    const depthInfo = this.depths.find(d => d.id === analysisDepth);
-                    console.log(
-                        `Analysis complete: ${opportunity.organization_name} (${depthInfo?.name}, $${result.cost})`
-                    );
-
                     this.showNotification?.(
                         `Analysis complete for ${opportunity.organization_name}`,
                         'success'
@@ -170,8 +163,6 @@ function intelligenceModule() {
         async analyzeAll(depth = null) {
             const analysisDepth = depth || this.selectedDepth;
 
-            console.log(`Starting batch analysis: ${this.selectedOpportunities.length} opportunities (${analysisDepth})`);
-
             const results = [];
             let totalCost = 0;
 
@@ -185,10 +176,6 @@ function intelligenceModule() {
                     // Continue with next opportunity
                 }
             }
-
-            console.log(
-                `Batch analysis complete: ${results.length}/${this.selectedOpportunities.length} successful (Total: $${totalCost.toFixed(2)})`
-            );
 
             this.showNotification?.(
                 `Analyzed ${results.length} opportunities for $${totalCost.toFixed(2)}`,
@@ -235,7 +222,6 @@ function intelligenceModule() {
                 );
 
                 if (result.success) {
-                    console.log(`Report generated: ${opportunityId} (${reportTemplate})`);
                     this.showNotification?.('Report generated successfully', 'success');
 
                     // Store report with intelligence
@@ -289,7 +275,6 @@ function intelligenceModule() {
                 );
 
                 if (result.success) {
-                    console.log(`Export complete: ${format.toUpperCase()}`);
                     this.showNotification?.(
                         `Exported as ${format.toUpperCase()}`,
                         'success'
@@ -344,7 +329,6 @@ function intelligenceModule() {
                 const result = await response.json();
 
                 if (result.success) {
-                    console.log(`Package generated: ${opportunityId}`);
                     this.showNotification?.('Grant package created successfully', 'success');
 
                     // Store package with intelligence
@@ -437,7 +421,6 @@ function intelligenceModule() {
         selectDepth(depth) {
             this.selectedDepth = depth;
             this.showDepthSelector = false;
-            console.log('Depth selected:', depth);
         },
 
         /**
@@ -554,3 +537,6 @@ function intelligenceModule() {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = intelligenceModule;
 }
+
+// CRITICAL: Attach to window for Alpine.js to see it
+window.intelligenceModule = intelligenceModule;

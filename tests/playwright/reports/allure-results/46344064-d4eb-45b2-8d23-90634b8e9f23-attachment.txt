@@ -1,0 +1,3 @@
+🧪 Testing intelligence tools availability...
+📊 Found 11/13 intelligence tools
+✅ Intelligence tools validated

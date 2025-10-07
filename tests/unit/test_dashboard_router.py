@@ -35,7 +35,10 @@ class TestDashboardRouter:
             'active_workflows': 5,
             'total_processed': 100,
             'success_rate': 0.95,
-            'recent_workflows': ['workflow1', 'workflow2']
+            'recent_workflows': [
+                {'workflow_id': 'workflow1', 'status': 'completed'},
+                {'workflow_id': 'workflow2', 'status': 'completed'}
+            ]
         }
         mock_get_engine.return_value = mock_engine
         
@@ -47,7 +50,8 @@ class TestDashboardRouter:
         assert data['active_workflows'] == 5
         assert data['total_processed'] == 100
         assert data['success_rate'] == 0.95
-        assert data['recent_workflows'] == ['workflow1', 'workflow2']
+        assert len(data['recent_workflows']) == 2
+        assert data['recent_workflows'][0]['workflow_id'] == 'workflow1'
     
     @patch('src.web.routers.dashboard.get_workflow_engine')
     def test_dashboard_overview_error_handling(self, mock_get_engine):

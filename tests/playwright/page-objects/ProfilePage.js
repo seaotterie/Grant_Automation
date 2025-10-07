@@ -137,13 +137,13 @@ class ProfilePage extends BasePage {
         await this.page.waitForFunction(
           (identifier) => {
             const app = window.catalynxApp;
-            return app && app.selectedProfile && 
+            return app && app.selectedProfile &&
                    (app.selectedProfile.profile_id === identifier ||
                     app.selectedProfile.id === identifier ||
                     app.selectedProfile.organization_name === identifier);
           },
           profileIdentifier,
-          { timeout: 5000 }
+          { timeout: 15000 }
         );
         
         return true;

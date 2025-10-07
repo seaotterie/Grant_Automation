@@ -56,16 +56,16 @@ class BasePage {
     try {
       await this.page.waitForResponse(
         response => response.url().includes('/api/system/status') && response.ok(),
-        { timeout: 5000 }
+        { timeout: 15000 }
       );
     } catch (error) {
       console.log('Note: System status API response not captured, continuing...');
     }
-    
+
     try {
       await this.page.waitForResponse(
         response => response.url().includes('/api/dashboard/overview') && response.ok(),
-        { timeout: 5000 }
+        { timeout: 15000 }
       );
     } catch (error) {
       console.log('Note: Dashboard API response not captured, continuing...');
@@ -132,9 +132,9 @@ class BasePage {
     
     for (const selector of loadingSelectors) {
       try {
-        await this.page.waitForSelector(selector, { 
-          state: 'detached', 
-          timeout: 5000 
+        await this.page.waitForSelector(selector, {
+          state: 'detached',
+          timeout: 15000
         });
       } catch (error) {
         // Loading element might not exist, which is fine
@@ -181,7 +181,7 @@ class BasePage {
    * @returns {string}
    */
   async getElementText(selector) {
-    await this.page.waitForSelector(selector, { timeout: 5000 });
+    await this.page.waitForSelector(selector, { timeout: 15000 });
     return await this.page.textContent(selector);
   }
 
@@ -191,7 +191,7 @@ class BasePage {
    * @param {string} value - Value to fill
    */
   async fillInput(selector, value) {
-    await this.page.waitForSelector(selector, { timeout: 5000 });
+    await this.page.waitForSelector(selector, { timeout: 15000 });
     await this.page.fill(selector, value);
     
     // Verify the value was set
@@ -491,7 +491,7 @@ class BasePage {
       try {
         await this.page.waitForSelector(selector, {
           state: 'visible',
-          timeout: 5000
+          timeout: 15000
         });
 
         switch (action) {

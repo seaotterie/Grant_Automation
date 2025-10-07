@@ -566,7 +566,12 @@ function profilesModule() {
                             assets: data.profile_data.assets || 0
                         });
 
-                        console.log('Profile updated - Alpine.js will handle UI reactivity');
+                        console.log('Profile updated - triggering modal refresh');
+
+                        // Dispatch event to update modal (Alpine doesn't track deep object changes)
+                        window.dispatchEvent(new CustomEvent('profile-research-complete', {
+                            detail: { profile: this.selectedProfile }
+                        }));
 
                         // Show appropriate notification based on NTEE code availability
                         if (!nteeCode) {
