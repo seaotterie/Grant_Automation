@@ -537,6 +537,19 @@ class DatabaseManager:
 
     def _row_to_profile(self, row) -> Profile:
         """Convert database row to Profile object"""
+        from datetime import datetime
+
+        # Helper to parse timestamps (SQLite stores as strings)
+        def parse_timestamp(ts):
+            if not ts:
+                return None
+            if isinstance(ts, datetime):
+                return ts
+            try:
+                return datetime.fromisoformat(ts.replace('Z', '+00:00'))
+            except:
+                return None
+
         return Profile(
             id=row['id'],
             name=row['name'],
@@ -559,10 +572,10 @@ class DatabaseManager:
             board_members=json.loads(row['board_members']) if row['board_members'] else None,
             discovery_count=row['discovery_count'],
             opportunities_count=row['opportunities_count'],
-            last_discovery_date=row['last_discovery_date'] if row['last_discovery_date'] else None,
+            last_discovery_date=parse_timestamp(row['last_discovery_date']),
             performance_metrics=json.loads(row['performance_metrics']) if row['performance_metrics'] else None,
-            created_at=row['created_at'] if row['created_at'] else None,
-            updated_at=row['updated_at'] if row['updated_at'] else None,
+            created_at=parse_timestamp(row['created_at']),
+            updated_at=parse_timestamp(row['updated_at']),
             processing_history=json.loads(row['processing_history']) if row['processing_history'] else None,
             website_url=row['website_url'],
             location=row['location'],
