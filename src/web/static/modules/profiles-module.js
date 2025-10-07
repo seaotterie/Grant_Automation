@@ -552,25 +552,14 @@ function profilesModule() {
                 if (data.success && data.profile_data) {
                     // Update current profile with researched data
                     if (this.selectedProfile) {
-                        // Set NTEE code - use null if empty (don't use placeholder text)
-                        const nteeCode = data.profile_data.ntee_code || data.profile_data.ntee_code_990;
-
-                        // Only update if we have a real NTEE code
-                        if (nteeCode && nteeCode !== 'None' && nteeCode !== '' && nteeCode !== null) {
-                            this.selectedProfile.ntee_code_990 = nteeCode;
-                            console.log('Updated NTEE code to:', nteeCode);
-                        } else {
-                            // Leave as null/empty - don't set placeholder text
-                            console.log('No NTEE code found in BMF data');
-                        }
-
-                        // Don't update organization_name - use 'name' field instead
-                        // Merge other data
+                        // Update all fields with BMF data (including empty values)
+                        // This ensures the profile reflects what's actually in the BMF database
                         Object.assign(this.selectedProfile, {
-                            city: data.profile_data.city,
-                            state: data.profile_data.state,
-                            revenue: data.profile_data.revenue,
-                            assets: data.profile_data.assets
+                            ntee_code_990: data.profile_data.ntee_code || data.profile_data.ntee_code_990 || '',
+                            city: data.profile_data.city || '',
+                            state: data.profile_data.state || '',
+                            revenue: data.profile_data.revenue || 0,
+                            assets: data.profile_data.assets || 0
                         });
 
                         console.log('Profile updated - Alpine.js will handle UI reactivity');
