@@ -552,18 +552,19 @@ function profilesModule() {
                 if (data.success && data.profile_data) {
                     // Update current profile with researched data
                     if (this.selectedProfile) {
-                        // Set NTEE code - show "None Found" message if empty
+                        // Set NTEE code - use null if empty (don't use placeholder text)
                         const nteeCode = data.profile_data.ntee_code || data.profile_data.ntee_code_990;
-                        const nteeValue = (nteeCode && nteeCode !== 'None' && nteeCode !== '' && nteeCode !== null)
-                            ? nteeCode
-                            : 'None Found - Enter manually (optional)';
 
-                        console.log('Updating selectedProfile with NTEE code:', nteeValue);
+                        // Only update if we have a real NTEE code
+                        if (nteeCode && nteeCode !== 'None' && nteeCode !== '' && nteeCode !== null) {
+                            this.selectedProfile.ntee_code_990 = nteeCode;
+                            console.log('Updated NTEE code to:', nteeCode);
+                        } else {
+                            // Leave as null/empty - don't set placeholder text
+                            console.log('No NTEE code found in BMF data');
+                        }
 
-                        // Update the profile fields directly (modal shares this object reference)
-                        this.selectedProfile.ntee_code_990 = nteeValue;
-                        this.selectedProfile.organization_name = data.profile_data.name || this.selectedProfile.organization_name;
-
+                        // Don't update organization_name - use 'name' field instead
                         // Merge other data
                         Object.assign(this.selectedProfile, {
                             city: data.profile_data.city,

@@ -186,7 +186,7 @@
                             <div class="flex items-center space-x-2">
                                 <input type="text"
                                        x-model="profile.ntee_code_990"
-                                       placeholder="Click Research to fetch from BMF database, or enter manually"
+                                       placeholder="Click Research to auto-fill, or enter manually (optional)"
                                        class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                                 <button @click="$dispatch('research-profile', { ein: profile.ein })"
                                         :disabled="!profile.ein"
