@@ -243,9 +243,11 @@ async def update_profile(
     try:
         # Debug: Log the update data received
         logger.info(f"Updating profile {profile_id} with data: ntee_codes={update_data.get('ntee_codes')}, government_criteria={update_data.get('government_criteria')}, keywords={update_data.get('keywords')}")
+        logger.critical(f"*** DB Manager using database: {db_manager.database_path} ***")
 
         # Get existing profile from database
         existing_profile_dict = db_manager.get_profile_by_id(profile_id)
+        logger.critical(f"*** Profile lookup result: {existing_profile_dict is not None} ***")
         if not existing_profile_dict:
             raise HTTPException(status_code=404, detail="Profile not found")
 
