@@ -21,7 +21,7 @@
             // Load all modal templates with cache-busting version
             // NOTE: ntee-selection-modal.html and government-criteria-modal.html are NOT loaded
             // because NTEE and Gov Criteria UIs are now embedded directly in profile-modals.html tabs
-            const version = 'RESEARCH_REACTIVITY_FIX_v3';
+            const version = 'RESEARCH_REACTIVITY_FIX_v4';
             const templates = [
                 `/static/templates/profile-modals.html?v=${version}`,
                 `/static/templates/create-delete-modals.html?v=${version}`

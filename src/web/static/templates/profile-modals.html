@@ -28,10 +28,22 @@
             console.log('Edit Profile Modal initialized');
         },
         refreshProfile(updatedProfile) {
-            console.log('Refreshing modal profile with:', updatedProfile);
+            console.log('=== REFRESH PROFILE CALLED ===');
+            console.log('Before refresh - this.profile.ntee_code_990:', this.profile.ntee_code_990);
+            console.log('Incoming - updatedProfile.ntee_code_990:', updatedProfile.ntee_code_990);
+
             // Force Alpine reactivity by creating new object
+            const oldProfile = this.profile;
             this.profile = JSON.parse(JSON.stringify(updatedProfile));
-            console.log('Modal profile after refresh:', this.profile.ntee_code_990, this.profile.city);
+
+            console.log('After refresh - this.profile.ntee_code_990:', this.profile.ntee_code_990);
+            console.log('Object identity changed:', oldProfile !== this.profile);
+            console.log('=== REFRESH COMPLETE ===');
+
+            // Force Alpine to re-evaluate bindings
+            this.$nextTick(() => {
+                console.log('After nextTick - DOM should be updated');
+            });
         },
         async saveProfile() {
             const profileId = this.profile?.profile_id || this.profile?.id;
