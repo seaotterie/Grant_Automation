@@ -102,10 +102,15 @@ class DatabaseManager:
     """
     
     def __init__(self, database_path: Optional[str] = None):
-        self.database_path = database_path or "data/catalynx.db"
-        # Use absolute path for schema file
         import os
+        # Use absolute path to ensure we always use the same database regardless of CWD
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        if database_path:
+            self.database_path = database_path
+        else:
+            # Default to project_root/data/catalynx.db (absolute path)
+            self.database_path = os.path.join(project_root, "data", "catalynx.db")
+
         self.schema_path = os.path.join(project_root, "src", "database", "schema.sql")
         self.normalized_schema_path = os.path.join(project_root, "normalized_schema_design.sql")
         self._connection = None
