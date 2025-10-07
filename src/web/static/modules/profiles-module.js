@@ -558,8 +558,11 @@ function profilesModule() {
                         // This ensures the profile reflects what's actually in the BMF database
                         const nteeCode = data.profile_data.ntee_code || data.profile_data.ntee_code_990 || '';
 
+                        // Show "None Found" message if BMF has no NTEE code
+                        const nteeDisplayValue = nteeCode || 'None Found - Enter Manually (optional)';
+
                         Object.assign(this.selectedProfile, {
-                            ntee_code_990: nteeCode,
+                            ntee_code_990: nteeDisplayValue,
                             city: data.profile_data.city || '',
                             state: data.profile_data.state || '',
                             revenue: data.profile_data.revenue || 0,

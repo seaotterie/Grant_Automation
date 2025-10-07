@@ -65,6 +65,11 @@
                     delete profileData.organization_name;
                 }
 
+                // Don't save placeholder text - convert to null
+                if (profileData.ntee_code_990 === 'None Found - Enter Manually (optional)') {
+                    profileData.ntee_code_990 = null;
+                }
+
                 console.log('Cleaned profile data:', profileData);
 
                 const response = await fetch(`/api/profiles/${profileId}`, {
