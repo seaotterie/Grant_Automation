@@ -556,8 +556,10 @@ function profilesModule() {
                     if (this.selectedProfile) {
                         // Update all fields with BMF data (including empty values)
                         // This ensures the profile reflects what's actually in the BMF database
+                        const nteeCode = data.profile_data.ntee_code || data.profile_data.ntee_code_990 || '';
+
                         Object.assign(this.selectedProfile, {
-                            ntee_code_990: data.profile_data.ntee_code || data.profile_data.ntee_code_990 || '',
+                            ntee_code_990: nteeCode,
                             city: data.profile_data.city || '',
                             state: data.profile_data.state || '',
                             revenue: data.profile_data.revenue || 0,
@@ -565,12 +567,20 @@ function profilesModule() {
                         });
 
                         console.log('Profile updated - Alpine.js will handle UI reactivity');
-                    }
 
-                    this.showNotification?.(
-                        `Research complete for ${data.profile_data.name}`,
-                        'success'
-                    );
+                        // Show appropriate notification based on NTEE code availability
+                        if (!nteeCode) {
+                            this.showNotification?.(
+                                `Research complete - NTEE code not found in BMF database`,
+                                'warning'
+                            );
+                        } else {
+                            this.showNotification?.(
+                                `Research complete for ${data.profile_data.name}`,
+                                'success'
+                            );
+                        }
+                    }
                 } else {
                     throw new Error(data.error || 'Research failed');
                 }
