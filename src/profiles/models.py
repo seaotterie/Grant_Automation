@@ -1,7 +1,7 @@
 """
 Profile data models for organization profiles and opportunity tracking
 """
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict, field_serializer
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -114,11 +114,6 @@ class ScheduleIGrantee(BaseModel):
     grant_amount: float = Field(..., description="Grant amount provided")
     grant_year: int = Field(..., description="Tax year of the grant")
     grant_purpose: Optional[str] = Field(default=None, description="Purpose or description of grant")
-    
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 class FoundationBoardMember(BaseModel):
@@ -130,11 +125,6 @@ class FoundationBoardMember(BaseModel):
     compensation: Optional[float] = Field(default=None, description="Compensation amount")
     is_officer: bool = Field(default=False, description="Whether this person is an officer")
     is_director: bool = Field(default=False, description="Whether this person is a director/trustee")
-    
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 class FoundationGrantRecord(BaseModel):
@@ -147,11 +137,6 @@ class FoundationGrantRecord(BaseModel):
     grant_purpose: Optional[str] = Field(default=None, description="Detailed purpose or project description")
     support_type: Optional[str] = Field(default=None, description="General support or project support")
     relationship_to_substantial_contributor: Optional[str] = Field(default=None, description="Any relationship notes")
-    
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 class FoundationApplicationProcess(BaseModel):
@@ -162,11 +147,6 @@ class FoundationApplicationProcess(BaseModel):
     contact_information: Optional[str] = Field(default=None, description="Contact person or information")
     application_restrictions: Optional[str] = Field(default=None, description="Any restrictions on applications")
     geographic_limitations: Optional[str] = Field(default=None, description="Geographic giving limitations")
-    
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 class FoundationFinancialData(BaseModel):
@@ -180,11 +160,6 @@ class FoundationFinancialData(BaseModel):
     qualifying_distributions: Optional[float] = Field(default=None, description="Qualifying distributions")
     minimum_investment_return: Optional[float] = Field(default=None, description="Minimum investment return")
     distributable_amount: Optional[float] = Field(default=None, description="Distributable amount for year")
-    
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 class FoundationProgramAreas(BaseModel):
@@ -194,11 +169,6 @@ class FoundationProgramAreas(BaseModel):
     funding_priorities: Optional[List[str]] = Field(default=[], description="Stated funding priorities")
     population_served: Optional[List[str]] = Field(default=[], description="Target populations served")
     geographic_focus: Optional[List[str]] = Field(default=[], description="Geographic areas of focus")
-    
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 class ProfileMetrics(BaseModel):
@@ -261,11 +231,6 @@ class ProfileMetrics(BaseModel):
     # Export and Reporting
     reports_generated: int = Field(default=0, description="Number of reports generated for this profile")
     last_export_date: Optional[datetime] = Field(default=None, description="Last data export timestamp")
-    
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
     
     def calculate_fte_hours_saved(self) -> float:
         """Calculate estimated FTE hours saved based on automated tasks"""
@@ -337,7 +302,7 @@ class OrganizationProfile(BaseModel):
     # Mission and Focus
     mission_statement: Optional[str] = Field(default=None, max_length=1000, description="Organization mission")
     keywords: Optional[str] = Field(default=None, max_length=500, description="Key terms and phrases describing the organization's work")
-    focus_areas: List[str] = Field(..., min_items=1, description="Primary focus areas/keywords")
+    focus_areas: List[str] = Field(..., min_length=1, description="Primary focus areas/keywords")
     program_areas: List[str] = Field(default=[], description="Specific program areas")
     target_populations: List[str] = Field(default=[], description="Populations served")
     ntee_codes: List[str] = Field(default=[], description="NTEE (National Taxonomy of Exempt Entities) classification codes")
@@ -416,21 +381,18 @@ class OrganizationProfile(BaseModel):
     # Comprehensive Metrics Tracking
     metrics: Optional[ProfileMetrics] = Field(default=None, description="Comprehensive metrics tracking for this profile")
 
-    @validator('focus_areas', 'program_areas', 'target_populations')
+    @field_validator('focus_areas', 'program_areas', 'target_populations', mode='before')
+    @classmethod
     def validate_string_lists(cls, v):
         """Ensure string lists contain non-empty strings"""
         return [item.strip() for item in v if item and item.strip()]
 
-    @validator('updated_at', always=True)
+    @field_validator('updated_at', mode='before')
+    @classmethod
     def set_updated_at(cls, v):
         """Always update timestamp on save"""
         return datetime.now()
 
-    class Config:
-        """Pydantic configuration"""
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 class DiscoverySession(BaseModel):
@@ -452,10 +414,6 @@ class DiscoverySession(BaseModel):
     error_messages: List[str] = Field(default=[], description="Any errors encountered")
     notes: Optional[str] = Field(default=None, description="Session notes")
 
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 class OpportunityLead(BaseModel):
@@ -497,11 +455,6 @@ class OpportunityLead(BaseModel):
     # External Data
     external_data: Dict[str, Any] = Field(default_factory=dict, description="Additional data from sources")
 
-    class Config:
-        """Pydantic configuration"""
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
 
 
 class ProfileSearchParams(BaseModel):
@@ -524,9 +477,8 @@ class ProfileSearchParams(BaseModel):
     max_processing_time: Optional[int] = Field(default=None, description="Max processing time in minutes")
     priority_level: str = Field(default="standard", description="Processing priority level")
 
-    class Config:
-        """Pydantic configuration"""
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "profile_id": "health_nonprofit_001",
                 "funding_types": ["grants", "government"],
@@ -538,6 +490,7 @@ class ProfileSearchParams(BaseModel):
                 "priority_level": "high"
             }
         }
+    )
 
 
 # ============================================================================
@@ -667,12 +620,15 @@ class RecentActivity(BaseModel):
 
 class UnifiedProfile(BaseModel):
     """Unified profile with embedded analytics"""
-    
+
     # Core Profile Information
     profile_id: str = Field(..., description="Unique profile identifier")
     organization_name: str = Field(..., description="Organization name")
+    ein: Optional[str] = Field(default=None, description="EIN (if applicable)")
+    organization_type: str = Field(default="nonprofit", description="Organization type")
     focus_areas: List[str] = Field(default=[], description="Focus areas")
     geographic_scope: Optional[Any] = Field(default=None, description="Geographic scope")
+    government_criteria: Optional[Any] = Field(default=None, description="Government criteria")
     ntee_codes: List[str] = Field(default=[], description="NTEE codes")
     created_at: Optional[str] = Field(default=None, description="ISO timestamp of creation")
     updated_at: Optional[str] = Field(default=None, description="ISO timestamp of last update")
@@ -683,10 +639,10 @@ class UnifiedProfile(BaseModel):
 
     # Embedded Analytics - Computed from Opportunities
     analytics: ProfileAnalytics = Field(default_factory=ProfileAnalytics, description="Real-time analytics")
-    
+
     # Recent Activity Summary
     recent_activity: List[RecentActivity] = Field(default=[], description="Recent activity summary")
-    
+
     # Legacy compatibility
     status: str = Field(default="active", description="Profile status")
     tags: List[str] = Field(default=[], description="Profile tags")

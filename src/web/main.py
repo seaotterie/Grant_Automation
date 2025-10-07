@@ -24,7 +24,7 @@ import re
 import sqlite3
 import dataclasses
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import List, Dict, Optional, Any
 import uvicorn
 
@@ -305,7 +305,7 @@ async def secure_profile_deletion(profile_id: str, deleted_by: str) -> bool:
         audit_entry = {
             "profile_id": profile_id,
             "deleted_by": deleted_by,
-            "deletion_timestamp": datetime.utcnow().isoformat(),
+            "deletion_timestamp": datetime.now(UTC).isoformat(),
             "deletion_success": deletion_success,
             "deleted_items": deleted_items,
             "items_count": len(deleted_items)
@@ -314,7 +314,7 @@ async def secure_profile_deletion(profile_id: str, deleted_by: str) -> bool:
         # Write audit log
         audit_dir = Path("data/audit_logs")
         audit_dir.mkdir(exist_ok=True)
-        audit_file = audit_dir / f"profile_deletion_{profile_id}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+        audit_file = audit_dir / f"profile_deletion_{profile_id}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
         
         with open(audit_file, 'w', encoding='utf-8') as f:
             json.dump(audit_entry, f, indent=2, ensure_ascii=False)
@@ -2661,7 +2661,7 @@ async def delete_profile(
         return {
             "message": "Profile and all associated data permanently deleted",
             "deleted_by": "system",
-            "deletion_timestamp": datetime.utcnow().isoformat()
+            "deletion_timestamp": datetime.now(UTC).isoformat()
         }
         
     except HTTPException:

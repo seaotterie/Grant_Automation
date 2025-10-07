@@ -11,7 +11,7 @@ from typing import Dict, Optional, List, Any
 from pathlib import Path
 
 from .models import ProfileMetrics, OrganizationProfile
-from .service import ProfileService
+from .unified_service import UnifiedProfileService
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 class ProfileMetricsTracker:
     """Service for tracking and updating profile-based metrics"""
     
-    def __init__(self, profile_service: Optional[ProfileService] = None):
-        self.profile_service = profile_service or ProfileService()
+    def __init__(self, profile_service: Optional[UnifiedProfileService] = None):
+        self.profile_service = profile_service or UnifiedProfileService()
         self._metrics_cache: Dict[str, ProfileMetrics] = {}
         self._lock = asyncio.Lock()
     

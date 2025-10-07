@@ -2,7 +2,7 @@
 Core Data Models for Grant Research Automation
 Comprehensive data models using Pydantic for validation and serialization.
 """
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
 from enum import Enum
@@ -422,21 +422,24 @@ class OrganizationProfile(BaseModel):
     data_sources: List[str] = Field(default_factory=list, description="Sources of data")
     processing_notes: List[str] = Field(default_factory=list, description="Processing notes and warnings")
     
-    @validator('ein')
+    @field_validator('ein')
+    @classmethod
     def validate_ein_format(cls, v):
         """Ensure EIN is properly formatted."""
         if not re.match(r'^\d{9}$', v):
             raise ValueError('EIN must be exactly 9 digits')
         return v
-    
-    @validator('program_expense_ratio', 'fundraising_efficiency', 'administrative_ratio')
+
+    @field_validator('program_expense_ratio', 'fundraising_efficiency', 'administrative_ratio')
+    @classmethod
     def validate_ratio_range(cls, v):
         """Ensure ratios are between 0 and 1."""
         if v is not None and (v < 0 or v > 1):
             raise ValueError('Ratio must be between 0 and 1')
         return v
-    
-    @validator('state')
+
+    @field_validator('state')
+    @classmethod
     def validate_state_code(cls, v):
         """Ensure state is a valid 2-letter code."""
         if not re.match(r'^[A-Z]{2}$', v):
@@ -520,14 +523,16 @@ class WorkflowConfig(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     created_by: Optional[str] = Field(None, description="User who created the workflow")
     
-    @validator('workflow_id')
+    @field_validator('workflow_id')
+    @classmethod
     def validate_workflow_id(cls, v):
         """Ensure workflow ID is valid."""
         if not re.match(r'^[a-zA-Z0-9_-]+$', v):
             raise ValueError('Workflow ID must contain only letters, numbers, underscores, and hyphens')
         return v
-    
-    @validator('state_filter')
+
+    @field_validator('state_filter')
+    @classmethod
     def validate_state_filter(cls, v):
         """Validate state filter."""
         if v and not re.match(r'^[A-Z]{2}$', v):

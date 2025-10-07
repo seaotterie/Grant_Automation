@@ -151,7 +151,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
         
         return JSONResponse(
             status_code=exc.status_code,
-            content=error_response.dict()
+            content=error_response.model_dump()
         )
     
     async def _handle_general_exception(self, exc: Exception, context: Dict[str, Any]) -> JSONResponse:
@@ -195,7 +195,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             
             return DateTimeAwareJSONResponse(
                 status_code=status_code,
-                content=error_response.dict()
+                content=error_response.model_dump()
             )
             
         except Exception as handler_exc:
@@ -213,7 +213,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             
             return DateTimeAwareJSONResponse(
                 status_code=500,
-                content=fallback_response.dict()
+                content=fallback_response.model_dump()
             )
     
     def _get_status_code_for_error(self, error_info: ErrorInfo) -> int:
@@ -276,7 +276,7 @@ async def validation_exception_handler(request: Request, exc: Exception):
     
     return JSONResponse(
         status_code=422,
-        content=error_response.dict()
+        content=error_response.model_dump()
     )
 
 
@@ -310,7 +310,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     
     return DateTimeAwareJSONResponse(
         status_code=exc.status_code,
-        content=error_response.dict()
+        content=error_response.model_dump()
     )
 
 

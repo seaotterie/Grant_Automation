@@ -2,7 +2,7 @@
 Government Opportunity Data Models
 Data models for Grants.gov and USASpending.gov API integration.
 """
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Dict, Any, Optional, Union
 from datetime import datetime, date
 from enum import Enum
@@ -96,14 +96,16 @@ class GovernmentOpportunity(BaseModel):
     retrieved_at: datetime = Field(default_factory=datetime.now, description="Data retrieval timestamp")
     processing_notes: List[str] = Field(default_factory=list, description="Processing notes")
     
-    @validator('opportunity_id', 'opportunity_number')
+    @field_validator('opportunity_id', 'opportunity_number')
+    @classmethod
     def validate_not_empty(cls, v):
         """Ensure required string fields are not empty."""
         if not v or not v.strip():
             raise ValueError('Field cannot be empty')
         return v.strip()
-    
-    @validator('agency_code')
+
+    @field_validator('agency_code')
+    @classmethod
     def validate_agency_code(cls, v):
         """Validate agency code format."""
         if not re.match(r'^[A-Z0-9-]{2,10}$', v):
@@ -186,7 +188,8 @@ class HistoricalAward(BaseModel):
     source: str = Field("usaspending", description="Data source")
     retrieved_at: datetime = Field(default_factory=datetime.now, description="Data retrieval timestamp")
     
-    @validator('recipient_ein')
+    @field_validator('recipient_ein')
+    @classmethod
     def validate_ein(cls, v):
         """Validate EIN format if provided."""
         if v and not re.match(r'^\d{9}$', v):
@@ -226,7 +229,8 @@ class OrganizationAwardHistory(BaseModel):
     # Metadata
     last_updated: datetime = Field(default_factory=datetime.now, description="Last update timestamp")
     
-    @validator('ein')
+    @field_validator('ein')
+    @classmethod
     def validate_ein(cls, v):
         """Validate EIN format."""
         if not re.match(r'^\d{9}$', v):

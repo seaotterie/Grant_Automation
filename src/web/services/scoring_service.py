@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 
 from src.scoring.discovery_scorer import DiscoveryScorer, ScoringResult, get_discovery_scorer
 from src.scoring.promotion_engine import PromotionEngine, PromotionResult, PromotionDecision, get_promotion_engine
-from src.profiles.service import get_profile_service
+from src.profiles.unified_service import get_unified_profile_service
 from src.profiles.models import OrganizationProfile
 
 logger = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ class ScoringService:
     def __init__(self):
         self.discovery_scorer = get_discovery_scorer()
         self.promotion_engine = get_promotion_engine()
-        self.profile_service = get_profile_service()
+        self.profile_service = get_unified_profile_service()
         
         # Cache for recent scores (in production, use Redis or similar)
         self.score_cache: Dict[str, Tuple[ScoringResult, datetime]] = {}
@@ -339,9 +339,7 @@ class ScoringService:
     async def _get_opportunity_data(self, profile_id: str, opportunity_id: str) -> Optional[Dict[str, Any]]:
         """Get opportunity data from profile service"""
         try:
-            from src.profiles.service import get_profile_service
-            
-            profile_service = get_profile_service()
+            profile_service = get_unified_profile_service()
             
             # Get all leads for the profile and find the one with matching ID
             leads = profile_service.get_profile_leads(profile_id)
@@ -392,10 +390,9 @@ class ScoringService:
     async def _update_opportunity_stage(self, profile_id: str, opportunity_id: str, new_stage: str):
         """Update opportunity stage using profile service"""
         try:
-            from src.profiles.service import get_profile_service
             from src.profiles.models import PipelineStage
-            
-            profile_service = get_profile_service()
+
+            profile_service = get_unified_profile_service()
             
             # Convert string stage to PipelineStage enum
             stage_mapping = {

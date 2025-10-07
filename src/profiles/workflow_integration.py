@@ -7,8 +7,7 @@ from datetime import datetime
 
 from .models import OrganizationProfile, ProfileSearchParams, FundingType, PipelineStage
 from .search_engine import ProfileSearchEngine
-from .service import ProfileService
-from .unified_service import get_unified_profile_service
+from .unified_service import get_unified_profile_service, UnifiedProfileService
 from src.discovery.unified_discovery_adapter import get_unified_discovery_adapter
 from src.core.workflow_engine import get_workflow_engine
 from src.core.data_models import WorkflowConfig
@@ -23,7 +22,7 @@ class ProfileWorkflowIntegrator:
     
     def __init__(self):
         self.search_engine = ProfileSearchEngine()
-        self.profile_service = ProfileService()
+        self.profile_service = get_unified_profile_service()  # Use UnifiedProfileService instead
         self.unified_service = get_unified_profile_service()
         self.discovery_adapter = get_unified_discovery_adapter()
         self.workflow_engine = get_workflow_engine()
