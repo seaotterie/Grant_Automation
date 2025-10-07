@@ -28,14 +28,15 @@
             console.log('Edit Profile Modal initialized');
         },
         async saveProfile() {
-            if (!this.profile || !this.profile.profile_id) {
-                console.error('No profile to save');
+            const profileId = this.profile?.profile_id || this.profile?.id;
+            if (!this.profile || !profileId) {
+                console.error('No profile to save or missing ID');
                 return;
             }
             this.loading = true;
             this.error = null;
             try {
-                const response = await fetch(`/api/profiles/${this.profile.profile_id}`, {
+                const response = await fetch(`/api/profiles/${profileId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(this.profile)
