@@ -567,11 +567,14 @@ function profilesModule() {
                         });
 
                         console.log('Profile updated - triggering modal refresh');
+                        console.log('Updated NTEE code:', this.selectedProfile.ntee_code_990);
+                        console.log('Updated city:', this.selectedProfile.city);
 
                         // Dispatch event to update modal (Alpine doesn't track deep object changes)
                         window.dispatchEvent(new CustomEvent('profile-research-complete', {
                             detail: { profile: this.selectedProfile }
                         }));
+                        console.log('Dispatched profile-research-complete event');
 
                         // Show appropriate notification based on NTEE code availability
                         if (!nteeCode) {

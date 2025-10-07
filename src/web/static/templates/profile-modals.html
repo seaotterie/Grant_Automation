@@ -78,7 +78,7 @@
      x-cloak
      @open-edit-profile-modal.window="modalOpen = true; profile = $event.detail.profile; activeTab = 'basic'"
      @close-edit-profile-modal.window="modalOpen = false"
-     @profile-research-complete.window="profile = $event.detail.profile"
+     @profile-research-complete.window="console.log('Modal received research-complete', $event.detail); profile = {...$event.detail.profile}; console.log('Modal profile refreshed:', profile.ntee_code_990)"
      class="fixed inset-0 z-50 overflow-y-auto"
      style="display: none;">
 
