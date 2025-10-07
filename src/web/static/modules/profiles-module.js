@@ -521,8 +521,10 @@ function profilesModule() {
          * Handle research profile event (Research button)
          * Calls BMF, 990 parsers, and Tool 25 to populate profile data
          */
-        async handleResearchProfile(event) {
-            const { ein } = event.detail;
+        async handleResearchProfile(detail) {
+            // Handle both event object and direct detail parameter
+            const data = detail?.detail || detail;
+            const { ein } = data || {};
 
             if (!ein) {
                 console.error('No EIN provided for research');
