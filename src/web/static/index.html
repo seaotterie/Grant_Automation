@@ -256,8 +256,8 @@
 
                 <!-- Stage 1: PROFILES (Replaces: WELCOME, PROFILER, SETTINGS) -->
                 <div class="px-2 mb-4 relative">
-                    <a href="#" @click.prevent="switchStage('profiles')"
-                       :class="{'bg-purple-600 text-white shadow-lg': activeStage === 'profiles', 'text-gray-300 hover:bg-gray-700 hover:text-white border-purple-500/30': activeStage !== 'profiles'}"
+                    <a href="#" @click.prevent="switchStage('profiler')"
+                       :class="{'bg-purple-600 text-white shadow-lg': activeStage === 'profiler', 'text-gray-300 hover:bg-gray-700 hover:text-white border-purple-500/30': activeStage !== 'profiler'}"
                        class="block px-6 py-8 text-2xl font-bold rounded-lg transition-all border">
                         PROFILES
                         <div class="text-xs font-normal opacity-80 mt-1">Profile Management</div>
@@ -467,158 +467,9 @@
                 <!-- ============================================================ -->
 
                 <!-- STAGE 1: PROFILES (Profile Management) -->
-                <div x-show="activeStage === 'profiles'" class="space-y-6" x-data="window.profilesModule ? window.profilesModule() : {}" x-init="init && init()">
-                    <!-- Header -->
-                    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg p-6 text-white">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h3 class="text-2xl font-bold">Profile Management</h3>
-                                <p class="text-purple-100 mt-2">Create, manage, and analyze organization profiles</p>
-                            </div>
-                            <button @click="openCreateModal()"
-                                    class="px-4 py-2 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-medium">
-                                + New Profile
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Search and Filters -->
-                    <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                        <div class="flex items-center space-x-4">
-                            <div class="flex-1">
-                                <input type="text"
-                                       x-model="searchQuery"
-                                       @input.debounce="searchProfiles()"
-                                       placeholder="Search profiles..."
-                                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white">
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">
-                                    <span x-text="profiles.length"></span> profiles
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Loading State -->
-                    <div x-show="loading" class="flex items-center justify-center py-12">
-                        <div class="text-center">
-                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-                            <p class="mt-4 text-gray-600 dark:text-gray-400">Loading profiles...</p>
-                        </div>
-                    </div>
-
-                    <!-- Profile Table -->
-                    <div x-show="!loading && profiles.length > 0" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                        <div class="overflow-x-auto">
-                            <table class="w-full">
-                                <thead>
-                                    <tr class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            Organization
-                                        </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            EIN
-                                        </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            Type
-                                        </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            Opportunities
-                                        </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            Status
-                                        </th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            Researched On
-                                        </th>
-                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                    <template x-for="profile in profiles" :key="profile.profile_id">
-                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                                            :class="selectedProfile?.profile_id === profile.profile_id ? 'bg-blue-100 dark:bg-blue-900' : ''"
-                                            x-data="{ clickTimer: null }"
-                                            @click="clickTimer = setTimeout(() => selectProfile(profile), 200)"
-                                            @dblclick="clearTimeout(clickTimer); openEditModal(profile)"
-                                            title="Click to select • Double-click to edit">
-                                            <!-- Organization -->
-                                            <td class="px-6 py-4 whitespace-nowrap" @dblclick="openEditModal(profile)">
-                                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="profile.organization_name || profile.name"></div>
-                                            </td>
-                                            <!-- EIN -->
-                                            <td class="px-6 py-4 whitespace-nowrap" @dblclick="openEditModal(profile)">
-                                                <div class="text-sm text-gray-600 dark:text-gray-400" x-text="profile.ein || 'N/A'"></div>
-                                            </td>
-                                            <!-- Type -->
-                                            <td class="px-6 py-4 whitespace-nowrap" @dblclick="openEditModal(profile)">
-                                                <span class="px-2 py-1 text-xs font-medium rounded-full"
-                                                      :class="{
-                                                          'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': (profile.organization_type || 'nonprofit') === 'nonprofit',
-                                                          'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200': (profile.organization_type || '') === '501c3',
-                                                          'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200': (profile.organization_type || '') === 'foundation',
-                                                          'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200': (profile.organization_type || '') === 'for_profit',
-                                                          'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200': !profile.organization_type
-                                                      }"
-                                                      x-text="profile.organization_type || 'nonprofit'"></span>
-                                            </td>
-                                            <!-- Opportunities -->
-                                            <td class="px-6 py-4 whitespace-nowrap" @dblclick="openEditModal(profile)">
-                                                <div class="text-sm text-gray-900 dark:text-white" x-text="(profile.analytics?.opportunity_count || 0) + ' leads'"></div>
-                                            </td>
-                                            <!-- Status -->
-                                            <td class="px-6 py-4 whitespace-nowrap" @dblclick="openEditModal(profile)">
-                                                <span class="px-2 py-1 text-xs font-medium rounded-full"
-                                                      :class="{
-                                                          'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200': (profile.status || 'active') === 'active',
-                                                          'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200': (profile.status || 'active') === 'inactive'
-                                                      }"
-                                                      x-text="profile.status || 'active'"></span>
-                                            </td>
-                                            <!-- Researched On -->
-                                            <td class="px-6 py-4 whitespace-nowrap" @dblclick="openEditModal(profile)">
-                                                <div class="text-sm text-gray-600 dark:text-gray-400"
-                                                     x-text="profile.updated_at ? new Date(profile.updated_at).toLocaleDateString() : 'Not run'"></div>
-                                            </td>
-                                            <!-- Actions -->
-                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <button @click.stop="openEditModal(profile)"
-                                                        class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">
-                                                    Edit
-                                                </button>
-                                                <button @click.stop="openDeleteModal(profile)"
-                                                        class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
-                                                    Delete
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Empty State -->
-                    <div x-show="!loading && profiles.length === 0"
-                         class="bg-white dark:bg-gray-800 rounded-lg p-12 border border-gray-200 dark:border-gray-700 text-center">
-                        <div class="text-gray-400 text-6xl mb-4">[</div>
-                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Profiles Yet</h3>
-                        <p class="text-gray-600 dark:text-gray-400 mb-6">Create your first organization profile to get started</p>
-                        <button @click="openCreateModal()"
-                                class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
-                            Create First Profile
-                        </button>
-                    </div>
-
-                    <!-- Error State -->
-                    <div x-show="error"
-                         class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                        <p class="text-red-600 dark:text-red-400" x-text="error"></p>
-                    </div>
-                </div>
+                <!-- DEPRECATED: Old 'profiles' stage removed - replaced by 'profiler' stage -->
+                <!-- This view was showing 0 profiles because it used a different data source -->
+                <!-- Users should click sidebar "PROFILES" button which now redirects to 'profiler' stage -->
 
                 <!-- STAGE 2: SCREENING (Discovery & Screening) -->
                 <div x-show="activeStage === 'screening'" class="space-y-6" x-data="window.screeningModule ? window.screeningModule() : {}"
@@ -1778,7 +1629,11 @@
                 
                 
                 <!-- STAGE 1: PROFILER (Profile Management) -->
-                <div x-show="activeStage === 'profiler'" class="space-y-6">
+                <div x-show="activeStage === 'profiler'"
+                     class="space-y-6"
+                     x-data="window.profilesModule ? window.profilesModule() : {}"
+                     x-init="init && init()"
+                     @research-profile.window="handleResearchProfile && handleResearchProfile($event.detail)">
                     <!-- Profiler Header -->
                     <div class="bg-gradient-to-r from-purple-600 to-teal-600 rounded-lg p-6 text-white">
                         <div class="flex items-center justify-between">
@@ -1792,7 +1647,7 @@
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
                         <div class="flex flex-wrap items-center gap-4">
                             <!-- Create Profile Button -->
-                            <button @click="showProfileModal = true; isEditingProfile = false; resetProfileForm()"
+                            <button @click="console.log('Create Profile button clicked (profiler)'); $dispatch('open-create-profile-modal'); console.log('Event dispatched')"
                                     class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
                                 <span class="text-lg">+</span>
                                 Create Profile
@@ -1823,7 +1678,7 @@
                             
                             <!-- Action Buttons -->
                             <div x-show="filteredProfiles.length > 0" class="flex space-x-3">
-                                <button @click="selectedProfile && editProfile(selectedProfile)" 
+                                <button @click="selectedProfile && openEditModal(selectedProfile)"
                                         :disabled="!selectedProfile"
                                         :class="!selectedProfile ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'"
                                         class="px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-md">
@@ -1832,7 +1687,7 @@
                                     </svg>
                                     Edit
                                 </button>
-                                <button @click="selectedProfile && deleteProfile(selectedProfile?.profile_id)" 
+                                <button @click="selectedProfile && openDeleteModal(selectedProfile)"
                                         :disabled="!selectedProfile"
                                         :class="!selectedProfile ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-lg'"
                                         class="px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center text-sm bg-red-600 hover:bg-red-700 text-white shadow-md">
@@ -1857,25 +1712,26 @@
                         <div class="overflow-x-auto">
                             <div class="max-h-[600px] overflow-y-auto">
                                 <!-- Loading State -->
-                                <div x-show="profilesLoading" class="p-8 text-center text-gray-500 dark:text-gray-400">
+                                <div x-show="loading" x-cloak class="p-8 text-center text-gray-500 dark:text-gray-400">
                                     <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
                                     Loading profiles...
                                 </div>
-                                
+
                                 <!-- Empty State -->
-                                <div x-show="!profilesLoading && filteredProfiles.length === 0" 
+                                <div x-show="!loading && filteredProfiles && filteredProfiles.length === 0"
+                                     x-cloak
                                      class="p-8 text-center text-gray-500 dark:text-gray-400">
                                     <div class="text-4xl mb-4">📋</div>
                                     <p class="text-lg font-medium mb-2">No profiles found</p>
                                     <p class="text-sm mb-4">Create your first organization profile to get started</p>
-                                    <button @click="showProfileModal = true; isEditingProfile = false; resetProfileForm()"
+                                    <button @click="console.log('Create Profile button clicked (empty state)'); $dispatch('open-create-profile-modal')"
                                             class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors">
                                         Create Profile
                                     </button>
                                 </div>
-                                
+
                                 <!-- Profiles Table with Discovery Column -->
-                                <table x-show="!profilesLoading && filteredProfiles.length > 0" class="w-full">
+                                <table x-show="!loading && filteredProfiles && filteredProfiles.length > 0" x-cloak class="w-full">
                                     <thead class="bg-gray-50 dark:bg-gray-700">
                                         <tr>
                                             <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization Name</th>
@@ -5614,7 +5470,7 @@
                                 Organization Profiles
                             </h3>
                             <div class="flex space-x-3">
-                                <button @click="openCreateProfile()" 
+                                <button @click="console.log('Create Profile button clicked'); $dispatch('open-create-profile-modal'); console.log('Event dispatched')"
                                         class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
                                     <span class="text-lg mr-2">➕</span>
                                     Create Profile
@@ -6344,130 +6200,8 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Edit Profile Modal -->
-                    <div x-show="showEditProfile" 
-                         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-                            <!-- Modal Header -->
-                            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                                <h3 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                                    <span class="text-2xl mr-3">✏️</span>
-                                    Edit Profile
-                                </h3>
-                                <button @click="closeEditProfile()" 
-                                        class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
-                                    <span class="text-2xl">&times;</span>
-                                </button>
-                            </div>
-                            
-                            <!-- Modal Content -->
-                            <div class="p-6 space-y-6" x-show="selectedProfile">
-                                <!-- Organization Info -->
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Organization Name *
-                                        </label>
-                                        <input type="text" x-model="selectedProfile.name" required
-                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
-                                               x-init="if (selectedProfile && !selectedProfile.name) selectedProfile.name = ''">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            EIN (Tax ID)
-                                        </label>
-                                        <input type="text" x-model="selectedProfile.ein"
-                                               class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white font-mono"
-                                               placeholder="XX-XXXXXXX"
-                                               x-init="if (selectedProfile && !selectedProfile.ein) selectedProfile.ein = ''">
-                                    </div>
-                                </div>
-                                
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Organization Type *
-                                        </label>
-                                        <select x-model="selectedProfile.organization_type" required
-                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
-                                                x-init="if (selectedProfile && !selectedProfile.organization_type) selectedProfile.organization_type = ''">
-                                            <option value="nonprofit">Nonprofit</option>
-                                            <option value="government">Government</option>
-                                            <option value="educational">Educational Institution</option>
-                                            <option value="healthcare">Healthcare</option>
-                                            <option value="foundation">Foundation</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                            Status
-                                        </label>
-                                        <select x-model="selectedProfile.status"
-                                                class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
-                                                x-init="if (selectedProfile && !selectedProfile.status) selectedProfile.status = 'active'">
-                                            <option value="active">Active</option>
-                                            <option value="archived">Archived</option>
-                                            <option value="draft">Draft</option>
-                                            <option value="template">Template</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Mission Statement
-                                    </label>
-                                    <textarea x-model="selectedProfile.mission_statement" rows="3"
-                                              class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
-                                              placeholder="Describe the organization's mission and purpose"
-                                              x-init="if (selectedProfile && !selectedProfile.mission_statement) selectedProfile.mission_statement = ''"></textarea>
-                                    <div class="mt-1 flex justify-end">
-                                        <span class="text-xs text-gray-500">
-                                            <span x-text="(selectedProfile?.mission_statement || '').length"></span>/1000 characters
-                                        </span>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Focus Areas * (comma-separated)
-                                    </label>
-                                    <input type="text" x-model="selectedProfile.focus_areas" required
-                                           class="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
-                                           placeholder="health, education, community development"
-                                           x-init="if (selectedProfile && !selectedProfile.focus_areas) selectedProfile.focus_areas = ''">
-                                </div>
-                            </div>
-                            
-                            <!-- Modal Footer -->
-                            <div class="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
-                                <div class="space-x-3">
-                                    <button @click="currentEditingProfile && deleteProfile(currentEditingProfile.profile_id)" 
-                                            :disabled="!currentEditingProfile"
-                                            :class="!currentEditingProfile ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-700'"
-                                            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md transition-colors">
-                                        Delete Profile
-                                    </button>
-                                    <button @click="archiveProfile()" 
-                                            class="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-md hover:bg-yellow-700 transition-colors">
-                                        Archive
-                                    </button>
-                                </div>
-                                <div class="space-x-3">
-                                    <button @click="closeEditProfile()" 
-                                            class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                                        Cancel
-                                    </button>
-                                    <button @click="saveProfileChanges()" 
-                                            :disabled="!selectedProfile?.name"
-                                            class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-400 transition-colors">
-                                        Save Changes
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+
+                    <!-- REMOVED: Duplicate Edit Profile Modal (replaced by profile-modals.html) -->
                 </div>
                 
                 <!-- Analytics Tab -->

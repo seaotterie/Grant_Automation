@@ -74,6 +74,7 @@ from src.web.auth_routes import router as auth_router
 # from src.web.routers.ai_processing import router as ai_processing_router
 from src.web.routers.intelligence import router as intelligence_router
 from src.web.routers.workflows import router as workflows_router
+from src.web.routers.profiles import router as profiles_router  # Phase 9: Fix duplicate fetch-ein endpoint
 from src.web.routers.profiles_v2 import router as profiles_v2_router
 from src.web.routers.discovery_v2 import router as discovery_v2_router
 # Optional enhanced scraping router (requires scrapy)
@@ -434,6 +435,11 @@ app.include_router(workflows_router)
 # Include unified tool execution routes (Phase 6)
 from src.web.routers.tools import router as tools_router
 app.include_router(tools_router)
+
+# Include profile routes (Phase 9: Fix duplicate fetch-ein endpoint)
+# This replaces the deprecated endpoint in main.py that used EINLookupProcessor
+# Note: profiles_router already has prefix="/api/profiles" so don't add it again
+app.include_router(profiles_router)
 
 # Include modernized profile routes (Phase 8 - Task 19)
 app.include_router(profiles_v2_router)
@@ -1952,522 +1958,530 @@ async def _get_stored_intelligence_data(ein: str) -> Optional[Dict[str, Any]]:
         return None
 
 # Profile Management API endpoints
-@app.post("/api/profiles/fetch-ein")
-async def fetch_ein_data(request: dict):
-    """
-    Enhanced organization data fetching with web scraping capabilities.
-    
-    Combines ProPublica API data with web scraping for comprehensive profiles:
-    - ProPublica API for official 990 data and Schedule I grantees
-    - Web scraping for mission statements, current programs, leadership info
-    - GuideStar and organization websites for additional context
-    """
-    try:
-        ein = request.get('ein', '').strip()
-        enable_web_scraping = request.get('enable_web_scraping', True)
-        
-        if not ein:
-            raise HTTPException(status_code=400, detail="EIN is required")
-        
-        # Initialize EIN lookup processor
-        ein_processor = EINLookupProcessor()
-        
+# DEPRECATED: Moved to routers/profiles.py - This endpoint uses deprecated EINLookupProcessor
+# @app.post("/api/profiles/fetch-ein")
+# async def fetch_ein_data_DEPRECATED(request: dict):
+#     """
+#     DEPRECATED: Moved to routers/profiles.py
+#     This endpoint uses deprecated EINLookupProcessor which no longer exists.
+#     Use the new endpoint in routers/profiles.py which queries BMF database directly.
+#     """
+#     pass
+#     # OLD CODE BELOW - COMMENTED OUT
+#     """
+#     Enhanced organization data fetching with web scraping capabilities.
+#
+#     Combines ProPublica API data with web scraping for comprehensive profiles:
+#     - ProPublica API for official 990 data and Schedule I grantees
+#     - Web scraping for mission statements, current programs, leadership info
+#     - GuideStar and organization websites for additional context
+#     """
+#     try:
+#         ein = request.get('ein', '').strip()
+#         enable_web_scraping = request.get('enable_web_scraping', True)
+#
+#         if not ein:
+#             raise HTTPException(status_code=400, detail="EIN is required")
+#
+#         # Initialize EIN lookup processor
+#         ein_processor = EINLookupProcessor()
+#        
         # Create workflow config with EIN
-        from src.core.data_models import WorkflowConfig, ProcessorConfig
-        
-        workflow_config = WorkflowConfig(
-            target_ein=ein,
-            target_state=None,
-            target_tags=[],
-            max_results=1
-        )
-        
-        config = ProcessorConfig(
-            workflow_id=str(uuid.uuid4()),
-            processor_name="ein_lookup",
-            workflow_config=workflow_config,
-            processor_specific_config={}
-        )
-        
+#        from src.core.data_models import WorkflowConfig, ProcessorConfig
+#        
+#        workflow_config = WorkflowConfig(
+#            target_ein=ein,
+#            target_state=None,
+#            target_tags=[],
+#            max_results=1
+#        )
+#        
+#        config = ProcessorConfig(
+#            workflow_id=str(uuid.uuid4()),
+#            processor_name="ein_lookup",
+#            workflow_config=workflow_config,
+#            processor_specific_config={}
+#        )
+#        
         # Execute EIN lookup (gets JSON data)
-        result = await ein_processor.execute(config)
-        logger.info(f"EIN lookup result: success={result.success}, data_keys={list(result.data.keys()) if result.data else 'None'}")
-        
-        if result.success and result.data:
-            logger.info(f"Result data structure: {result.data}")
-            org_data = result.data.get('target_organization', {})
-            
+#        result = await ein_processor.execute(config)
+#        logger.info(f"EIN lookup result: success={result.success}, data_keys={list(result.data.keys()) if result.data else 'None'}")
+#        
+#        if result.success and result.data:
+#            logger.info(f"Result data structure: {result.data}")
+#            org_data = result.data.get('target_organization', {})
+#            
             # Prepare basic response data with real 990 data extraction
-            extracted_website = _extract_website_url_from_990(org_data) or org_data.get('website', '')
-            extracted_mission = _extract_mission_from_990(org_data) or org_data.get('mission_description', '') or org_data.get('activity_description', '')
-
-            response_data = {
-                "name": org_data.get('name', ''),
-                "ein": org_data.get('ein', ein),
-                "mission_statement": extracted_mission,
-                "organization_type": str(org_data.get('organization_type', 'nonprofit')).replace('OrganizationType.', '').lower(),
-                "ntee_code": org_data.get('ntee_code', ''),
-                "city": org_data.get('city', ''),
-                "state": org_data.get('state', ''),
-                "website": extracted_website,
-                "website_url": extracted_website,  # For frontend compatibility
-                "revenue": org_data.get('revenue', 0),
-                "assets": org_data.get('assets', 0),
-                "expenses": org_data.get('expenses', 0),
-                "most_recent_filing_year": org_data.get('most_recent_filing_year', ''),
-                "filing_years": org_data.get('filing_years', []),
-                "schedule_i_grantees": [],  # Initialize empty list
-                "schedule_i_status": "not_checked",  # Default status
-                "web_scraping_data": {},  # New field for scraped data
-                "enhanced_with_web_data": False  # Flag to indicate if web enhancement was successful
-            }
-            
+#            extracted_website = _extract_website_url_from_990(org_data) or org_data.get('website', '')
+#            extracted_mission = _extract_mission_from_990(org_data) or org_data.get('mission_description', '') or org_data.get('activity_description', '')
+#
+#            response_data = {
+#                "name": org_data.get('name', ''),
+#                "ein": org_data.get('ein', ein),
+#                "mission_statement": extracted_mission,
+#                "organization_type": str(org_data.get('organization_type', 'nonprofit')).replace('OrganizationType.', '').lower(),
+#                "ntee_code": org_data.get('ntee_code', ''),
+#                "city": org_data.get('city', ''),
+#                "state": org_data.get('state', ''),
+#                "website": extracted_website,
+#                "website_url": extracted_website,  # For frontend compatibility
+#                "revenue": org_data.get('revenue', 0),
+#                "assets": org_data.get('assets', 0),
+#                "expenses": org_data.get('expenses', 0),
+#                "most_recent_filing_year": org_data.get('most_recent_filing_year', ''),
+#                "filing_years": org_data.get('filing_years', []),
+#                "schedule_i_grantees": [],  # Initialize empty list
+#                "schedule_i_status": "not_checked",  # Default status
+#                "web_scraping_data": {},  # New field for scraped data
+#                "enhanced_with_web_data": False  # Flag to indicate if web enhancement was successful
+#            }
+#            
             # Enhanced web scraping integration with GPT URL discovery
-            if enable_web_scraping:
-                try:
-                    logger.info(f"Starting intelligent web scraping for {org_data.get('name', 'Unknown')} (EIN: {ein})")
-                    
+#            if enable_web_scraping:
+#                try:
+#                    logger.info(f"Starting intelligent web scraping for {org_data.get('name', 'Unknown')} (EIN: {ein})")
+#                    
                     # Step 1: Use GPT URL Discovery to find likely URLs
-                    try:
-                        from src.processors.analysis.gpt_url_discovery import GPTURLDiscoveryProcessor
-                        from src.core.data_models import ProcessorConfig, WorkflowConfig
-                        
+#                    try:
+#                        from src.processors.analysis.gpt_url_discovery import GPTURLDiscoveryProcessor
+#                        from src.core.data_models import ProcessorConfig, WorkflowConfig
+#                        
                         # Create processor config for URL discovery
-                        url_discovery_processor = GPTURLDiscoveryProcessor()
-                        
+#                        url_discovery_processor = GPTURLDiscoveryProcessor()
+#                        
                         # Prepare organization data for GPT URL discovery
-                        organization_data = {
-                            'organization_name': org_data.get('name', ''),
-                            'ein': ein,
-                            'address': f"{org_data.get('city', '')}, {org_data.get('state', '')}",
-                            'city': org_data.get('city', ''),
-                            'state': org_data.get('state', ''),
-                            'organization_type': 'nonprofit'
-                        }
-                        
-                        url_config = ProcessorConfig(
-                            workflow_id=str(uuid.uuid4()),
-                            processor_name="gpt_url_discovery",
-                            workflow_config=WorkflowConfig(target_ein=ein),
-                            processor_specific_config={'organization_data': organization_data}
-                        )
-                        
+#                        organization_data = {
+#                            'organization_name': org_data.get('name', ''),
+#                            'ein': ein,
+#                            'address': f"{org_data.get('city', '')}, {org_data.get('state', '')}",
+#                            'city': org_data.get('city', ''),
+#                            'state': org_data.get('state', ''),
+#                            'organization_type': 'nonprofit'
+#                        }
+#                        
+#                        url_config = ProcessorConfig(
+#                            workflow_id=str(uuid.uuid4()),
+#                            processor_name="gpt_url_discovery",
+#                            workflow_config=WorkflowConfig(target_ein=ein),
+#                            processor_specific_config={'organization_data': organization_data}
+#                        )
+#                        
                         # Get URL predictions from GPT
-                        url_result = await url_discovery_processor.execute(url_config)
-                        predicted_urls = []
-                        
-                        if url_result.success and url_result.data.get('urls'):
-                            predicted_urls = url_result.data['urls']
-                            logger.info(f"GPT predicted {len(predicted_urls)} URLs for {org_data.get('name', '')}")
-                        else:
-                            logger.warning(f"GPT URL discovery failed for EIN {ein}: {url_result.error_message}")
-                            
-                    except Exception as gpt_error:
-                        logger.warning(f"GPT URL discovery failed for EIN {ein}: {gpt_error}")
-                        predicted_urls = []
-                    
+#                        url_result = await url_discovery_processor.execute(url_config)
+#                        predicted_urls = []
+#                        
+#                        if url_result.success and url_result.data.get('urls'):
+#                            predicted_urls = url_result.data['urls']
+#                            logger.info(f"GPT predicted {len(predicted_urls)} URLs for {org_data.get('name', '')}")
+#                        else:
+#                            logger.warning(f"GPT URL discovery failed for EIN {ein}: {url_result.error_message}")
+#                            
+#                    except Exception as gpt_error:
+#                        logger.warning(f"GPT URL discovery failed for EIN {ein}: {gpt_error}")
+#                        predicted_urls = []
+#                    
                     # Step 2: Tool 25 Profile Builder (Scrapy-powered with 990 verification)
-                    logger.info(f"Starting Tool 25 Profile Builder for EIN {ein}")
-
-                    tool25_service = get_tool25_profile_builder()
-                    org_name = org_data.get('name', '')
-
+#                    logger.info(f"Starting Tool 25 Profile Builder for EIN {ein}")
+#
+#                    tool25_service = get_tool25_profile_builder()
+#                    org_name = org_data.get('name', '')
+#
                     # Execute Tool 25 with Smart URL Resolution (User → 990 → GPT priority)
-                    success, tool25_data = await tool25_service.execute_profile_builder(
-                        ein=ein,
-                        organization_name=org_name,
-                        user_provided_url=request.get('user_provided_url'),  # User URL if provided
-                        filing_url=extracted_website,  # From 990 tax filing
-                        gpt_predicted_url=predicted_urls[0] if predicted_urls else None,  # GPT fallback
-                        require_990_verification=True,
-                        min_confidence_score=0.7
-                    )
-
-                    if success:
+#                    success, tool25_data = await tool25_service.execute_profile_builder(
+#                        ein=ein,
+#                        organization_name=org_name,
+#                        user_provided_url=request.get('user_provided_url'),  # User URL if provided
+#                        filing_url=extracted_website,  # From 990 tax filing
+#                        gpt_predicted_url=predicted_urls[0] if predicted_urls else None,  # GPT fallback
+#                        require_990_verification=True,
+#                        min_confidence_score=0.7
+#                    )
+#
+#                    if success:
                         # Merge Tool 25 data with 990 data
-                        response_data = tool25_service.merge_with_990_data(
-                            base_data=response_data,
-                            tool_25_data=tool25_data,
-                            confidence_threshold=0.7
-                        )
-                        logger.info(f"Tool 25 SUCCESS: {org_name} enhanced with web intelligence")
-                    else:
+#                        response_data = tool25_service.merge_with_990_data(
+#                            base_data=response_data,
+#                            tool_25_data=tool25_data,
+#                            confidence_threshold=0.7
+#                        )
+#                        logger.info(f"Tool 25 SUCCESS: {org_name} enhanced with web intelligence")
+#                    else:
                         # Graceful degradation - return 990 data only
-                        logger.warning(f"Tool 25 failed for {ein}, using 990 data only")
-                        response_data["enhanced_with_web_data"] = False
-                        response_data["tool_25_error"] = tool25_data.get("tool_25_error", "Unknown error")
-
-                except Exception as web_error:
-                    logger.error(f"Web scraping error for EIN {ein}: {web_error}")
-                    response_data["web_scraping_data"] = {"error": str(web_error)}
-                    response_data["enhanced_with_web_data"] = False
+#                        logger.warning(f"Tool 25 failed for {ein}, using 990 data only")
+#                        response_data["enhanced_with_web_data"] = False
+#                        response_data["tool_25_error"] = tool25_data.get("tool_25_error", "Unknown error")
+#
+#                except Exception as web_error:
+#                    logger.error(f"Web scraping error for EIN {ein}: {web_error}")
+#                    response_data["web_scraping_data"] = {"error": str(web_error)}
+#                    response_data["enhanced_with_web_data"] = False
                     # Don't fail the entire request if web scraping fails
-            
+#            
             # Always check for stored intelligence data (regardless of web scraping setting)
-            web_scraping_data = response_data.get("web_scraping_data")
-            extracted_info = web_scraping_data.get("extracted_info", {}) if web_scraping_data else {}
-            programs_count = len(extracted_info.get("programs", []))
-            
-            logger.info(f"DEBUG: Checking intelligence conditions for EIN {ein}")
-            logger.info(f"DEBUG: Has web_scraping_data: {web_scraping_data is not None}")
-            logger.info(f"DEBUG: Has extracted_info: {extracted_info is not None}")
-            logger.info(f"DEBUG: Programs count: {programs_count}")
-            
+#            web_scraping_data = response_data.get("web_scraping_data")
+#            extracted_info = web_scraping_data.get("extracted_info", {}) if web_scraping_data else {}
+#            programs_count = len(extracted_info.get("programs", []))
+#            
+#            logger.info(f"DEBUG: Checking intelligence conditions for EIN {ein}")
+#            logger.info(f"DEBUG: Has web_scraping_data: {web_scraping_data is not None}")
+#            logger.info(f"DEBUG: Has extracted_info: {extracted_info is not None}")
+#            logger.info(f"DEBUG: Programs count: {programs_count}")
+#            
             # REMOVED: Fallback to cached database data to prevent fake data contamination
             # Only use fresh scraping or validated JSON data from now on
-            logger.info(f"Skipping cached database intelligence to avoid fake data for EIN {ein}")
-            
+#            logger.info(f"Skipping cached database intelligence to avoid fake data for EIN {ein}")
+#            
             # CRITICAL: COMPLETELY REMOVE JSON VALIDATION PIPELINE FALLBACKS
             # After MCP removal, the DataValidationPipeline creates poor quality data that overrides VerificationEnhancedScraper
             # We now rely exclusively on VerificationEnhancedScraper for high-quality verified data
-
-            if enable_web_scraping:
-                if response_data.get("web_scraping_data"):
-                    logger.info(f"SUCCESS: Using VerificationEnhancedScraper verified data for EIN {ein}")
-                    logger.info(f"Data sources: Tax filing baseline + web verification")
-                else:
-                    logger.warning(f"VerificationEnhancedScraper failed for EIN {ein} - maintaining no-fake-data policy")
-                    logger.warning(f"Will NOT use any fallback data sources to prevent poor quality data contamination")
-            else:
-                logger.info(f"Web scraping disabled for EIN {ein} - using ProPublica data only")
+#
+#            if enable_web_scraping:
+#                if response_data.get("web_scraping_data"):
+#                    logger.info(f"SUCCESS: Using VerificationEnhancedScraper verified data for EIN {ein}")
+#                    logger.info(f"Data sources: Tax filing baseline + web verification")
+#                else:
+#                    logger.warning(f"VerificationEnhancedScraper failed for EIN {ein} - maintaining no-fake-data policy")
+#                    logger.warning(f"Will NOT use any fallback data sources to prevent poor quality data contamination")
+#            else:
+#                logger.info(f"Web scraping disabled for EIN {ein} - using ProPublica data only")
                 # Note: DataValidationPipeline completely removed to prevent poor quality data
-            
+#            
             # Check for 990-PF foundation processing
-            try:
+#            try:
                 # Auto-detect form type and add foundation intelligence if applicable
-                organization_type = org_data.get('organization_type', '').lower()
-                is_foundation = 'foundation' in organization_type or organization_type == 'private_foundation'
-
-                if is_foundation:
-                    logger.info(f"Detected foundation organization for EIN {ein}, adding foundation intelligence")
-
-                    from src.processors.data_collection.pf_data_extractor import PFDataExtractorProcessor
-
-                    pf_processor = PFDataExtractorProcessor()
-
+#                organization_type = org_data.get('organization_type', '').lower()
+#                is_foundation = 'foundation' in organization_type or organization_type == 'private_foundation'
+#
+#                if is_foundation:
+#                    logger.info(f"Detected foundation organization for EIN {ein}, adding foundation intelligence")
+#
+#                    from src.processors.data_collection.pf_data_extractor import PFDataExtractorProcessor
+#
+#                    pf_processor = PFDataExtractorProcessor()
+#
                     # Process 990-PF specific data
-                    pf_result = await pf_processor.process({
-                        "target_organization": org_data,
-                        "ein": ein,
-                        "organization_name": org_data.get('name', '')
-                    })
-
-                    if pf_result.success and pf_result.data:
-                        foundation_data = pf_result.data
-                        logger.info(f"Successfully extracted 990-PF foundation data for EIN {ein}")
-
+#                    pf_result = await pf_processor.process({
+#                        "target_organization": org_data,
+#                        "ein": ein,
+#                        "organization_name": org_data.get('name', '')
+#                    })
+#
+#                    if pf_result.success and pf_result.data:
+#                        foundation_data = pf_result.data
+#                        logger.info(f"Successfully extracted 990-PF foundation data for EIN {ein}")
+#
                         # Add foundation-specific intelligence to response
-                        response_data["foundation_intelligence"] = {
-                            "grant_making_capacity": foundation_data.get("grant_making_capacity", {}),
-                            "distribution_requirements": foundation_data.get("distribution_requirements", {}),
-                            "grants_paid": foundation_data.get("grants_paid", []),
-                            "application_process": foundation_data.get("application_process", {}),
-                            "form_type": "990-PF",
-                            "is_foundation": True
-                        }
-
+#                        response_data["foundation_intelligence"] = {
+#                            "grant_making_capacity": foundation_data.get("grant_making_capacity", {}),
+#                            "distribution_requirements": foundation_data.get("distribution_requirements", {}),
+#                            "grants_paid": foundation_data.get("grants_paid", []),
+#                            "application_process": foundation_data.get("application_process", {}),
+#                            "form_type": "990-PF",
+#                            "is_foundation": True
+#                        }
+#
                         # Enhance Enhanced Data tab with foundation grant data
-                        if foundation_data.get("grants_paid"):
-                            response_data["foundation_grants"] = foundation_data["grants_paid"][:10]  # Top 10 grants
-                    else:
-                        logger.warning(f"990-PF processing failed for EIN {ein}: {pf_result.error_message}")
-                        response_data["foundation_intelligence"] = {"form_type": "990-PF", "is_foundation": True, "processing_failed": True}
-                else:
-                    logger.info(f"Regular 990 organization detected for EIN {ein}")
-                    response_data["foundation_intelligence"] = {"form_type": "990", "is_foundation": False}
-
-            except Exception as foundation_error:
-                logger.warning(f"Foundation processing error for EIN {ein}: {foundation_error}")
-                response_data["foundation_intelligence"] = {"processing_error": str(foundation_error)}
-
+#                        if foundation_data.get("grants_paid"):
+#                            response_data["foundation_grants"] = foundation_data["grants_paid"][:10]  # Top 10 grants
+#                    else:
+#                        logger.warning(f"990-PF processing failed for EIN {ein}: {pf_result.error_message}")
+#                        response_data["foundation_intelligence"] = {"form_type": "990-PF", "is_foundation": True, "processing_failed": True}
+#                else:
+#                    logger.info(f"Regular 990 organization detected for EIN {ein}")
+#                    response_data["foundation_intelligence"] = {"form_type": "990", "is_foundation": False}
+#
+#            except Exception as foundation_error:
+#                logger.warning(f"Foundation processing error for EIN {ein}: {foundation_error}")
+#                response_data["foundation_intelligence"] = {"processing_error": str(foundation_error)}
+#
             # Attempt to fetch XML data and extract Schedule I grantees
-            try:
-                from src.utils.xml_fetcher import XMLFetcher
-                from src.utils.schedule_i_extractor import ScheduleIExtractor
-
-                logger.info(f"Attempting to fetch XML data for EIN {ein}")
-
-                xml_fetcher = XMLFetcher(context="profile")
-                xml_content = await xml_fetcher.fetch_xml_by_ein(ein)
-
-                logger.info(f"XML fetch completed for EIN {ein}, content: {xml_content is not None}, size: {len(xml_content) if xml_content else 0}")
-
-                if xml_content:
-                    logger.info(f"Successfully fetched XML data for EIN {ein} ({len(xml_content):,} bytes)")
-
+#            try:
+#                from src.utils.xml_fetcher import XMLFetcher
+#                from src.utils.schedule_i_extractor import ScheduleIExtractor
+#
+#                logger.info(f"Attempting to fetch XML data for EIN {ein}")
+#
+#                xml_fetcher = XMLFetcher(context="profile")
+#                xml_content = await xml_fetcher.fetch_xml_by_ein(ein)
+#
+#                logger.info(f"XML fetch completed for EIN {ein}, content: {xml_content is not None}, size: {len(xml_content) if xml_content else 0}")
+#
+#                if xml_content:
+#                    logger.info(f"Successfully fetched XML data for EIN {ein} ({len(xml_content):,} bytes)")
+#
                     # Extract Schedule I grantees
-                    extractor = ScheduleIExtractor()
-                    most_recent_year = org_data.get('most_recent_filing_year')
-                    grantees = extractor.extract_grantees_from_xml(xml_content, most_recent_year)
-                    
-                    if grantees:
-                        logger.info(f"Extracted {len(grantees)} Schedule I grantees for EIN {ein}")
-                        response_data["schedule_i_grantees"] = [grantee.dict() for grantee in grantees]
-                        response_data["schedule_i_status"] = "found"
-                    else:
-                        logger.info(f"No Schedule I grantees found in XML for EIN {ein}")
-                        response_data["schedule_i_status"] = "no_grantees"
-                else:
-                    logger.warning(f"No XML data available for EIN {ein}")
-                    response_data["schedule_i_status"] = "no_xml"
-                    
-            except Exception as e:
-                logger.warning(f"Error fetching/processing XML data for EIN {ein}: {e}")
-                response_data["schedule_i_status"] = "no_xml"
+#                    extractor = ScheduleIExtractor()
+#                    most_recent_year = org_data.get('most_recent_filing_year')
+#                    grantees = extractor.extract_grantees_from_xml(xml_content, most_recent_year)
+#                    
+#                    if grantees:
+#                        logger.info(f"Extracted {len(grantees)} Schedule I grantees for EIN {ein}")
+#                        response_data["schedule_i_grantees"] = [grantee.dict() for grantee in grantees]
+#                        response_data["schedule_i_status"] = "found"
+#                    else:
+#                        logger.info(f"No Schedule I grantees found in XML for EIN {ein}")
+#                        response_data["schedule_i_status"] = "no_grantees"
+#                else:
+#                    logger.warning(f"No XML data available for EIN {ein}")
+#                    response_data["schedule_i_status"] = "no_xml"
+#                    
+#            except Exception as e:
+#                logger.warning(f"Error fetching/processing XML data for EIN {ein}: {e}")
+#                response_data["schedule_i_status"] = "no_xml"
                 # Continue with basic data even if XML processing fails
-            
+#            
             # NEW: Save extracted data to profile if profile_id provided
-            profile_id = request.get('profile_id')
-            if profile_id:
-                try:
+#            profile_id = request.get('profile_id')
+#            if profile_id:
+#                try:
                     # Prepare profile update data with real extracted data only
-                    profile_updates = {}
-
+#                    profile_updates = {}
+#
                     # CRITICAL: Prioritize VerificationEnhancedScraper verified data
-                    if verification_result:
-                        logger.info("Saving VerificationEnhancedScraper verified data to database")
-
+#                    if verification_result:
+#                        logger.info("Saving VerificationEnhancedScraper verified data to database")
+#
                         # Save verified website URL (highest confidence)
-                        if verification_result.verified_website:
-                            profile_updates["website_url"] = verification_result.verified_website
-                            profile_updates["website"] = verification_result.verified_website  # Legacy compatibility
-                            logger.info(f"Saving verified website: {verification_result.verified_website}")
-
+#                        if verification_result.verified_website:
+#                            profile_updates["website_url"] = verification_result.verified_website
+#                            profile_updates["website"] = verification_result.verified_website  # Legacy compatibility
+#                            logger.info(f"Saving verified website: {verification_result.verified_website}")
+#
                         # Save verified mission statement (highest confidence)
-                        if verification_result.verified_mission and len(verification_result.verified_mission.strip()) > 10:
-                            profile_updates["mission_statement"] = verification_result.verified_mission
-                            logger.info(f"Saving verified mission: {verification_result.verified_mission[:50]}...")
-
+#                        if verification_result.verified_mission and len(verification_result.verified_mission.strip()) > 10:
+#                            profile_updates["mission_statement"] = verification_result.verified_mission
+#                            logger.info(f"Saving verified mission: {verification_result.verified_mission[:50]}...")
+#
                         # Save verification metadata for quality tracking
-                        profile_updates["verification_data"] = {
-                            "verification_confidence": verification_result.verification_confidence,
-                            "verified_leadership_count": len(verification_result.verified_leadership),
-                            "data_sources": verification_result.source_attribution,
-                            "last_verified": datetime.now().isoformat(),
-                            "tax_baseline_available": verification_result.tax_baseline is not None
-                        }
-
+#                        profile_updates["verification_data"] = {
+#                            "verification_confidence": verification_result.verification_confidence,
+#                            "verified_leadership_count": len(verification_result.verified_leadership),
+#                            "data_sources": verification_result.source_attribution,
+#                            "last_verified": datetime.now().isoformat(),
+#                            "tax_baseline_available": verification_result.tax_baseline is not None
+#                        }
+#
                         # Map verified leadership to board_members field for database consistency
-                        if verification_result.verified_leadership:
-                            board_members_list = []
-                            for leader in verification_result.verified_leadership:
-                                if hasattr(leader, 'name') and leader.name:
-                                    member_entry = leader.name
-                                    if hasattr(leader, 'title') and leader.title:
-                                        member_entry += f" - {leader.title}"
-                                    board_members_list.append(member_entry)
-                                elif hasattr(leader, 'content') and leader.content:
-                                    board_members_list.append(leader.content)
-
-                            if board_members_list:
-                                profile_updates["board_members"] = board_members_list
-                                logger.info(f"Saving {len(board_members_list)} verified leadership entries to board_members field")
-
+#                        if verification_result.verified_leadership:
+#                            board_members_list = []
+#                            for leader in verification_result.verified_leadership:
+#                                if hasattr(leader, 'name') and leader.name:
+#                                    member_entry = leader.name
+#                                    if hasattr(leader, 'title') and leader.title:
+#                                        member_entry += f" - {leader.title}"
+#                                    board_members_list.append(member_entry)
+#                                elif hasattr(leader, 'content') and leader.content:
+#                                    board_members_list.append(leader.content)
+#
+#                            if board_members_list:
+#                                profile_updates["board_members"] = board_members_list
+#                                logger.info(f"Saving {len(board_members_list)} verified leadership entries to board_members field")
+#
                     # Fallback: Only update fields that have real data (legacy support)
-                    elif response_data.get("mission_statement") and len(response_data["mission_statement"].strip()) > 10:
-                        profile_updates["mission_statement"] = response_data["mission_statement"]
-
+#                    elif response_data.get("mission_statement") and len(response_data["mission_statement"].strip()) > 10:
+#                        profile_updates["mission_statement"] = response_data["mission_statement"]
+#
                     # Fallback: Use verified website URL from XML + web verification (takes priority)
-                    elif response_data.get("website_url"):
-                        profile_updates["website_url"] = response_data["website_url"]
-
+#                    elif response_data.get("website_url"):
+#                        profile_updates["website_url"] = response_data["website_url"]
+#
                     # Fallback: Map leadership/officers data to board_members if no verification result
-                    if not verification_result and extracted_info:
-                        board_members_list = []
-
+#                    if not verification_result and extracted_info:
+#                        board_members_list = []
+#
                         # Process leadership data
-                        leadership_data = extracted_info.get('leadership', [])
-                        officers_data = extracted_info.get('officers', [])
-
+#                        leadership_data = extracted_info.get('leadership', [])
+#                        officers_data = extracted_info.get('officers', [])
+#
                         # Combine leadership and officers data, removing duplicates
-                        all_leadership = leadership_data + officers_data
-                        seen_names = set()
-
-                        for leader in all_leadership:
-                            leader_text = ""
-                            if isinstance(leader, dict):
-                                if leader.get('name'):
-                                    leader_text = leader['name']
-                                    if leader.get('title'):
-                                        leader_text += f" - {leader['title']}"
-                                elif leader.get('content'):
-                                    leader_text = leader['content']
-                            else:
-                                leader_text = str(leader).strip()
-
+#                        all_leadership = leadership_data + officers_data
+#                        seen_names = set()
+#
+#                        for leader in all_leadership:
+#                            leader_text = ""
+#                            if isinstance(leader, dict):
+#                                if leader.get('name'):
+#                                    leader_text = leader['name']
+#                                    if leader.get('title'):
+#                                        leader_text += f" - {leader['title']}"
+#                                elif leader.get('content'):
+#                                    leader_text = leader['content']
+#                            else:
+#                                leader_text = str(leader).strip()
+#
                             # Only add if non-empty and not duplicate
-                            if leader_text and len(leader_text) > 3 and leader_text not in seen_names:
-                                seen_names.add(leader_text)
-                                board_members_list.append(leader_text)
-
-                        if board_members_list:
-                            profile_updates["board_members"] = board_members_list[:10]  # Limit to 10 entries
-                            logger.info(f"Fallback: Saving {len(board_members_list)} leadership/officers entries to board_members field")
-
+#                            if leader_text and len(leader_text) > 3 and leader_text not in seen_names:
+#                                seen_names.add(leader_text)
+#                                board_members_list.append(leader_text)
+#
+#                        if board_members_list:
+#                            profile_updates["board_members"] = board_members_list[:10]  # Limit to 10 entries
+#                            logger.info(f"Fallback: Saving {len(board_members_list)} leadership/officers entries to board_members field")
+#
                     # Add keywords from scraped programs if available
-                    if response_data.get("programs") and len(response_data["programs"]) > 0:
+#                    if response_data.get("programs") and len(response_data["programs"]) > 0:
                         # Extract meaningful keywords from programs (real data only)
-                        program_keywords = []
-                        for program in response_data["programs"][:3]:  # Top 3 programs
-                            if isinstance(program, dict):
-                                program_text = program.get("content", "")
-                            else:
-                                program_text = str(program)
-
-                            if program_text and len(program_text.strip()) > 5:
+#                        program_keywords = []
+#                        for program in response_data["programs"][:3]:  # Top 3 programs
+#                            if isinstance(program, dict):
+#                                program_text = program.get("content", "")
+#                            else:
+#                                program_text = str(program)
+#
+#                            if program_text and len(program_text.strip()) > 5:
                                 # Extract key terms from program descriptions
-                                words = program_text.replace(',', ' ').replace('.', ' ').split()
-                                keywords = [w.lower() for w in words if len(w) > 3 and w.isalpha()][:3]
-                                program_keywords.extend(keywords)
-
-                        if program_keywords:
-                            profile_updates["keywords"] = ", ".join(program_keywords[:10])  # Top 10 keywords
-
+#                                words = program_text.replace(',', ' ').replace('.', ' ').split()
+#                                keywords = [w.lower() for w in words if len(w) > 3 and w.isalpha()][:3]
+#                                program_keywords.extend(keywords)
+#
+#                        if program_keywords:
+#                            profile_updates["keywords"] = ", ".join(program_keywords[:10])  # Top 10 keywords
+#
                     # Save web scraping results for Enhanced Data tab
-                    if response_data.get("web_scraping_data"):
+#                    if response_data.get("web_scraping_data"):
                         # Store structured web scraping data (real data only)
-                        profile_updates["web_enhanced_data"] = {
-                            "scraped_data": response_data["web_scraping_data"],
-                            "enhanced_with_web_data": response_data["enhanced_with_web_data"],
-                            "last_scraped": datetime.now().isoformat()
-                        }
-
+#                        profile_updates["web_enhanced_data"] = {
+#                            "scraped_data": response_data["web_scraping_data"],
+#                            "enhanced_with_web_data": response_data["enhanced_with_web_data"],
+#                            "last_scraped": datetime.now().isoformat()
+#                        }
+#
                         # CRITICAL: Also save VerificationEnhancedScraper verified leadership for Enhanced Data tab
-                        if verification_result and verification_result.verified_leadership:
-                            verified_leadership_data = []
-                            for leader in verification_result.verified_leadership:
-                                if hasattr(leader, 'name') and leader.name:
-                                    verified_leadership_data.append({
-                                        "name": leader.name,
-                                        "title": getattr(leader, 'title', ''),
-                                        "source": leader.source,
-                                        "confidence": getattr(leader, 'confidence_score', 0.8),
-                                        "verification_status": getattr(leader, 'verification_status', 'verified')
-                                    })
-
+#                        if verification_result and verification_result.verified_leadership:
+#                            verified_leadership_data = []
+#                            for leader in verification_result.verified_leadership:
+#                                if hasattr(leader, 'name') and leader.name:
+#                                    verified_leadership_data.append({
+#                                        "name": leader.name,
+#                                        "title": getattr(leader, 'title', ''),
+#                                        "source": leader.source,
+#                                        "confidence": getattr(leader, 'confidence_score', 0.8),
+#                                        "verification_status": getattr(leader, 'verification_status', 'verified')
+#                                    })
+#
                             # Add verified leadership to web_enhanced_data for Enhanced Data tab
-                            profile_updates["web_enhanced_data"]["verified_leadership"] = verified_leadership_data
-                            logger.info(f"Saving {len(verified_leadership_data)} verified leadership entries to database")
-
+#                            profile_updates["web_enhanced_data"]["verified_leadership"] = verified_leadership_data
+#                            logger.info(f"Saving {len(verified_leadership_data)} verified leadership entries to database")
+#
                     # Only update if we have real data to save
-                    if profile_updates:
+#                    if profile_updates:
                         # Save to database (not file-based profile_service) for persistence
                         # Get existing profile, update it, then save back
-                        existing_profile = database_service.get_profile(profile_id)
-                        if existing_profile:
+#                        existing_profile = database_service.get_profile(profile_id)
+#                        if existing_profile:
                             # Update the profile object with the new data
-                            for key, value in profile_updates.items():
-                                if hasattr(existing_profile, key):
-                                    setattr(existing_profile, key, value)
-                                else:
-                                    logger.debug(f"Profile doesn't have attribute '{key}', skipping")
-
+#                            for key, value in profile_updates.items():
+#                                if hasattr(existing_profile, key):
+#                                    setattr(existing_profile, key, value)
+#                                else:
+#                                    logger.debug(f"Profile doesn't have attribute '{key}', skipping")
+#
                             # Update the updated_at timestamp
-                            existing_profile.updated_at = datetime.now()
-
+#                            existing_profile.updated_at = datetime.now()
+#
                             # Save the updated profile
-                            success = database_service.update_profile(existing_profile)
-                            if success:
-                                logger.info(f"Saved fetched data to database for profile {profile_id}: {list(profile_updates.keys())}")
-                            else:
-                                logger.error(f"Failed to save profile updates to database for {profile_id}")
-                        else:
-                            logger.error(f"Could not find existing profile {profile_id} for update")
-                    else:
-                        logger.info(f"No real data to save for profile {profile_id}")
-
-                except Exception as save_error:
-                    logger.error(f"Failed to save fetched data to profile {profile_id}: {save_error}")
+#                            success = database_service.update_profile(existing_profile)
+#                            if success:
+#                                logger.info(f"Saved fetched data to database for profile {profile_id}: {list(profile_updates.keys())}")
+#                            else:
+#                                logger.error(f"Failed to save profile updates to database for {profile_id}")
+#                        else:
+#                            logger.error(f"Could not find existing profile {profile_id} for update")
+#                    else:
+#                        logger.info(f"No real data to save for profile {profile_id}")
+#
+#                except Exception as save_error:
+#                    logger.error(f"Failed to save fetched data to profile {profile_id}: {save_error}")
                     # Continue with response even if save fails
-
+#
             # ENHANCED DATABASE FALLBACK: Compare data quality and preserve better data
             # This prevents partial/incomplete fetch results from overwriting complete database data
-            profile_id = request.get('profile_id')
-            if profile_id:
-                try:
-                    existing_profile = database_service.get_profile(profile_id)
-                    if existing_profile:
-
-                        def data_quality_score(data_dict, field_name):
-                            """Calculate data quality score for a field (0-100)"""
-                            value = data_dict.get(field_name, "")
-                            if not value or str(value).strip() == "":
-                                return 0
+#            profile_id = request.get('profile_id')
+#            if profile_id:
+#                try:
+#                    existing_profile = database_service.get_profile(profile_id)
+#                    if existing_profile:
+#
+#                        def data_quality_score(data_dict, field_name):
+#                            """Calculate data quality score for a field (0-100)"""
+#                            value = data_dict.get(field_name, "")
+#                            if not value or str(value).strip() == "":
+#                                return 0
                             # Base score on length and content quality
-                            score = min(len(str(value)), 100)
+#                            score = min(len(str(value)), 100)
                             # Bonus for meaningful content
-                            if len(str(value)) > 20:
-                                score += 20
-                            if any(keyword in str(value).lower() for keyword in ['provide', 'assist', 'support', 'mission', 'purpose']):
-                                score += 10
-                            return min(score, 100)
-
+#                            if len(str(value)) > 20:
+#                                score += 20
+#                            if any(keyword in str(value).lower() for keyword in ['provide', 'assist', 'support', 'mission', 'purpose']):
+#                                score += 10
+#                            return min(score, 100)
+#
                         # Critical fields to compare
-                        critical_fields = {
-                            'mission_statement': 'mission_statement',
-                            'website_url': 'website_url',
-                            'website': 'website_url',  # Both map to same DB field
+#                        critical_fields = {
+#                            'mission_statement': 'mission_statement',
+#                            'website_url': 'website_url',
+#                            'website': 'website_url',  # Both map to same DB field
                             # Note: location and annual_revenue don't exist on profile model, they come from form data
-                        }
-
-                        restored_fields = []
-
+#                        }
+#
+#                        restored_fields = []
+#
                         # Compare each critical field
-                        for response_field, db_field in critical_fields.items():
-                            if response_field == 'website':  # Skip duplicate mapping
-                                continue
-
+#                        for response_field, db_field in critical_fields.items():
+#                            if response_field == 'website':  # Skip duplicate mapping
+#                                continue
+#
                             # Get values
-                            new_value = response_data.get(response_field, "")
-                            db_value = getattr(existing_profile, db_field, "")
-
+#                            new_value = response_data.get(response_field, "")
+#                            db_value = getattr(existing_profile, db_field, "")
+#
                             # Calculate quality scores
-                            new_score = data_quality_score(response_data, response_field)
-                            db_score = data_quality_score({db_field: db_value}, db_field)
-
-                            logger.info(f"Quality comparison for {response_field}: new_score={new_score}, db_score={db_score}")
-                            logger.info(f"Values: new='{str(new_value)[:50]}...' db='{str(db_value)[:50]}...'")
-
+#                            new_score = data_quality_score(response_data, response_field)
+#                            db_score = data_quality_score({db_field: db_value}, db_field)
+#
+#                            logger.info(f"Quality comparison for {response_field}: new_score={new_score}, db_score={db_score}")
+#                            logger.info(f"Values: new='{str(new_value)[:50]}...' db='{str(db_value)[:50]}...'")
+#
                             # If database data is significantly better, restore it
-                            if db_score > new_score + 10:  # 10-point threshold to avoid unnecessary replacements
-                                response_data[response_field] = db_value
-                                if response_field == 'website_url':
-                                    response_data['website'] = db_value  # Keep both fields in sync
-                                restored_fields.append(f"{response_field}(score: {db_score} > {new_score})")
-                                logger.warning(f"RESTORED {response_field} from database: DB data quality ({db_score}) > fetch data ({new_score})")
-
+#                            if db_score > new_score + 10:  # 10-point threshold to avoid unnecessary replacements
+#                                response_data[response_field] = db_value
+#                                if response_field == 'website_url':
+#                                    response_data['website'] = db_value  # Keep both fields in sync
+#                                restored_fields.append(f"{response_field}(score: {db_score} > {new_score})")
+#                                logger.warning(f"RESTORED {response_field} from database: DB data quality ({db_score}) > fetch data ({new_score})")
+#
                         # Log comprehensive restoration summary
-                        if restored_fields:
-                            logger.critical(f"DATA QUALITY PROTECTION: Restored {len(restored_fields)} fields from database for profile {profile_id}: {restored_fields}")
-                        else:
-                            logger.info(f"DATA QUALITY CHECK: All fetched data quality is acceptable for profile {profile_id}")
-
-                except Exception as db_fallback_error:
-                    logger.error(f"Enhanced database fallback failed for profile {profile_id}: {db_fallback_error}")
-
-            return {
-                "success": True,
-                "data": response_data,
-                "enhanced_features": {
-                    "web_scraping_enabled": enable_web_scraping,
-                    "web_data_available": response_data["enhanced_with_web_data"],
-                    "data_sources": [
-                        "ProPublica API",
-                        "IRS XML Filings",
-                        "Web Scraping" if response_data["enhanced_with_web_data"] else "Web Scraping (Failed)"
-                    ]
-                }
-            }
-        else:
-            return {
-                "success": False,
-                "message": "Organization not found or API error",
-                "error": result.error_message if hasattr(result, 'error_message') else "Unknown error"
-            }
-            
-    except Exception as e:
-        logger.error(f"EIN fetch error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch EIN data: {str(e)}")
+#                        if restored_fields:
+#                            logger.critical(f"DATA QUALITY PROTECTION: Restored {len(restored_fields)} fields from database for profile {profile_id}: {restored_fields}")
+#                        else:
+#                            logger.info(f"DATA QUALITY CHECK: All fetched data quality is acceptable for profile {profile_id}")
+#
+#                except Exception as db_fallback_error:
+#                    logger.error(f"Enhanced database fallback failed for profile {profile_id}: {db_fallback_error}")
+#
+#            return {
+#                "success": True,
+#                "data": response_data,
+#                "enhanced_features": {
+#                    "web_scraping_enabled": enable_web_scraping,
+#                    "web_data_available": response_data["enhanced_with_web_data"],
+#                    "data_sources": [
+#                        "ProPublica API",
+#                        "IRS XML Filings",
+#                        "Web Scraping" if response_data["enhanced_with_web_data"] else "Web Scraping (Failed)"
+#                    ]
+#                }
+#            }
+#        else:
+#            return {
+#                "success": False,
+#                "message": "Organization not found or API error",
+#                "error": result.error_message if hasattr(result, 'error_message') else "Unknown error"
+#            }
+#
+#    except Exception as e:
+#        logger.error(f"EIN fetch error: {str(e)}")
+#        raise HTTPException(status_code=500, detail=f"Failed to fetch EIN data: {str(e)}")
 
 # OLD PROFILES ENDPOINT REMOVED - Using database direct endpoint instead
 

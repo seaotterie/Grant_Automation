@@ -14,6 +14,9 @@ from typing import List, Dict, Optional, Any
 # Import essential services only
 from src.database.query_interface import DatabaseQueryInterface, QueryFilter
 from src.database.database_manager import DatabaseManager, Profile
+from src.web.services.scoring_service import (
+    get_scoring_service, ScoreRequest, ScoreResponse
+)
 
 # ProfileService removed - now using DatabaseManager exclusively
 
@@ -29,6 +32,7 @@ router = APIRouter(prefix="/api/profiles", tags=["profiles"])
 # Initialize essential services
 db_query_interface = DatabaseQueryInterface()
 db_manager = DatabaseManager()
+scoring_service = get_scoring_service()
 
 # ProfileService initialization removed - using DatabaseManager only
 
@@ -578,37 +582,91 @@ async def create_profile_template(template_data: Dict[str, Any]) -> Dict[str, An
 
 @router.post("/fetch-ein")
 async def fetch_ein_data(request_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Fetch organization data by EIN."""
+    """Fetch organization data by EIN from BMF database."""
     try:
+        print(f"\n=== FETCH-EIN DEBUG START ===")
+        print(f"Request data: {request_data}")
+
         ein = request_data.get("ein")
         if not ein:
+            print(f"ERROR: No EIN provided in request")
             raise HTTPException(status_code=400, detail="EIN is required")
-        
-        # Use EIN lookup processor
-        from src.processors.lookup.ein_lookup import EINLookupProcessor
-        ein_processor = EINLookupProcessor()
-        
-        # Create minimal config for lookup
-        config = {"ein": ein}
-        result = ein_processor.execute(config)
-        
-        if result and result.get("success"):
+
+        # Strip hyphens from EIN for BMF database query (BMF uses format without hyphens)
+        ein_normalized = ein.replace("-", "").strip()
+
+        print(f"Fetching data for EIN: {ein} (normalized: {ein_normalized})")
+        logger.info(f"Fetching data for EIN: {ein} (normalized: {ein_normalized})")
+
+        # Query BMF database directly
+        import sqlite3
+        import os
+
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        db_path = os.path.join(project_root, "data", "nonprofit_intelligence.db")
+
+        print(f"Project root: {project_root}")
+        print(f"Database path: {db_path}")
+        print(f"Database exists: {os.path.exists(db_path)}")
+
+        if not os.path.exists(db_path):
+            logger.error(f"BMF database not found at {db_path}")
             return {
-                "organization_data": result.get("data", {}),
+                "success": False,
+                "profile_data": None,
                 "ein": ein,
-                "source": "irs_bmf"
+                "error": "BMF database not available"
+            }
+
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Query BMF organizations table
+        # Try both normalized (no hyphens) and original format to handle user input flexibility
+        cursor.execute("""
+            SELECT ein, name, city, state, ntee_cd, asset_amt, income_amt,
+                   classification, deductibility
+            FROM bmf_organizations
+            WHERE ein = ? OR ein = ?
+        """, (ein_normalized, ein))
+
+        row = cursor.fetchone()
+        conn.close()
+
+        if row:
+            organization_data = {
+                'name': row['name'] or '',
+                'ein': ein,
+                'city': row['city'] or '',
+                'state': row['state'] or '',
+                'ntee_code': row['ntee_cd'] or '',
+                'organization_type': row['classification'] or '',
+                'revenue': row['income_amt'] or 0,
+                'assets': row['asset_amt'] or 0,
+                'deductibility': row['deductibility'] or ''
+            }
+            logger.info(f"Found organization in BMF: {organization_data['name']}")
+
+            return {
+                "success": True,
+                "profile_data": organization_data,
+                "ein": ein,
+                "source": "bmf"
             }
         else:
+            logger.warning(f"No organization found for EIN: {ein}")
             return {
-                "organization_data": None,
+                "success": False,
+                "profile_data": None,
                 "ein": ein,
-                "error": "No data found for EIN"
+                "error": "Organization not found in BMF database"
             }
-            
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to fetch EIN data: {e}")
+        logger.error(f"Failed to fetch EIN data: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -13,6 +13,7 @@ function profilesModule() {
         // =================================================================
 
         profiles: [],
+        filteredProfiles: [],
         selectedProfile: null,
         loading: false,
         error: null,
@@ -27,10 +28,7 @@ function profilesModule() {
         sortBy: 'name',
         sortOrder: 'asc',
 
-        // Modals
-        showCreateModal: false,
-        showEditModal: false,
-        showDeleteModal: false,
+        // Modal state (managed by event system)
         profileToDelete: null,
 
         // =================================================================
@@ -41,8 +39,8 @@ function profilesModule() {
          * Initialize profiles module
          */
         async init() {
-            console.log('Profiles module initialized');
             await this.loadProfiles();
+            this.setupModalListeners();
         },
 
         // =================================================================
@@ -73,7 +71,7 @@ function profilesModule() {
                     params.append('search', this.searchQuery);
                 }
 
-                const response = await fetch(`/api/v2/profiles?${params}`);
+                const response = await fetch(`/api/profiles?${params}`);
 
                 if (!response.ok) {
                     throw new Error(`Failed to load profiles: ${response.statusText}`);
@@ -81,14 +79,16 @@ function profilesModule() {
 
                 const data = await response.json();
 
-                if (data.success) {
+                // Handle both response formats: {success: true, profiles: []} and {profiles: []}
+                if (data.profiles) {
                     this.profiles = data.profiles || [];
+                    this.filteredProfiles = [...this.profiles]; // Initialize filtered list
                     this.totalProfiles = data.total || this.profiles.length;
                     this.currentPage = currentPage;
-
-                    console.log(`Loaded ${this.profiles.length} profiles (page ${currentPage})`);
-                } else {
+                } else if (data.success === false) {
                     throw new Error(data.error || 'Unknown error');
+                } else {
+                    throw new Error('Invalid response format');
                 }
 
             } catch (error) {
@@ -128,7 +128,6 @@ function profilesModule() {
                 const data = await response.json();
 
                 if (data.success) {
-                    console.log('Profile created:', data.profile?.name || data.profile_id);
                     this.showNotification?.('Profile created successfully', 'success');
 
                     // Reload profiles list
@@ -138,9 +137,6 @@ function profilesModule() {
                     if (data.profile) {
                         this.selectProfile(data.profile);
                     }
-
-                    // Close modal
-                    this.showCreateModal = false;
 
                     return data;
                 } else {
@@ -180,7 +176,6 @@ function profilesModule() {
                 const data = await response.json();
 
                 if (data.success) {
-                    console.log('Profile updated:', profileId);
                     this.showNotification?.('Profile updated successfully', 'success');
 
                     // Reload profiles list
@@ -190,9 +185,6 @@ function profilesModule() {
                     if (this.selectedProfile?.profile_id === profileId) {
                         this.selectedProfile = data.profile;
                     }
-
-                    // Close modal
-                    this.showEditModal = false;
 
                     return data;
                 } else {
@@ -229,7 +221,6 @@ function profilesModule() {
                 const data = await response.json();
 
                 if (data.success) {
-                    console.log('Profile deleted:', profileId);
                     this.showNotification?.('Profile deleted successfully', 'success');
 
                     // Clear selected profile if it's the one being deleted
@@ -240,8 +231,6 @@ function profilesModule() {
                     // Reload profiles list
                     await this.loadProfiles();
 
-                    // Close modal
-                    this.showDeleteModal = false;
                     this.profileToDelete = null;
 
                     return data;
@@ -366,46 +355,14 @@ function profilesModule() {
          */
         selectProfile(profile) {
             this.selectedProfile = profile;
-            console.log('Profile selected:', profile.name);
+
+            // Store profile ID globally for other modules to access
+            window.currentProfileId = profile.profile_id || profile.id;
 
             // Dispatch event for other modules
             this.$dispatch?.('profile-selected', { profile });
         },
 
-        /**
-         * Open create profile modal
-         */
-        openCreateModal() {
-            this.showCreateModal = true;
-        },
-
-        /**
-         * Open edit profile modal
-         * @param {Object} profile
-         */
-        openEditModal(profile) {
-            this.selectedProfile = profile;
-            this.showEditModal = true;
-        },
-
-        /**
-         * Open delete confirmation modal
-         * @param {Object} profile
-         */
-        openDeleteModal(profile) {
-            this.profileToDelete = profile;
-            this.showDeleteModal = true;
-        },
-
-        /**
-         * Close all modals
-         */
-        closeModals() {
-            this.showCreateModal = false;
-            this.showEditModal = false;
-            this.showDeleteModal = false;
-            this.profileToDelete = null;
-        },
 
         /**
          * Search profiles (debounced)
@@ -455,6 +412,298 @@ function profilesModule() {
                 this.currentPage--;
                 await this.loadProfiles();
             }
+        },
+
+        // =================================================================
+        // MODAL EVENT HANDLERS (Phase 9 Week 4)
+        // =================================================================
+
+        /**
+         * Open create profile modal (dispatch event)
+         */
+        openCreateModal() {
+            window.dispatchEvent(new CustomEvent('open-create-profile-modal'));
+        },
+
+        /**
+         * Open edit profile modal (dispatch event)
+         * @param {Object} profile
+         */
+        openEditModal(profile) {
+            this.selectedProfile = profile;
+            window.dispatchEvent(new CustomEvent('open-edit-profile-modal', {
+                detail: { profile }
+            }));
+        },
+
+        /**
+         * Open delete confirmation modal (dispatch event)
+         * @param {Object} profile
+         */
+        openDeleteModal(profile) {
+            this.profileToDelete = profile;
+            window.dispatchEvent(new CustomEvent('open-delete-profile-modal', {
+                detail: { profile }
+            }));
+        },
+
+        /**
+         * Handle create profile event
+         */
+        async handleCreateProfile(event) {
+            const { formData, mode } = event.detail;
+
+            try {
+                if (mode === 'ein') {
+                    // Use Tool 25 to fetch profile data
+                    await this.createProfileFromEIN(formData.ein);
+                } else {
+                    // Manual profile creation
+                    await this.createProfile(formData);
+                }
+            } catch (error) {
+                console.error('Create profile failed:', error);
+            }
+        },
+
+        /**
+         * Create profile from EIN using Tool 25
+         * @param {string} ein
+         */
+        async createProfileFromEIN(ein) {
+            this.loading = true;
+
+            try {
+                const response = await fetch('/api/v2/profiles/build', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ein })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to create profile from EIN');
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.showNotification?.('Profile created successfully', 'success');
+                    await this.loadProfiles();
+
+                    if (data.profile) {
+                        this.selectProfile(data.profile);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to create profile from EIN:', error);
+                this.showNotification?.(error.message, 'error');
+                throw error;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        /**
+         * Handle delete profile confirmed event
+         */
+        async handleDeleteProfile(event) {
+            const { profileId } = event.detail;
+
+            try {
+                await this.deleteProfile(profileId);
+            } catch (error) {
+                console.error('Delete profile failed:', error);
+            }
+        },
+
+        /**
+         * Handle research profile event (Research button)
+         * Calls BMF, 990 parsers, and Tool 25 to populate profile data
+         */
+        async handleResearchProfile(event) {
+            const { ein } = event.detail;
+
+            if (!ein) {
+                console.error('No EIN provided for research');
+                this.showNotification?.('EIN required for research', 'error');
+                return;
+            }
+
+            this.loading = true;
+            this.showNotification?.('Researching organization...', 'info');
+
+            try {
+                // Call the profile fetch endpoint (BMF + 990 + Tool 25)
+                const response = await fetch(`/api/profiles/fetch-ein`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ein })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Research failed: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('Research response:', data);
+                console.log('Profile data:', data.profile_data);
+
+                if (data.success && data.profile_data) {
+                    // Update current profile with researched data
+                    if (this.selectedProfile) {
+                        // Set NTEE code - show "None Found" message if empty
+                        const nteeCode = data.profile_data.ntee_code || data.profile_data.ntee_code_990;
+                        const nteeValue = (nteeCode && nteeCode !== 'None' && nteeCode !== '' && nteeCode !== null)
+                            ? nteeCode
+                            : 'None Found - Enter manually (optional)';
+
+                        console.log('Updating selectedProfile with NTEE code:', nteeValue);
+
+                        // Update the profile fields directly (modal shares this object reference)
+                        this.selectedProfile.ntee_code_990 = nteeValue;
+                        this.selectedProfile.organization_name = data.profile_data.name || this.selectedProfile.organization_name;
+
+                        // Merge other data
+                        Object.assign(this.selectedProfile, {
+                            city: data.profile_data.city,
+                            state: data.profile_data.state,
+                            revenue: data.profile_data.revenue,
+                            assets: data.profile_data.assets
+                        });
+
+                        console.log('Profile updated - Alpine.js will handle UI reactivity');
+                    }
+
+                    this.showNotification?.(
+                        `Research complete for ${data.profile_data.name}`,
+                        'success'
+                    );
+                } else {
+                    throw new Error(data.error || 'Research failed');
+                }
+            } catch (error) {
+                console.error('Research failed:', error);
+                this.showNotification?.(
+                    `Research failed: ${error.message}`,
+                    'error'
+                );
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        /**
+         * Handle NTEE codes selected event
+         */
+        handleNTEECodesSelected(event) {
+            const { codes } = event.detail;
+
+            if (this.selectedProfile) {
+                this.selectedProfile.ntee_codes = codes;
+            }
+        },
+
+        /**
+         * Handle government criteria selected event
+         */
+        handleGovernmentCriteriaSelected(event) {
+            const { criteria } = event.detail;
+
+            if (this.selectedProfile) {
+                this.selectedProfile.government_criteria = criteria;
+            }
+        },
+
+        /**
+         * Get NTEE code name from code
+         * @param {string} code - e.g., 'F40'
+         * @returns {string} - e.g., 'Hot Line, Crisis Intervention'
+         */
+        getNteeCodeName(code) {
+            // This would load from NTEE_CODES data
+            // For now, return the code itself
+            return code;
+        },
+
+        /**
+         * Remove NTEE code from profile
+         * @param {string} code
+         */
+        removeNteeCode(code) {
+            if (this.selectedProfile && this.selectedProfile.ntee_codes) {
+                this.selectedProfile.ntee_codes = this.selectedProfile.ntee_codes.filter(c => c !== code);
+            }
+        },
+
+        /**
+         * Remove government criteria from profile
+         * @param {string} criteriaId
+         */
+        removeGovernmentCriteria(criteriaId) {
+            if (this.selectedProfile && this.selectedProfile.government_criteria) {
+                this.selectedProfile.government_criteria = this.selectedProfile.government_criteria.filter(
+                    c => c.id !== criteriaId
+                );
+            }
+        },
+
+        /**
+         * Get CSS class for criteria source badge
+         * @param {string} source - 'Federal', 'State', or 'Local'
+         * @returns {string} - Tailwind CSS classes
+         */
+        getCriteriaSourceBadgeClass(source) {
+            const badges = {
+                'Federal': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+                'State': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                'Local': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+            };
+            return badges[source] || 'bg-gray-100 text-gray-800';
+        },
+
+        /**
+         * Save profile changes (called from modal)
+         */
+        async saveProfile() {
+            if (!this.selectedProfile) return;
+
+            try {
+                await this.updateProfile(this.selectedProfile.profile_id, this.selectedProfile);
+                window.dispatchEvent(new CustomEvent('close-edit-profile-modal'));
+            } catch (error) {
+                console.error('Save profile failed:', error);
+            }
+        },
+
+        /**
+         * Setup event listeners for modals
+         */
+        setupModalListeners() {
+            // Listen for create profile event
+            window.addEventListener('create-profile', (event) => {
+                this.handleCreateProfile(event);
+            });
+
+            // Listen for delete profile confirmed event
+            window.addEventListener('delete-profile-confirmed', (event) => {
+                this.handleDeleteProfile(event);
+            });
+
+            // Listen for research profile event (Research button)
+            window.addEventListener('research-profile', (event) => {
+                this.handleResearchProfile(event);
+            });
+
+            // Listen for NTEE codes selected event
+            window.addEventListener('ntee-codes-selected', (event) => {
+                this.handleNTEECodesSelected(event);
+            });
+
+            // Listen for government criteria selected event
+            window.addEventListener('government-criteria-selected', (event) => {
+                this.handleGovernmentCriteriaSelected(event);
+            });
         }
     };
 }
@@ -463,3 +712,6 @@ function profilesModule() {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = profilesModule;
 }
+
+// CRITICAL: Attach to window for Alpine.js to see it
+window.profilesModule = profilesModule;
