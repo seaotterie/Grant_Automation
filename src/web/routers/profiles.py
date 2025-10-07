@@ -308,6 +308,17 @@ async def update_profile(
         # Debug: Log the profile after update
         logger.info(f"Profile updated in database: ntee_codes={updated_profile.ntee_codes}, government_criteria={updated_profile.government_criteria}, keywords={updated_profile.keywords}")
 
+        # Helper to safely format timestamps (handles both str and datetime)
+        def format_timestamp(ts):
+            if not ts:
+                return None
+            if isinstance(ts, str):
+                return ts  # Already a string, return as-is
+            try:
+                return ts.isoformat()  # datetime object
+            except:
+                return str(ts)
+
         # Convert Profile object to dict for response
         profile_dict = {
             'profile_id': updated_profile.id,
@@ -333,9 +344,9 @@ async def update_profile(
             'web_enhanced_data': updated_profile.web_enhanced_data,
             'discovery_count': updated_profile.discovery_count,
             'opportunities_count': updated_profile.opportunities_count,
-            'last_discovery_date': updated_profile.last_discovery_date.isoformat() if updated_profile.last_discovery_date else None,
-            'created_at': updated_profile.created_at.isoformat() if updated_profile.created_at else None,
-            'updated_at': updated_profile.updated_at.isoformat() if updated_profile.updated_at else None
+            'last_discovery_date': format_timestamp(updated_profile.last_discovery_date),
+            'created_at': format_timestamp(updated_profile.created_at),
+            'updated_at': format_timestamp(updated_profile.updated_at)
         }
 
         return {"profile": profile_dict, "message": "Profile updated successfully"}
