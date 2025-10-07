@@ -27,6 +27,12 @@
             // When profiles-module updates selectedProfile, modal's profile updates automatically
             console.log('Edit Profile Modal initialized');
         },
+        refreshProfile(updatedProfile) {
+            console.log('Refreshing modal profile with:', updatedProfile);
+            // Force Alpine reactivity by creating new object
+            this.profile = JSON.parse(JSON.stringify(updatedProfile));
+            console.log('Modal profile after refresh:', this.profile.ntee_code_990, this.profile.city);
+        },
         async saveProfile() {
             const profileId = this.profile?.profile_id || this.profile?.id;
             if (!this.profile || !profileId) {
@@ -78,7 +84,7 @@
      x-cloak
      @open-edit-profile-modal.window="modalOpen = true; profile = $event.detail.profile; activeTab = 'basic'"
      @close-edit-profile-modal.window="modalOpen = false"
-     @profile-research-complete.window="console.log('Modal received research-complete', $event.detail); profile = {...$event.detail.profile}; console.log('Modal profile refreshed:', profile.ntee_code_990)"
+     @profile-research-complete.window="refreshProfile($event.detail.profile)"
      class="fixed inset-0 z-50 overflow-y-auto"
      style="display: none;">
 
