@@ -10,6 +10,7 @@ Version 2.1: Two-Part NTEE Scoring Implementation (Phase 2, Week 3)
 Version 2.2: Schedule I Recipient Voting System (Phase 2, Week 4-5)
 Version 2.3: Grant-Size Realism Bands (Phase 2, Week 4-5)
 Version 2.4: Composite Scorer V2 with Rebalanced Weights (Phase 3, Week 6)
+Version 2.5: Abstain/Triage Queue for Manual Review (Phase 3, Week 6)
 """
 
 # Legacy scoring (V1)
@@ -87,6 +88,17 @@ from .composite_scorer_v2 import (
     FoundationOpportunityData,
 )
 
+# V2.5 Abstain/Triage Queue (Phase 3, Week 6)
+from .triage_queue import (
+    TriageQueue,
+    TriageItem,
+    TriageStatus,
+    TriagePriority,
+    ExpertDecision,
+    TriageQueueStats,
+    get_triage_queue,
+)
+
 __all__ = [
     # Legacy V1 scoring
     'DiscoveryScorer',
@@ -155,6 +167,15 @@ __all__ = [
     "CompositeScoreV2",
     "CompositeScoreResult",
     "FoundationOpportunityData",
+
+    # V2.5 Abstain/Triage Queue
+    "TriageQueue",
+    "TriageItem",
+    "TriageStatus",
+    "TriagePriority",
+    "ExpertDecision",
+    "TriageQueueStats",
+    "get_triage_queue",
 ]
 
-__version__ = "2.4.0"
+__version__ = "2.5.0"
