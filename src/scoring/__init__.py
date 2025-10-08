@@ -14,6 +14,7 @@ Version 2.5: Abstain/Triage Queue for Manual Review (Phase 3, Week 6)
 Version 2.6: Payout Sufficiency (5% Rule) Scoring (Phase 3, Week 7)
 Version 2.7: Application Policy Reconciler (Phase 3, Week 7)
 Version 2.8: Reliability Safeguards (Phase 3, Week 7)
+Version 2.9: Evidence Cards System (Phase 4, Week 8)
 """
 
 # Legacy scoring (V1)
@@ -136,6 +137,18 @@ from .reliability_safeguards import (
     analyze_reliability_safeguards,
 )
 
+# V2.9 Evidence Cards System (Phase 4, Week 8)
+from .evidence_cards import (
+    EvidenceCardGenerator,
+    EvidenceCard,
+    EvidenceCardCollection,
+    Citation,
+    EvidenceType,
+    CitationSource,
+    EvidenceStrength,
+    generate_evidence_collection,
+)
+
 __all__ = [
     # Legacy V1 scoring
     'DiscoveryScorer',
@@ -241,6 +254,16 @@ __all__ = [
     "GrantHistoryStatus",
     "BorderProximity",
     "analyze_reliability_safeguards",
+
+    # V2.9 Evidence Cards System
+    "EvidenceCardGenerator",
+    "EvidenceCard",
+    "EvidenceCardCollection",
+    "Citation",
+    "EvidenceType",
+    "CitationSource",
+    "EvidenceStrength",
+    "generate_evidence_collection",
 ]
 
-__version__ = "2.8.0"
+__version__ = "2.9.0"
