@@ -11,6 +11,7 @@ Version 2.2: Schedule I Recipient Voting System (Phase 2, Week 4-5)
 Version 2.3: Grant-Size Realism Bands (Phase 2, Week 4-5)
 Version 2.4: Composite Scorer V2 with Rebalanced Weights (Phase 3, Week 6)
 Version 2.5: Abstain/Triage Queue for Manual Review (Phase 3, Week 6)
+Version 2.6: Payout Sufficiency (5% Rule) Scoring (Phase 3, Week 7)
 """
 
 # Legacy scoring (V1)
@@ -99,6 +100,15 @@ from .triage_queue import (
     get_triage_queue,
 )
 
+# V2.6 Payout Sufficiency (Phase 3, Week 7)
+from .payout_sufficiency import (
+    PayoutSufficiencyScorer,
+    PayoutAnalysis,
+    PayoutCompliance,
+    GrantActivity,
+    score_payout_sufficiency,
+)
+
 __all__ = [
     # Legacy V1 scoring
     'DiscoveryScorer',
@@ -176,6 +186,13 @@ __all__ = [
     "ExpertDecision",
     "TriageQueueStats",
     "get_triage_queue",
+
+    # V2.6 Payout Sufficiency
+    "PayoutSufficiencyScorer",
+    "PayoutAnalysis",
+    "PayoutCompliance",
+    "GrantActivity",
+    "score_payout_sufficiency",
 ]
 
-__version__ = "2.5.0"
+__version__ = "2.6.0"
