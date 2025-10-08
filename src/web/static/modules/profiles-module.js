@@ -474,10 +474,11 @@ function profilesModule() {
             this.loading = true;
 
             try {
+                // Send EIN as-is - backend handles both "123456789" and "12-3456789" formats
                 const response = await fetch('/api/v2/profiles/build', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ein })
+                    body: JSON.stringify({ ein: ein.trim() })
                 });
 
                 if (!response.ok) {

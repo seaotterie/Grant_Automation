@@ -503,6 +503,7 @@ class ProfileEnhancementOrchestrator:
         profile = UnifiedProfile(
             profile_id=profile_id,
             organization_name=bmf_data.get('name', ''),
+            ein=ein,  # Store the EIN
             focus_areas=[],
             geographic_scope={'states': [bmf_data.get('state', '')], 'nationwide': False, 'international': False},
             ntee_codes=ntee_codes,

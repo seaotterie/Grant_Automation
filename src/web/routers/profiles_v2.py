@@ -17,7 +17,7 @@ import sqlite3
 from datetime import datetime
 
 from src.profiles.unified_service import UnifiedProfileService
-from src.profiles.orchestration import ProfileEnhancementOrchestrator, WorkflowResult
+from src.profiles.orchestration import ProfileEnhancementOrchestrator, WorkflowResult, StepResult
 from src.profiles.quality_scoring import (
     ProfileQualityScorer,
     OpportunityQualityScorer,
@@ -462,15 +462,19 @@ async def build_profile_with_orchestration(request: Dict[str, Any]):
         if not ein:
             raise HTTPException(status_code=400, detail="EIN is required")
 
+        # Normalize EIN: accept both "123456789" and "12-3456789" formats
+        # Store the clean version for database queries
+        ein_clean = ein.replace('-', '')
+
         enable_tool25 = request.get('enable_tool25', True)
         enable_tool2 = request.get('enable_tool2', False)
         quality_threshold = request.get('quality_threshold', 0.70)
 
-        logger.info(f"Building profile for EIN {ein} (Tool25={enable_tool25}, Tool2={enable_tool2})")
+        logger.info(f"Building profile for EIN {ein_clean} (Tool25={enable_tool25}, Tool2={enable_tool2})")
 
         # Execute orchestrated profile building workflow
         workflow_result: WorkflowResult = orchestrator.execute_profile_building(
-            ein=ein,
+            ein=ein_clean,
             enable_tool25=enable_tool25,
             enable_tool2=enable_tool2,
             quality_threshold=quality_threshold
@@ -483,44 +487,53 @@ async def build_profile_with_orchestration(request: Dict[str, Any]):
             )
 
         # Extract profile data from workflow result
-        profile_data = workflow_result.profile_data
+        profile_data = workflow_result.profile
+
+        # Convert steps_completed list to dictionary for easier lookup
+        steps_dict = {step.step_name.lower().replace(' ', '_'): step
+                     for step in workflow_result.steps_completed}
 
         # Calculate quality score
         quality_score = profile_scorer.calculate_profile_quality(
-            bmf_data=workflow_result.steps_completed.get('bmf_discovery', {}).get('data'),
-            form_990=workflow_result.steps_completed.get('form_990', {}).get('data'),
-            tool25_data=workflow_result.steps_completed.get('tool_25', {}).get('data'),
-            tool2_data=workflow_result.steps_completed.get('tool_2', {}).get('data')
+            bmf_data=steps_dict.get('bmf_discovery', StepResult('', False)).data,
+            form_990=steps_dict.get('form_990_query', StepResult('', False)).data,
+            tool25_data=steps_dict.get('tool_25_web_intelligence', StepResult('', False)).data,
+            tool2_data=steps_dict.get('tool_2_ai_analysis', StepResult('', False)).data
         )
 
         # Calculate completeness
         completeness = completeness_validator.validate_profile_completeness(
-            bmf_data=workflow_result.steps_completed.get('bmf_discovery', {}).get('data'),
-            form_990=workflow_result.steps_completed.get('form_990', {}).get('data'),
-            tool25_data=workflow_result.steps_completed.get('tool_25', {}).get('data'),
-            tool2_data=workflow_result.steps_completed.get('tool_2', {}).get('data')
+            bmf_data=steps_dict.get('bmf_discovery', StepResult('', False)).data,
+            form_990=steps_dict.get('form_990_query', StepResult('', False)).data,
+            tool25_data=steps_dict.get('tool_25_web_intelligence', StepResult('', False)).data,
+            tool2_data=steps_dict.get('tool_2_ai_analysis', StepResult('', False)).data
         )
 
-        # Create UnifiedProfile and save to database
+        # Save UnifiedProfile to database
         try:
-            unified_profile = UnifiedProfile(**profile_data)
-            profile_service.create_profile(unified_profile)
-            logger.info(f"Profile saved to database for EIN {ein}")
+            if isinstance(profile_data, UnifiedProfile):
+                profile_service.create_profile(profile_data)
+                logger.info(f"Profile saved to database for EIN {ein_clean}")
+                # Convert to dict for JSON response
+                profile_dict = profile_data.dict()
+            else:
+                logger.error(f"Profile data is not UnifiedProfile instance: {type(profile_data)}")
+                profile_dict = profile_data if isinstance(profile_data, dict) else {}
         except Exception as save_error:
-            logger.warning(f"Failed to save profile to database: {save_error}")
+            logger.error(f"Failed to save profile to database for EIN {ein_clean}: {save_error}", exc_info=True)
             # Continue anyway - return the data even if save fails
+            profile_dict = profile_data.dict() if hasattr(profile_data, 'dict') else {}
 
         return {
             "success": True,
-            "profile": profile_data,
+            "profile": profile_dict,
             "workflow_result": {
                 "success": workflow_result.success,
-                "steps_completed": list(workflow_result.steps_completed.keys()),
-                "total_cost": workflow_result.total_cost,
-                "total_duration": workflow_result.total_duration,
-                "quality_score": workflow_result.quality_score,
-                "errors": workflow_result.errors,
-                "recommendations": workflow_result.recommendations
+                "steps_completed": [step.step_name for step in workflow_result.steps_completed],
+                "total_cost": workflow_result.total_cost_dollars,
+                "total_duration": workflow_result.total_duration_seconds,
+                "quality_score": workflow_result.final_quality_score,
+                "errors": workflow_result.errors
             },
             "quality_assessment": {
                 "overall_score": quality_score.overall_score,
