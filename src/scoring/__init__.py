@@ -8,6 +8,7 @@ Added: Time-decay, two-part NTEE, recipient voting, and composite scoring v2
 
 Version 2.1: Two-Part NTEE Scoring Implementation (Phase 2, Week 3)
 Version 2.2: Schedule I Recipient Voting System (Phase 2, Week 4-5)
+Version 2.3: Grant-Size Realism Bands (Phase 2, Week 4-5)
 """
 
 # Legacy scoring (V1)
@@ -67,6 +68,17 @@ from .schedule_i_voting import (
     get_foundation_ntee_codes,
 )
 
+# V2.3 Grant-Size Realism Bands (Phase 2, Week 4-5)
+from .grant_size_scoring import (
+    GrantSizeScorer,
+    GrantSizeAnalysis,
+    GrantSizeBand,
+    CapacityLevel,
+    GrantSizeFit,
+    score_grant_size_fit,
+    get_recommended_grant_range,
+)
+
 __all__ = [
     # Legacy V1 scoring
     'DiscoveryScorer',
@@ -121,6 +133,15 @@ __all__ = [
     "RecipientVote",
     "NTEEVoteResult",
     "get_foundation_ntee_codes",
+
+    # V2.3 Grant-Size Realism Bands
+    "GrantSizeScorer",
+    "GrantSizeAnalysis",
+    "GrantSizeBand",
+    "CapacityLevel",
+    "GrantSizeFit",
+    "score_grant_size_fit",
+    "get_recommended_grant_range",
 ]
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
