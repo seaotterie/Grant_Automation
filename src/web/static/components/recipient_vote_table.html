@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule I Recipient Vote Table</title>
+    <style>
+        :root {
+            --color-primary: #3b82f6;
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-danger: #ef4444;
+            --color-neutral: #6b7280;
+            --color-bg: #f9fafb;
+            --color-surface: #ffffff;
+            --color-border: #e5e7eb;
+            --color-text: #111827;
+            --color-text-muted: #6b7280;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: var(--color-surface);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--color-text-muted);
+            font-size: 1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--color-surface);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--color-text);
+        }
+
+        .stat-subtext {
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .table-container {
+            background: var(--color-surface);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .table-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .filters {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            background: var(--color-surface);
+            color: var(--color-text);
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .vote-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .vote-table thead {
+            background: var(--color-bg);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .vote-table th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-text-muted);
+            border-bottom: 2px solid var(--color-border);
+        }
+
+        .vote-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .vote-table th.sortable:hover {
+            background: var(--color-border);
+        }
+
+        .vote-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .vote-table tbody tr:hover {
+            background: var(--color-bg);
+        }
+
+        .ntee-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
+        }
+
+        .vote-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .vote-bar-bg {
+            flex: 1;
+            height: 24px;
+            background: var(--color-border);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .vote-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-success), var(--color-primary));
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 0.5rem;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: width 0.3s ease;
+        }
+
+        .vote-count {
+            font-weight: 600;
+            color: var(--color-text);
+            min-width: 30px;
+            text-align: right;
+        }
+
+        .coherence-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .coherence-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .coherence-high {
+            background: var(--color-success);
+        }
+
+        .coherence-medium {
+            background: var(--color-warning);
+        }
+
+        .coherence-low {
+            background: var(--color-danger);
+        }
+
+        .coherence-text {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .amount {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            padding: 4rem 2rem;
+            text-align: center;
+            color: var(--color-text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .pagination {
+            padding: 1.5rem;
+            border-top: 1px solid var(--color-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pagination-info {
+            font-size: 0.875rem;
+            color: var(--color-text-muted);
+        }
+
+        .pagination-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .pagination-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            background: var(--color-surface);
+            color: var(--color-text);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: var(--color-bg);
+            border-color: var(--color-primary);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .legend {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--color-surface);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .legend h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .legend-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .legend-item strong {
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .table-container {
+                overflow-x: auto;
+            }
+
+            .vote-table {
+                min-width: 800px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Schedule I Recipient Vote Table</h1>
+            <p>Visual analysis of foundation grant-making patterns via NTEE code voting from 990-PF Schedule I data</p>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+            <!-- Stats will be populated by JavaScript -->
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-title">NTEE Code Votes</div>
+                <div class="filters">
+                    <select class="filter-select" id="sortBy">
+                        <option value="votes-desc">Sort: Votes (High to Low)</option>
+                        <option value="votes-asc">Sort: Votes (Low to High)</option>
+                        <option value="ntee-asc">Sort: NTEE Code (A-Z)</option>
+                        <option value="amount-desc">Sort: Total Amount (High to Low)</option>
+                    </select>
+                    <select class="filter-select" id="filterCoherence">
+                        <option value="all">All Coherence Levels</option>
+                        <option value="high">High Coherence Only</option>
+                        <option value="medium">Medium Coherence Only</option>
+                        <option value="low">Low Coherence Only</option>
+                    </select>
+                </div>
+            </div>
+
+            <table class="vote-table">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort="ntee">NTEE Code</th>
+                        <th class="sortable" data-sort="description">Description</th>
+                        <th class="sortable" data-sort="votes">Votes</th>
+                        <th class="sortable" data-sort="percentage">Percentage</th>
+                        <th class="sortable" data-sort="total-amount">Total Amount</th>
+                        <th class="sortable" data-sort="avg-amount">Avg Grant</th>
+                        <th class="sortable" data-sort="coherence">Coherence</th>
+                    </tr>
+                </thead>
+                <tbody id="voteTableBody">
+                    <!-- Rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-state-icon">📋</div>
+                <p>No voting data available</p>
+            </div>
+
+            <div class="pagination" id="pagination">
+                <div class="pagination-info" id="paginationInfo">
+                    Showing <span id="startRow">1</span>-<span id="endRow">10</span> of <span id="totalRows">0</span> rows
+                </div>
+                <div class="pagination-buttons">
+                    <button class="pagination-btn" id="prevBtn">← Previous</button>
+                    <button class="pagination-btn" id="nextBtn">Next →</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <h3>Legend</h3>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="coherence-dot coherence-high"></div>
+                    <span><strong>High Coherence:</strong> 75%+ vote concentration</span>
+                </div>
+                <div class="legend-item">
+                    <div class="coherence-dot coherence-medium"></div>
+                    <span><strong>Medium Coherence:</strong> 50-75% vote concentration</span>
+                </div>
+                <div class="legend-item">
+                    <div class="coherence-dot coherence-low"></div>
+                    <span><strong>Low Coherence:</strong> <50% vote concentration</span>
+                </div>
+                <div class="legend-item">
+                    <span><strong>Vote Bar:</strong> Visual representation of vote count</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data structure (would be loaded from API in production)
+        let voteData = {
+            foundation_ein: "541234567",
+            foundation_name: "Example Foundation",
+            total_votes: 50,
+            total_amount: 2500000,
+            coherence_score: 0.78,
+            votes: [
+                {
+                    ntee_code: "B25",
+                    description: "Secondary & High School (Alternative Schools)",
+                    vote_count: 15,
+                    percentage: 30.0,
+                    total_amount: 750000,
+                    avg_grant: 50000,
+                    coherence: "high"
+                },
+                {
+                    ntee_code: "P20",
+                    description: "Human Services (General)",
+                    vote_count: 12,
+                    percentage: 24.0,
+                    total_amount: 600000,
+                    avg_grant: 50000,
+                    coherence: "high"
+                },
+                {
+                    ntee_code: "L21",
+                    description: "Community Housing Development",
+                    vote_count: 8,
+                    percentage: 16.0,
+                    total_amount: 400000,
+                    avg_grant: 50000,
+                    coherence: "medium"
+                },
+                {
+                    ntee_code: "K30",
+                    description: "Food Banks & Pantries",
+                    vote_count: 7,
+                    percentage: 14.0,
+                    total_amount: 350000,
+                    avg_grant: 50000,
+                    coherence: "medium"
+                },
+                {
+                    ntee_code: "A25",
+                    description: "Arts & Culture (Museums)",
+                    vote_count: 4,
+                    percentage: 8.0,
+                    total_amount: 200000,
+                    avg_grant: 50000,
+                    coherence: "low"
+                },
+                {
+                    ntee_code: "C32",
+                    description: "Environment (Water Resource)",
+                    vote_count: 2,
+                    percentage: 4.0,
+                    total_amount: 100000,
+                    avg_grant: 50000,
+                    coherence: "low"
+                },
+                {
+                    ntee_code: "T20",
+                    description: "Private Grantmaking Foundations",
+                    vote_count: 2,
+                    percentage: 4.0,
+                    total_amount: 100000,
+                    avg_grant: 50000,
+                    coherence: "low"
+                }
+            ]
+        };
+
+        // State
+        let currentPage = 1;
+        let rowsPerPage = 10;
+        let filteredData = [];
+
+        // Initialize
+        function init() {
+            renderStats();
+            filteredData = voteData.votes;
+            renderTable();
+            attachEventListeners();
+        }
+
+        // Render statistics
+        function renderStats() {
+            const statsGrid = document.getElementById('statsGrid');
+            const coherenceLevel = voteData.coherence_score >= 0.75 ? 'High' :
+                                  voteData.coherence_score >= 0.50 ? 'Medium' : 'Low';
+
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">Total Grants</div>
+                    <div class="stat-value">${voteData.total_votes}</div>
+                    <div class="stat-subtext">Analyzed from Schedule I</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Amount</div>
+                    <div class="stat-value">$${(voteData.total_amount / 1000000).toFixed(1)}M</div>
+                    <div class="stat-subtext">All grants combined</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">NTEE Codes</div>
+                    <div class="stat-value">${voteData.votes.length}</div>
+                    <div class="stat-subtext">Unique focus areas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Coherence</div>
+                    <div class="stat-value">${(voteData.coherence_score * 100).toFixed(0)}%</div>
+                    <div class="stat-subtext">${coherenceLevel} focus</div>
+                </div>
+            `;
+        }
+
+        // Render table
+        function renderTable() {
+            const tbody = document.getElementById('voteTableBody');
+            const emptyState = document.getElementById('emptyState');
+
+            if (filteredData.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                document.getElementById('pagination').style.display = 'none';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            document.getElementById('pagination').style.display = 'flex';
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = Math.min(start + rowsPerPage, filteredData.length);
+            const pageData = filteredData.slice(start, end);
+
+            const maxVotes = Math.max(...filteredData.map(v => v.vote_count));
+
+            tbody.innerHTML = pageData.map(vote => {
+                const barWidth = (vote.vote_count / maxVotes * 100).toFixed(1);
+                const coherenceClass = vote.coherence === 'high' ? 'coherence-high' :
+                                      vote.coherence === 'medium' ? 'coherence-medium' : 'coherence-low';
+
+                return `
+                    <tr>
+                        <td><span class="ntee-badge" style="background: ${getNTEEColor(vote.ntee_code)}; color: white;">${vote.ntee_code}</span></td>
+                        <td>${vote.description}</td>
+                        <td>
+                            <div class="vote-bar">
+                                <div class="vote-bar-bg">
+                                    <div class="vote-bar-fill" style="width: ${barWidth}%">
+                                        ${vote.vote_count}
+                                    </div>
+                                </div>
+                                <span class="vote-count">${vote.vote_count}</span>
+                            </div>
+                        </td>
+                        <td>${vote.percentage.toFixed(1)}%</td>
+                        <td class="amount">$${formatNumber(vote.total_amount)}</td>
+                        <td class="amount">$${formatNumber(vote.avg_grant)}</td>
+                        <td>
+                            <div class="coherence-indicator">
+                                <div class="coherence-dot ${coherenceClass}"></div>
+                                <span class="coherence-text">${vote.coherence.charAt(0).toUpperCase() + vote.coherence.slice(1)}</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            updatePagination();
+        }
+
+        // Get color for NTEE code
+        function getNTEEColor(code) {
+            const colors = {
+                'A': '#ef4444', 'B': '#f59e0b', 'C': '#10b981', 'D': '#3b82f6',
+                'E': '#8b5cf6', 'F': '#ec4899', 'G': '#14b8a6', 'H': '#f97316',
+                'I': '#06b6d4', 'J': '#84cc16', 'K': '#eab308', 'L': '#6366f1',
+                'M': '#a855f7', 'N': '#22c55e', 'O': '#f43f5e', 'P': '#0ea5e9',
+                'Q': '#d946ef', 'R': '#64748b', 'S': '#0891b2', 'T': '#6b7280'
+            };
+            return colors[code.charAt(0)] || '#6b7280';
+        }
+
+        // Format number
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(0) + 'K';
+            }
+            return num.toLocaleString();
+        }
+
+        // Update pagination
+        function updatePagination() {
+            const start = (currentPage - 1) * rowsPerPage + 1;
+            const end = Math.min(currentPage * rowsPerPage, filteredData.length);
+
+            document.getElementById('startRow').textContent = start;
+            document.getElementById('endRow').textContent = end;
+            document.getElementById('totalRows').textContent = filteredData.length;
+
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = end >= filteredData.length;
+        }
+
+        // Sort data
+        function sortData(sortBy) {
+            switch (sortBy) {
+                case 'votes-desc':
+                    filteredData.sort((a, b) => b.vote_count - a.vote_count);
+                    break;
+                case 'votes-asc':
+                    filteredData.sort((a, b) => a.vote_count - b.vote_count);
+                    break;
+                case 'ntee-asc':
+                    filteredData.sort((a, b) => a.ntee_code.localeCompare(b.ntee_code));
+                    break;
+                case 'amount-desc':
+                    filteredData.sort((a, b) => b.total_amount - a.total_amount);
+                    break;
+            }
+            currentPage = 1;
+            renderTable();
+        }
+
+        // Filter data
+        function filterData(coherenceFilter) {
+            if (coherenceFilter === 'all') {
+                filteredData = voteData.votes;
+            } else {
+                filteredData = voteData.votes.filter(v => v.coherence === coherenceFilter);
+            }
+            currentPage = 1;
+            renderTable();
+        }
+
+        // Attach event listeners
+        function attachEventListeners() {
+            document.getElementById('sortBy').addEventListener('change', (e) => {
+                sortData(e.target.value);
+            });
+
+            document.getElementById('filterCoherence').addEventListener('change', (e) => {
+                filterData(e.target.value);
+            });
+
+            document.getElementById('prevBtn').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderTable();
+                }
+            });
+
+            document.getElementById('nextBtn').addEventListener('click', () => {
+                if (currentPage * rowsPerPage < filteredData.length) {
+                    currentPage++;
+                    renderTable();
+                }
+            });
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
