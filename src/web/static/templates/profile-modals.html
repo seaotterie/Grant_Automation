@@ -25,35 +25,19 @@
         init() {
             // Modal uses shared object reference - no event listeners needed
             // When profiles-module updates selectedProfile, modal's profile updates automatically
-            console.log('Edit Profile Modal initialized');
         },
         refreshProfile(updatedProfile) {
-            console.log('=== REFRESH PROFILE CALLED ===');
-            console.log('Before refresh - this.profile.ntee_code_990:', this.profile.ntee_code_990);
-            console.log('Incoming - updatedProfile.ntee_code_990:', updatedProfile.ntee_code_990);
-
-            // Force Alpine reactivity by creating new object
-            const oldProfile = this.profile;
-            this.profile = JSON.parse(JSON.stringify(updatedProfile));
-
-            console.log('After refresh - this.profile.ntee_code_990:', this.profile.ntee_code_990);
-            console.log('Object identity changed:', oldProfile !== this.profile);
-            console.log('=== REFRESH COMPLETE ===');
-
-            // Force Alpine to re-evaluate bindings
-            this.$nextTick(() => {
-                console.log('After nextTick - DOM should be updated');
+            // Update profile properties to trigger Alpine reactivity
+            Object.keys(updatedProfile).forEach(key => {
+                this.profile[key] = updatedProfile[key];
             });
         },
         async saveProfile() {
             const profileId = this.profile?.profile_id || this.profile?.id;
             if (!this.profile || !profileId) {
-                console.error('No profile to save or missing ID');
+                this.error = 'No profile to save or missing ID';
                 return;
             }
-
-            console.log('Saving profile:', profileId);
-            console.log('Profile data:', this.profile);
 
             this.loading = true;
             this.error = null;
