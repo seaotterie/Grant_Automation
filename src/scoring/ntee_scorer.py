@@ -382,26 +382,50 @@ class NTEEScorer:
         )
 
     def extract_codes_from_schedule_i(self,
-                                     schedule_i_recipients: List[Dict]) -> List[str]:
+                                     schedule_i_grantees: List,
+                                     min_vote_threshold: float = 0.1) -> List[str]:
         """
         Extract NTEE codes from Schedule I recipient data
 
         Infers foundation's funding interests from recipient organizations.
-        Uses EIN resolution to look up recipient NTEE codes in BMF.
+        Uses Schedule I voting system (Phase 2 Week 4-5) to analyze grant patterns.
 
         Args:
-            schedule_i_recipients: List of recipient dicts with 'ein', 'name', etc.
+            schedule_i_grantees: List of ScheduleIGrantee objects from 990-PF
+            min_vote_threshold: Minimum vote ratio to include code (default 0.1 = 10%)
 
         Returns:
-            List of inferred NTEE codes from recipients
+            List of inferred NTEE codes from recipients, ordered by vote strength
 
         Note:
-            Requires EIN resolution and BMF lookup - placeholder for Phase 2
+            Uses Phase 2 Week 4-5 Schedule I voting system with coherence analysis
         """
-        # TODO: Implement in Phase 2, Week 4-5 (Schedule I recipient voting)
-        # Will integrate with EINResolver and BMF database
-        self.logger.debug("Schedule I NTEE extraction not yet implemented")
-        return []
+        try:
+            from .schedule_i_voting import ScheduleIVotingSystem, get_foundation_ntee_codes
+
+            # Create voting system and analyze recipients
+            voting_system = ScheduleIVotingSystem()
+            analysis = voting_system.analyze_foundation_patterns(
+                foundation_ein="UNKNOWN",  # EIN not needed for NTEE extraction
+                schedule_i_grantees=schedule_i_grantees
+            )
+
+            # Extract NTEE codes from analysis
+            ntee_codes = get_foundation_ntee_codes(analysis, min_vote_threshold)
+
+            self.logger.info(
+                f"Extracted {len(ntee_codes)} NTEE codes from {len(schedule_i_grantees)} recipients "
+                f"(coherence={analysis.coherence_score:.2f}, entropy={analysis.entropy_score:.2f})"
+            )
+
+            return ntee_codes
+
+        except ImportError:
+            self.logger.warning("Schedule I voting system not available")
+            return []
+        except Exception as e:
+            self.logger.error(f"Failed to extract NTEE codes from Schedule I: {e}")
+            return []
 
     def extract_codes_from_website(self, website_text: str) -> List[str]:
         """

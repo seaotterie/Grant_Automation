@@ -7,6 +7,7 @@ Version 2.0: 990-PF Screening Enhancement
 Added: Time-decay, two-part NTEE, recipient voting, and composite scoring v2
 
 Version 2.1: Two-Part NTEE Scoring Implementation (Phase 2, Week 3)
+Version 2.2: Schedule I Recipient Voting System (Phase 2, Week 4-5)
 """
 
 # Legacy scoring (V1)
@@ -57,6 +58,15 @@ from .ntee_scorer import (
     get_ntee_major_description,
 )
 
+# V2.2 Schedule I Recipient Voting (Phase 2, Week 4-5)
+from .schedule_i_voting import (
+    ScheduleIVotingSystem,
+    ScheduleIAnalysis,
+    RecipientVote,
+    NTEEVoteResult,
+    get_foundation_ntee_codes,
+)
+
 __all__ = [
     # Legacy V1 scoring
     'DiscoveryScorer',
@@ -104,6 +114,13 @@ __all__ = [
     "NTEEMatchLevel",
     "score_ntee_alignment",
     "get_ntee_major_description",
+
+    # V2.2 Schedule I Recipient Voting
+    "ScheduleIVotingSystem",
+    "ScheduleIAnalysis",
+    "RecipientVote",
+    "NTEEVoteResult",
+    "get_foundation_ntee_codes",
 ]
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
