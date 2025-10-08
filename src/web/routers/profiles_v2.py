@@ -12,9 +12,10 @@ Replaces legacy processor-based endpoints with tool-based architecture.
 
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, Any, List, Optional
+from pydantic import BaseModel, Field, validator
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.profiles.unified_service import UnifiedProfileService
 from src.profiles.orchestration import ProfileEnhancementOrchestrator, WorkflowResult, StepResult
@@ -31,6 +32,23 @@ from src.config.database_config import get_nonprofit_intelligence_db, get_cataly
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v2/profiles", tags=["profiles_v2"])
+
+
+# Pydantic Request Models for Input Validation
+
+class DiscoveryRequest(BaseModel):
+    """Request model for nonprofit discovery endpoint."""
+    min_score_threshold: float = Field(default=0.62, ge=0.0, le=1.0, description="Minimum score threshold (0.0-1.0)")
+    max_return_limit: int = Field(default=500, ge=1, le=10000, description="Maximum results to return")
+    auto_scrapy_count: int = Field(default=20, ge=0, le=100, description="Number of top orgs to auto-scrape")
+    max_results: int = Field(default=200, ge=1, le=10000, description="Maximum orgs to query from BMF")
+
+    @validator('min_score_threshold')
+    def validate_score(cls, v):
+        if not 0 <= v <= 1:
+            raise ValueError('Score threshold must be between 0.0 and 1.0')
+        return v
+
 
 # Initialize services
 profile_service = UnifiedProfileService()
@@ -64,12 +82,29 @@ def _query_bmf_database(ntee_codes: List[str], max_results: int = 200) -> List[D
         # Build query with NTEE code filtering
         # Match on major code (first letter) OR full code
         # Example: If Profile has ["P20", "E31"], match orgs with NTEE starting with P or E, or exact match
+
+        # Validate NTEE codes to prevent SQL injection
+        import re
+        NTEE_PATTERN = re.compile(r'^[A-Z][0-9]{0,2}[A-Z]?$')  # e.g., P, P20, P20Z
+        VALID_NTEE_MAJOR_CODES = set('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+
         ntee_conditions = []
         params = []
 
         for code in ntee_codes:
+            # Validate NTEE code format
+            if not NTEE_PATTERN.match(code):
+                logger.warning(f"Invalid NTEE code format rejected: {code}")
+                continue
+
             if len(code) >= 1:
                 major_code = code[0]  # First letter (e.g., 'P' from 'P20')
+
+                # Validate major code is in allowed set
+                if major_code not in VALID_NTEE_MAJOR_CODES:
+                    logger.warning(f"Invalid NTEE major code rejected: {major_code}")
+                    continue
+
                 ntee_conditions.append("(ntee_code LIKE ? OR ntee_code = ?)")
                 params.extend([f"{major_code}%", code])
 
@@ -97,10 +132,16 @@ def _query_bmf_database(ntee_codes: List[str], max_results: int = 200) -> List[D
             ORDER BY b.income_amt DESC
         """
 
-        # Remove LIMIT - score all matching orgs, filter by threshold later
+        # Add safety limit to prevent OOM with broad filters
+        MAX_QUERY_LIMIT = 10000  # Safety limit for memory protection
+        sql += f" LIMIT {MAX_QUERY_LIMIT}"
 
         cursor.execute(sql, params)
         rows = cursor.fetchall()
+
+        # Log if we hit the safety limit
+        if len(rows) >= MAX_QUERY_LIMIT:
+            logger.warning(f"BMF query hit safety limit ({MAX_QUERY_LIMIT} orgs) with NTEE codes {ntee_codes}. Results may be incomplete.")
 
         # Convert to list of dicts
         results = [dict(row) for row in rows]
@@ -1265,7 +1306,7 @@ async def export_profile_data(profile_id: str, export_config: Dict[str, Any]):
 
 
 @router.post("/{profile_id}/discover")
-async def discover_nonprofit_opportunities(profile_id: str, request: Dict[str, Any]):
+async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRequest):
     """
     SCREENING Stage: Discover nonprofit opportunities using BMF + 990 + Scoring + Scrapy.
 
@@ -1328,10 +1369,11 @@ async def discover_nonprofit_opportunities(profile_id: str, request: Dict[str, A
                 detail="Profile has no NTEE Codes. Please configure in Profile modal."
             )
 
-        # Scoring parameters
-        min_score_threshold = request.get('min_score_threshold', 0.62)  # 50th percentile - baseline qualification
-        max_return_limit = request.get('max_return_limit', 500)  # Safety cap for UI performance
-        auto_scrapy_count = request.get('auto_scrapy_count', 20)
+        # Scoring parameters (now validated by Pydantic)
+        min_score_threshold = request.min_score_threshold  # Validated 0.0-1.0
+        max_return_limit = request.max_return_limit  # Validated 1-10000
+        auto_scrapy_count = request.auto_scrapy_count  # Validated 0-100
+        max_results = request.max_results  # Validated 1-10000
 
         logger.info(f"Starting discovery for profile {profile_id} with NTEE codes: {target_ntee_codes}")
         logger.info(f"Parameters: min_score={min_score_threshold}, max_return={max_return_limit}")
@@ -1442,7 +1484,7 @@ async def discover_nonprofit_opportunities(profile_id: str, request: Dict[str, A
                     current_stage='discovery',  # Initial stage for discovered opportunities
                     overall_score=opp_data.get('overall_score', 0.0),
                     confidence_level=0.8 if opp_data.get('confidence') == 'high' else 0.6,
-                    scored_at=datetime.now(),
+                    scored_at=datetime.now(timezone.utc),
                     scorer_version='multi_dimensional_v1.0',
                     analysis_discovery={
                         'dimensional_scores': opp_data.get('dimensional_scores', {}),
@@ -1452,10 +1494,10 @@ async def discover_nonprofit_opportunities(profile_id: str, request: Dict[str, A
                         'location': opp_data.get('location')
                     },
                     source='nonprofit',  # Discovery source
-                    discovery_date=datetime.now(),
+                    discovery_date=datetime.now(timezone.utc),
                     processing_status='discovered',
-                    created_at=datetime.now(),
-                    updated_at=datetime.now()
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc)
                 )
 
                 # Save to database
