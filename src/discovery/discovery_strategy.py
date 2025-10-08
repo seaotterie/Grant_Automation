@@ -1,6 +1,9 @@
 """
 Discovery Strategy Pattern
 Simplified discovery architecture using strategy pattern with unified execution.
+
+Version 2.0: Enhanced with NTEE weight capping and time-decay support
+Version 2.1: Two-part NTEE scoring integration (Phase 2, Week 3)
 """
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Any, Callable
@@ -11,20 +14,25 @@ import asyncio
 import logging
 
 from ..core.data_models import (
-    BaseOpportunity, 
-    GovernmentOpportunity, 
-    FoundationOpportunity, 
+    BaseOpportunity,
+    GovernmentOpportunity,
+    FoundationOpportunity,
     CorporateOpportunity,
     OpportunityCollection,
     FundingSourceType
 )
 from ..profiles.models import OrganizationProfile
 from ..clients import (
-    GrantsGovClient, 
-    FoundationDirectoryClient, 
-    USASpendingClient, 
-    ProPublicaClient, 
+    GrantsGovClient,
+    FoundationDirectoryClient,
+    USASpendingClient,
+    ProPublicaClient,
     VAStateClient
+)
+from ..scoring import (
+    NTEE_MAX_CONTRIBUTION,
+    NTEEScorer,
+    NTEEDataSource,
 )
 
 
@@ -114,19 +122,22 @@ class DiscoveryStrategy(ABC):
 
 class GovernmentDiscoveryStrategy(DiscoveryStrategy):
     """Strategy for discovering federal and state government opportunities"""
-    
+
     def __init__(self):
         super().__init__("government", FundingSourceType.GOVERNMENT_FEDERAL)
         # Phase 2 Integration: Use migrated processors instead of direct clients
         self.grants_gov_processor = None
         self.usaspending_processor = None
         self.va_state_processor = None
-        
+
         # Legacy client fallback for immediate operation
         self.grants_gov_client = GrantsGovClient()
         self.usaspending_client = USASpendingClient()
         self.va_state_client = VAStateClient()
-        
+
+        # V2.1: Two-part NTEE scorer (Phase 2, Week 3)
+        self.ntee_scorer = NTEEScorer(enable_time_decay=True)
+
         # Initialize processors
         self._initialize_processors()
     
@@ -222,36 +233,55 @@ class GovernmentDiscoveryStrategy(DiscoveryStrategy):
         opportunities.sort(key=lambda x: x.relevance_score, reverse=True)
         return opportunities[:max_results]
     
-    def calculate_relevance_score(self, 
-                                opportunity: GovernmentOpportunity, 
+    def calculate_relevance_score(self,
+                                opportunity: GovernmentOpportunity,
                                 profile: OrganizationProfile) -> float:
-        """Calculate relevance score for government opportunity"""
-        
+        """
+        Calculate relevance score for government opportunity.
+
+        V2.0 Enhancement: NTEE contribution capped at 30% of final score
+        V2.1 Enhancement: Two-part NTEE scoring (major 40% + leaf 60%)
+        """
+
         score = 0.0
-        
+
         # Base score for government opportunities
         score += 20.0
-        
-        # NTEE code alignment
-        if profile.ntee_code:
-            profile_ntee_major = profile.ntee_code[0] if profile.ntee_code else ''
-            
-            # Map NTEE codes to government focus areas
-            if profile_ntee_major in ['P', 'Q']:  # Health
-                if any(word in opportunity.title.lower() for word in ['health', 'medical', 'wellness']):
-                    score += 25.0
-            elif profile_ntee_major in ['B', 'E']:  # Education
-                if any(word in opportunity.title.lower() for word in ['education', 'school', 'student']):
-                    score += 25.0
-            elif profile_ntee_major in ['C', 'D']:  # Environment
-                if any(word in opportunity.title.lower() for word in ['environment', 'conservation', 'green']):
-                    score += 25.0
-        
+
+        # V2.1: Two-part NTEE code alignment with structured scoring
+        ntee_score = 0.0
+        if profile.ntee_codes:
+            # Extract opportunity NTEE codes from title/description keywords
+            opportunity_ntee_codes = self._infer_ntee_from_opportunity(opportunity)
+
+            if opportunity_ntee_codes:
+                # Use two-part NTEE scorer
+                ntee_result = self.ntee_scorer.score_alignment(
+                    profile_codes=profile.ntee_codes,
+                    foundation_codes=opportunity_ntee_codes,
+                    profile_code_sources={code: NTEEDataSource.BMF for code in profile.ntee_codes},
+                )
+
+                # Convert 0.0-1.0 score to 0-30 points (30% max contribution)
+                # weighted_score includes time-decay
+                ntee_score = ntee_result.weighted_score * 30.0
+
+                self.logger.debug(
+                    f"NTEE scoring: {ntee_result.match_level.value}, "
+                    f"major={ntee_result.major_score:.2f}, leaf={ntee_result.leaf_score:.2f}, "
+                    f"final={ntee_score:.2f}/30"
+                )
+
+        # Apply NTEE weight cap (30% of max score = 30 points out of 100)
+        ntee_max_contribution = 100.0 * NTEE_MAX_CONTRIBUTION  # 30 points
+        ntee_score_capped = min(ntee_score, ntee_max_contribution)
+        score += ntee_score_capped
+
         # Geographic alignment
         if profile.state and hasattr(opportunity, 'eligible_states'):
             if not opportunity.eligible_states or profile.state in opportunity.eligible_states:
                 score += 15.0
-        
+
         # Funding amount appropriateness
         if hasattr(opportunity, 'funding_amount_max') and opportunity.funding_amount_max:
             if profile.revenue:
@@ -261,7 +291,7 @@ class GovernmentDiscoveryStrategy(DiscoveryStrategy):
                     score += 15.0
                 elif 0.05 <= funding_ratio <= 0.8:
                     score += 10.0
-        
+
         # Deadline urgency (prefer deadlines 30-120 days out)
         days_until_deadline = opportunity.calculate_days_until_deadline()
         if days_until_deadline:
@@ -269,8 +299,61 @@ class GovernmentDiscoveryStrategy(DiscoveryStrategy):
                 score += 10.0
             elif 15 <= days_until_deadline <= 180:
                 score += 5.0
-        
+
         return min(100.0, score)
+
+    def _infer_ntee_from_opportunity(self, opportunity: GovernmentOpportunity) -> List[str]:
+        """
+        Infer NTEE codes from government opportunity title and description
+
+        This is a basic keyword-to-NTEE mapping. Government opportunities don't
+        have explicit NTEE codes, so we infer them from text content.
+
+        Returns:
+            List of inferred NTEE codes (major only for now)
+        """
+        codes = set()
+        text = (opportunity.title + ' ' + opportunity.description).lower()
+
+        # Health (P, Q)
+        if any(kw in text for kw in ['health', 'medical', 'wellness', 'hospital', 'clinic']):
+            codes.update(['P', 'Q'])
+
+        # Education (B, E, O)
+        if any(kw in text for kw in ['education', 'school', 'student', 'teacher', 'learning', 'college']):
+            codes.update(['B', 'E'])
+            if any(kw in text for kw in ['youth', 'children', 'after-school']):
+                codes.add('O')  # Youth development
+
+        # Environment (C, D)
+        if any(kw in text for kw in ['environment', 'conservation', 'green', 'climate', 'energy', 'wildlife']):
+            codes.update(['C'])
+            if 'animal' in text:
+                codes.add('D')
+
+        # Arts & Culture (A)
+        if any(kw in text for kw in ['arts', 'culture', 'museum', 'theater', 'music', 'humanities']):
+            codes.add('A')
+
+        # Community & Human Services (S, P, I)
+        if any(kw in text for kw in ['community', 'homeless', 'shelter', 'poverty', 'social service']):
+            codes.add('S')
+        if any(kw in text for kw in ['crime', 'justice', 'legal', 'law enforcement']):
+            codes.add('I')
+
+        # Food & Agriculture (K)
+        if any(kw in text for kw in ['food', 'agriculture', 'farm', 'nutrition', 'hunger']):
+            codes.add('K')
+
+        # Housing (L)
+        if any(kw in text for kw in ['housing', 'affordable housing', 'homeownership']):
+            codes.add('L')
+
+        # Public Safety (M)
+        if any(kw in text for kw in ['disaster', 'emergency', 'safety', 'preparedness']):
+            codes.add('M')
+
+        return list(codes)
     
     def _convert_grants_gov_result(self, result: Dict[str, Any]) -> Optional[GovernmentOpportunity]:
         """Convert Grants.gov API result to GovernmentOpportunity"""
@@ -427,16 +510,19 @@ class GovernmentDiscoveryStrategy(DiscoveryStrategy):
 
 
 class FoundationDiscoveryStrategy(DiscoveryStrategy):
-    """Strategy for discovering foundation opportunities"""
-    
+    """Strategy for discovering foundation opportunities (990-PF screening)"""
+
     def __init__(self):
         super().__init__("foundation", FundingSourceType.FOUNDATION_PRIVATE)
         # Phase 2 Integration: Use migrated processor
         self.foundation_processor = None
-        
+
         # Legacy client fallback
         self.foundation_client = FoundationDirectoryClient()
-        
+
+        # V2.1: Two-part NTEE scorer for 990-PF matching (Phase 2, Week 3)
+        self.ntee_scorer = NTEEScorer(enable_time_decay=True)
+
         # Initialize processor
         self._initialize_processor()
     
@@ -495,19 +581,94 @@ class FoundationDiscoveryStrategy(DiscoveryStrategy):
         opportunities.sort(key=lambda x: x.relevance_score, reverse=True)
         return opportunities[:max_results]
     
-    def calculate_relevance_score(self, 
-                                opportunity: FoundationOpportunity, 
+    def calculate_relevance_score(self,
+                                opportunity: FoundationOpportunity,
                                 profile: OrganizationProfile) -> float:
-        """Calculate relevance score for foundation opportunity"""
-        
+        """
+        Calculate relevance score for foundation opportunity (990-PF screening)
+
+        V2.1 Enhancement: Two-part NTEE scoring (major 40% + leaf 60%)
+        This is the PRIMARY use case for enhanced 990-PF matching logic.
+        """
+
         score = 0.0
-        
+
         # Base score for foundation opportunities
         score += 15.0
-        
-        # Add foundation-specific scoring logic here
-        # This would include focus area matching, geographic alignment, etc.
-        
+
+        # V2.1: Two-part NTEE code alignment (PRIMARY 990-PF FEATURE)
+        # This is where the new NTEE scorer provides the most value
+        ntee_score = 0.0
+        if profile.ntee_codes and hasattr(opportunity, 'ntee_codes') and opportunity.ntee_codes:
+            # Use two-part NTEE scorer with foundation-specific sources
+            # Foundation NTEE codes come from:
+            # 1. BMF data (foundation's own NTEE)
+            # 2. Schedule I recipients (inferred from grantees) - Phase 2 Week 4-5
+            # 3. Website scraping (mission statement keywords) - Phase 6+
+
+            ntee_result = self.ntee_scorer.score_alignment(
+                profile_codes=profile.ntee_codes,
+                foundation_codes=opportunity.ntee_codes,
+                profile_code_sources={code: NTEEDataSource.BMF for code in profile.ntee_codes},
+                foundation_code_sources={
+                    code: getattr(opportunity, 'ntee_code_source', NTEEDataSource.BMF)
+                    for code in opportunity.ntee_codes
+                },
+            )
+
+            # Convert 0.0-1.0 score to 0-35 points (35% weight for foundations)
+            # Higher weight than government because NTEE is more critical for 990-PF matching
+            ntee_score = ntee_result.weighted_score * 35.0
+
+            self.logger.debug(
+                f"990-PF NTEE scoring: {ntee_result.match_level.value}, "
+                f"major={ntee_result.major_score:.2f}, leaf={ntee_result.leaf_score:.2f}, "
+                f"confidence={ntee_result.confidence:.2f}, final={ntee_score:.2f}/35"
+            )
+
+        # Apply NTEE weight cap (35% for foundations vs 30% for government)
+        ntee_score_capped = min(ntee_score, 35.0)
+        score += ntee_score_capped
+
+        # Geographic alignment (20% weight)
+        if profile.state and hasattr(opportunity, 'geographic_focus'):
+            if opportunity.geographic_focus:
+                if profile.state in opportunity.geographic_focus:
+                    score += 20.0  # Exact state match
+                elif 'national' in [g.lower() for g in opportunity.geographic_focus]:
+                    score += 15.0  # National foundations still good match
+            else:
+                # No geographic restrictions
+                score += 15.0
+
+        # Financial capacity alignment (15% weight)
+        if hasattr(opportunity, 'typical_grant_range') and opportunity.typical_grant_range:
+            if profile.revenue:
+                grant_min = opportunity.typical_grant_range.get('min', 0)
+                grant_max = opportunity.typical_grant_range.get('max', float('inf'))
+                # Check if profile's revenue range makes them competitive
+                if grant_min <= profile.revenue * 0.5:  # Can handle at least half revenue
+                    if grant_max >= profile.revenue * 0.05:  # Grant is meaningful (5%+ of budget)
+                        score += 15.0
+                    else:
+                        score += 10.0  # Smaller grants but still relevant
+
+        # Foundation size/assets (10% weight - prefer established foundations)
+        if hasattr(opportunity, 'total_assets') and opportunity.total_assets:
+            if opportunity.total_assets > 10_000_000:  # $10M+ assets
+                score += 10.0
+            elif opportunity.total_assets > 1_000_000:  # $1M+ assets
+                score += 7.0
+            else:
+                score += 4.0  # Smaller foundations
+
+        # Application status (10% weight)
+        if hasattr(opportunity, 'accepts_applications') and opportunity.accepts_applications:
+            score += 10.0
+        elif hasattr(opportunity, 'application_status'):
+            # Partial credit if unclear
+            score += 5.0
+
         return min(100.0, score)
     
     def _convert_foundation_result(self, result: Dict[str, Any], foundation_type: str) -> Optional[FoundationOpportunity]:
