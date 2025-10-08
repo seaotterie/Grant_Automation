@@ -1465,6 +1465,7 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
 
         # Step 4: Save discovered opportunities to database
         saved_count = 0
+        failed_saves = []
         import hashlib
         import time as time_module
 
@@ -1507,13 +1508,25 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
                     # Add ID to response for frontend reference
                     opp_data['opportunity_id'] = opportunity_id
                 else:
+                    failed_saves.append({
+                        'organization': opp_data.get('organization_name'),
+                        'ein': opp_data.get('ein'),
+                        'reason': 'Database save failed'
+                    })
                     logger.warning(f"Failed to save opportunity {opportunity_id}")
 
             except Exception as e:
-                logger.error(f"Error saving opportunity {opp_data.get('organization_name')}: {e}")
+                failed_saves.append({
+                    'organization': opp_data.get('organization_name'),
+                    'ein': opp_data.get('ein'),
+                    'reason': str(e)
+                })
+                logger.error(f"Error saving opportunity {opp_data.get('organization_name')}: {e}", exc_info=True)
 
         logger.info(f"Saved {saved_count}/{len(opportunities)} opportunities to database")
         summary['saved_to_database'] = saved_count
+        summary['failed_saves'] = failed_saves
+        summary['save_success_rate'] = f"{saved_count}/{len(opportunities)} ({(saved_count/len(opportunities)*100):.1f}%)" if opportunities else "0/0"
 
         return {
             "status": "success",
