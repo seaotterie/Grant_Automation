@@ -13,6 +13,7 @@ Version 2.4: Composite Scorer V2 with Rebalanced Weights (Phase 3, Week 6)
 Version 2.5: Abstain/Triage Queue for Manual Review (Phase 3, Week 6)
 Version 2.6: Payout Sufficiency (5% Rule) Scoring (Phase 3, Week 7)
 Version 2.7: Application Policy Reconciler (Phase 3, Week 7)
+Version 2.8: Reliability Safeguards (Phase 3, Week 7)
 """
 
 # Legacy scoring (V1)
@@ -122,6 +123,19 @@ from .application_policy_reconciler import (
     reconcile_application_policy,
 )
 
+# V2.8 Reliability Safeguards (Phase 3, Week 7)
+from .reliability_safeguards import (
+    ReliabilitySafeguards,
+    ReliabilitySafeguardsResult,
+    FilingRecencyAnalysis,
+    GrantHistoryAnalysis,
+    BorderProximityAnalysis,
+    FilingRecencyLevel,
+    GrantHistoryStatus,
+    BorderProximity,
+    analyze_reliability_safeguards,
+)
+
 __all__ = [
     # Legacy V1 scoring
     'DiscoveryScorer',
@@ -216,6 +230,17 @@ __all__ = [
     "ConflictType",
     "ReconciliationConfidence",
     "reconcile_application_policy",
+
+    # V2.8 Reliability Safeguards
+    "ReliabilitySafeguards",
+    "ReliabilitySafeguardsResult",
+    "FilingRecencyAnalysis",
+    "GrantHistoryAnalysis",
+    "BorderProximityAnalysis",
+    "FilingRecencyLevel",
+    "GrantHistoryStatus",
+    "BorderProximity",
+    "analyze_reliability_safeguards",
 ]
 
-__version__ = "2.7.0"
+__version__ = "2.8.0"
