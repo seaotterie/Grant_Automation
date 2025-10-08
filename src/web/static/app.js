@@ -11945,6 +11945,47 @@ function catalynxApp() {
             return this.nteeModal.tempSelectedCodes.includes(subcategoryCode);
         },
 
+        // Get selected NTEE codes grouped by main category for display
+        getSelectedNteeCodesByCategory() {
+            const groupedCodes = {};
+
+            // Get the codes to display (use profile.ntee_codes if available)
+            const codesToDisplay = this.selectedProfile?.ntee_codes || this.nteeModal.selectedNteeCodes || [];
+
+            if (!codesToDisplay || codesToDisplay.length === 0) {
+                return groupedCodes;
+            }
+
+            // Group codes by main category
+            codesToDisplay.forEach(code => {
+                Object.keys(this.fullNteeCodeList).forEach(categoryKey => {
+                    const category = this.fullNteeCodeList[categoryKey];
+                    const subcategory = category.subcategories.find(sub => sub.code === code);
+
+                    if (subcategory) {
+                        if (!groupedCodes[categoryKey]) {
+                            groupedCodes[categoryKey] = {
+                                categoryKey: categoryKey,
+                                categoryName: category.category,
+                                codes: []
+                            };
+                        }
+                        groupedCodes[categoryKey].codes.push({
+                            code: subcategory.code,
+                            name: subcategory.name
+                        });
+                    }
+                });
+            });
+
+            // Sort codes within each category
+            Object.values(groupedCodes).forEach(group => {
+                group.codes.sort((a, b) => a.code.localeCompare(b.code));
+            });
+
+            return groupedCodes;
+        },
+
         // GOVERNMENT CRITERIA MODAL FUNCTIONS
         openGovernmentCriteriaModal() {
             console.log('Opening Government Criteria Modal');
