@@ -2,9 +2,9 @@
 Evaluation Module for 990-PF Screening Enhancement
 Gold set validation, drift monitoring, and A/B testing infrastructure.
 
-Version: 2.1
+Version: 2.2
 Created: Phase 1, Week 1 (runs through Phase 5, Week 10)
-Updated: Phase 5, Week 9-10 (complete evaluation framework)
+Updated: Phase 5, Week 9-10 (complete evaluation framework + A/B testing)
 """
 
 from .gold_set_evaluator import (
@@ -28,6 +28,16 @@ from .performance_reporter import (
     generate_performance_report,
 )
 
+from .ab_testing import (
+    ABTestingFramework,
+    ABTestExecution,
+    ABTestMetrics,
+    ScoringResult,
+    RolloutStage,
+    ComparisonResult,
+    run_ab_test,
+)
+
 __all__ = [
     # Gold Set Evaluation
     "GoldSetEvaluator",
@@ -47,6 +57,15 @@ __all__ = [
     "MetricStatus",
     "MetricTarget",
     "generate_performance_report",
+
+    # A/B Testing
+    "ABTestingFramework",
+    "ABTestExecution",
+    "ABTestMetrics",
+    "ScoringResult",
+    "RolloutStage",
+    "ComparisonResult",
+    "run_ab_test",
 ]
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
