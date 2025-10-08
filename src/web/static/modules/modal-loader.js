@@ -8,7 +8,7 @@
 (function() {
     'use strict';
 
-    console.log('Modal Loader: Initializing... VERSION: NO_DUPLICATE_MODALS_20251006');
+    console.log('Modal Loader: Initializing...');
 
     /**
      * Load modal templates into DOM
@@ -21,7 +21,9 @@
             // Load all modal templates with cache-busting version
             // NOTE: ntee-selection-modal.html and government-criteria-modal.html are NOT loaded
             // because NTEE and Gov Criteria UIs are now embedded directly in profile-modals.html tabs
-            const version = 'NONE_FOUND_MESSAGE_v5';
+
+            // Use deployment timestamp for cache-busting (auto-updates on deployment)
+            const version = window.__CATALYNX_VERSION__ || Date.now();
             const templates = [
                 `/static/templates/profile-modals.html?v=${version}`,
                 `/static/templates/create-delete-modals.html?v=${version}`
