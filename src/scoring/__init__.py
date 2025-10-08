@@ -12,6 +12,7 @@ Version 2.3: Grant-Size Realism Bands (Phase 2, Week 4-5)
 Version 2.4: Composite Scorer V2 with Rebalanced Weights (Phase 3, Week 6)
 Version 2.5: Abstain/Triage Queue for Manual Review (Phase 3, Week 6)
 Version 2.6: Payout Sufficiency (5% Rule) Scoring (Phase 3, Week 7)
+Version 2.7: Application Policy Reconciler (Phase 3, Week 7)
 """
 
 # Legacy scoring (V1)
@@ -109,6 +110,18 @@ from .payout_sufficiency import (
     score_payout_sufficiency,
 )
 
+# V2.7 Application Policy Reconciler (Phase 3, Week 7)
+from .application_policy_reconciler import (
+    ApplicationPolicyReconciler,
+    ReconciliationResult,
+    ApplicationPolicyData,
+    ApplicationStatus,
+    DataSource,
+    ConflictType,
+    ReconciliationConfidence,
+    reconcile_application_policy,
+)
+
 __all__ = [
     # Legacy V1 scoring
     'DiscoveryScorer',
@@ -193,6 +206,16 @@ __all__ = [
     "PayoutCompliance",
     "GrantActivity",
     "score_payout_sufficiency",
+
+    # V2.7 Application Policy Reconciler
+    "ApplicationPolicyReconciler",
+    "ReconciliationResult",
+    "ApplicationPolicyData",
+    "ApplicationStatus",
+    "DataSource",
+    "ConflictType",
+    "ReconciliationConfidence",
+    "reconcile_application_policy",
 ]
 
-__version__ = "2.6.0"
+__version__ = "2.7.0"
