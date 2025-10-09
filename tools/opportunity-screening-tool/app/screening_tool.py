@@ -52,7 +52,8 @@ class OpportunityScreeningTool(BaseTool[ScreeningOutput]):
         super().__init__(config)
 
         # Configuration
-        self.openai_api_key = config.get("openai_api_key") if config else None
+        config = config or {}
+        self.openai_api_key = config.get("openai_api_key")
         self.default_mode = config.get("default_mode", "fast")
         self.default_threshold = config.get("default_threshold", 0.55)
 

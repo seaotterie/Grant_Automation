@@ -399,6 +399,9 @@ class CompositeScoreV2:
         years_old = current_year - foundation.most_recent_filing_year
         months_old = years_old * 12
 
+        # Clamp to 0 for future dates (data errors)
+        months_old = max(0.0, months_old)
+
         # Apply time-decay
         decay_factor = self.time_decay.calculate_decay(months_old)
 

@@ -4,7 +4,7 @@ Tests for Opportunity Screening Tool
 
 import pytest
 import asyncio
-from tools.opportunity_screening_tool.app import (
+from app import (
     OpportunityScreeningTool,
     screen_opportunities,
     ScreeningMode,
@@ -138,7 +138,7 @@ async def test_thorough_screening():
 
 def test_screening_output_structure():
     """Test that screening output has all required fields"""
-    from tools.opportunity_screening_tool.app.screening_models import (
+    from app.screening_models import (
         ScreeningOutput,
         OpportunityScore
     )

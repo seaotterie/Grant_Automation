@@ -393,6 +393,49 @@ class OrganizationProfile(BaseModel):
         """Always update timestamp on save"""
         return datetime.now()
 
+    @property
+    def state(self) -> Optional[str]:
+        """
+        Extract state from location string.
+
+        Provides compatibility with composite_scorer_v2.py which expects profile.state.
+        Parses location string like "Raleigh, VA 27601" to extract "VA".
+
+        Returns:
+            Two-letter state code if found in location, None otherwise
+        """
+        if not self.location:
+            return None
+
+        # Try to extract state from location string
+        # Expected formats:
+        #   "City, ST Zip" -> "ST"
+        #   "City, ST" -> "ST"
+        #   "City, State Zip" -> "State" (not ideal but handle it)
+        parts = self.location.split(',')
+        if len(parts) >= 2:
+            # Get the part after the comma
+            state_zip = parts[-1].strip()
+            # Split by space and get first part (should be state code)
+            state_parts = state_zip.split()
+            if state_parts:
+                # Return the first part (state code)
+                return state_parts[0]
+
+        return None
+
+    @property
+    def revenue(self) -> Optional[float]:
+        """
+        Alias for annual_revenue as float.
+
+        Provides compatibility with composite_scorer_v2.py which expects profile.revenue.
+
+        Returns:
+            Annual revenue as float if available, None otherwise
+        """
+        return float(self.annual_revenue) if self.annual_revenue is not None else None
+
 
 
 class DiscoverySession(BaseModel):

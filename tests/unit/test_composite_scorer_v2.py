@@ -48,7 +48,8 @@ def sample_profile():
         focus_areas=["Veteran Services", "Community Support"],
         ntee_codes=["W30", "P85"],
         program_areas=["Veteran Services", "Community Support"],
-        mission_statement="Supporting military veterans and their families"
+        mission_statement="Supporting military veterans and their families",
+        annual_revenue=1500000  # $1.5M annual revenue
     )
 
 
@@ -116,10 +117,8 @@ def _create_sample_grantees(ntee_codes: List[str]) -> List[ScheduleIGrantee]:
         grantees.append(ScheduleIGrantee(
             recipient_name=f"Grantee {i+1}",
             recipient_ein=f"12345678{i}",
-            recipient_ntee_code=ntee,
             grant_amount=50000.0,
-            recipient_city="Test City",
-            recipient_state="VA"
+            grant_year=2023  # Required field
         ))
     return grantees
 
@@ -467,11 +466,14 @@ class TestDataQualityHandling:
         scorer = CompositeScoreV2()
 
         profile_no_ntee = OrganizationProfile(
-            ein="999999999",
+            profile_id="test_profile_no_ntee",
             name="No NTEE Org",
+            organization_type=OrganizationType.NONPROFIT,
+            ein="999999999",
+            focus_areas=["General"],
             ntee_codes=[],  # No NTEE codes
-            state="VA",
-            revenue=1000000.0
+            location="Richmond, VA 23219",  # State extracted via property
+            annual_revenue=1000000  # Revenue accessed via property
         )
 
         result = scorer.score_foundation_match(profile_no_ntee, high_match_foundation)
@@ -541,11 +543,14 @@ class TestEdgeCases:
         scorer = CompositeScoreV2()
 
         zero_revenue_profile = OrganizationProfile(
-            ein="000000000",
+            profile_id="test_profile_zero_revenue",
             name="Zero Revenue Org",
+            organization_type=OrganizationType.NONPROFIT,
+            ein="000000000",
+            focus_areas=["Veteran Services"],
             ntee_codes=["W30"],
-            state="VA",
-            revenue=0.0  # Zero revenue
+            location="Norfolk, VA 23510",  # State extracted via property
+            annual_revenue=0  # Zero revenue (accessed via property)
         )
 
         result = scorer.score_foundation_match(zero_revenue_profile, high_match_foundation)

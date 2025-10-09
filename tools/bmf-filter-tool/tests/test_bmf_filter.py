@@ -68,7 +68,12 @@ class TestBMFFilterTool:
     def bmf_tool(self, temp_csv_file, temp_config_file):
         """Create BMF Filter Tool with test data"""
         # Set environment variables for test
-        os.environ['BMF_INPUT_PATH'] = temp_csv_file
+        # Point to the actual database at project root
+        project_root = Path(__file__).parent.parent.parent.parent
+        database_path = project_root / "data" / "nonprofit_intelligence.db"
+
+        os.environ['BMF_DATABASE_PATH'] = str(database_path)
+        os.environ['BMF_INPUT_PATH'] = temp_csv_file  # Legacy, may not be used
         os.environ['BMF_FILTER_CONFIG_PATH'] = temp_config_file
         os.environ['BMF_CACHE_ENABLED'] = 'false'  # Disable cache for testing
 
@@ -76,7 +81,7 @@ class TestBMFFilterTool:
         yield tool
 
         # Cleanup environment
-        for key in ['BMF_INPUT_PATH', 'BMF_FILTER_CONFIG_PATH', 'BMF_CACHE_ENABLED']:
+        for key in ['BMF_DATABASE_PATH', 'BMF_INPUT_PATH', 'BMF_FILTER_CONFIG_PATH', 'BMF_CACHE_ENABLED']:
             os.environ.pop(key, None)
 
     @pytest.mark.asyncio
@@ -280,9 +285,13 @@ class TestTwelveFactorCompliance:
 
     def test_factor_3_config_from_environment(self):
         """Factor 3: Config comes from environment"""
+        # Point to the actual database
+        project_root = Path(__file__).parent.parent.parent.parent
+        database_path = project_root / "data" / "nonprofit_intelligence.db"
+
         # Set test environment variables
         test_env = {
-            'BMF_INPUT_PATH': 'test_input.csv',
+            'BMF_DATABASE_PATH': str(database_path),
             'BMF_CACHE_ENABLED': 'false',
             'BMF_MAX_RESULTS': '500'
         }
@@ -292,7 +301,7 @@ class TestTwelveFactorCompliance:
 
         try:
             tool = BMFFilterTool()
-            assert tool.input_path == 'test_input.csv'
+            assert tool.database_path == str(database_path)
             assert tool.cache_enabled == False
             assert tool.max_results == 500
         finally:
@@ -302,6 +311,11 @@ class TestTwelveFactorCompliance:
     @pytest.mark.asyncio
     async def test_factor_6_stateless_processes(self, sample_csv_data, temp_csv_file, temp_config_file):
         """Factor 6: Stateless processes"""
+        # Point to the actual database
+        project_root = Path(__file__).parent.parent.parent.parent
+        database_path = project_root / "data" / "nonprofit_intelligence.db"
+
+        os.environ['BMF_DATABASE_PATH'] = str(database_path)
         os.environ['BMF_INPUT_PATH'] = temp_csv_file
         os.environ['BMF_FILTER_CONFIG_PATH'] = temp_config_file
         os.environ['BMF_CACHE_ENABLED'] = 'false'
@@ -323,7 +337,7 @@ class TestTwelveFactorCompliance:
             assert len(result1.organizations) == len(result2.organizations)
 
         finally:
-            for key in ['BMF_INPUT_PATH', 'BMF_FILTER_CONFIG_PATH', 'BMF_CACHE_ENABLED']:
+            for key in ['BMF_DATABASE_PATH', 'BMF_INPUT_PATH', 'BMF_FILTER_CONFIG_PATH', 'BMF_CACHE_ENABLED']:
                 os.environ.pop(key, None)
 
 if __name__ == "__main__":
