@@ -1,0 +1,97 @@
+# Abstain/Triage Queue System Configuration
+# Phase 3, Week 6 - Foundation Matching Infrastructure
+
+[module]
+name = "Abstain/Triage Queue System"
+version = "2.0.0"
+description = "Manual review queue for borderline 990-PF screening results ($0.00 per operation)"
+purpose = "Enable human-in-the-loop validation and continuous learning from expert decisions"
+phase = "Phase 3, Week 6"
+expected_impact = "15-20% reduction in false positives/negatives through human validation"
+
+[module.factors]
+codebase_tracked = true
+dependencies_explicit = true
+config_in_environment = true
+tools_as_structured_outputs = true  # Uses dataclasses, will convert to BAML
+stateless_execution = false  # Maintains queue state in memory (singleton pattern)
+small_focused_agents = true
+
+[module.output_structure]
+primary_output = "TriageItem"
+cost_per_operation = 0.00  # No AI calls, pure queue management
+processing_time = "< 1ms per queue operation"
+
+[module.dependencies]
+internal_modules = []
+external_packages = []
+
+[module.capabilities]
+abstain_decision_tracking = true
+priority_based_workflow = true  # CRITICAL → HIGH → MEDIUM → LOW
+expert_decision_logging = true  # PASS/FAIL/UNCERTAIN
+performance_metrics = true
+json_export = true  # For review dashboards
+singleton_pattern = true  # Global queue instance
+
+[triage_workflow]
+# 1. Composite scorer identifies borderline match (abstain decision)
+# 2. Create TriageItem and add to queue with priority
+# 3. Analyst retrieves next item (highest priority first)
+# 4. Expert reviews with full component score context
+# 5. Submit PASS/FAIL/UNCERTAIN decision with rationale
+# 6. Decision logged to review history for feedback loop
+
+[priority_levels]
+# Priority determination logic
+critical = "Missing critical data but otherwise strong (score ≥50)"
+high = "Borderline high score (55-58) - likely to pass with review"
+medium = "True borderline (50-55) - unclear direction"
+low = "Borderline low score (45-50) - likely to fail"
+
+[score_ranges]
+# Typical abstain score ranges
+borderline_high = "55.0-58.0"
+borderline_medium = "50.0-55.0"
+borderline_low = "45.0-50.0"
+
+[queue_management]
+storage = "in_memory"  # Active items in memory
+history = "list"  # Completed items in review_history list
+persistence = "TODO"  # Future: database persistence
+export_format = "JSON"
+
+[performance_metrics]
+# Calculated statistics
+total_items = true
+pending_count = true
+in_review_count = true
+approved_count = true
+rejected_count = true
+priority_breakdown = true
+avg_review_time_hours = true
+approval_rate = true  # % of reviewed items passing
+agreement_rate = true  # % where expert agrees with borderline score
+
+[framework]
+compliance_level = "Partial"  # Factor 6 violated (maintains state)
+factor_4_implementation = "Structured TriageItem dataclass (to be converted to BAML)"
+factor_6_implementation = "Stateful - maintains queue state via singleton pattern (acceptable for queue system)"
+factor_10_implementation = "Single responsibility - manual review queue management only"
+
+[dataclasses]
+# 2 dataclasses to convert to BAML schemas
+triage_item = "TriageItem - Single item in manual review queue"
+triage_queue_stats = "TriageQueueStats - Performance statistics for triage queue"
+
+[enums]
+# 3 enums
+triage_status = "TriageStatus - Queue item status (pending, in_review, approved, rejected, escalated, deferred)"
+triage_priority = "TriagePriority - Priority level (critical, high, medium, low)"
+expert_decision = "ExpertDecision - Expert's final decision (pass, fail, uncertain)"
+
+[feedback_loop]
+# Future enhancement: Use expert decisions to tune thresholds
+learning_enabled = false  # TODO: Phase 4 enhancement
+threshold_tuning = false  # TODO: Use agreement_rate to adjust 45-58 range
+model_training = false    # TODO: Train ML model from expert decisions

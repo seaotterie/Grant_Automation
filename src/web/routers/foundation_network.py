@@ -8,20 +8,23 @@ from typing import List, Optional
 import logging
 from datetime import datetime
 
-# Import tool models and functions
+# Import tool models and functions via wrapper module
 import sys
 from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from tools.foundation_grantee_bundling_tool.app import (
+# Use new Python-compatible import wrapper
+from tools.foundation_grantee_bundling_tool import (
     GranteeBundlingInput,
     GranteeBundlingOutput,
-    analyze_foundation_bundling
+    FoundationGranteeBundlingTool,
+    CoFundingAnalyzer,
 )
-from tools.foundation_grantee_bundling_tool.app.database_service import (
-    FoundationGrantsDatabaseService
-)
+
+# Database service still needs direct import
+sys.path.insert(0, str(project_root / "tools" / "foundation-grantee-bundling-tool"))
+from app.database_service import FoundationGrantsDatabaseService
 from src.analytics.foundation_network_graph import (
     FoundationNetworkGraph,
     NetworkQueryEngine,

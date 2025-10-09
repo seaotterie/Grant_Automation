@@ -1,0 +1,91 @@
+# 990-PF Composite Scorer V2 Configuration
+# Phase 3, Week 6 - Foundation Matching Infrastructure
+
+[module]
+name = "990-PF Composite Scorer V2"
+version = "2.0.0"
+description = "Unified 8-component scoring system for foundation-nonprofit alignment ($0.00 per analysis)"
+purpose = "Comprehensive foundation match scoring integrating all Phase 1-3 components"
+phase = "Phase 3, Week 6"
+expected_impact = "70-90% improvement in screening accuracy vs V1"
+
+[module.factors]
+codebase_tracked = true
+dependencies_explicit = true
+config_in_environment = true
+tools_as_structured_outputs = true  # Uses dataclasses, will convert to BAML
+stateless_execution = true
+small_focused_agents = true
+
+[module.output_structure]
+primary_output = "CompositeScoreResult"
+cost_per_analysis = 0.00  # No AI calls, pure algorithmic scoring
+processing_time = "< 10ms per foundation-nonprofit pair"
+
+[module.dependencies]
+internal_modules = ["ntee_scorer", "schedule_i_voting", "grant_size_scoring", "time_decay_utils", "scoring_config", "profiles.models"]
+external_packages = []
+
+[module.capabilities]
+eight_component_scoring = true
+rebalanced_weights = true  # Data-driven weight optimization
+ntee_capping = true  # NTEE limited to 30% max contribution
+coherence_boost = true  # 0.0-0.15 bonus for coherent foundations
+time_decay_penalty = true  # Filing recency multiplier
+three_tier_decisions = true  # PASS/ABSTAIN/FAIL
+confidence_calculation = true
+
+[scoring_weights]
+# Rebalanced weights from team evaluation (total = 100%)
+ntee_alignment = 0.30  # Reduced from 35%, capped at 30 points
+geographic_match = 0.20  # Increased from 15% (state alignment critical)
+recipient_coherence = 0.12  # New component (Schedule I voting)
+financial_capacity = 0.10  # Asset-based scoring
+grant_size_fit = 0.10  # Revenue-proportional
+application_policy = 0.08  # Accepts applications preference
+filing_recency = 0.05  # Time-decay penalty
+foundation_type = 0.05  # Operating vs non-operating
+
+# Additional adjustments
+coherence_boost_max = 0.15  # +15 points max for coherent foundations
+time_decay_min = 0.0  # No penalty for stale data (floor)
+time_decay_max = 1.0  # Current data (ceiling)
+
+[decision_thresholds]
+# Three-tier decision system
+pass_threshold = 58.0  # ≥ 58 = PASS (default, adjustable)
+abstain_lower = 45.0   # 45-58 = ABSTAIN (manual review queue)
+abstain_upper = 58.0
+fail_threshold = 45.0  # < 45 = FAIL (clear mismatch)
+
+[abstain_triggers]
+# Conditions that force ABSTAIN regardless of score
+missing_ntee_codes = true  # Cannot assess mission alignment
+very_low_ntee = 20.0  # < 20 NTEE score = mission mismatch
+geographic_mismatch = true  # Foundation focuses on other states
+borderline_score = true  # Score in 45-58 range
+
+[confidence_factors]
+# Confidence calculation (0.0-1.0)
+recent_filing_bonus = 0.20  # ≤ 2 years old
+moderate_filing_bonus = 0.10  # ≤ 4 years old
+schedule_i_data_bonus = 0.15  # ≥ 10 recipients
+strong_ntee_bonus = 0.15  # ≥ 70 NTEE score
+good_ntee_bonus = 0.05  # ≥ 50 NTEE score
+baseline_confidence = 0.50
+
+[framework]
+compliance_level = "Full"
+factor_4_implementation = "Structured CompositeScoreResult dataclass (to be converted to BAML)"
+factor_6_implementation = "Stateless - no persistence between runs, scores each match independently"
+factor_10_implementation = "Single responsibility - comprehensive foundation-nonprofit alignment scoring"
+
+[dataclasses]
+# 2 dataclasses to convert to BAML schemas
+foundation_opportunity_data = "FoundationOpportunityData - Foundation 990-PF data for scoring"
+composite_score_result = "CompositeScoreResult - Complete composite scoring result with component breakdown"
+
+[performance]
+target_processing_time = "< 10ms per foundation-nonprofit pair"
+target_accuracy = "70-90% screening accuracy improvement vs V1"
+expected_results = "Final score (0-100), recommendation (PASS/ABSTAIN/FAIL), confidence (0-1), component breakdown"

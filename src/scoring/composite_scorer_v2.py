@@ -91,12 +91,14 @@ class CompositeScoreResult:
 
     # Detailed analysis
     ntee_explanation: str
-    schedule_i_analysis: Optional[Dict] = None
-    grant_size_analysis: Optional[Dict] = None
 
     # Decision support
     confidence: float  # 0.0-1.0
     should_abstain: bool
+
+    # Optional fields (must come after required fields)
+    schedule_i_analysis: Optional[Dict] = None
+    grant_size_analysis: Optional[Dict] = None
     abstain_reason: Optional[str] = None
 
 

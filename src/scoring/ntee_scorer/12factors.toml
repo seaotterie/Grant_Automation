@@ -1,0 +1,67 @@
+# NTEE Two-Part Scoring System Configuration
+# Phase 2, Week 3 - Foundation Matching Infrastructure
+
+[module]
+name = "NTEE Two-Part Scoring System"
+version = "2.0.0"
+description = "Two-part NTEE code alignment scoring with multi-source validation ($0.00 per analysis)"
+purpose = "Score NTEE code alignment between nonprofit profiles and foundation funding interests"
+phase = "Phase 2, Week 3"
+expected_impact = "30-40% reduction in false positives"
+
+[module.factors]
+codebase_tracked = true
+dependencies_explicit = true
+config_in_environment = true
+tools_as_structured_outputs = true  # Uses dataclasses, will convert to BAML
+stateless_execution = true
+small_focused_agents = true
+
+[module.output_structure]
+primary_output = "NTEEScoreResult"
+cost_per_analysis = 0.00  # No AI calls, pure algorithmic scoring
+processing_time = "< 1ms per comparison"
+
+[module.dependencies]
+internal_modules = ["time_decay_utils", "scoring_config"]
+external_packages = []
+
+[module.capabilities]
+two_part_scoring = true  # Major (40%) + Leaf (60%)
+multi_source_validation = true  # BMF → Schedule I → Website
+time_decay_integration = true
+confidence_penalties = true  # Major-only codes get 0.7x multiplier
+related_major_matching = true  # Partial credit for related codes
+
+[scoring]
+major_weight = 0.40  # Major code contribution
+leaf_weight = 0.60   # Leaf code contribution
+max_contribution = 0.30  # Max contribution in government scoring
+max_contribution_foundation = 0.35  # Max contribution in foundation scoring
+
+[match_levels]
+exact_full = 1.0      # Exact major + leaf match (B25 = B25)
+exact_major = 0.4     # Major match, different leaf (B25 = B30)
+related_major = 0.2   # Related major codes (B ~ E for education)
+no_match = 0.0
+
+[framework]
+compliance_level = "Full"
+factor_4_implementation = "Structured NTEEScoreResult dataclass (to be converted to BAML)"
+factor_6_implementation = "Stateless - no persistence between runs, pure functional scoring"
+factor_10_implementation = "Single responsibility - NTEE code alignment scoring only"
+
+[dataclasses]
+# 2 dataclasses to convert to BAML schemas
+ntee_code = "NTEECode - Parsed NTEE code with metadata"
+ntee_score_result = "NTEEScoreResult - Complete scoring result with breakdown"
+
+[enums]
+# 2 enums
+ntee_data_source = "NTEEDataSource - Source of NTEE code data (BMF, Schedule I, Website)"
+ntee_match_level = "NTEEMatchLevel - Level of NTEE code matching"
+
+[performance]
+target_processing_time = "< 1ms per code pair comparison"
+target_accuracy = "95% alignment detection accuracy"
+expected_results = "Scored alignment with detailed breakdown"

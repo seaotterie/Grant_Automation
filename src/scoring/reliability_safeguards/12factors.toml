@@ -1,0 +1,120 @@
+# Reliability Safeguards System Configuration
+# Phase 3, Week 7 - Foundation Matching Infrastructure
+
+[module]
+name = "Reliability Safeguards System"
+version = "2.0.0"
+description = "Three-part safeguard system to prevent recommending unreliable foundations ($0.00 per analysis)"
+purpose = "Prevent recommending inactive, unproven, or unreliable foundations through data quality checks"
+phase = "Phase 3, Week 7"
+expected_impact = "8-12% reduction in recommendations of inactive/unreliable foundations"
+
+[module.factors]
+codebase_tracked = true
+dependencies_explicit = true
+config_in_environment = true
+tools_as_structured_outputs = true  # Uses dataclasses, will convert to BAML
+stateless_execution = true
+small_focused_agents = true
+
+[module.output_structure]
+primary_output = "ReliabilitySafeguardsResult"
+cost_per_analysis = 0.00  # No AI calls, pure data quality analysis
+processing_time = "< 5ms per foundation"
+
+[module.dependencies]
+internal_modules = []
+external_packages = []
+
+[module.capabilities]
+filing_recency_penalty = true
+mirage_guard = true  # Insufficient grant history detection
+border_proximity_bonus = true
+composite_reliability_score = true
+concern_flagging = true
+haversine_distance_calculation = true
+
+[safeguard_1_filing_recency]
+# Penalty for old 990-PF filings (potential inactivity)
+description = "Penalty for aging 990-PF data"
+penalty_range = "0.00 (current) → 0.15 (5+ years old)"
+
+[safeguard_1.recency_levels]
+current = "0-1 years: 0.00 penalty, 100 score"
+recent = "1-2 years: 0.02 penalty, 85 score"
+moderate = "2-3 years: 0.05 penalty, 70 score"
+old = "3-4 years: 0.08 penalty, 50 score"
+very_old = "4-5 years: 0.12 penalty, 30 score"
+stale = "5+ years: 0.15 penalty, 10 score"
+
+[safeguard_2_mirage_guard]
+# Penalty for insufficient grant history (unproven grantmakers)
+description = "Penalty for insufficient grant-making track record"
+penalty_range = "0.00 (established) → 0.12 (unknown)"
+
+[safeguard_2.history_levels]
+established = "5+ years, 5+/year: 0.00 penalty, 100 score"
+proven = "3-5 years, 5+/year: 0.00 penalty, 85 score"
+emerging = "1-3 years: 0.05 penalty, 60 score"
+minimal = "<1 year: 0.10 penalty, 30 score"
+unknown = "No data: 0.12 penalty, 20 score"
+
+[safeguard_2.requirements]
+min_years_proven = 3
+min_grants_per_year = 5
+min_total_grants = 10
+
+[safeguard_3_border_proximity]
+# Boost for foundations near state borders (cross-state opportunities)
+description = "Boost for geographic border proximity"
+boost_range = "0.00 (distant) → 0.08 (adjacent)"
+
+[safeguard_3.proximity_levels]
+adjacent = "<10 miles: 0.08 boost, 100 score"
+near = "10-25 miles: 0.05 boost, 75 score"
+moderate = "25-50 miles: 0.03 boost, 50 score"
+far = "50-100 miles: 0.00 boost, 25 score"
+distant = "100+ miles: 0.00 boost, 0 score"
+
+[safeguard_3.distance_thresholds]
+border_adjacent_miles = 10
+border_near_miles = 25
+border_moderate_miles = 50
+border_far_miles = 100
+
+[composite_metrics]
+# Combined reliability analysis
+total_penalty_max = 0.27  # 0.15 (filing) + 0.12 (history)
+total_boost_max = 0.08  # Border proximity
+net_adjustment_range = "-0.27 to +0.08"
+reliability_score_range = "0.0-100.0"
+
+[weighting]
+# Composite reliability score weights
+filing_recency_weight = 0.40
+grant_history_weight = 0.50
+border_proximity_weight = 0.10
+
+[framework]
+compliance_level = "Full"
+factor_4_implementation = "Structured ReliabilitySafeguardsResult dataclass (to be converted to BAML)"
+factor_6_implementation = "Stateless - no persistence between runs, analyzes each foundation independently"
+factor_10_implementation = "Single responsibility - foundation reliability data quality analysis only"
+
+[dataclasses]
+# 4 dataclasses to convert to BAML schemas
+filing_recency_analysis = "FilingRecencyAnalysis - 990-PF filing recency analysis"
+grant_history_analysis = "GrantHistoryAnalysis - Grant-making history analysis"
+border_proximity_analysis = "BorderProximityAnalysis - Geographic border proximity analysis"
+reliability_safeguards_result = "ReliabilitySafeguardsResult - Combined reliability safeguards result"
+
+[enums]
+# 3 enums
+filing_recency_level = "FilingRecencyLevel - Filing age categorization"
+grant_history_status = "GrantHistoryStatus - Grant-making history status"
+border_proximity = "BorderProximity - Distance to state border categories"
+
+[performance]
+target_processing_time = "< 5ms per foundation"
+target_accuracy = "100% categorization accuracy (deterministic algorithm)"
+expected_results = "Reliability score (0-100), net adjustment (-0.27 to +0.08), concern flags, recommendations"

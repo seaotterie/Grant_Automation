@@ -1,0 +1,70 @@
+# Schedule I Recipient Voting System Configuration
+# Phase 2, Week 4-5 - Foundation Matching Infrastructure
+
+[module]
+name = "Schedule I Recipient Voting System"
+version = "2.0.0"
+description = "Recipient voting analysis for foundation grant-making pattern inference ($0.00 per analysis)"
+purpose = "Analyze foundation Schedule I recipients to infer funding interests and improve 990-PF screening"
+phase = "Phase 2, Week 4-5"
+expected_impact = "25-35% improvement in foundation matching accuracy"
+
+[module.factors]
+codebase_tracked = true
+dependencies_explicit = true
+config_in_environment = true
+tools_as_structured_outputs = true  # Uses dataclasses, will convert to BAML
+stateless_execution = true
+small_focused_agents = true
+
+[module.output_structure]
+primary_output = "ScheduleIAnalysis"
+cost_per_analysis = 0.00  # No AI calls, pure data aggregation and voting
+processing_time = "< 100ms per foundation (10-50 recipients)"
+
+[module.dependencies]
+internal_modules = ["time_decay_utils", "scoring_config", "ein_resolution", "profiles.models"]
+external_packages = []
+
+[module.capabilities]
+recipient_voting = true  # Each grantee votes for NTEE codes weighted by grant amount
+ein_resolution_integration = true  # HIGH/MEDIUM/LOW confidence weighting
+time_decay_weighting = true  # Recent grants weighted more heavily
+coherence_analysis = true  # Measures consistency of grant patterns
+entropy_scoring = true  # Shannon entropy for focused vs scattered giving
+concentration_ratio = true  # % of $ going to top 3 NTEE codes
+
+[voting_system]
+vote_formula = "grant_amount × confidence_weight × time_decay_weight"
+confidence_weights = { HIGH = 1.0, MEDIUM = 0.5, LOW = 0.0 }
+time_decay_type = "SCHEDULE_I_GRANTS"  # Uses Schedule I-specific decay parameters
+
+[coherence_metrics]
+coherence_threshold = 0.5  # > 0.5 = high coherence
+entropy_focused_threshold = 2.0  # < 2.0 = focused giving
+entropy_scattered_threshold = 2.5  # > 2.5 = scattered giving
+concentration_threshold = 0.6  # > 0.6 = high concentration in top 3 codes
+
+[coherence_boost]
+base_bonus = 0.12  # RECIPIENT_COHERENCE_BONUS from scoring_config
+entropy_penalty_coefficient = 0.03  # RECIPIENT_ENTROPY_PENALTY
+min_boost = 0.0
+max_boost = 0.15  # Maximum coherence boost for composite scorer
+
+[framework]
+compliance_level = "Full"
+factor_4_implementation = "Structured ScheduleIAnalysis dataclass (to be converted to BAML)"
+factor_6_implementation = "Stateless - no persistence between runs, analyzes foundation patterns independently"
+factor_10_implementation = "Single responsibility - Schedule I recipient pattern analysis only"
+
+[dataclasses]
+# 3 dataclasses to convert to BAML schemas
+recipient_vote = "RecipientVote - Single recipient's vote for NTEE codes"
+ntee_vote_result = "NTEEVoteResult - Aggregated votes for a single NTEE code"
+schedule_i_analysis = "ScheduleIAnalysis - Complete analysis with voting and coherence metrics"
+
+[performance]
+target_processing_time = "< 100ms for typical foundation (10-50 recipients)"
+target_accuracy = "95% recipient matching accuracy via EIN resolution"
+expected_results = "NTEE code recommendations with coherence boost (0.0-0.15)"
+ein_resolution_target = "> 80% high-confidence EIN resolution rate"

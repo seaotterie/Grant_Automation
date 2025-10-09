@@ -1,0 +1,104 @@
+# Grant-Size Realism Bands Configuration
+# Phase 2, Week 4-5 - Foundation Matching Infrastructure
+
+[module]
+name = "Grant-Size Realism Bands"
+version = "2.0.0"
+description = "Revenue-proportional grant size scoring to match organizational capacity ($0.00 per analysis)"
+purpose = "Ensure grant recommendations match organizational capacity - prevent recommending unrealistic grant sizes"
+phase = "Phase 2, Week 4-5"
+expected_impact = "15-20% improvement in applicant success rates"
+
+[module.factors]
+codebase_tracked = true
+dependencies_explicit = true
+config_in_environment = true
+tools_as_structured_outputs = true  # Uses dataclasses, will convert to BAML
+stateless_execution = true
+small_focused_agents = true
+
+[module.output_structure]
+primary_output = "GrantSizeAnalysis"
+cost_per_analysis = 0.00  # No AI calls, pure algorithmic scoring
+processing_time = "< 1ms per analysis"
+
+[module.dependencies]
+internal_modules = ["scoring_config"]
+external_packages = []
+
+[module.capabilities]
+realism_bands = true  # Grant size categorization (micro → transformational)
+revenue_proportionality = true  # Typical grants should be 5-50% of annual budget
+capacity_scoring = true  # Penalize unrealistic grant sizes (too large/small)
+match_multipliers = true  # Boost scores for optimal grant-to-revenue ratios
+gaussian_scoring = true  # Peak at 15% grant-to-revenue ratio
+
+[grant_size_bands]
+# 6 grant size categories based on award amount
+micro = "< $5K"
+small = "$5K - $25K"
+medium = "$25K - $100K"
+large = "$100K - $500K"
+major = "$500K - $2M"
+transformational = "> $2M"
+
+[capacity_levels]
+# 5 organizational capacity levels based on revenue
+grassroots = "< $100K revenue"
+emerging = "$100K - $500K"
+established = "$500K - $2M"
+mature = "$2M - $10M"
+major_institution = "> $10M"
+
+[fit_levels]
+# 6 quality levels of grant size fit
+optimal = "5-25% of budget (sweet spot)"
+good = "3-5% or 25-40% of budget"
+acceptable = "1-3% or 40-60% of budget"
+stretch = "60-100% of budget (challenging)"
+unrealistic_large = "> 100% of budget (exceeds annual budget)"
+unrealistic_small = "< 1% of budget (not worth overhead)"
+
+[scoring]
+# Optimal grant-to-revenue ratios
+optimal_center = 0.15  # 15% - peak of Gaussian curve
+optimal_min = 0.05     # 5% - lower bound of optimal range
+optimal_max = 0.25     # 25% - upper bound of optimal range
+
+# Fit scores (0.0-1.0)
+optimal_score = "0.85-1.0 (Gaussian peak at 15%)"
+good_score = 0.85
+acceptable_score = 0.70
+stretch_score = 0.50
+unrealistic_large_score = 0.0
+unrealistic_small_score = 0.1
+
+[multipliers]
+# Score multipliers (0.5-1.5x)
+optimal_multiplier = "1.3-1.5x (higher for ratio closer to 15%)"
+good_multiplier = 1.15
+acceptable_multiplier = 1.0
+stretch_multiplier = 0.85
+unrealistic_large_multiplier = 0.5
+unrealistic_small_multiplier = 0.7
+
+[framework]
+compliance_level = "Full"
+factor_4_implementation = "Structured GrantSizeAnalysis dataclass (to be converted to BAML)"
+factor_6_implementation = "Stateless - no persistence between runs, pure revenue-proportional scoring"
+factor_10_implementation = "Single responsibility - grant size capacity matching only"
+
+[dataclasses]
+# 1 dataclass to convert to BAML schema
+grant_size_analysis = "GrantSizeAnalysis - Complete grant size fit analysis with scoring and recommendations"
+
+[enums]
+# 3 enums
+grant_size_band = "GrantSizeBand - Grant size categories"
+capacity_level = "CapacityLevel - Organizational capacity levels"
+grant_size_fit = "GrantSizeFit - Quality of grant size fit"
+
+[performance]
+target_processing_time = "< 1ms per analysis"
+target_accuracy = "100% categorization accuracy (deterministic algorithm)"
+expected_results = "Fit score (0.0-1.0) + multiplier (0.5-1.5x) + recommendations"
