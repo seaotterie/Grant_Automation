@@ -1,0 +1,43 @@
+# Foundation Grantee Bundling Tool Configuration
+
+[tool]
+name = "Foundation Grantee Bundling Tool"
+version = "1.0.0"
+description = "Multi-foundation grant aggregation and co-funding analysis ($0.00 per analysis)"
+purpose = "Aggregate grants across multiple foundations to identify co-funded organizations and peer funders"
+tool_number = 26
+replaces_processors = []  # New capability, no legacy processors replaced
+
+[tool.factors]
+codebase_tracked = true
+dependencies_explicit = true
+config_in_environment = true
+tools_as_structured_outputs = true
+stateless_execution = true
+small_focused_agents = true
+
+[tool.output_structure]
+primary_output = "GranteeBundlingOutput"
+cost_per_analysis = 0.00  # No AI calls, pure data aggregation
+
+[tool.dependencies]
+internal_tools = ["schedule-i-grant-analyzer-tool", "ein-validator-tool"]
+external_packages = ["networkx>=3.1", "python-louvain>=0.16"]
+
+[tool.capabilities]
+multi_foundation_analysis = true
+recipient_bundling = true
+cofunding_detection = true
+peer_funder_identification = true
+funder_similarity_graph = true
+
+[framework]
+compliance_level = "Full"
+factor_4_implementation = "Structured GranteeBundlingOutput with bundled grantees and co-funding patterns"
+factor_6_implementation = "Stateless - no persistence between runs, processes multiple foundations independently"
+factor_10_implementation = "Single responsibility - multi-foundation grant aggregation and co-funding analysis only"
+
+[performance]
+target_processing_time = "30 seconds for 10 foundations"
+target_accuracy = "95% recipient matching accuracy"
+expected_results = "50+ bundled grantees from typical dataset"

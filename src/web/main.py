@@ -455,6 +455,10 @@ app.include_router(opportunities_router)
 from src.web.routers.admin import router as admin_router
 app.include_router(admin_router)
 
+# Include Foundation Network Intelligence routes (Phase 9 - Foundation Network Intelligence)
+from src.web.routers.foundation_network import router as foundation_network_router
+app.include_router(foundation_network_router)
+
 # Include Enhanced Scraping routes
 # Include enhanced scraping router only if available
 if enhanced_scraping_available and enhanced_scraping_router:
