@@ -1,0 +1,170 @@
+
+
++==============================================================================+
+|                                                                              |
+|            Foundation Network Intelligence - Phase 3 Demonstration           |
+|                                                                              |
++==============================================================================+
+
+================================================================================
+  PHASE 3 DEMO: Foundation Network Graph Construction
+================================================================================
+
+Creating demo data (5 foundations, 10 grantees)...
+
+Building foundation-grantee bipartite network graph...
+
+[SUCCESS] Graph constructed successfully!
+   - Nodes: 15
+   - Edges: 29
+   - Foundations: 5
+   - Grantees: 10
+   - Total funding: $23,300,000
+   - Average grant: $803,448
+   - Network density: 0.276
+
+================================================================================
+  CO-FUNDER DETECTION
+================================================================================
+
+Query: Who funds Teach For America?
+Grantee EIN: 92-2222222
+
+Found 5 co-funders:
+
+1. 81-1234567
+   EIN: 81-1234567
+   Total funding: $1,500,000
+   Grants: 1
+   Years: [2023]
+   Avg grant: $1,500,000
+
+2. 82-2345678
+   EIN: 82-2345678
+   Total funding: $1,200,000
+   Grants: 1
+   Years: [2023]
+   Avg grant: $1,200,000
+
+3. 83-3456789
+   EIN: 83-3456789
+   Total funding: $1,000,000
+   Grants: 1
+   Years: [2022]
+   Avg grant: $1,000,000
+
+4. 84-4567890
+   EIN: 84-4567890
+   Total funding: $800,000
+   Grants: 1
+   Years: [2021]
+   Avg grant: $800,000
+
+5. 85-5678901
+   EIN: 85-5678901
+   Total funding: $700,000
+   Grants: 1
+   Years: [2020]
+   Avg grant: $700,000
+
+
+================================================================================
+  SHARED GRANTEE ANALYSIS
+================================================================================
+
+Query: Which organizations do these two foundations both fund?
+Foundation 1: Gates Foundation (Education) - 81-1234567
+Foundation 2: Chan Zuckerberg Initiative - 82-2345678
+
+Found 3 shared grantees:
+
+1. Khan Academy
+   EIN: 94-4444444
+   Gates funding: $1,500,000
+   CZI funding: $1,200,000
+   Total co-funding: $2,700,000
+
+2. Teach For America
+   EIN: 92-2222222
+   Gates funding: $1,500,000
+   CZI funding: $1,200,000
+   Total co-funding: $2,700,000
+
+3. National Urban League
+   EIN: 91-1111111
+   Gates funding: $800,000
+   CZI funding: $600,000
+   Total co-funding: $1,400,000
+
+
+================================================================================
+  FOUNDATION PORTFOLIO ANALYSIS
+================================================================================
+
+Query: What is the complete grantee portfolio for Gates Foundation?
+Foundation EIN: 81-1234567
+
+Portfolio Overview:
+  Total grantees: 6
+  Total funding: $6,400,000
+  Total grants: 6
+  Average grant size: $1,066,667
+
+Grantees (sorted by funding):
+
+1. Teach For America
+   Total funding: $1,500,000
+   Grants: 1
+   Years: [2023]
+
+2. Khan Academy
+   Total funding: $1,500,000
+   Grants: 1
+   Years: [2023]
+
+3. KIPP (Knowledge Is Power Program)
+   Total funding: $1,000,000
+   Grants: 1
+   Years: [2023]
+
+4. College Board
+   Total funding: $900,000
+   Grants: 1
+   Years: [2023]
+
+5. National Urban League
+   Total funding: $800,000
+   Grants: 1
+   Years: [2023]
+
+
+================================================================================
+  STRATEGIC PATHFINDING
+================================================================================
+
+Query: How can National Urban League connect to Walton Family Foundation?
+Source: National Urban League (91-1111111)
+Target: Walton Family Foundation (83-3456789)
+
+Found 5 pathway(s):
+
+Pathway 1:
+  Length: 3 hops
+  Strength: $1,010,000
+  Route: National Urban League -> 81-1234567 -> Teach For America -> 83-3456789
+
+  Description:
+Traceback (most recent call last):
+  File "C:\Users\cotte\Documents\Home\03_Dad\_Projects\2025\ClaudeCode\Grant_Automation\examples\foundation_network_demo.py", line 492, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\cotte\Documents\Home\03_Dad\_Projects\2025\ClaudeCode\Grant_Automation\examples\foundation_network_demo.py", line 468, in main
+    demo_pathfinding(graph)
+    ~~~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\cotte\Documents\Home\03_Dad\_Projects\2025\ClaudeCode\Grant_Automation\examples\foundation_network_demo.py", line 356, in demo_pathfinding
+    print(f"  {path.path_description}\n")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\cotte\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 52: character maps to <undefined>

@@ -1,0 +1,395 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.0, pytest-8.4.1, pluggy-1.6.0 -- C:\Users\cotte\Documents\Home\03_Dad\_Projects\2025\ClaudeCode\Grant_Automation\grant-research-env\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\cotte\Documents\Home\03_Dad\_Projects\2025\ClaudeCode\Grant_Automation
+configfile: pytest.ini
+plugins: anyio-4.10.0, cov-6.2.1
+collecting ... collected 119 items
+
+tests/unit/test_api_endpoints.py::TestHealthEndpoints::test_health_endpoint_success SKIPPED [  0%]
+tests/unit/test_api_endpoints.py::TestHealthEndpoints::test_health_endpoint_response_time SKIPPED [  1%]
+tests/unit/test_api_endpoints.py::TestHealthEndpoints::test_system_status_endpoint SKIPPED [  2%]
+tests/unit/test_api_endpoints.py::TestProfileEndpoints::test_create_profile_success PASSED [  3%]
+tests/unit/test_api_endpoints.py::TestProfileEndpoints::test_create_profile_validation FAILED [  4%]
+tests/unit/test_api_endpoints.py::TestProfileEndpoints::test_get_profile_success FAILED [  5%]
+tests/unit/test_api_endpoints.py::TestProfileEndpoints::test_get_nonexistent_profile FAILED [  5%]
+tests/unit/test_api_endpoints.py::TestProfileEndpoints::test_update_profile PASSED [  6%]
+tests/unit/test_api_endpoints.py::TestProfileEndpoints::test_delete_profile PASSED [  7%]
+tests/unit/test_api_endpoints.py::TestProfileEndpoints::test_list_profiles FAILED [  8%]
+tests/unit/test_api_endpoints.py::TestDiscoveryEndpoints::test_entity_discovery_endpoint PASSED [  9%]
+tests/unit/test_api_endpoints.py::TestDiscoveryEndpoints::test_cache_stats_endpoint PASSED [ 10%]
+tests/unit/test_api_endpoints.py::TestDiscoveryEndpoints::test_discovery_validation FAILED [ 10%]
+tests/unit/test_api_endpoints.py::TestAnalyticsEndpoints::test_profile_analytics_endpoint PASSED [ 11%]
+tests/unit/test_api_endpoints.py::TestAnalyticsEndpoints::test_profile_metrics_endpoint PASSED [ 12%]
+tests/unit/test_api_endpoints.py::TestAIEndpoints::test_ai_lite_analysis_endpoint PASSED [ 13%]
+tests/unit/test_api_endpoints.py::TestAIEndpoints::test_ai_heavy_research_endpoint PASSED [ 14%]
+tests/unit/test_api_endpoints.py::TestExportEndpoints::test_export_opportunities_endpoint PASSED [ 15%]
+tests/unit/test_api_endpoints.py::TestExportEndpoints::test_export_format_validation PASSED [ 15%]
+tests/unit/test_api_endpoints.py::TestErrorHandling::test_404_error_handling PASSED [ 16%]
+tests/unit/test_api_endpoints.py::TestErrorHandling::test_malformed_json_handling PASSED [ 17%]
+tests/unit/test_api_endpoints.py::TestErrorHandling::test_missing_content_type PASSED [ 18%]
+tests/unit/test_api_endpoints.py::TestCORS::test_cors_preflight PASSED   [ 19%]
+tests/unit/test_api_endpoints.py::TestEndpointIntegration::test_complete_profile_workflow SKIPPED [ 20%]
+tests/unit/test_dashboard_router.py::TestDashboardRouter::test_dashboard_overview_success PASSED [ 21%]
+tests/unit/test_dashboard_router.py::TestDashboardRouter::test_dashboard_overview_error_handling PASSED [ 21%]
+tests/unit/test_dashboard_router.py::TestDashboardRouter::test_system_status_success PASSED [ 22%]
+tests/unit/test_dashboard_router.py::TestDashboardRouter::test_system_status_error_handling PASSED [ 23%]
+tests/unit/test_dashboard_router.py::TestDashboardRouter::test_system_health_success PASSED [ 24%]
+tests/unit/test_dashboard_router.py::TestDashboardRouter::test_system_metrics_success PASSED [ 25%]
+tests/unit/test_dashboard_router.py::TestDashboardRouter::test_system_processors_success PASSED [ 26%]
+tests/unit/test_data_models.py::TestFundingSourceType::test_all_values_present PASSED [ 26%]
+tests/unit/test_data_models.py::TestOpportunityStatus::test_status_values PASSED [ 27%]
+tests/unit/test_data_models.py::TestBaseOpportunity::test_required_fields PASSED [ 28%]
+tests/unit/test_data_models.py::TestBaseOpportunity::test_default_values PASSED [ 29%]
+tests/unit/test_data_models.py::TestBaseOpportunity::test_days_until_deadline_calculation PASSED [ 30%]
+tests/unit/test_data_models.py::TestBaseOpportunity::test_eligibility_check PASSED [ 31%]
+tests/unit/test_data_models.py::TestBaseOpportunity::test_match_reason_management PASSED [ 31%]
+tests/unit/test_data_models.py::TestBaseOpportunity::test_score_update PASSED [ 32%]
+tests/unit/test_data_models.py::TestGovernmentOpportunity::test_government_opportunity_creation PASSED [ 33%]
+tests/unit/test_data_models.py::TestGovernmentOpportunity::test_government_specific_fields PASSED [ 34%]
+tests/unit/test_data_models.py::TestFoundationOpportunity::test_foundation_opportunity_creation PASSED [ 35%]
+tests/unit/test_data_models.py::TestFoundationOpportunity::test_corporate_foundation_source_type PASSED [ 36%]
+tests/unit/test_data_models.py::TestFoundationOpportunity::test_community_foundation_source_type PASSED [ 36%]
+tests/unit/test_data_models.py::TestCorporateOpportunity::test_corporate_opportunity_creation PASSED [ 37%]
+tests/unit/test_data_models.py::TestCorporateOpportunity::test_sponsorship_source_type PASSED [ 38%]
+tests/unit/test_data_models.py::TestOpportunityCollection::test_collection_creation PASSED [ 39%]
+tests/unit/test_data_models.py::TestOpportunityCollection::test_add_opportunities PASSED [ 40%]
+tests/unit/test_data_models.py::TestOpportunityCollection::test_get_all_opportunities PASSED [ 41%]
+tests/unit/test_data_models.py::TestOpportunityCollection::test_get_top_opportunities PASSED [ 42%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_basic_scoring_functionality FAILED [ 42%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_perfect_match_scoring FAILED [ 43%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_poor_match_scoring FAILED [ 44%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_missing_data_handling FAILED [ 45%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_ntee_code_matching FAILED [ 46%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_geographic_scoring FAILED [ 47%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_revenue_compatibility FAILED [ 47%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_confidence_calculation FAILED [ 48%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_boost_factors FAILED [ 49%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_edge_case_handling FAILED [ 50%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_scoring_performance FAILED [ 51%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_scorer_initialization PASSED [ 52%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_concurrent_scoring FAILED [ 52%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_score_consistency FAILED [ 53%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_dimension_score_validation PASSED [ 54%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_error_handling FAILED [ 55%]
+tests/unit/test_discovery_scorer.py::TestDiscoveryScorerIntegration::test_scorer_with_real_data_structure FAILED [ 56%]
+tests/unit/test_entity_cache.py::TestEntityCacheManager::test_cache_manager_initialization PASSED [ 57%]
+tests/unit/test_entity_cache.py::TestEntityCacheManager::test_store_and_retrieve_entity_data PASSED [ 57%]
+tests/unit/test_entity_cache.py::TestEntityCacheManager::test_cache_miss_handling PASSED [ 58%]
+tests/unit/test_entity_cache.py::TestEntityCacheManager::test_cache_overwrite PASSED [ 59%]
+tests/unit/test_entity_cache.py::TestEntityCacheManager::test_cache_stats FAILED [ 60%]
+tests/unit/test_entity_cache.py::TestEntityCacheManager::test_cache_performance_with_large_dataset PASSED [ 61%]
+tests/unit/test_entity_cache.py::TestEntityCacheManager::test_entity_data_types PASSED [ 62%]
+tests/unit/test_entity_cache.py::TestEntityCacheManager::test_concurrent_cache_operations PASSED [ 63%]
+tests/unit/test_entity_cache.py::TestEntityCacheManager::test_cache_memory_efficiency PASSED [ 63%]
+tests/unit/test_entity_cache.py::TestEntityCacheManager::test_cache_error_handling PASSED [ 64%]
+tests/unit/test_entity_cache.py::TestEntityCacheIntegration::test_cache_manager_singleton PASSED [ 65%]
+tests/unit/test_entity_cache.py::TestEntityCacheIntegration::test_cache_hit_rate_targets PASSED [ 66%]
+tests/unit/test_entity_cache.py::TestEntityCacheIntegration::test_cache_integration_with_scoring PASSED [ 67%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheManager::test_cache_manager_initialization PASSED [ 68%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheManager::test_get_cache_stats_empty FAILED [ 68%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheManager::test_get_entity_data_miss PASSED [ 69%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheManager::test_set_and_get_entity_data_hit PASSED [ 70%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheManager::test_cache_stats_with_data FAILED [ 71%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheManager::test_cache_size_calculation PASSED [ 72%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheManager::test_entity_types_enum PASSED [ 73%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheManager::test_data_source_types PASSED [ 73%]
+tests/unit/test_entity_cache_manager.py::TestEntityCachePerformance::test_cache_hit_rate_simulation PASSED [ 74%]
+tests/unit/test_entity_cache_manager.py::TestEntityCachePerformance::test_cache_performance_under_load FAILED [ 75%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheIntegration::test_nonprofit_entity_caching PASSED [ 76%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheIntegration::test_government_opportunity_caching PASSED [ 77%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheIntegration::test_foundation_entity_caching PASSED [ 78%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheErrorHandling::test_none_entity_id PASSED [ 78%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheErrorHandling::test_empty_entity_id PASSED [ 79%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheErrorHandling::test_none_entity_data PASSED [ 80%]
+tests/unit/test_entity_cache_manager.py::TestEntityCacheErrorHandling::test_concurrent_cache_modifications FAILED [ 81%]
+tests/unit/test_http_client.py::TestHTTPConfig::test_default_config PASSED [ 82%]
+tests/unit/test_http_client.py::TestHTTPConfig::test_custom_config PASSED [ 83%]
+tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_client_initialization PASSED [ 84%]
+tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_custom_config_initialization PASSED [ 84%]
+tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_cache_key_generation PASSED [ 85%]
+tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_rate_limit_configuration PASSED [ 86%]
+tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_get_session FAILED [ 87%]
+tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_successful_get_request FAILED [ 88%]
+tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_http_error_handling FAILED [ 89%]
+tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_rate_limiting FAILED [ 89%]
+tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_cleanup FAILED [ 90%]
+tests/unit/test_http_client.py::TestHTTPError::test_basic_error PASSED   [ 91%]
+tests/unit/test_http_client.py::TestHTTPError::test_error_with_details PASSED [ 92%]
+tests/unit/test_processor_registry.py::TestProcessorAutoRegistry::test_registry_initialization PASSED [ 93%]
+tests/unit/test_processor_registry.py::TestProcessorAutoRegistry::test_discover_and_register_all SKIPPED [ 94%]
+tests/unit/test_processor_registry.py::TestProcessorAutoRegistry::test_register_processor_from_file_invalid_module SKIPPED [ 94%]
+tests/unit/test_processor_registry.py::TestProcessorAutoRegistry::test_get_registered_processors PASSED [ 95%]
+tests/unit/test_processor_registry.py::TestRegistryFunctions::test_get_auto_registry_singleton PASSED [ 96%]
+tests/unit/test_processor_registry.py::TestRegistryFunctions::test_register_all_processors PASSED [ 97%]
+tests/unit/test_processor_registry.py::TestProcessorRegistration::test_processor_registration_workflow SKIPPED [ 98%]
+tests/unit/test_processor_registry.py::TestErrorHandling::test_registration_error_handling SKIPPED [ 99%]
+tests/unit/test_processor_registry.py::TestErrorHandling::test_invalid_processor_class_handling PASSED [100%]
+
+================================== FAILURES ===================================
+_____________ TestProfileEndpoints.test_create_profile_validation _____________
+tests\unit\test_api_endpoints.py:133: in test_create_profile_validation
+    assert response.status_code in [400, 422, 500]
+E   AssertionError: assert 200 in [400, 422, 500]
+E    +  where 200 = <Mock name='mock.post()' id='2267686751936'>.status_code
+________________ TestProfileEndpoints.test_get_profile_success ________________
+tests\unit\test_api_endpoints.py:154: in test_get_profile_success
+    assert (profile_data.get("organization_name") == valid_profile_data["organization_name"] or
+E   AssertionError: assert ('Test Organization' == 'Test Education Foundation'
+E     
+E     - Test Education Foundation
+E     + Test Organization or None == 'Test Education Foundation')
+E    +  where None = <built-in method get of dict object at 0x0000020FFCA6B740>('name')
+E    +    where <built-in method get of dict object at 0x0000020FFCA6B740> = {'organization_name': 'Test Organization', 'profile_id': 'test_profile_123'}.get
+______________ TestProfileEndpoints.test_get_nonexistent_profile ______________
+tests\unit\test_api_endpoints.py:162: in test_get_nonexistent_profile
+    assert response.status_code == 404
+E   AssertionError: assert 200 == 404
+E    +  where 200 = <Mock name='mock.get()' id='2267686756976'>.status_code
+___________________ TestProfileEndpoints.test_list_profiles ___________________
+tests\unit\test_api_endpoints.py:207: in test_list_profiles
+    assert "profiles" in data or "results" in data
+E   AssertionError: assert ('profiles' in {'organization_name': 'Test Organization', 'profile_id': 'test_profile_123'} or 'results' in {'organization_name': 'Test Organization', 'profile_id': 'test_profile_123'})
+______________ TestDiscoveryEndpoints.test_discovery_validation _______________
+tests\unit\test_api_endpoints.py:277: in test_discovery_validation
+    assert response.status_code in [400, 404, 422, 500]
+E   AssertionError: assert 200 in [400, 404, 422, 500]
+E    +  where 200 = <Mock name='mock.post()' id='2267687863696'>.status_code
+____________ TestDiscoveryScorer.test_basic_scoring_functionality _____________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______________ TestDiscoveryScorer.test_perfect_match_scoring ________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_________________ TestDiscoveryScorer.test_poor_match_scoring _________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______________ TestDiscoveryScorer.test_missing_data_handling ________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_________________ TestDiscoveryScorer.test_ntee_code_matching _________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_________________ TestDiscoveryScorer.test_geographic_scoring _________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______________ TestDiscoveryScorer.test_revenue_compatibility ________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______________ TestDiscoveryScorer.test_confidence_calculation _______________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+___________________ TestDiscoveryScorer.test_boost_factors ____________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_________________ TestDiscoveryScorer.test_edge_case_handling _________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+________________ TestDiscoveryScorer.test_scoring_performance _________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_________________ TestDiscoveryScorer.test_concurrent_scoring _________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_________________ TestDiscoveryScorer.test_score_consistency __________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+___________________ TestDiscoveryScorer.test_error_handling ___________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_____ TestDiscoveryScorerIntegration.test_scorer_with_real_data_structure _____
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+___________________ TestEntityCacheManager.test_cache_stats ___________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______________ TestEntityCacheManager.test_get_cache_stats_empty ______________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______________ TestEntityCacheManager.test_cache_stats_with_data ______________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+________ TestEntityCachePerformance.test_cache_performance_under_load _________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+______ TestEntityCacheErrorHandling.test_concurrent_cache_modifications _______
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+___________________ TestCatalynxHTTPClient.test_get_session ___________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_____________ TestCatalynxHTTPClient.test_successful_get_request ______________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______________ TestCatalynxHTTPClient.test_http_error_handling _______________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+__________________ TestCatalynxHTTPClient.test_rate_limiting __________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_____________________ TestCatalynxHTTPClient.test_cleanup _____________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+============================== warnings summary ===============================
+src\web\routers\profiles_v2.py:46
+  C:\Users\cotte\Documents\Home\03_Dad\_Projects\2025\ClaudeCode\Grant_Automation\src\web\routers\profiles_v2.py:46: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.11/migration/
+    @validator('min_score_threshold')
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/unit/test_api_endpoints.py::TestProfileEndpoints::test_create_profile_validation
+FAILED tests/unit/test_api_endpoints.py::TestProfileEndpoints::test_get_profile_success
+FAILED tests/unit/test_api_endpoints.py::TestProfileEndpoints::test_get_nonexistent_profile
+FAILED tests/unit/test_api_endpoints.py::TestProfileEndpoints::test_list_profiles
+FAILED tests/unit/test_api_endpoints.py::TestDiscoveryEndpoints::test_discovery_validation
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_basic_scoring_functionality
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_perfect_match_scoring
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_poor_match_scoring
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_missing_data_handling
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_ntee_code_matching
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_geographic_scoring
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_revenue_compatibility
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_confidence_calculation
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_boost_factors
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_edge_case_handling
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_scoring_performance
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_concurrent_scoring
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_score_consistency
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorer::test_error_handling
+FAILED tests/unit/test_discovery_scorer.py::TestDiscoveryScorerIntegration::test_scorer_with_real_data_structure
+FAILED tests/unit/test_entity_cache.py::TestEntityCacheManager::test_cache_stats
+FAILED tests/unit/test_entity_cache_manager.py::TestEntityCacheManager::test_get_cache_stats_empty
+FAILED tests/unit/test_entity_cache_manager.py::TestEntityCacheManager::test_cache_stats_with_data
+FAILED tests/unit/test_entity_cache_manager.py::TestEntityCachePerformance::test_cache_performance_under_load
+FAILED tests/unit/test_entity_cache_manager.py::TestEntityCacheErrorHandling::test_concurrent_cache_modifications
+FAILED tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_get_session
+FAILED tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_successful_get_request
+FAILED tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_http_error_handling
+FAILED tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_rate_limiting
+FAILED tests/unit/test_http_client.py::TestCatalynxHTTPClient::test_cleanup
+============= 30 failed, 81 passed, 8 skipped, 1 warning in 0.66s =============
