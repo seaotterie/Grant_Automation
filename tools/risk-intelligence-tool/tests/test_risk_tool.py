@@ -3,7 +3,7 @@ Tests for Risk Intelligence Tool
 """
 
 import pytest
-from tools.risk_intelligence_tool.app import (
+from app import (
     RiskIntelligenceTool,
     analyze_risk_intelligence,
     RiskIntelligenceInput,

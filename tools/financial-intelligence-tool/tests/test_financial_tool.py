@@ -4,7 +4,7 @@ Tests for Financial Intelligence Tool
 
 import pytest
 import asyncio
-from tools.financial_intelligence_tool.app import (
+from app import (
     FinancialIntelligenceTool,
     analyze_financial_intelligence,
     FinancialIntelligenceInput,

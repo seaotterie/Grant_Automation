@@ -3,7 +3,7 @@ Tests for Network Intelligence Tool
 """
 
 import pytest
-from tools.network_intelligence_tool.app import (
+from app import (
     NetworkIntelligenceTool,
     analyze_network_intelligence,
     NetworkIntelligenceInput,
