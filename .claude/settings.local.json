@@ -6,7 +6,10 @@
       "Bash(then mv tests/deprecated_processor_tests tests/archive/pre_transformation/)",
       "Bash(else echo \"Directory doesn''t exist\")",
       "Bash(fi)",
-      "Bash(pytest:*)"
+      "Bash(pytest:*)",
+      "Bash(git mv:*)",
+      "Bash(git rm:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": [],
