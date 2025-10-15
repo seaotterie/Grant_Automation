@@ -54,7 +54,7 @@ service_export = "Direct Python function calls (not network services)"
 # Factor 8: Scale out via the process model
 process_model_scaling = true
 concurrent_processing = true
-batch_processing = true
+batch_processing_enabled = true
 batch_sizes = { fast = 10, thorough = 5 }
 
 # Factor 9: Maximize robustness with fast startup and graceful shutdown

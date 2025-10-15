@@ -34,11 +34,11 @@ import sys
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-# Import spider
-from app.scrapy_spiders.organization_profile_spider import OrganizationProfileSpider
+# Import spider (relative imports within tool)
+from .scrapy_spiders.organization_profile_spider import OrganizationProfileSpider
 
-# Import structured output models
-from app.scrapy_pipelines.structured_output_pipeline import OrganizationIntelligence
+# Import structured output models (relative imports within tool)
+from .scrapy_pipelines.structured_output_pipeline import OrganizationIntelligence
 
 logger = logging.getLogger(__name__)
 

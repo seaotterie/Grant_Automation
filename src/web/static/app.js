@@ -391,15 +391,21 @@ const CatalynxUtils = {
             return false;
         }
         
+        // Core required fields (scoring fields are optional for backward compatibility)
         const requiredFields = [
             'opportunity_id', 'organization_name', 'funnel_stage', 'source_type',
-            'discovery_source', 'compatibility_score', 'discovered_at'
+            'discovery_source', 'discovered_at'
         ];
-        
+
         const missingFields = requiredFields.filter(field => !opportunity[field]);
         if (missingFields.length > 0) {
             console.warn('Missing required fields in opportunity:', missingFields, opportunity);
             return false;
+        }
+
+        // Warn about missing scores but don't fail validation (for backward compatibility)
+        if (!opportunity.compatibility_score) {
+            console.debug('Opportunity missing compatibility_score (legacy data):', opportunity.organization_name);
         }
         
         // Validate score ranges (0-1)
@@ -587,9 +593,10 @@ function catalynxApp() {
     return {
         // Application state - New workflow-based navigation
         activeTab: 'status', // Legacy compatibility
-        activeStage: 'welcome', // New workflow stage system - start with welcome
+        activeStage: 'profiler', // New workflow stage system - start with profiler for immediate testing access
         systemStatus: 'healthy',
         apiStatus: 'healthy',
+        wsConnectionStatus: 'disconnected', // WebSocket connection status (disconnected, connecting, connected)
         currentTime: new Date().toLocaleTimeString(),
         
         // Data source configuration
@@ -2806,13 +2813,55 @@ function catalynxApp() {
                 }
             });
             
-            // Watch for application status filter changes  
+            // Watch for application status filter changes
             this.$watch('applicationStatusFilter', () => {
                 if (this.selectedDiscoveryProfile && this.activeStage === 'discover') {
                     // Data loaded via discovery process
                 }
             });
-            
+
+            // Listen for run-tool-25 event from profile modal
+            window.addEventListener('run-tool-25', async (event) => {
+                const ein = event.detail?.ein;
+                if (!ein) {
+                    this.showNotification('No EIN provided for web scraping', 'error');
+                    return;
+                }
+
+                try {
+                    this.showNotification(`Starting web scraping for EIN ${ein}...`, 'info');
+
+                    const response = await fetch('/api/v2/profiles/build', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ein: ein,
+                            enable_tool25: true,
+                            enable_tool2: false
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        this.showNotification(`Web scraping completed for ${result.profile?.name || ein}`, 'success');
+                        // Refresh the profile data to show enhanced data
+                        if (this.selectedProfile && this.selectedProfile.ein === ein) {
+                            await this.loadProfileDetails(this.selectedProfile.profile_id);
+                        }
+                    } else {
+                        throw new Error('Web scraping failed');
+                    }
+                } catch (error) {
+                    console.error('Error running web scraping:', error);
+                    this.showNotification(`Web scraping failed: ${error.message}`, 'error');
+                }
+            });
+
             // Initialize theme
             this.applyTheme();
             
@@ -4135,21 +4184,16 @@ function catalynxApp() {
                     this.selectedExamineProfile = null;
                 }
                 
-                // Remove the profile from the local array (frontend deletion)
-                this.profiles = this.profiles.filter(profile => profile.profile_id !== this.pendingDeleteProfileId);
-                this.filteredProfiles = this.filteredProfiles.filter(profile => profile.profile_id !== this.pendingDeleteProfileId);
-                
-                // For now, simulate successful deletion to fix UI issue
-                // TODO: Fix backend authentication for actual deletion
-                const response = { ok: true };
-                
-                // Uncomment when backend is fixed:
-                // const response = await fetch(`/api/profiles/simple/${this.pendingDeleteProfileId}`, {
-                //     method: 'DELETE'
-                // });
+                // Call backend DELETE API first
+                const response = await fetch(`/api/profiles/${this.pendingDeleteProfileId}`, {
+                    method: 'DELETE'
+                });
 
                 if (response.ok) {
-                    // Profile already removed from arrays above, just show success
+                    // Remove the profile from the local arrays after successful backend deletion
+                    this.profiles = this.profiles.filter(profile => profile.profile_id !== this.pendingDeleteProfileId);
+                    this.filteredProfiles = this.filteredProfiles.filter(profile => profile.profile_id !== this.pendingDeleteProfileId);
+
                     this.showNotification('Profile deleted successfully!', 'success');
                 } else {
                     throw new Error('Failed to delete profile');

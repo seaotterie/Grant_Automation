@@ -77,6 +77,7 @@ from src.web.routers.workflows import router as workflows_router
 from src.web.routers.profiles import router as profiles_router  # Phase 9: Fix duplicate fetch-ein endpoint
 from src.web.routers.profiles_v2 import router as profiles_v2_router
 from src.web.routers.discovery_v2 import router as discovery_v2_router
+from src.web.routers.discovery_legacy import router as discovery_legacy_router  # Phase 9: Backward-compatible discovery endpoints
 # Optional enhanced scraping router (requires scrapy)
 try:
     from src.web.routers.enhanced_scraping import router as enhanced_scraping_router
@@ -446,6 +447,9 @@ app.include_router(profiles_v2_router)
 
 # Include V2 discovery routes (Phase 9 - Week 2)
 app.include_router(discovery_v2_router)
+
+# Include legacy discovery routes for backward compatibility (Phase 9 - GUI Testing)
+app.include_router(discovery_legacy_router)
 
 # Include opportunities routes (Phase 9 - SCREENING stage)
 from src.web.routers.opportunities import router as opportunities_router

@@ -297,9 +297,9 @@ class DatabaseManager:
                         target_populations, ntee_codes, government_criteria, geographic_scope,
                         service_areas, funding_preferences, annual_revenue, form_type,
                         foundation_grants, board_members, discovery_count, opportunities_count,
-                        last_discovery_date, performance_metrics, processing_history,
-                        verification_data, web_enhanced_data
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        last_discovery_date, performance_metrics, created_at, updated_at,
+                        processing_history, verification_data, web_enhanced_data
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     profile.id, profile.name, profile.organization_type, profile.ein,
                     profile.website_url, profile.location, profile.mission_statement, profile.status,
@@ -308,8 +308,8 @@ class DatabaseManager:
                     service_areas_json, funding_preferences_json, profile.annual_revenue,
                     profile.form_type, foundation_grants_json, board_members_json,
                     profile.discovery_count, profile.opportunities_count,
-                    profile.last_discovery_date, performance_metrics_json, processing_history_json,
-                    verification_data_json, web_enhanced_data_json
+                    profile.last_discovery_date, performance_metrics_json, profile.created_at, profile.updated_at,
+                    processing_history_json, verification_data_json, web_enhanced_data_json
                 ))
                 
                 conn.commit()

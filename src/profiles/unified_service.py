@@ -130,8 +130,6 @@ class UnifiedProfileService:
                 name=profile.organization_name,
                 organization_type=profile.organization_type,
                 ein=profile.ein,
-                website_url=getattr(profile, 'website_url', None),
-                location=getattr(profile, 'location', None),
                 mission_statement=getattr(profile, 'mission_statement', None),
                 status=profile.status or 'active',
                 keywords=getattr(profile, 'keywords', None),

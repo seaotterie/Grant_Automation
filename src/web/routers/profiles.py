@@ -683,6 +683,102 @@ async def fetch_ein_data(request_data: Dict[str, Any]) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Plan Results Management
+
+@router.get("/{profile_id}/plan-results")
+async def get_plan_results(profile_id: str) -> Dict[str, Any]:
+    """Get plan results for a profile (5-stage workflow planning data)."""
+    try:
+        # Get profile from database
+        profile_dict = db_manager.get_profile_by_id(profile_id)
+        if not profile_dict:
+            raise HTTPException(status_code=404, detail="Profile not found")
+
+        # Extract plan results from profile data
+        # Plan results are stored in the profile's processing_history or a dedicated field
+        plan_results = profile_dict.get('plan_results', {})
+
+        return {
+            "success": True,
+            "plan_results": plan_results,
+            "profile_id": profile_id
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get plan results for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{profile_id}/plan-results")
+async def save_plan_results(
+    profile_id: str,
+    plan_data: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Save plan results for a profile (5-stage workflow planning data)."""
+    try:
+        # Get profile from database
+        profile_dict = db_manager.get_profile_by_id(profile_id)
+        if not profile_dict:
+            raise HTTPException(status_code=404, detail="Profile not found")
+
+        # Update the profile with plan results
+        # For now, store plan_results as a JSON field in the profile
+        # In the future, this could be a separate table
+        updated_profile = Profile(
+            id=profile_id,
+            name=profile_dict.get('name'),
+            organization_type=profile_dict.get('organization_type'),
+            ein=profile_dict.get('ein'),
+            mission_statement=profile_dict.get('mission_statement'),
+            keywords=profile_dict.get('keywords'),
+            focus_areas=profile_dict.get('focus_areas', []),
+            program_areas=profile_dict.get('program_areas', []),
+            target_populations=profile_dict.get('target_populations', []),
+            ntee_codes=profile_dict.get('ntee_codes', []),
+            government_criteria=profile_dict.get('government_criteria', []),
+            geographic_scope=profile_dict.get('geographic_scope', {}),
+            service_areas=profile_dict.get('service_areas', []),
+            funding_preferences=profile_dict.get('funding_preferences', {}),
+            annual_revenue=profile_dict.get('annual_revenue'),
+            form_type=profile_dict.get('form_type'),
+            foundation_grants=profile_dict.get('foundation_grants', []),
+            board_members=profile_dict.get('board_members', []),
+            verification_data=profile_dict.get('verification_data'),
+            web_enhanced_data=profile_dict.get('web_enhanced_data'),
+            discovery_count=profile_dict.get('discovery_count', 0),
+            opportunities_count=profile_dict.get('opportunities_count', 0),
+            last_discovery_date=profile_dict.get('last_discovery_date'),
+            performance_metrics=profile_dict.get('performance_metrics'),
+            created_at=profile_dict.get('created_at'),
+            updated_at=datetime.now(),
+            processing_history=profile_dict.get('processing_history', [])
+        )
+
+        # Note: We need to add plan_results field to the Profile class
+        # For now, store it in a custom field if the database schema supports it
+        # This is a temporary solution - ideally we'd have a dedicated table
+
+        success = db_manager.update_profile(updated_profile)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to save plan results")
+
+        logger.info(f"Saved plan results for profile {profile_id}")
+
+        return {
+            "success": True,
+            "message": "Plan results saved successfully",
+            "profile_id": profile_id
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to save plan results for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Export router will be created separately to avoid making this file too large
 # The following routes will be moved to export router:
 # - /api/profiles/{profile_id}/approach/export-decision

@@ -14,17 +14,14 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-# Use new Python-compatible import wrapper
-from tools.foundation_grantee_bundling_tool import (
+# Import from renamed tool directory
+from tools.foundation_grantee_bundling_tool.app import (
     GranteeBundlingInput,
     GranteeBundlingOutput,
-    FoundationGranteeBundlingTool,
-    CoFundingAnalyzer,
 )
-
-# Database service still needs direct import
-sys.path.insert(0, str(project_root / "tools" / "foundation-grantee-bundling-tool"))
-from app.database_service import FoundationGrantsDatabaseService
+from tools.foundation_grantee_bundling_tool.app.bundling_tool import FoundationGranteeBundlingTool
+from tools.foundation_grantee_bundling_tool.app.cofunding_analyzer import CoFundingAnalyzer
+from tools.foundation_grantee_bundling_tool.app.database_service import FoundationGrantsDatabaseService
 from src.analytics.foundation_network_graph import (
     FoundationNetworkGraph,
     NetworkQueryEngine,

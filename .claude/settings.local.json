@@ -1,15 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(awk:*)",
-      "Bash(if [ -d \"tests/deprecated_processor_tests\" ])",
-      "Bash(then mv tests/deprecated_processor_tests tests/archive/pre_transformation/)",
-      "Bash(else echo \"Directory doesn''t exist\")",
-      "Bash(fi)",
-      "Bash(pytest:*)",
-      "Bash(git mv:*)",
-      "Bash(git rm:*)",
-      "Bash(find:*)"
+      "Bash(curl:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(python:*)",
+      "Bash(taskkill:*)",
+      "Bash(npm run test:*)",
+      "Bash(npx playwright:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": [],

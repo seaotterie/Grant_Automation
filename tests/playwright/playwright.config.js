@@ -158,10 +158,6 @@ module.exports = defineConfig({
   ],
 
   // Web server configuration for local development
-  webServer: {
-    command: 'echo "Catalynx server should be running on http://localhost:8000"',
-    url: 'http://localhost:8000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  // Server must be running externally on http://localhost:8000 before running tests
+  webServer: undefined,
 });

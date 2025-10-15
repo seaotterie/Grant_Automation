@@ -14,11 +14,8 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
 
-# Add tools directory to path
-tools_dir = Path(__file__).parent.parent.parent.parent / "tools" / "web-intelligence-tool"
-sys.path.insert(0, str(tools_dir))
-
-from app.web_intelligence_tool import (
+# Import from renamed tool directory
+from tools.web_intelligence_tool.app.web_intelligence_tool import (
     WebIntelligenceTool,
     WebIntelligenceRequest,
     WebIntelligenceResponse,

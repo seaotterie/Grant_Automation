@@ -593,6 +593,137 @@ async def build_profile_with_orchestration(request: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/enhance")
+async def enhance_profile(request: Dict[str, Any]):
+    """
+    Enhance an existing profile with web intelligence and AI analysis.
+
+    Alias for /build endpoint for backward compatibility with tests.
+
+    Request:
+    {
+        "ein": "123456789",
+        "enhancement_level": "basic"  # or "complete"
+    }
+    """
+    # Map enhancement_level to tool flags
+    enhancement_level = request.get('enhancement_level', 'basic')
+    enable_tool25 = enhancement_level in ['basic', 'complete']
+    enable_tool2 = enhancement_level == 'complete'
+
+    # Call build endpoint with appropriate flags
+    build_request = {
+        'ein': request.get('ein'),
+        'enable_tool25': enable_tool25,
+        'enable_tool2': enable_tool2,
+        'quality_threshold': request.get('quality_threshold', 0.70)
+    }
+
+    return await build_profile_with_orchestration(build_request)
+
+
+@router.post("/orchestrate")
+async def orchestrate_profile_workflow(request: Dict[str, Any]):
+    """
+    Execute orchestrated profile building workflow.
+
+    Alias for /build endpoint for backward compatibility with tests.
+
+    Request:
+    {
+        "ein": "123456789",
+        "workflow": "comprehensive",  # or "basic"
+        "steps": ["fetch_990", "analyze_financial", "assess_risk"]  # optional
+    }
+    """
+    # Map workflow type to tool flags
+    workflow = request.get('workflow', 'basic')
+    enable_tool25 = workflow in ['basic', 'comprehensive']
+    enable_tool2 = workflow == 'comprehensive'
+
+    # Call build endpoint
+    build_request = {
+        'ein': request.get('ein'),
+        'enable_tool25': enable_tool25,
+        'enable_tool2': enable_tool2,
+        'quality_threshold': request.get('quality_threshold', 0.70)
+    }
+
+    return await build_profile_with_orchestration(build_request)
+
+
+async def _get_quality_internal(profile_id: str):
+    """Internal function to get quality assessment - shared by both endpoints."""
+    # Load profile from database
+    profile = profile_service.get_profile(profile_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+
+    # Load associated data from intelligence database
+    bmf_data = None
+    form_990 = None
+
+    if profile.ein:
+        # Query BMF data
+        db_path = get_nonprofit_intelligence_db()
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Get BMF data
+        cursor.execute(
+            "SELECT * FROM bmf_organizations WHERE ein = ?",
+            (profile.ein,)
+        )
+        bmf_row = cursor.fetchone()
+        if bmf_row:
+            bmf_data = dict(bmf_row)
+
+        # Get Form 990 data (most recent)
+        cursor.execute(
+            """
+            SELECT * FROM form_990
+            WHERE ein = ?
+            ORDER BY tax_year DESC
+            LIMIT 1
+            """,
+            (profile.ein,)
+        )
+        form_990_row = cursor.fetchone()
+        if form_990_row:
+            form_990 = dict(form_990_row)
+
+        conn.close()
+
+    # Calculate quality score
+    quality_score = profile_scorer.calculate_profile_quality(
+        bmf_data=bmf_data,
+        form_990=form_990,
+        tool25_data=None,  # Would need to load from profile data
+        tool2_data=None
+    )
+
+    # Calculate completeness
+    completeness = completeness_validator.validate_profile_completeness(
+        bmf_data=bmf_data,
+        form_990=form_990,
+        tool25_data=None,
+        tool2_data=None
+    )
+
+    return {
+        "profile_id": profile_id,
+        "quality_score": {
+            "overall_score": quality_score.overall_score,
+            "rating": quality_score.rating.value,
+            "component_scores": quality_score.component_scores,
+            "missing_fields": quality_score.missing_fields,
+            "recommendations": quality_score.recommendations
+        },
+        "completeness": completeness
+    }
+
+
 @router.get("/{profile_id}/quality")
 async def get_profile_quality(profile_id: str):
     """
@@ -606,79 +737,34 @@ async def get_profile_quality(profile_id: str):
     }
     """
     try:
-        # Load profile from database
-        profile = profile_service.get_profile(profile_id)
-        if not profile:
-            raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
-
-        # Load associated data from intelligence database
-        bmf_data = None
-        form_990 = None
-
-        if profile.ein:
-            # Query BMF data
-            db_path = get_nonprofit_intelligence_db()
-            conn = sqlite3.connect(db_path)
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-
-            # Get BMF data
-            cursor.execute(
-                "SELECT * FROM bmf_organizations WHERE ein = ?",
-                (profile.ein,)
-            )
-            bmf_row = cursor.fetchone()
-            if bmf_row:
-                bmf_data = dict(bmf_row)
-
-            # Get Form 990 data (most recent)
-            cursor.execute(
-                """
-                SELECT * FROM form_990
-                WHERE ein = ?
-                ORDER BY tax_year DESC
-                LIMIT 1
-                """,
-                (profile.ein,)
-            )
-            form_990_row = cursor.fetchone()
-            if form_990_row:
-                form_990 = dict(form_990_row)
-
-            conn.close()
-
-        # Calculate quality score
-        quality_score = profile_scorer.calculate_profile_quality(
-            bmf_data=bmf_data,
-            form_990=form_990,
-            tool25_data=None,  # Would need to load from profile data
-            tool2_data=None
-        )
-
-        # Calculate completeness
-        completeness = completeness_validator.validate_profile_completeness(
-            bmf_data=bmf_data,
-            form_990=form_990,
-            tool25_data=None,
-            tool2_data=None
-        )
-
-        return {
-            "profile_id": profile_id,
-            "quality_score": {
-                "overall_score": quality_score.overall_score,
-                "rating": quality_score.rating.value,
-                "component_scores": quality_score.component_scores,
-                "missing_fields": quality_score.missing_fields,
-                "recommendations": quality_score.recommendations
-            },
-            "completeness": completeness
-        }
-
+        return await _get_quality_internal(profile_id)
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to get quality for profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{profile_id}/quality-score")
+async def get_profile_quality_score(profile_id: str):
+    """
+    Get quality assessment for an existing profile.
+
+    Alias for /quality endpoint for backward compatibility with tests.
+
+    Returns:
+    {
+        "quality_score": {...},
+        "completeness": {...},
+        "recommendations": [...]
+    }
+    """
+    try:
+        return await _get_quality_internal(profile_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get quality-score for profile {profile_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1600,13 +1686,18 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
                 "ein": opp_raw.get('ein'),
                 "location": discovery_data.get('location', {}),
                 "overall_score": opp_raw.get('overall_score', 0.0),
+                "compatibility_score": opp_raw.get('overall_score', 0.0),  # Frontend alias for overall_score
                 "confidence": "high" if opp_raw.get('confidence_level', 0) >= 0.75 else "medium",
                 "category_level": category_level,
                 "dimensional_scores": discovery_data.get('dimensional_scores', {}),
                 "990_data": discovery_data.get('990_data'),
                 "grant_history": discovery_data.get('grant_history'),
                 "current_stage": opp_raw.get('current_stage'),
-                "discovery_date": opp_raw.get('discovery_date')
+                "funnel_stage": opp_raw.get('current_stage'),  # Frontend alias for current_stage
+                "source_type": opp_raw.get('source', 'nonprofit'),  # Map source to source_type with default
+                "discovery_source": opp_raw.get('source', 'nonprofit'),  # Frontend alias for source
+                "discovery_date": opp_raw.get('discovery_date'),
+                "discovered_at": opp_raw.get('discovery_date')  # Frontend alias for discovery_date
             })
 
         summary = {

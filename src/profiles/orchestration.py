@@ -17,6 +17,7 @@ Key Features:
 import logging
 import time
 import sqlite3
+import os
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -26,6 +27,13 @@ from .models import UnifiedProfile
 from .unified_service import UnifiedProfileService
 
 logger = logging.getLogger(__name__)
+
+
+def get_nonprofit_intelligence_db() -> Path:
+    """Get absolute path to nonprofit intelligence database."""
+    # Get project root (assumes this file is in src/profiles/)
+    project_root = Path(__file__).parent.parent.parent
+    return project_root / "data" / "nonprofit_intelligence.db"
 
 
 @dataclass
@@ -153,8 +161,10 @@ class ProfileEnhancementOrchestrator:
     - Final: Overall quality >= 0.70 recommended for AI analysis
     """
 
-    def __init__(self, db_path: str = "data/nonprofit_intelligence.db"):
+    def __init__(self, db_path: Optional[str] = None):
         """Initialize orchestrator with database connection."""
+        if db_path is None:
+            db_path = str(get_nonprofit_intelligence_db())
         self.db_path = db_path
         self.profile_service = UnifiedProfileService()
         self.quality_gate = QualityGate()
