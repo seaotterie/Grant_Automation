@@ -225,6 +225,7 @@ class UnifiedProfileService:
             for row in rows:
                 profile = {
                     'profile_id': row['id'],
+                    'name': row['name'],  # Backward compatibility with frontend
                     'organization_name': row['name'],
                     'ein': row['ein'],
                     'organization_type': row['organization_type'],
@@ -311,6 +312,18 @@ class UnifiedProfileService:
                 logger.info(f"Profile {profile_id} deleted from database successfully")
             else:
                 logger.warning(f"Profile {profile_id} not found in database for deletion")
+
+                # Debug: List existing profiles to help diagnose the issue
+                try:
+                    import sqlite3
+                    conn = sqlite3.connect("data/catalynx.db")
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT id, name FROM profiles LIMIT 10")
+                    existing_profiles = cursor.fetchall()
+                    logger.warning(f"Existing profiles in database (first 10): {[(p[0], p[1]) for p in existing_profiles]}")
+                    conn.close()
+                except Exception as debug_error:
+                    logger.error(f"Failed to list existing profiles for debugging: {debug_error}")
 
             return success
 

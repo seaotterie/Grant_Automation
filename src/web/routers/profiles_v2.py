@@ -565,6 +565,10 @@ async def build_profile_with_orchestration(request: Dict[str, Any]):
             # Continue anyway - return the data even if save fails
             profile_dict = profile_data.dict() if hasattr(profile_data, 'dict') else {}
 
+        # Add 'name' field for backward compatibility
+        if isinstance(profile_dict, dict) and 'organization_name' in profile_dict:
+            profile_dict['name'] = profile_dict['organization_name']
+
         return {
             "success": True,
             "profile": profile_dict,
@@ -1101,17 +1105,18 @@ async def create_profile(request: Dict[str, Any]):
         if not name:
             raise HTTPException(status_code=400, detail="Organization name is required")
 
+        # Generate unique profile_id
+        import uuid
+        profile_id = f"profile_{uuid.uuid4().hex[:12]}"
+
         # Create UnifiedProfile
         profile = UnifiedProfile(
+            profile_id=profile_id,
+            organization_name=name,
             ein=request.get('ein'),
-            name=name,
-            description=request.get('description'),
             ntee_codes=request.get('ntee_codes', []),
             geographic_scope=request.get('geographic_scope', {}),
-            contact_info=request.get('contact_info', {}),
             mission_statement=request.get('mission_statement'),
-            programs=request.get('programs', []),
-            board_members=request.get('board_members', []),
             created_at=datetime.utcnow().isoformat()
         )
 
@@ -1219,9 +1224,14 @@ async def get_profile_details(profile_id: str):
         if not profile:
             raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
 
+        # Convert to dict and add 'name' field for backward compatibility
+        profile_dict = profile.__dict__ if hasattr(profile, '__dict__') else profile
+        if isinstance(profile_dict, dict) and 'organization_name' in profile_dict:
+            profile_dict['name'] = profile_dict['organization_name']
+
         return {
             "success": True,
-            "profile": profile.__dict__ if hasattr(profile, '__dict__') else profile
+            "profile": profile_dict
         }
 
     except HTTPException:

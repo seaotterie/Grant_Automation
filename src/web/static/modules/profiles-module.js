@@ -71,7 +71,7 @@ function profilesModule() {
                     params.append('search', this.searchQuery);
                 }
 
-                const response = await fetch(`/api/profiles?${params}`);
+                const response = await fetch(`/api/v2/profiles?${params}`);
 
                 if (!response.ok) {
                     throw new Error(`Failed to load profiles: ${response.statusText}`);
@@ -689,6 +689,12 @@ function profilesModule() {
          * Setup event listeners for modals
          */
         setupModalListeners() {
+            // Prevent duplicate listener registration
+            if (this._listenersSetup) {
+                return;
+            }
+            this._listenersSetup = true;
+
             // Listen for create profile event
             window.addEventListener('create-profile', (event) => {
                 this.handleCreateProfile(event);

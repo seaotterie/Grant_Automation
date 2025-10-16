@@ -7,7 +7,9 @@
       "Bash(taskkill:*)",
       "Bash(npm run test:*)",
       "Bash(npx playwright:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(powershell:*)",
+      "Bash(npm i:*)"
     ],
     "deny": [],
     "ask": [],
