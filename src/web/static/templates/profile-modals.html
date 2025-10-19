@@ -549,7 +549,7 @@
                     </div>
 
                     <!-- Enhanced Data Display - With Results -->
-                    <div x-show="!scrapingLoading && (profile.web_enhanced_data || profile.website_url)" class="space-y-4">
+                    <div x-show="!scrapingLoading && profile.web_enhanced_data" class="space-y-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <!-- Website URL -->
                             <div x-show="profile.website_url || profile.web_enhanced_data?.website_url">
@@ -592,7 +592,7 @@
                             </div>
                         </div>
 
-                        <!-- Re-search Button -->
+                        <!-- Re-search Button (after data is found) -->
                         <div class="flex justify-end mt-4">
                             <button @click="$dispatch('run-tool-25', { ein: profile.ein })"
                                     :disabled="scrapingLoading || !profile.ein"
@@ -600,12 +600,34 @@
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                 </svg>
-                                Run Enhanced Search
+                                Re-run Enhanced Search
                             </button>
                         </div>
                     </div>
 
-                    <!-- No Enhanced Data State -->
+                    <!-- Ready to Search State (website exists but no enhanced data yet) -->
+                    <div x-show="!scrapingLoading && !profile.web_enhanced_data && profile.website_url"
+                         class="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 text-center">
+                        <svg class="mx-auto h-12 w-12 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        </svg>
+                        <h3 class="mt-4 text-sm font-medium text-blue-900 dark:text-blue-100">Website Found - Ready to Search</h3>
+                        <p class="mt-2 text-sm text-blue-700 dark:text-blue-300 mb-4">
+                            Click below to run Enhanced Search and gather comprehensive web intelligence from:
+                            <br/>
+                            <a :href="profile.website_url" target="_blank" class="underline hover:text-blue-800" x-text="profile.website_url"></a>
+                        </p>
+                        <button @click="$dispatch('run-tool-25', { ein: profile.ein })"
+                                :disabled="scrapingLoading || !profile.ein"
+                                class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center font-medium">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            Run Enhanced Search
+                        </button>
+                    </div>
+
+                    <!-- No Website State (need to add website first) -->
                     <div x-show="!scrapingLoading && !profile.web_enhanced_data && !profile.website_url"
                          class="text-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
                         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -613,33 +635,12 @@
                         </svg>
                         <h3 class="mt-4 text-sm font-medium text-gray-900 dark:text-white">No Website Information</h3>
                         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            Add a website URL in the Basic Information tab, then run Enhanced Search to gather comprehensive web intelligence.
+                            Add a website URL in the Basic Information tab, then come back here to run Enhanced Search.
                         </p>
                         <button @click="activeTab = 'basic'"
                                 class="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm">
                             Go to Basic Info
                         </button>
-                    </div>
-
-                    <!-- Empty Results Message (website exists but no data scraped) -->
-                    <div x-show="!scrapingLoading && profile.website_url && !profile.web_enhanced_data"
-                         class="mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                        <div class="flex items-start">
-                            <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                            </svg>
-                            <div class="ml-3">
-                                <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">No Enhanced Search Data Yet</h3>
-                                <p class="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
-                                    Click "Run Enhanced Search" to gather comprehensive web intelligence using the scrapy tool. If no data is found, the website may not be accessible or doesn't contain structured information.
-                                </p>
-                                <button @click="$dispatch('run-tool-25', { ein: profile.ein })"
-                                        :disabled="scrapingLoading || !profile.ein"
-                                        class="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                                    Run Enhanced Search
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
