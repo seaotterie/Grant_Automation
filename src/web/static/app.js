@@ -2859,10 +2859,12 @@ function catalynxApp() {
                             if (profileResponse.ok) {
                                 const profileData = await profileResponse.json();
                                 if (profileData.profile) {
-                                    this.selectedProfile = profileData.profile;
-                                    // Dispatch event to update modal
+                                    // Update properties instead of replacing object to maintain modal's reference
+                                    Object.assign(this.selectedProfile, profileData.profile);
+
+                                    // Dispatch event to update modal and stop loading spinner
                                     window.dispatchEvent(new CustomEvent('profile-updated', {
-                                        detail: { profile: profileData.profile }
+                                        detail: { profile: this.selectedProfile }
                                     }));
                                 }
                             }

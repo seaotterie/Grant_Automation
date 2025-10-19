@@ -37,11 +37,14 @@
 
             // Listen for web scraping start
             window.addEventListener('run-tool-25', () => {
+                console.log('[MODAL] Enhanced Search started, setting scrapingLoading = true');
                 this.scrapingLoading = true;
             });
 
             // Listen for profile updates (includes web scraping completion)
-            window.addEventListener('profile-updated', () => {
+            window.addEventListener('profile-updated', (event) => {
+                console.log('[MODAL] Profile updated event received, setting scrapingLoading = false');
+                console.log('[MODAL] Profile web_enhanced_data:', this.profile?.web_enhanced_data ? 'Present' : 'Missing');
                 this.scrapingLoading = false;
             });
         },
