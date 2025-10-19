@@ -257,12 +257,14 @@ async def update_profile(
             name=update_data.get('name', existing_profile_dict.get('name')),
             organization_type=update_data.get('organization_type', existing_profile_dict.get('organization_type')),
             ein=update_data.get('ein', existing_profile_dict.get('ein')),
+            website_url=update_data.get('website_url', existing_profile_dict.get('website_url')),
             mission_statement=update_data.get('mission_statement', existing_profile_dict.get('mission_statement')),
             keywords=update_data.get('keywords', existing_profile_dict.get('keywords')),
             focus_areas=update_data.get('focus_areas', existing_profile_dict.get('focus_areas', [])),
             program_areas=update_data.get('program_areas', existing_profile_dict.get('program_areas', [])),
             target_populations=update_data.get('target_populations', existing_profile_dict.get('target_populations', [])),
             ntee_codes=update_data.get('ntee_codes', existing_profile_dict.get('ntee_codes', [])),
+            ntee_code_990=update_data.get('ntee_code_990', existing_profile_dict.get('ntee_code_990')),
             government_criteria=update_data.get('government_criteria', existing_profile_dict.get('government_criteria', [])),
             geographic_scope=update_data.get('geographic_scope', existing_profile_dict.get('geographic_scope', {})),
             service_areas=update_data.get('service_areas', existing_profile_dict.get('service_areas', [])),
@@ -638,7 +640,7 @@ async def fetch_ein_data(request_data: Dict[str, Any]) -> Dict[str, Any]:
         # Query BMF organizations table
         # Try both normalized (no hyphens) and original format to handle user input flexibility
         cursor.execute("""
-            SELECT ein, name, city, state, ntee_cd, asset_amt, income_amt,
+            SELECT ein, name, city, state, ntee_code, asset_amt, income_amt,
                    classification, deductibility
             FROM bmf_organizations
             WHERE ein = ? OR ein = ?
@@ -653,7 +655,7 @@ async def fetch_ein_data(request_data: Dict[str, Any]) -> Dict[str, Any]:
                 'ein': ein,
                 'city': row['city'] or '',
                 'state': row['state'] or '',
-                'ntee_code': row['ntee_cd'] or '',
+                'ntee_code': row['ntee_code'] or '',
                 'organization_type': row['classification'] or '',
                 'revenue': row['income_amt'] or 0,
                 'assets': row['asset_amt'] or 0,

@@ -40,6 +40,7 @@ class Profile:
     program_areas: Optional[List[str]] = None
     target_populations: Optional[List[str]] = None
     ntee_codes: Optional[List[str]] = None
+    ntee_code_990: Optional[str] = None  # NTEE code from 990 filing
     government_criteria: Optional[List[str]] = None
     geographic_scope: Optional[Dict] = None
     service_areas: Optional[List[str]] = None
@@ -294,17 +295,17 @@ class DatabaseManager:
                     INSERT INTO profiles (
                         id, name, organization_type, ein, website_url, location,
                         mission_statement, status, keywords, focus_areas, program_areas,
-                        target_populations, ntee_codes, government_criteria, geographic_scope,
+                        target_populations, ntee_codes, ntee_code_990, government_criteria, geographic_scope,
                         service_areas, funding_preferences, annual_revenue, form_type,
                         foundation_grants, board_members, discovery_count, opportunities_count,
                         last_discovery_date, performance_metrics, created_at, updated_at,
                         processing_history, verification_data, web_enhanced_data
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     profile.id, profile.name, profile.organization_type, profile.ein,
                     profile.website_url, profile.location, profile.mission_statement, profile.status,
                     profile.keywords, focus_areas_json, program_areas_json, target_populations_json,
-                    ntee_codes_json, government_criteria_json, geographic_scope_json,
+                    ntee_codes_json, profile.ntee_code_990, government_criteria_json, geographic_scope_json,
                     service_areas_json, funding_preferences_json, profile.annual_revenue,
                     profile.form_type, foundation_grants_json, board_members_json,
                     profile.discovery_count, profile.opportunities_count,
@@ -433,7 +434,7 @@ class DatabaseManager:
                     UPDATE profiles SET
                         name = ?, organization_type = ?, ein = ?, website_url = ?, location = ?,
                         mission_statement = ?, status = ?, keywords = ?, focus_areas = ?,
-                        program_areas = ?, target_populations = ?, ntee_codes = ?,
+                        program_areas = ?, target_populations = ?, ntee_codes = ?, ntee_code_990 = ?,
                         government_criteria = ?, geographic_scope = ?, service_areas = ?,
                         funding_preferences = ?, annual_revenue = ?, form_type = ?,
                         foundation_grants = ?, board_members = ?, discovery_count = ?,
@@ -444,8 +445,8 @@ class DatabaseManager:
                 """, (
                     profile.name, profile.organization_type, profile.ein, profile.website_url, profile.location,
                     profile.mission_statement, profile.status, profile.keywords, focus_areas_json,
-                    program_areas_json, target_populations_json, ntee_codes_json, government_criteria_json,
-                    geographic_scope_json, service_areas_json, funding_preferences_json,
+                    program_areas_json, target_populations_json, ntee_codes_json, profile.ntee_code_990,
+                    government_criteria_json, geographic_scope_json, service_areas_json, funding_preferences_json,
                     profile.annual_revenue, profile.form_type, foundation_grants_json,
                     board_members_json, profile.discovery_count, profile.opportunities_count,
                     profile.last_discovery_date, performance_metrics_json, processing_history_json,
@@ -562,6 +563,7 @@ class DatabaseManager:
             program_areas=json.loads(row['program_areas']) if row['program_areas'] else None,
             target_populations=json.loads(row['target_populations']) if row['target_populations'] else None,
             ntee_codes=json.loads(row['ntee_codes']) if row['ntee_codes'] else None,
+            ntee_code_990=row['ntee_code_990'],
             government_criteria=json.loads(row['government_criteria']) if row['government_criteria'] else None,
             geographic_scope=json.loads(row['geographic_scope']) if row['geographic_scope'] else None,
             service_areas=json.loads(row['service_areas']) if row['service_areas'] else None,

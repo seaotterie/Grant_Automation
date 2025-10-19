@@ -335,14 +335,24 @@
                 <!-- TAB 1: BASIC INFORMATION -->
                 <div x-show="activeTab === 'basic'" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Organization Name -->
+                        <!-- Organization Name with Research Button -->
                         <div class="md:col-span-2">
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Organization Name <span class="text-red-500">*</span>
                             </label>
-                            <input type="text"
-                                   x-model="profile.name"
-                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white">
+                            <div class="flex items-center space-x-2">
+                                <input type="text"
+                                       x-model="profile.name"
+                                       class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white">
+                                <button @click="$dispatch('research-profile', { ein: profile.ein })"
+                                        :disabled="!profile.ein"
+                                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+                                    Research
+                                </button>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Research scrubs IRS 990 filing for Website, NTEE Code, Mission, and Keywords
+                            </p>
                         </div>
 
                         <!-- EIN -->
@@ -362,19 +372,12 @@
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Profile's NTEE Code
                             </label>
-                            <div class="flex items-center space-x-2">
-                                <input type="text"
-                                       x-model="profile.ntee_code_990"
-                                       placeholder="Click Research to auto-fill, or enter manually (optional)"
-                                       class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                <button @click="$dispatch('research-profile', { ein: profile.ein })"
-                                        :disabled="!profile.ein"
-                                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
-                                    Research
-                                </button>
-                            </div>
+                            <input type="text"
+                                   x-model="profile.ntee_code_990"
+                                   placeholder="Auto-filled by Research button, or enter manually (optional)"
+                                   class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Auto-populated from 990 filing data
+                                Auto-populated from 990 filing data via Research button
                             </p>
                         </div>
 
@@ -536,9 +539,9 @@
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                         </div>
-                        <h3 class="text-sm font-medium text-green-900 dark:text-green-100">Scraping Website...</h3>
+                        <h3 class="text-sm font-medium text-green-900 dark:text-green-100">Running Enhanced Search...</h3>
                         <p class="mt-2 text-sm text-green-700 dark:text-green-300">
-                            Analyzing organization website and IRS data. This may take 10-60 seconds.
+                            Running comprehensive web intelligence search using scrapy tool. This may take 10-60 seconds.
                         </p>
                     </div>
 
@@ -586,7 +589,7 @@
                             </div>
                         </div>
 
-                        <!-- Re-scrape Button -->
+                        <!-- Re-search Button -->
                         <div class="flex justify-end mt-4">
                             <button @click="$dispatch('run-tool-25', { ein: profile.ein })"
                                     :disabled="scrapingLoading || !profile.ein"
@@ -594,7 +597,7 @@
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                 </svg>
-                                Refresh Web Data
+                                Run Enhanced Search
                             </button>
                         </div>
                     </div>
@@ -607,7 +610,7 @@
                         </svg>
                         <h3 class="mt-4 text-sm font-medium text-gray-900 dark:text-white">No Website Information</h3>
                         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            Add a website URL in the Basic Information tab, then run web scraping to gather intelligence.
+                            Add a website URL in the Basic Information tab, then run Enhanced Search to gather comprehensive web intelligence.
                         </p>
                         <button @click="activeTab = 'basic'"
                                 class="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm">
@@ -623,14 +626,14 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                             </svg>
                             <div class="ml-3">
-                                <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">No Data Scraped Yet</h3>
+                                <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">No Enhanced Search Data Yet</h3>
                                 <p class="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
-                                    Click "Run Web Scraping" to gather intelligence from the organization's website. If no data is found, the website may not be accessible or doesn't contain structured information.
+                                    Click "Run Enhanced Search" to gather comprehensive web intelligence using the scrapy tool. If no data is found, the website may not be accessible or doesn't contain structured information.
                                 </p>
                                 <button @click="$dispatch('run-tool-25', { ein: profile.ein })"
                                         :disabled="scrapingLoading || !profile.ein"
                                         class="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                                    Run Web Scraping
+                                    Run Enhanced Search
                                 </button>
                             </div>
                         </div>
