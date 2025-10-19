@@ -2823,14 +2823,16 @@ function catalynxApp() {
             // Listen for run-tool-25 event from profile modal
             window.addEventListener('run-tool-25', async (event) => {
                 const ein = event.detail?.ein;
+
                 if (!ein) {
-                    this.showNotification('No EIN provided for web scraping', 'error');
+                    this.showNotification('EIN required for Enhanced Search', 'error');
                     return;
                 }
 
                 try {
-                    this.showNotification(`Starting web scraping for EIN ${ein}...`, 'info');
+                    this.showNotification(`Starting Enhanced Search for EIN ${ein}...`, 'info');
 
+                    // Call profile build endpoint which includes Tool 25
                     const response = await fetch('/api/v2/profiles/build', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2847,18 +2849,32 @@ function catalynxApp() {
 
                     const result = await response.json();
 
-                    if (result.success) {
-                        this.showNotification(`Web scraping completed for ${result.profile?.name || ein}`, 'success');
-                        // Refresh the profile data to show enhanced data
+                    if (result.profile) {
+                        this.showNotification(`Enhanced Search completed successfully`, 'success');
+
+                        // Update the current profile with enhanced data
                         if (this.selectedProfile && this.selectedProfile.ein === ein) {
-                            await this.loadProfileDetails(this.selectedProfile.profile_id);
+                            // Reload the profile to get updated web_enhanced_data
+                            const profileResponse = await fetch(`/api/v2/profiles/${result.profile.profile_id}`);
+                            if (profileResponse.ok) {
+                                const profileData = await profileResponse.json();
+                                if (profileData.profile) {
+                                    this.selectedProfile = profileData.profile;
+                                    // Dispatch event to update modal
+                                    window.dispatchEvent(new CustomEvent('profile-updated', {
+                                        detail: { profile: profileData.profile }
+                                    }));
+                                }
+                            }
                         }
                     } else {
-                        throw new Error('Web scraping failed');
+                        throw new Error(result.error || 'Enhanced Search failed');
                     }
                 } catch (error) {
-                    console.error('Error running web scraping:', error);
-                    this.showNotification(`Web scraping failed: ${error.message}`, 'error');
+                    console.error('Error running Enhanced Search:', error);
+                    this.showNotification(`Enhanced Search failed: ${error.message}`, 'error');
+                    // Dispatch event to stop loading spinner
+                    window.dispatchEvent(new CustomEvent('profile-updated'));
                 }
             });
 
