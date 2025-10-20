@@ -495,13 +495,14 @@ class WebIntelligenceTool:
             logger.error(f"Error running spider in subprocess: {e}", exc_info=True)
 
         finally:
-            # Cleanup temp files
+            # Cleanup temp files (but keep logs for debugging)
             try:
                 if result_file.exists():
                     result_file.unlink()
-                log_file = result_file.with_suffix('.log')
-                if log_file.exists():
-                    log_file.unlink()
+                # DON'T delete log files - keep them for debugging
+                # log_file = result_file.with_suffix('.log')
+                # if log_file.exists():
+                #     log_file.unlink()
             except Exception:
                 pass
 
