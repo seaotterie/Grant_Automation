@@ -289,7 +289,14 @@ class DatabaseManager:
                 processing_history_json = json.dumps(profile.processing_history) if profile.processing_history else None
                 # Enhanced data fields
                 verification_data_json = json.dumps(profile.verification_data) if profile.verification_data else None
-                web_enhanced_data_json = json.dumps(profile.web_enhanced_data) if profile.web_enhanced_data else None
+                # Prevent double-encoding: only encode if not already a string
+                if profile.web_enhanced_data:
+                    if isinstance(profile.web_enhanced_data, str):
+                        web_enhanced_data_json = profile.web_enhanced_data  # Already encoded
+                    else:
+                        web_enhanced_data_json = json.dumps(profile.web_enhanced_data)  # Encode dict/object
+                else:
+                    web_enhanced_data_json = None
 
                 cursor.execute("""
                     INSERT INTO profiles (
@@ -424,7 +431,14 @@ class DatabaseManager:
                 processing_history_json = json.dumps(profile.processing_history) if profile.processing_history else None
                 # Enhanced data fields
                 verification_data_json = json.dumps(profile.verification_data) if profile.verification_data else None
-                web_enhanced_data_json = json.dumps(profile.web_enhanced_data) if profile.web_enhanced_data else None
+                # Prevent double-encoding: only encode if not already a string
+                if profile.web_enhanced_data:
+                    if isinstance(profile.web_enhanced_data, str):
+                        web_enhanced_data_json = profile.web_enhanced_data  # Already encoded
+                    else:
+                        web_enhanced_data_json = json.dumps(profile.web_enhanced_data)  # Encode dict/object
+                else:
+                    web_enhanced_data_json = None
 
                 # CRITICAL DEBUG: Log the exact values being passed to SQL
                 logger.critical(f"DATABASE UPDATE DEBUG: profile.website_url='{profile.website_url}', profile.location='{profile.location}', profile.annual_revenue='{profile.annual_revenue}'")
