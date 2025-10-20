@@ -304,13 +304,25 @@ class WebIntelligenceTool:
         # If no max_depth specified, limit first run to depth 2 for faster initial search
         if request.max_depth:
             settings['DEPTH_LIMIT'] = request.max_depth
+            logger.info(f"DEPTH_LIMIT SET FROM REQUEST: {request.max_depth}")
         else:
             settings['DEPTH_LIMIT'] = 2  # Limit initial search to depth 2 (vs default 3)
+            logger.info(f"DEPTH_LIMIT SET TO DEFAULT: 2")
 
         if request.max_pages:
             settings['CLOSESPIDER_PAGECOUNT'] = request.max_pages
+            logger.info(f"CLOSESPIDER_PAGECOUNT SET FROM REQUEST: {request.max_pages}")
+        else:
+            logger.info(f"CLOSESPIDER_PAGECOUNT NOT SET (unlimited)")
 
-        logger.info(f"Spider settings: DEPTH_LIMIT={settings.get('DEPTH_LIMIT')}, CLOSESPIDER_PAGECOUNT={settings.get('CLOSESPIDER_PAGECOUNT', 'unlimited')}")
+        logger.info(
+            f"Spider configuration for {request.organization_name}:\n"
+            f"  max_depth (request): {request.max_depth}\n"
+            f"  max_pages (request): {request.max_pages}\n"
+            f"  DEPTH_LIMIT (settings): {settings.get('DEPTH_LIMIT')}\n"
+            f"  CLOSESPIDER_PAGECOUNT (settings): {settings.get('CLOSESPIDER_PAGECOUNT', 'unlimited')}\n"
+            f"  Recursive discovery will be: {'ENABLED' if settings.get('DEPTH_LIMIT', 0) > 3 else 'DISABLED'} (depth > 3)"
+        )
 
         # Create spider instance WITH pre-resolved URL
         spider = OrganizationProfileSpider(
