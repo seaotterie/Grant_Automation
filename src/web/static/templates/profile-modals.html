@@ -43,8 +43,29 @@
 
             // Listen for profile updates (includes web scraping completion)
             window.addEventListener('profile-updated', (event) => {
-                console.log('[MODAL] Profile updated event received, setting scrapingLoading = false');
-                console.log('[MODAL] Profile web_enhanced_data:', this.profile?.web_enhanced_data ? 'Present' : 'Missing');
+                console.log('[MODAL] Profile updated event received');
+                console.log('[MODAL] Event detail:', event.detail);
+
+                // Update profile with fresh data if provided
+                if (event.detail?.profile) {
+                    console.log('[MODAL] Updating profile with fresh data...');
+                    console.log('[MODAL] Fresh data web_enhanced_data present:', !!event.detail.profile.web_enhanced_data);
+
+                    // Preserve user-edited fields that might not be saved to database yet
+                    const preservedFields = {
+                        website_url: this.profile.website_url || event.detail.profile.website_url,
+                        ntee_code_990: this.profile.ntee_code_990 || event.detail.profile.ntee_code_990
+                    };
+
+                    // Update profile properties to trigger Alpine reactivity
+                    Object.assign(this.profile, event.detail.profile, preservedFields);
+
+                    console.log('[MODAL] Profile updated, web_enhanced_data now:', this.profile?.web_enhanced_data ? 'Present' : 'Missing');
+                    console.log('[MODAL] Preserved fields:', preservedFields);
+                } else {
+                    console.log('[MODAL] No profile data in event, just stopping spinner');
+                }
+
                 this.scrapingLoading = false;
             });
         },
@@ -174,6 +195,14 @@
                 }
 
                 console.log('Cleaned profile data:', profileData);
+                console.log('[MODAL_SAVE] Sending data:', {
+                    profile_id: profileId,
+                    website_url: profileData.website_url,
+                    ntee_code_990: profileData.ntee_code_990,
+                    has_website: !!profileData.website_url,
+                    has_ntee: !!profileData.ntee_code_990,
+                    api_endpoint: `/api/profiles/${profileId}`
+                });
 
                 const response = await fetch(`/api/profiles/${profileId}`, {
                     method: 'PUT',
@@ -252,6 +281,80 @@
             } catch (error) {
                 console.error('File upload error:', error);
                 this.error = 'File upload failed: ' + error.message;
+            }
+        },
+        // Quality Helper Functions (Phase 2 - UI Feedback)
+        getQualityBadgeClass(score) {
+            if (!score || score === 0) return 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+            if (score >= 0.70) return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+            if (score >= 0.40) return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+            if (score >= 0.20) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+            return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+        },
+        getQualityBadgeLabel(score) {
+            if (!score || score === 0) return 'No Data';
+            if (score >= 0.70) return '✅ Excellent';
+            if (score >= 0.40) return '👍 Good';
+            if (score >= 0.20) return '📊 Limited';
+            return '⚠️ Minimal';
+        },
+        getQualityMessage(score) {
+            if (!score || score === 0) return 'No data available';
+            if (score >= 0.70) return 'Comprehensive data found! Profile is highly complete.';
+            if (score >= 0.40) return 'Solid information found. Some fields may need manual entry.';
+            if (score >= 0.20) return 'Basic information found. Website has limited content.';
+            return 'Very little data found. Website may be sparse or under construction.';
+        },
+        // Manual Retry Function (Phase 3 - Adaptive Scraping)
+        async retryEnhancedSearch(ein) {
+            if (!ein) {
+                console.error('[RETRY] No EIN provided for retry');
+                return;
+            }
+
+            console.log('[RETRY] Starting manual retry with expanded parameters for EIN:', ein);
+            this.scrapingLoading = true;
+
+            try {
+                const response = await fetch('/api/v2/profiles/build', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ein: ein,
+                        enable_tool25: true,
+                        tool25_retry: true,  // Signal this is a manual retry
+                        tool25_params: {
+                            max_pages: 30,   // Allow up to 30 pages (vs default ~10)
+                            depth: 6,        // Go VERY deep (vs default 3)
+                            timeout: 240     // 4 minute timeout
+                        },
+                        enable_tool2: false
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('[RETRY] Manual retry completed:', result);
+
+                // Fetch updated profile
+                const profileResponse = await fetch(`/api/v2/profiles/profile_${ein}`);
+                if (profileResponse.ok) {
+                    const profileData = await profileResponse.json();
+                    if (profileData.success && profileData.profile) {
+                        // Trigger profile update event
+                        window.dispatchEvent(new CustomEvent('profile-updated', {
+                            detail: { profile: profileData.profile }
+                        }));
+                    }
+                }
+            } catch (error) {
+                console.error('[RETRY] Manual retry failed:', error);
+                this.error = 'Enhanced Search retry failed: ' + error.message;
+            } finally {
+                this.scrapingLoading = false;
             }
         }
      }"
@@ -525,15 +628,6 @@
 
                 <!-- TAB 4: ENHANCED DATA (Tool 25 - Scrapy) -->
                 <div x-show="activeTab === 'enhanced'" class="space-y-4">
-                    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
-                        <h4 class="text-sm font-semibold text-green-900 dark:text-green-100 mb-2">
-                            Web Intelligence (Tool 25)
-                        </h4>
-                        <p class="text-sm text-green-700 dark:text-green-300 mb-3">
-                            Data automatically scraped from your organization's website and IRS filings using Tool 25.
-                        </p>
-                    </div>
-
                     <!-- Loading State -->
                     <div x-show="scrapingLoading" class="text-center py-12 border-2 border-dashed border-green-300 dark:border-green-600 rounded-lg bg-green-50 dark:bg-green-900/10">
                         <div class="flex justify-center mb-4">
@@ -550,6 +644,41 @@
 
                     <!-- Enhanced Data Display - With Results -->
                     <div x-show="!scrapingLoading && profile.web_enhanced_data" class="space-y-4">
+                        <!-- Scraping Statistics Section -->
+                        <div class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                            <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                Web Intelligence Results
+                            </h4>
+
+                            <!-- Statistics Grid -->
+                            <div class="grid grid-cols-3 gap-4 mb-4">
+                                <div class="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                                    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" x-text="profile.web_enhanced_data?.scraping_metadata?.pages_scraped || 0"></div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Pages Scraped</div>
+                                </div>
+                                <div class="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                                    <div class="text-2xl font-bold text-green-600 dark:text-green-400" x-text="Object.keys(profile.web_enhanced_data || {}).length"></div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Fields Extracted</div>
+                                </div>
+                                <div class="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                                    <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" x-text="((profile.web_enhanced_data?.scraping_metadata?.data_quality_score || 0) * 100).toFixed(0) + '%'"></div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Data Quality</div>
+                                </div>
+                            </div>
+
+                            <!-- Quality Badge & Message -->
+                            <div class="flex items-start space-x-3">
+                                <span :class="getQualityBadgeClass(profile.web_enhanced_data?.scraping_metadata?.data_quality_score)"
+                                      class="px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap"
+                                      x-text="getQualityBadgeLabel(profile.web_enhanced_data?.scraping_metadata?.data_quality_score)"></span>
+                                <p class="text-sm text-gray-700 dark:text-gray-300 flex-1"
+                                   x-text="getQualityMessage(profile.web_enhanced_data?.scraping_metadata?.data_quality_score)"></p>
+                            </div>
+                        </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <!-- Website URL -->
                             <div x-show="profile.website_url || profile.web_enhanced_data?.website_url">
@@ -592,8 +721,20 @@
                             </div>
                         </div>
 
-                        <!-- Re-search Button (after data is found) -->
-                        <div class="flex justify-end mt-4">
+                        <!-- Action Buttons (after data is found) -->
+                        <div class="flex justify-end gap-3 mt-4">
+                            <!-- Deeper Search Button (shown when quality < 40%) -->
+                            <button x-show="(profile.web_enhanced_data?.scraping_metadata?.data_quality_score || 0) < 0.4"
+                                    @click="retryEnhancedSearch(profile.ein)"
+                                    :disabled="scrapingLoading"
+                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                                </svg>
+                                Run Deeper Search
+                            </button>
+
+                            <!-- Re-run Button -->
                             <button @click="$dispatch('run-tool-25', { ein: profile.ein })"
                                     :disabled="scrapingLoading || !profile.ein"
                                     class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center">

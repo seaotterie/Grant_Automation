@@ -242,7 +242,9 @@ async def update_profile(
     """Update an existing organization profile."""
     try:
         # Debug: Log the update data received
-        logger.info(f"Updating profile {profile_id} with data: ntee_codes={update_data.get('ntee_codes')}, government_criteria={update_data.get('government_criteria')}, keywords={update_data.get('keywords')}")
+        logger.info(f"[V1_UPDATE] Received update for profile {profile_id}")
+        logger.info(f"[V1_UPDATE] website_url={update_data.get('website_url')}, ntee_code_990={update_data.get('ntee_code_990')}")
+        logger.info(f"[V1_UPDATE] ntee_codes={update_data.get('ntee_codes')}, government_criteria={update_data.get('government_criteria')}, keywords={update_data.get('keywords')}")
         logger.critical(f"*** DB Manager using database: {db_manager.database_path} ***")
 
         # Get existing profile from database
@@ -283,6 +285,9 @@ async def update_profile(
             updated_at=datetime.now(),
             processing_history=existing_profile_dict.get('processing_history', [])
         )
+
+        # Debug: Log the Profile object being saved
+        logger.info(f"[V1_UPDATE] Created Profile object with website_url={updated_profile.website_url}, ntee_code_990={updated_profile.ntee_code_990}")
 
         # Save updated profile to database
         success = db_manager.update_profile(updated_profile)

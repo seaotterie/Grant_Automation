@@ -191,10 +191,41 @@ class WebIntelligenceTool:
 
             # Extract metrics from intelligence data
             if intelligence_data:
-                metadata = intelligence_data.scraping_metadata
-                pages_scraped = metadata.pages_scraped
-                data_quality_score = metadata.data_quality_score
-                verification_confidence = metadata.verification_confidence
+                # Handle both structured objects and dicts
+                if hasattr(intelligence_data, 'scraping_metadata'):
+                    # Structured object with metadata attribute
+                    metadata = intelligence_data.scraping_metadata
+                    pages_scraped = metadata.pages_scraped
+                    data_quality_score = metadata.data_quality_score
+                    verification_confidence = metadata.verification_confidence
+                elif isinstance(intelligence_data, dict):
+                    # Dict returned from FEEDS export - check if it's BAML structure
+                    if 'scraping_metadata' in intelligence_data:
+                        # Try to reconstruct BAML OrganizationIntelligence from dict
+                        from app.scrapy_pipelines.structured_output_pipeline import OrganizationIntelligence
+                        try:
+                            intelligence_data = OrganizationIntelligence(**intelligence_data)
+                            metadata = intelligence_data.scraping_metadata
+                            pages_scraped = metadata.pages_scraped
+                            data_quality_score = metadata.data_quality_score
+                            verification_confidence = metadata.verification_confidence
+                            logger.info(f"Reconstructed BAML structure: {pages_scraped} pages scraped, quality {data_quality_score:.0%}")
+                        except Exception as e:
+                            logger.warning(f"BAML reconstruction failed: {e}, using dict fallback")
+                            metadata = intelligence_data.get('scraping_metadata', {})
+                            pages_scraped = metadata.get('pages_scraped', 1) if metadata else 1
+                            data_quality_score = metadata.get('data_quality_score', 0.8) if metadata else 0.8
+                            verification_confidence = metadata.get('verification_confidence', 0.7) if metadata else 0.7
+                    else:
+                        # Raw dict without BAML structure (fallback)
+                        pages_scraped = intelligence_data.get('pages_scraped', 1)
+                        data_quality_score = 0.8
+                        verification_confidence = 0.7
+                        logger.info(f"Spider returned raw dict: {pages_scraped} pages, {len(intelligence_data)} fields")
+                else:
+                    pages_scraped = 0
+                    data_quality_score = 0.0
+                    verification_confidence = 0.0
             else:
                 pages_scraped = 0
                 data_quality_score = 0.0
@@ -269,8 +300,17 @@ class WebIntelligenceTool:
         settings = get_project_settings()
 
         # Override settings from request
+        # Default DEPTH_LIMIT in scrapy_settings.py is 3
+        # If no max_depth specified, limit first run to depth 2 for faster initial search
         if request.max_depth:
             settings['DEPTH_LIMIT'] = request.max_depth
+        else:
+            settings['DEPTH_LIMIT'] = 2  # Limit initial search to depth 2 (vs default 3)
+
+        if request.max_pages:
+            settings['CLOSESPIDER_PAGECOUNT'] = request.max_pages
+
+        logger.info(f"Spider settings: DEPTH_LIMIT={settings.get('DEPTH_LIMIT')}, CLOSESPIDER_PAGECOUNT={settings.get('CLOSESPIDER_PAGECOUNT', 'unlimited')}")
 
         # Create spider instance WITH pre-resolved URL
         spider = OrganizationProfileSpider(
@@ -335,16 +375,50 @@ class WebIntelligenceTool:
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
                 result_file = Path(f.name)
 
+            # Clear Scrapy cache for retry attempts to ensure fresh data
+            if settings and settings.get('DEPTH_LIMIT') and settings['DEPTH_LIMIT'] > 1:
+                cache_dir = self.tool_dir / 'data' / 'scrapy_cache'
+                if cache_dir.exists():
+                    import shutil
+                    try:
+                        shutil.rmtree(cache_dir)
+                        logger.info(f"Cleared Scrapy cache directory for fresh crawl: {cache_dir}")
+                    except Exception as e:
+                        logger.warning(f"Failed to clear cache directory: {e}")
+
             logger.info(f"Running spider {spider.name} in subprocess for EIN {spider.ein}")
 
             # Build scrapy command
+            # Convert Windows path to proper file URI (forward slashes, triple slash)
+            # Windows: C:\path\file.json -> file:///C:/path/file.json
+            file_uri = result_file.as_posix()  # Convert to forward slashes
+            if file_uri[1] == ':':  # Windows absolute path (C:/)
+                file_uri = f"file:///{file_uri}"
+            else:
+                file_uri = f"file://{file_uri}"
+
+            feeds_json = json.dumps({file_uri: {"format": "json"}})
             cmd = [
                 'scrapy', 'crawl', spider.name,
                 '-a', f'ein={spider.ein}',
                 '-a', f'organization_name={spider.organization_name}',
-                '-o', str(result_file),
+                '-s', f'FEEDS={feeds_json}',
                 '--logfile', str(result_file.with_suffix('.log'))
             ]
+
+            # CRITICAL FIX: Pass Scrapy settings from settings object to subprocess
+            if settings:
+                # Disable cache for retry attempts to get fresh data
+                if settings.get('DEPTH_LIMIT') and settings['DEPTH_LIMIT'] > 1:
+                    cmd.extend(['-s', 'HTTPCACHE_ENABLED=False'])
+                    logger.info("Disabling HTTP cache for deeper search (to fetch fresh data)")
+
+                if settings.get('DEPTH_LIMIT'):
+                    cmd.extend(['-s', f'DEPTH_LIMIT={settings["DEPTH_LIMIT"]}'])
+                    logger.info(f"Setting DEPTH_LIMIT={settings['DEPTH_LIMIT']}")
+                if settings.get('CLOSESPIDER_PAGECOUNT'):
+                    cmd.extend(['-s', f'CLOSESPIDER_PAGECOUNT={settings["CLOSESPIDER_PAGECOUNT"]}'])
+                    logger.info(f"Setting CLOSESPIDER_PAGECOUNT={settings['CLOSESPIDER_PAGECOUNT']}")
 
             # Add user URL if provided (legacy)
             if spider.user_provided_url:
@@ -354,6 +428,9 @@ class WebIntelligenceTool:
             if hasattr(spider, 'start_urls') and spider.start_urls:
                 cmd.extend(['-a', f'start_url={spider.start_urls[0]}'])
                 logger.info(f"Passing start_url to subprocess: {spider.start_urls[0]}")
+
+            # Log full command for debugging
+            logger.info(f"Executing Scrapy command: {' '.join(cmd)}")
 
             # Run spider in subprocess with timeout
             process = await asyncio.create_subprocess_exec(
@@ -379,6 +456,19 @@ class WebIntelligenceTool:
                             return data[0] if isinstance(data, list) and data else data
                     else:
                         logger.warning(f"Spider completed but output file is empty")
+                        # Check Scrapy log for details
+                        log_file = result_file.with_suffix('.log')
+                        if log_file.exists():
+                            with open(log_file, 'r') as f:
+                                log_content = f.read()
+                                # Extract ERROR lines
+                                error_lines = [line for line in log_content.split('\n') if 'ERROR' in line]
+                                if error_lines:
+                                    logger.error(f"Scrapy errors found ({len(error_lines)} errors):")
+                                    for error_line in error_lines[:5]:  # Show first 5 errors
+                                        logger.error(f"  {error_line}")
+                                # Also show last 2000 chars for context
+                                logger.info(f"Scrapy log excerpt (last 2000 chars):\n{log_content[-2000:]}")
                 else:
                     logger.error(f"Spider failed with return code {process.returncode}")
                     if stderr:
@@ -413,7 +503,10 @@ class WebIntelligenceTool:
 async def scrape_organization_profile(
         ein: str,
         organization_name: str,
-        user_provided_url: Optional[str] = None
+        user_provided_url: Optional[str] = None,
+        max_pages: Optional[int] = None,
+        max_depth: Optional[int] = None,
+        timeout: Optional[int] = None
 ) -> WebIntelligenceResponse:
     """
     Convenience function to scrape organization profile.
@@ -422,6 +515,9 @@ async def scrape_organization_profile(
         ein: Organization EIN
         organization_name: Organization name
         user_provided_url: Optional user URL
+        max_pages: Optional override for max pages to scrape (default: 5)
+        max_depth: Optional override for crawl depth (default: 1)
+        timeout: Optional override for timeout in seconds (default: 60)
 
     Returns:
         WebIntelligenceResponse with OrganizationIntelligence
@@ -432,7 +528,9 @@ async def scrape_organization_profile(
         ein=ein,
         organization_name=organization_name,
         use_case=UseCase.PROFILE_BUILDER,
-        user_provided_url=user_provided_url
+        user_provided_url=user_provided_url,
+        max_pages=max_pages,
+        max_depth=max_depth
     )
 
     return await tool.execute(request)

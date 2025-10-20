@@ -675,6 +675,7 @@ class UnifiedProfile(BaseModel):
     ntee_codes: List[str] = Field(default=[], description="NTEE codes (user-selected target codes for grant searching)")
     ntee_code_990: Optional[str] = Field(default=None, description="NTEE code from 990 filing (organization's official NTEE code)")
     website_url: Optional[str] = Field(default=None, description="Organization website URL")
+    web_enhanced_data: Optional[Dict[str, Any]] = Field(default=None, description="Tool 25 web intelligence data")
     created_at: Optional[str] = Field(default=None, description="ISO timestamp of creation")
     updated_at: Optional[str] = Field(default=None, description="ISO timestamp of last update")
 

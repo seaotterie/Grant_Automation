@@ -511,15 +511,53 @@ async def build_profile_with_orchestration(request: Dict[str, Any]):
         enable_tool2 = request.get('enable_tool2', False)
         quality_threshold = request.get('quality_threshold', 0.70)
 
-        logger.info(f"Building profile for EIN {ein_clean} (Tool25={enable_tool25}, Tool2={enable_tool2})")
+        # Phase 3: Extract retry parameters if provided (manual retry from UI)
+        tool25_params = request.get('tool25_params', {})
+        tool25_retry = request.get('tool25_retry', False)
+        max_pages = tool25_params.get('max_pages')
+        max_depth = tool25_params.get('depth')
+        timeout = tool25_params.get('timeout')
+
+        retry_label = " (MANUAL RETRY)" if tool25_retry else ""
+        logger.info(f"[BUILD_PROFILE] Building profile{retry_label} for EIN {ein_clean} (Tool25={enable_tool25}, Tool2={enable_tool2})")
+        if tool25_params:
+            logger.info(f"[BUILD_PROFILE] Tool 25 custom params: max_pages={max_pages}, depth={max_depth}, timeout={timeout}")
+
+        # Check if profile already exists and has user-edited fields
+        profile_id = f"profile_{ein_clean}"
+        existing_profile = profile_service.get_profile(profile_id)
+        existing_website = existing_profile.website_url if existing_profile and existing_profile.website_url else None
+        existing_ntee = existing_profile.ntee_code_990 if existing_profile and existing_profile.ntee_code_990 else None
+        existing_ntee_codes = existing_profile.ntee_codes if existing_profile and existing_profile.ntee_codes else None
+        existing_gov_criteria = existing_profile.government_criteria if existing_profile and existing_profile.government_criteria else None
+
+        if existing_website:
+            logger.info(f"[BUILD_PROFILE] Using existing profile's website URL: {existing_website}")
+        if existing_ntee:
+            logger.info(f"[BUILD_PROFILE] Using existing profile's NTEE code: {existing_ntee}")
+        if existing_ntee_codes:
+            logger.info(f"[BUILD_PROFILE] Using existing profile's NTEE codes: {existing_ntee_codes}")
+        if existing_gov_criteria:
+            logger.info(f"[BUILD_PROFILE] Using existing profile's government criteria: {existing_gov_criteria}")
 
         # Execute orchestrated profile building workflow
         workflow_result: WorkflowResult = orchestrator.execute_profile_building(
             ein=ein_clean,
             enable_tool25=enable_tool25,
             enable_tool2=enable_tool2,
-            quality_threshold=quality_threshold
+            quality_threshold=quality_threshold,
+            website_url=existing_website,  # Pass existing website URL if available
+            ntee_code_990=existing_ntee,  # Pass existing NTEE code if available
+            ntee_codes=existing_ntee_codes,  # Pass existing NTEE codes list if available
+            government_criteria=existing_gov_criteria,  # Pass existing government criteria if available
+            tool25_max_pages=max_pages,  # Phase 3: Manual retry parameters
+            tool25_max_depth=max_depth,
+            tool25_timeout=timeout
         )
+
+        logger.info(f"[BUILD_PROFILE] Workflow completed: success={workflow_result.success}, steps={len(workflow_result.steps_completed)}")
+        for step in workflow_result.steps_completed:
+            logger.info(f"[BUILD_PROFILE] Step: {step.step_name}, success={step.success}, has_data={bool(step.data)}")
 
         if not workflow_result.success:
             raise HTTPException(
@@ -553,15 +591,19 @@ async def build_profile_with_orchestration(request: Dict[str, Any]):
         # Save UnifiedProfile to database
         try:
             if isinstance(profile_data, UnifiedProfile):
+                logger.info(f"[BUILD_PROFILE] Profile has web_enhanced_data: {bool(profile_data.web_enhanced_data)}")
+                if profile_data.web_enhanced_data:
+                    logger.info(f"[BUILD_PROFILE] web_enhanced_data keys: {list(profile_data.web_enhanced_data.keys())}")
+
                 profile_service.create_profile(profile_data)
-                logger.info(f"Profile saved to database for EIN {ein_clean}")
+                logger.info(f"[BUILD_PROFILE] Profile saved to database for EIN {ein_clean}")
                 # Convert to dict for JSON response
                 profile_dict = profile_data.dict()
             else:
-                logger.error(f"Profile data is not UnifiedProfile instance: {type(profile_data)}")
+                logger.error(f"[BUILD_PROFILE] Profile data is not UnifiedProfile instance: {type(profile_data)}")
                 profile_dict = profile_data if isinstance(profile_data, dict) else {}
         except Exception as save_error:
-            logger.error(f"Failed to save profile to database for EIN {ein_clean}: {save_error}", exc_info=True)
+            logger.error(f"[BUILD_PROFILE] Failed to save profile to database for EIN {ein_clean}: {save_error}", exc_info=True)
             # Continue anyway - return the data even if save fails
             profile_dict = profile_data.dict() if hasattr(profile_data, 'dict') else {}
 

@@ -98,7 +98,8 @@ class UnifiedProfileService:
                     },
                     'recent_activity': [],
                     'tags': [],
-                    'notes': None
+                    'notes': None,
+                    'web_enhanced_data': json.loads(row['web_enhanced_data']) if row['web_enhanced_data'] else None
                 }
 
                 logger.info(f"[GET_PROFILE] Profile data prepared: {list(profile_data.keys())}")

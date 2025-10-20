@@ -104,6 +104,9 @@ class OrganizationProfileSpider(scrapy.Spider):
         # Track pending requests for final yield
         self.requests_pending = 1  # Start with homepage request
 
+        # Track whether we've yielded final results (to prevent double yielding)
+        self.results_yielded = False
+
         logger.info(f"Initialized OrganizationProfileSpider for {organization_name} (EIN: {ein})")
 
     def start_requests(self):
@@ -189,13 +192,15 @@ class OrganizationProfileSpider(scrapy.Spider):
             # All pages processed - calculate quality and yield final data
             self.scraped_data['data_quality_score'] = self._calculate_data_quality()
             logger.info("All pages processed, yielding final scraped data")
+            self.results_yielded = True
             yield self.scraped_data
 
     def parse_target_page(self, response: Response):
         """
         Parse a target page (mission, programs, leadership, etc.).
 
-        Extracts content based on page type.
+        Extracts content based on page type AND discovers more links
+        to enable deeper crawling (respecting DEPTH_LIMIT).
         """
         self.scraped_data['pages_attempted'] += 1
         self.scraped_data['pages_scraped'] += 1
@@ -232,6 +237,36 @@ class OrganizationProfileSpider(scrapy.Spider):
             if financial:
                 self.scraped_data['financial_info'].update(financial)
 
+        # RECURSIVE LINK DISCOVERY: Only enabled for deeper searches (depth > 3)
+        # For shallow searches (depth ≤ 3), we only crawl links from homepage
+        # This prevents queuing too many requests that hit page limits
+        depth_limit = self.settings.getint('DEPTH_LIMIT', 3)
+
+        if depth_limit > 3:
+            # Deeper search - discover and follow links recursively
+            target_links = self._discover_target_pages(response)
+            logger.info(f"Recursive discovery enabled (depth={depth_limit}): Found {len(target_links)} potential links from {page_type} page")
+
+            new_links_queued = 0
+            for link, discovered_page_type in target_links:
+                if link not in self.visited_urls:
+                    # Mark as visited BEFORE yielding to avoid duplicate filtering issues
+                    self.visited_urls.add(link)
+                    self.requests_pending += 1  # Track pending request
+                    new_links_queued += 1
+                    logger.debug(f"Queued {discovered_page_type} page from {page_type}, requests_pending now: {self.requests_pending}")
+                    yield scrapy.Request(
+                        url=link,
+                        callback=self.parse_target_page,
+                        errback=self.handle_error,
+                        meta={'page_type': discovered_page_type},
+                        dont_filter=True  # We're already tracking visited URLs manually
+                    )
+
+            logger.info(f"Queued {new_links_queued} new links from {page_type} page (out of {len(target_links)} discovered)")
+        else:
+            logger.debug(f"Recursive discovery disabled for shallow search (depth={depth_limit} ≤ 3)")
+
         # Decrement pending requests counter
         self.requests_pending -= 1
         logger.info(f"{page_type} page complete, requests_pending now: {self.requests_pending}")
@@ -239,6 +274,7 @@ class OrganizationProfileSpider(scrapy.Spider):
             # All pages processed - calculate quality and yield final data
             self.scraped_data['data_quality_score'] = self._calculate_data_quality()
             logger.info("All pages processed, yielding final scraped data")
+            self.results_yielded = True
             yield self.scraped_data
 
     def _discover_target_pages(self, response: Response) -> List[tuple]:
@@ -481,4 +517,18 @@ class OrganizationProfileSpider(scrapy.Spider):
             # All pages processed (including failures) - calculate quality and yield final data
             self.scraped_data['data_quality_score'] = self._calculate_data_quality()
             logger.info("All pages processed (with errors), yielding final scraped data")
+            self.results_yielded = True
             return self.scraped_data
+
+    def closed(self, reason):
+        """
+        Called when spider closes.
+
+        Logs final statistics for debugging.
+        """
+        logger.info(f"Spider closing - reason: {reason}")
+        logger.info(f"Final stats - Pages scraped: {self.scraped_data['pages_scraped']}, Requests pending: {self.requests_pending}, Results yielded: {self.results_yielded}")
+
+        if not self.results_yielded:
+            logger.error(f"BUG: Spider closed without yielding results! This indicates a counter logic error.")
+            logger.error(f"Visited URLs: {len(self.visited_urls)}, URLs: {list(self.visited_urls)[:10]}")

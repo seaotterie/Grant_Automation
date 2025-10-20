@@ -2848,26 +2848,39 @@ function catalynxApp() {
                     }
 
                     const result = await response.json();
+                    console.log('[ENHANCED_SEARCH] Build response:', result);
 
                     if (result.profile) {
                         this.showNotification(`Enhanced Search completed successfully`, 'success');
+                        console.log('[ENHANCED_SEARCH] result.profile exists:', result.profile.profile_id);
 
-                        // Update the current profile with enhanced data
-                        if (this.selectedProfile && this.selectedProfile.ein === ein) {
-                            // Reload the profile to get updated web_enhanced_data
-                            const profileResponse = await fetch(`/api/v2/profiles/${result.profile.profile_id}`);
-                            if (profileResponse.ok) {
-                                const profileData = await profileResponse.json();
-                                if (profileData.profile) {
-                                    // Update properties instead of replacing object to maintain modal's reference
-                                    Object.assign(this.selectedProfile, profileData.profile);
+                        // Fetch the updated profile data (don't rely on selectedProfile)
+                        console.log('[ENHANCED_SEARCH] Fetching updated profile from API...');
+                        const profileResponse = await fetch(`/api/v2/profiles/${result.profile.profile_id}`);
+                        console.log('[ENHANCED_SEARCH] Profile fetch response ok:', profileResponse.ok, 'status:', profileResponse.status);
 
-                                    // Dispatch event to update modal and stop loading spinner
-                                    window.dispatchEvent(new CustomEvent('profile-updated', {
-                                        detail: { profile: this.selectedProfile }
-                                    }));
-                                }
+                        if (profileResponse.ok) {
+                            const profileData = await profileResponse.json();
+                            console.log('[ENHANCED_SEARCH] Profile data received:', profileData);
+                            console.log('[ENHANCED_SEARCH] profileData.profile exists:', !!profileData.profile);
+                            console.log('[ENHANCED_SEARCH] web_enhanced_data present:', !!profileData.profile?.web_enhanced_data);
+
+                            if (profileData.profile) {
+                                console.log('[ENHANCED_SEARCH] Dispatching profile-updated event with fresh data');
+
+                                // Dispatch event with fresh profile data (modal will update itself)
+                                window.dispatchEvent(new CustomEvent('profile-updated', {
+                                    detail: { profile: profileData.profile }
+                                }));
+
+                                console.log('[ENHANCED_SEARCH] Event dispatched successfully');
+                            } else {
+                                console.error('[ENHANCED_SEARCH] profileData.profile is missing - dispatching event anyway to stop spinner');
+                                window.dispatchEvent(new CustomEvent('profile-updated'));
                             }
+                        } else {
+                            console.error('[ENHANCED_SEARCH] Profile fetch failed - dispatching event anyway to stop spinner');
+                            window.dispatchEvent(new CustomEvent('profile-updated'));
                         }
                     } else {
                         throw new Error(result.error || 'Enhanced Search failed');
@@ -3202,6 +3215,9 @@ function catalynxApp() {
                 this.showNotification('Error', 'Profile ID is missing. Cannot edit profile.', 'error');
                 return;
             }
+
+            // Update selectedProfile so Enhanced Search can find it
+            this.selectedProfile = profile;
 
             // Dispatch event to open the new tabbed modal
             window.dispatchEvent(new CustomEvent('open-edit-profile-modal', {
