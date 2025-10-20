@@ -94,6 +94,7 @@ class ScrapingMetadata(BaseModel):
     """Metadata about scraping process"""
     pages_scraped: int = 0
     pages_attempted: int = 0
+    scraped_urls: List[str] = []  # List of URLs that were successfully scraped
     scraping_duration_seconds: float = 0.0
     scraping_timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
     data_quality_score: float = 0.0
@@ -301,6 +302,7 @@ class StructuredOutputPipeline:
         metadata = ScrapingMetadata(
             pages_scraped=item.get('pages_scraped', 0),
             pages_attempted=item.get('pages_attempted', 0),
+            scraped_urls=item.get('scraped_urls', []),  # List of successfully scraped URLs
             scraping_duration_seconds=item.get('scraping_duration_seconds', 0.0),
             data_quality_score=data_quality_score,
             data_quality=data_quality,

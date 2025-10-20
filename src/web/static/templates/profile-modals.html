@@ -744,6 +744,107 @@
                                 Re-run Enhanced Search
                             </button>
                         </div>
+
+                        <!-- Pages Scraped Section (Collapsible) -->
+                        <div x-data="{pagesOpen: false}" class="mt-6">
+                            <button @click="pagesOpen = !pagesOpen"
+                                    class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                <div class="flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white">
+                                        Pages Scraped (<span x-text="(profile.web_enhanced_data?.scraping_metadata?.scraped_urls || []).length"></span>)
+                                    </span>
+                                </div>
+                                <svg :class="pagesOpen ? 'rotate-180' : ''" class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div x-show="pagesOpen" x-collapse class="mt-2 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+                                <div class="max-h-60 overflow-y-auto p-3 bg-white dark:bg-gray-800">
+                                    <template x-for="(url, index) in (profile.web_enhanced_data?.scraping_metadata?.scraped_urls || [])" :key="index">
+                                        <div class="mb-2 p-2 bg-gray-50 dark:bg-gray-700 rounded flex items-start">
+                                            <span class="inline-flex items-center justify-center w-6 h-6 mr-2 text-xs font-bold text-white bg-blue-500 rounded-full flex-shrink-0" x-text="index + 1"></span>
+                                            <a :href="url" target="_blank"
+                                               class="text-xs text-blue-600 dark:text-blue-400 hover:underline break-all flex-1"
+                                               x-text="url"></a>
+                                        </div>
+                                    </template>
+                                    <div x-show="!(profile.web_enhanced_data?.scraping_metadata?.scraped_urls || []).length"
+                                         class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                                        No URLs tracked
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Extracted Fields Section (Collapsible) -->
+                        <div x-data="{fieldsOpen: false}" class="mt-4">
+                            <button @click="fieldsOpen = !fieldsOpen"
+                                    class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                <div class="flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                                    </svg>
+                                    <span class="text-sm font-medium text-gray-900 dark:text-white">
+                                        Extracted Fields (<span x-text="Object.keys(profile.web_enhanced_data || {}).length"></span>)
+                                    </span>
+                                </div>
+                                <svg :class="fieldsOpen ? 'rotate-180' : ''" class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <div x-show="fieldsOpen" x-collapse class="mt-2 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+                                <div class="max-h-80 overflow-y-auto bg-white dark:bg-gray-800">
+                                    <template x-for="[fieldName, fieldValue] in Object.entries(profile.web_enhanced_data || {})" :key="fieldName">
+                                        <div class="border-b border-gray-200 dark:border-gray-700 last:border-b-0 p-3 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                            <div class="flex items-start justify-between mb-1">
+                                                <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide" x-text="fieldName.replace(/_/g, ' ')"></span>
+                                                <span x-show="fieldValue !== null && fieldValue !== '' && fieldValue !== undefined && !(Array.isArray(fieldValue) && fieldValue.length === 0) && !(typeof fieldValue === 'object' && Object.keys(fieldValue).length === 0)"
+                                                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                    ✓
+                                                </span>
+                                                <span x-show="!(fieldValue !== null && fieldValue !== '' && fieldValue !== undefined && !(Array.isArray(fieldValue) && fieldValue.length === 0) && !(typeof fieldValue === 'object' && Object.keys(fieldValue).length === 0))"
+                                                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                                    ✗
+                                                </span>
+                                            </div>
+                                            <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                <template x-if="typeof fieldValue === 'string'">
+                                                    <div>
+                                                        <span class="font-mono" x-text="fieldValue ? fieldValue.substring(0, 100) + (fieldValue.length > 100 ? '...' : '') : 'No data'"></span>
+                                                        <span x-show="fieldValue && fieldValue.length > 0" class="ml-2 text-gray-500">(<span x-text="fieldValue.length"></span> chars)</span>
+                                                    </div>
+                                                </template>
+                                                <template x-if="Array.isArray(fieldValue)">
+                                                    <div>
+                                                        <span x-text="fieldValue.length + ' items'"></span>
+                                                    </div>
+                                                </template>
+                                                <template x-if="typeof fieldValue === 'object' && !Array.isArray(fieldValue) && fieldValue !== null">
+                                                    <div>
+                                                        <span x-text="Object.keys(fieldValue).length + ' properties'"></span>
+                                                    </div>
+                                                </template>
+                                                <template x-if="typeof fieldValue === 'number'">
+                                                    <div>
+                                                        <span x-text="fieldValue"></span>
+                                                    </div>
+                                                </template>
+                                                <template x-if="typeof fieldValue === 'boolean'">
+                                                    <div>
+                                                        <span x-text="fieldValue ? 'Yes' : 'No'"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Ready to Search State (website exists but no enhanced data yet) -->

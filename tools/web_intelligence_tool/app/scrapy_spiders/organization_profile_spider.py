@@ -95,6 +95,7 @@ class OrganizationProfileSpider(scrapy.Spider):
             'current_initiatives': [],
             'pages_scraped': 0,
             'pages_attempted': 0,
+            'scraped_urls': [],  # List of URLs that were successfully scraped
             'extraction_errors': [],
         }
 
@@ -191,6 +192,8 @@ class OrganizationProfileSpider(scrapy.Spider):
         if self.requests_pending == 0:
             # All pages processed - calculate quality and yield final data
             self.scraped_data['data_quality_score'] = self._calculate_data_quality()
+            # Convert visited_urls set to sorted list for frontend display
+            self.scraped_data['scraped_urls'] = sorted(list(self.visited_urls))
             logger.info("All pages processed, yielding final scraped data")
             self.results_yielded = True
             yield self.scraped_data
@@ -273,6 +276,8 @@ class OrganizationProfileSpider(scrapy.Spider):
         if self.requests_pending == 0:
             # All pages processed - calculate quality and yield final data
             self.scraped_data['data_quality_score'] = self._calculate_data_quality()
+            # Convert visited_urls set to sorted list for frontend display
+            self.scraped_data['scraped_urls'] = sorted(list(self.visited_urls))
             logger.info("All pages processed, yielding final scraped data")
             self.results_yielded = True
             yield self.scraped_data
