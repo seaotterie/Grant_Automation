@@ -513,7 +513,10 @@ class ProfileEnhancementOrchestrator:
                 logger.info(f"Tool 25 data quality below threshold ({quality:.0%}), but saving anyway for user visibility")
 
             # PHASE 3: HYBRID ADAPTIVE SCRAPING - Auto-retry once if quality < 40%
-            if quality < 0.40 and not is_retry and web_data:
+            # BUT: Skip auto-retry if user already requested custom parameters (manual deeper search)
+            user_requested_custom_params = (max_pages and max_pages > 10) or (max_depth and max_depth > 3)
+
+            if quality < 0.40 and not is_retry and web_data and not user_requested_custom_params:
                 logger.info(f"Quality {quality:.0%} below 40% threshold - Auto-retrying with expanded parameters...")
                 logger.info(f"Expanding search: pages unlimited, depth 3 → 5")
 
@@ -529,6 +532,8 @@ class ProfileEnhancementOrchestrator:
                     timeout=180,   # Expanded: 3 minute timeout
                     is_retry=True
                 )
+            elif quality < 0.40 and user_requested_custom_params:
+                logger.info(f"Quality {quality:.0%} is low, but skipping auto-retry because user requested custom parameters (depth={max_depth}, pages={max_pages})")
 
             return StepResult(
                 step_name=step_name,
