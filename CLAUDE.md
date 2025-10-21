@@ -489,17 +489,47 @@ foundation_capacity = intelligence_db.analyze_foundation_grants(ein="541026365")
 ## 12-FACTOR TOOL ARCHITECTURE (PHASE 1-9 TRANSFORMATION)
 
 ### Transformation Overview
-**Goal**: Modernize 43 processors → 19 12-factor compliant tools
-**Timeline**: 9 weeks (Started: 2025-09-30)
-**Status**: Phase 1 Foundation Infrastructure (Week 1) - IN PROGRESS
+**Goal**: Modernize 43 processors → 24 12-factor compliant tools
+**Timeline**: 11 weeks (Started: 2025-09-30)
+**Status**: ✅ **PHASE 8 COMPLETE** - 24 operational tools, Week 9 UI modernization
 
-### Tool Infrastructure (NEW - Phase 1)
+**CRITICAL LOCATION**: All 12-factor tools are in `tools/` directory at project root, NOT in `src/`
+
+```
+Grant_Automation/
+├── tools/                    ← 24 OPERATIONAL 12-FACTOR TOOLS HERE
+│   ├── opportunity_screening_tool/     # Tool 1
+│   ├── deep_intelligence_tool/         # Tool 2
+│   ├── bmf_filter_tool/                # Tool 4
+│   ├── financial_intelligence_tool/    # Tool 10
+│   ├── risk_intelligence_tool/         # Tool 11
+│   ├── network_intelligence_tool/      # Tool 12
+│   ├── schedule_i_grant_analyzer_tool/ # Tool 13
+│   ├── multi_dimensional_scorer_tool/  # Tool 20
+│   ├── report_generator_tool/          # Tool 21
+│   ├── historical_funding_analyzer_tool/ # Tool 22
+│   ├── web_intelligence_tool/          # Tool 25
+│   └── ... (13 more tools)
+├── src/                     ← Service layer, legacy processors, API routers
+│   ├── core/tool_framework/ ← Base classes for tools
+│   ├── workflows/           ← Workflow engine & tool loader
+│   ├── profiles/            ← Service layer (keep)
+│   ├── discovery/           ← Service layer (keep)
+│   ├── scoring/             ← Legacy processors (deprecate Week 3)
+│   ├── analysis/            ← Legacy processors (deprecate Week 3)
+│   └── processors/          ← Legacy processors (deprecated)
+└── docs/                    ← Documentation
+    └── TOOL_ARCHITECTURE_MAPPING.md ← Complete 3-tab workflow mapping
+```
+
+### Tool Infrastructure
 
 #### Tool Registry System (`src/core/tool_registry.py`)
-- Auto-discovery of tools via `12factors.toml` files
+- Auto-discovery of tools via `12factors.toml` files in `tools/` directory
 - Tool metadata management and version tracking
 - Status management (operational, deprecated, in_development)
 - Inventory reporting and tool lifecycle management
+- **Default Directory**: `tools/` (project root)
 
 #### Base Tool Framework (`src/core/tool_framework/`)
 - **BaseTool**: Abstract base class for async tools
@@ -544,30 +574,49 @@ foundation_capacity = intelligence_db.analyze_foundation_grants(ein="541026365")
 - **Depths**: quick ($0.75), standard ($7.50), enhanced ($22.00), complete ($42.00)
 - **Replaces**: 6 processors (ai_heavy_deep, ai_heavy_researcher, 4 tier processors)
 
-### Operational Tools (23 of 23 Complete - 100% Nonprofit Core + Web Intelligence)
-1. ✅ XML 990 Parser Tool - Regular nonprofit 990 parsing
-2. ✅ XML 990-PF Parser Tool - Private foundation 990-PF parsing
-3. ✅ XML 990-EZ Parser Tool - Small nonprofit 990-EZ parsing
-4. ✅ BMF Filter Tool - IRS Business Master File filtering
-5. ✅ Form 990 Analysis Tool - Financial metrics and analytics
-6. ✅ Form 990 ProPublica Tool - ProPublica API enrichment
-7. ✅ Foundation Grant Intelligence Tool - Grant-making analysis
-8. ✅ ProPublica API Enrichment Tool - Additional data enrichment
-9. ✅ XML Schedule Parser Tool - Schedule extraction and parsing
-10. ✅ **Opportunity Screening Tool** - Mass screening with fast/thorough modes (Phase 2)
-11. ✅ **Deep Intelligence Tool** - 4-depth comprehensive analysis (Phase 2)
-12. ✅ **Financial Intelligence Tool** - Comprehensive financial metrics and scoring (Phase 3)
-13. ✅ **Risk Intelligence Tool** - Multi-dimensional risk assessment (Phase 3)
-14. ✅ **Network Intelligence Tool** - Board network and relationship analysis (Phase 3)
-15. ✅ **Schedule I Grant Analyzer Tool** - Foundation grant-making patterns (Phase 3)
-16. ✅ **Data Validator Tool** - Data quality and completeness validation (Phase 3)
-17. ✅ **EIN Validator Tool** - EIN format validation and lookup (Phase 3)
-18. ✅ **Data Export Tool** - Multi-format export capabilities (Phase 3)
-19. ✅ **Grant Package Generator Tool** - Application package assembly (Phase 3)
-20. ✅ **Multi-Dimensional Scorer Tool** - 5-stage dimensional scoring with boost factors (Phase 4)
-21. ✅ **Report Generator Tool** - Professional report templates with DOSSIER structure (Phase 4)
-22. ✅ **Historical Funding Analyzer Tool** - USASpending.gov pattern analysis and trends (Phase 5)
-25. ✅ **Web Intelligence Tool** - Scrapy-powered web scraping with 990 verification (Phase 8)
+### Operational Tools (24 of 24 Complete - 100% Nonprofit Core + Web Intelligence)
+
+**Location**: All tools in `tools/` directory at project root
+
+**Categories**:
+1. **XML Parser Tools** (4 tools) - Foundation data layer
+2. **Core Workflow Tools** (2 tools) - Main pipeline
+3. **Intelligence Analysis Tools** (5 tools) - Deep analysis
+4. **Scoring & Reporting Tools** (2 tools) - Results generation
+5. **Data Collection & Enrichment** (4 tools) - Data sources
+6. **Support & Foundation Tools** (6 tools) - Utilities
+7. **Web Intelligence Tools** (1 tool) - Web scraping
+
+**Complete Tool List**:
+1. ✅ **XML 990 Parser Tool** - Regular nonprofit 990 parsing (`xml-990-parser-tool/`)
+2. ✅ **XML 990-PF Parser Tool** - Private foundation 990-PF parsing (`xml-990pf-parser-tool/`)
+3. ✅ **XML 990-EZ Parser Tool** - Small nonprofit 990-EZ parsing (`xml-990ez-parser-tool/`)
+4. ✅ **XML Schedule Parser Tool** - Schedule extraction and parsing (`xml-schedule-parser-tool/`)
+5. ✅ **BMF Filter Tool** - IRS Business Master File filtering (`bmf_filter_tool/`)
+6. ✅ **Form 990 Analysis Tool** - Financial metrics and analytics (`form990_analysis_tool/`)
+7. ✅ **Form 990 ProPublica Tool** - ProPublica API enrichment (`form990_propublica_tool/`)
+8. ✅ **ProPublica API Enrichment Tool** - Additional data enrichment (`propublica_api_enrichment_tool/`)
+9. ✅ **Foundation Grant Intelligence Tool** - Grant-making analysis (`foundation_grant_intelligence_tool/`)
+10. ✅ **Tool 1: Opportunity Screening Tool** - Mass screening with fast/thorough modes (`opportunity_screening_tool/`)
+11. ✅ **Tool 2: Deep Intelligence Tool** - 2-tier comprehensive analysis (Essentials $2, Premium $8) (`deep_intelligence_tool/`)
+12. ✅ **Tool 10: Financial Intelligence Tool** - Comprehensive financial metrics and scoring (`financial_intelligence_tool/`)
+13. ✅ **Tool 11: Risk Intelligence Tool** - Multi-dimensional risk assessment (`risk_intelligence_tool/`)
+14. ✅ **Tool 12: Network Intelligence Tool** - Board network and relationship analysis (`network_intelligence_tool/`)
+15. ✅ **Tool 13: Schedule I Grant Analyzer Tool** - Foundation grant-making patterns (`schedule_i_grant_analyzer_tool/`)
+16. ✅ **Tool 14: Foundation Grantee Bundling Tool** - Co-funding analysis (`foundation_grantee_bundling_tool/`)
+17. ✅ **Tool 16: Data Validator Tool** - Data quality and completeness validation (`data_validator_tool/`)
+18. ✅ **Tool 17: EIN Validator Tool** - EIN format validation and lookup (`ein_validator_tool/`)
+19. ✅ **Tool 18: Data Export Tool** - Multi-format export capabilities (`data_export_tool/`)
+20. ✅ **Tool 19: Grant Package Generator Tool** - Application package assembly (`grant_package_generator_tool/`)
+21. ✅ **Tool 20: Multi-Dimensional Scorer Tool** - 5-stage dimensional scoring (`multi_dimensional_scorer_tool/`)
+22. ✅ **Tool 21: Report Generator Tool** - Professional report templates with DOSSIER structure (`report_generator_tool/`)
+23. ✅ **Tool 22: Historical Funding Analyzer Tool** - USASpending.gov pattern analysis (`historical_funding_analyzer_tool/`)
+24. ✅ **Tool 25: Web Intelligence Tool** - Scrapy-powered web scraping with 990 verification (`web_intelligence_tool/`)
+
+**Documentation**:
+- **Complete Inventory**: `tools/TOOLS_INVENTORY.md` (24 tools with full descriptions)
+- **Architecture Mapping**: `docs/TOOL_ARCHITECTURE_MAPPING.md` (3-tab workflow, execution order)
+- **Tool-Specific Docs**: Each tool has `README.md` in its directory
 
 ### Future Enhancements (Optional - Phase 9)
 - Government opportunity tools (3 tools - Grants.gov, USASpending, State grants)
