@@ -206,11 +206,27 @@ class OrganizationProfileSpider(scrapy.Spider):
         to enable deeper crawling (respecting DEPTH_LIMIT).
         """
         self.scraped_data['pages_attempted'] += 1
-        self.scraped_data['pages_scraped'] += 1
-        self.visited_urls.add(response.url)
 
         page_type = response.meta.get('page_type', 'unknown')
         logger.info(f"Parsing {page_type} page: {response.url}")
+
+        # CRITICAL FIX: Skip non-HTML content (PDFs, images, etc.)
+        content_type = response.headers.get('Content-Type', b'').decode('utf-8', errors='ignore').lower()
+        if 'pdf' in content_type or 'image' in content_type or not hasattr(response, 'text'):
+            logger.warning(f"Skipping non-HTML content ({content_type}): {response.url}")
+            # Decrement pending requests and check if done
+            self.requests_pending -= 1
+            logger.info(f"Skipped page, requests_pending now: {self.requests_pending}")
+            if self.requests_pending == 0:
+                self.scraped_data['data_quality_score'] = self._calculate_data_quality()
+                self.scraped_data['scraped_urls'] = sorted(list(self.visited_urls))
+                logger.info("All pages processed, yielding final scraped data")
+                self.results_yielded = True
+                yield self.scraped_data
+            return
+
+        self.scraped_data['pages_scraped'] += 1
+        self.visited_urls.add(response.url)
 
         soup = BeautifulSoup(response.text, 'lxml')
 
