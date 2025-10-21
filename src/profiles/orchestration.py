@@ -520,10 +520,14 @@ class ProfileEnhancementOrchestrator:
                 logger.info(f"Quality {quality:.0%} below 40% threshold - Auto-retrying with expanded parameters...")
                 logger.info(f"Expanding search: pages unlimited, depth 3 → 5")
 
+                # Save first attempt data in case retry fails
+                first_attempt_data = web_data.copy() if isinstance(web_data, dict) else web_data
+                first_attempt_quality = quality
+
                 # Recursive call with expanded parameters
                 # NOTE: Default DEPTH_LIMIT in scrapy_settings.py is 3
                 # First run uses default depth 3, so retry needs depth 4-5 to go deeper
-                return self._step_tool25_web_intelligence(
+                retry_result = self._step_tool25_web_intelligence(
                     ein=ein,
                     website=website,
                     organization_name=organization_name,
@@ -532,6 +536,24 @@ class ProfileEnhancementOrchestrator:
                     timeout=180,   # Expanded: 3 minute timeout
                     is_retry=True
                 )
+
+                # CRITICAL FIX: Only use retry result if it's BETTER than first attempt
+                # Don't overwrite good data with empty retry results!
+                if retry_result.data and retry_result.quality_score > first_attempt_quality:
+                    logger.info(f"Retry improved quality: {first_attempt_quality:.0%} → {retry_result.quality_score:.0%}")
+                    return retry_result
+                else:
+                    logger.warning(f"Retry failed or didn't improve quality ({first_attempt_quality:.0%} → {retry_result.quality_score:.0%}), keeping first attempt data")
+                    # Return original StepResult with first attempt data
+                    return StepResult(
+                        step_name=step_name,
+                        success=True,
+                        data=first_attempt_data,
+                        errors=errors if not passed else [],
+                        duration_seconds=time.time() - start_time,
+                        cost_dollars=0.10,
+                        quality_score=first_attempt_quality
+                    )
             elif quality < 0.40 and user_requested_custom_params:
                 logger.info(f"Quality {quality:.0%} is low, but skipping auto-retry because user requested custom parameters (depth={max_depth}, pages={max_pages})")
 
