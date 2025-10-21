@@ -245,6 +245,7 @@ class UnifiedProfileService:
                     'status': row['status'] or 'active',
                     'discovery_status': None,
                     'last_discovery_at': row['last_discovery_date'],
+                    'web_enhanced_data': json.loads(row['web_enhanced_data']) if row['web_enhanced_data'] else None,  # Enhanced Search results
                     'analytics': {
                         'opportunity_count': row['opportunities_count'] or 0,
                         'stages_distribution': {},
