@@ -112,12 +112,18 @@ async def create_profile(
         import uuid
         profile_id = f"profile_{uuid.uuid4().hex[:12]}"
 
+        # Normalize EIN: Remove dashes for consistency
+        ein_raw = profile_data.get('ein', '').strip() if profile_data.get('ein') else None
+        ein_normalized = ein_raw.replace('-', '') if ein_raw else None
+
+        logger.info(f"[CREATE_PROFILE] Creating profile {profile_id}, EIN: {ein_raw} → {ein_normalized}")
+
         # Create Profile object for DatabaseManager
         profile = Profile(
             id=profile_id,
             name=profile_data.get('name'),
             organization_type=profile_data.get('organization_type', 'nonprofit'),
-            ein=profile_data.get('ein'),
+            ein=ein_normalized,  # Store normalized EIN
             mission_statement=profile_data.get('mission_statement'),
             keywords=profile_data.get('keywords'),
             focus_areas=profile_data.get('focus_areas', []),
@@ -253,12 +259,21 @@ async def update_profile(
         if not existing_profile_dict:
             raise HTTPException(status_code=404, detail="Profile not found")
 
+        # Normalize EIN if being updated
+        ein_value = update_data.get('ein', existing_profile_dict.get('ein'))
+        if ein_value:
+            ein_raw = str(ein_value).strip()
+            ein_normalized = ein_raw.replace('-', '')
+            logger.info(f"[UPDATE_PROFILE] Normalizing EIN: {ein_raw} → {ein_normalized}")
+        else:
+            ein_normalized = ein_value
+
         # Create updated Profile object by merging existing data with updates
         updated_profile = Profile(
             id=profile_id,
             name=update_data.get('name', existing_profile_dict.get('name')),
             organization_type=update_data.get('organization_type', existing_profile_dict.get('organization_type')),
-            ein=update_data.get('ein', existing_profile_dict.get('ein')),
+            ein=ein_normalized,  # Use normalized EIN
             website_url=update_data.get('website_url', existing_profile_dict.get('website_url')),
             mission_statement=update_data.get('mission_statement', existing_profile_dict.get('mission_statement')),
             keywords=update_data.get('keywords', existing_profile_dict.get('keywords')),

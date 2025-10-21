@@ -1166,6 +1166,12 @@ async def create_profile(request: Dict[str, Any]):
         if not name:
             raise HTTPException(status_code=400, detail="Organization name is required")
 
+        # Normalize EIN: Remove dashes for consistency
+        ein_raw = request.get('ein', '').strip()
+        ein_normalized = ein_raw.replace('-', '') if ein_raw else None
+
+        logger.info(f"[CREATE_PROFILE] Creating profile for {name}, EIN: {ein_raw} → {ein_normalized}")
+
         # Generate unique profile_id
         import uuid
         profile_id = f"profile_{uuid.uuid4().hex[:12]}"
@@ -1174,7 +1180,7 @@ async def create_profile(request: Dict[str, Any]):
         profile = UnifiedProfile(
             profile_id=profile_id,
             organization_name=name,
-            ein=request.get('ein'),
+            ein=ein_normalized,  # Store normalized EIN
             ntee_codes=request.get('ntee_codes', []),
             geographic_scope=request.get('geographic_scope', {}),
             mission_statement=request.get('mission_statement'),
@@ -1319,6 +1325,13 @@ async def update_profile(profile_id: str, updates: Dict[str, Any]):
         existing_profile = profile_service.get_profile(profile_id)
         if not existing_profile:
             raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+
+        # Normalize EIN if being updated
+        if 'ein' in updates and updates['ein']:
+            ein_raw = str(updates['ein']).strip()
+            ein_normalized = ein_raw.replace('-', '')
+            updates['ein'] = ein_normalized
+            logger.info(f"[UPDATE_PROFILE] Normalizing EIN: {ein_raw} → {ein_normalized}")
 
         # Update fields
         for key, value in updates.items():
