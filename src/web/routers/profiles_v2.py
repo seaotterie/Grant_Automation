@@ -523,9 +523,28 @@ async def build_profile_with_orchestration(request: Dict[str, Any]):
         if tool25_params:
             logger.info(f"[BUILD_PROFILE] Tool 25 custom params: max_pages={max_pages}, depth={max_depth}, timeout={timeout}")
 
-        # Check if profile already exists and has user-edited fields
+        # Check if profile already exists by EIN (search by EIN value, not just profile ID)
+        # This handles profiles created manually with random IDs
+        existing_profile = None
         profile_id = f"profile_{ein_clean}"
+
+        # First try to find by EIN-based profile ID
         existing_profile = profile_service.get_profile(profile_id)
+
+        # If not found, search all profiles for matching EIN (with or without dash)
+        if not existing_profile:
+            logger.info(f"[BUILD_PROFILE] Profile {profile_id} not found, searching by EIN value...")
+            all_profiles = profile_service.list_profiles(limit=1000)  # Get all profiles
+            for p in all_profiles:
+                p_ein = p.get('ein', '').replace('-', '')  # Normalize to compare
+                if p_ein == ein_clean:
+                    existing_profile_dict = p
+                    profile_id = p.get('profile_id')  # Use existing profile ID!
+                    logger.info(f"[BUILD_PROFILE] Found existing profile by EIN: {profile_id}")
+                    # Convert dict to UnifiedProfile object
+                    from src.profiles.models import UnifiedProfile
+                    existing_profile = profile_service.get_profile(profile_id)
+                    break
         existing_website = existing_profile.website_url if existing_profile and existing_profile.website_url else None
         existing_ntee = existing_profile.ntee_code_990 if existing_profile and existing_profile.ntee_code_990 else None
         existing_ntee_codes = existing_profile.ntee_codes if existing_profile and existing_profile.ntee_codes else None
