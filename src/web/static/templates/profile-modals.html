@@ -339,8 +339,9 @@
                 const result = await response.json();
                 console.log('[RETRY] Manual retry completed:', result);
 
-                // Fetch updated profile
-                const profileResponse = await fetch(`/api/v2/profiles/profile_${ein}`);
+                // Fetch updated profile - IMPORTANT: Normalize EIN (remove dash) to match backend
+                const einClean = ein.replace('-', '');
+                const profileResponse = await fetch(`/api/v2/profiles/profile_${einClean}`);
                 if (profileResponse.ok) {
                     const profileData = await profileResponse.json();
                     if (profileData.success && profileData.profile) {
