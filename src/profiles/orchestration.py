@@ -4,7 +4,7 @@ Profile Enhancement Orchestration Engine
 Implements the multi-step profile building workflow as specified in
 docs/PROFILE_ENHANCEMENT_DATA_FLOW.md (Task 16).
 
-Workflow: BMF → Form 990 → Tool 25 → Tool 2 (optional)
+Workflow: Tool 17 (EIN Validation) → BMF → Form 990 → Tool 25 → Tool 2 (optional)
 
 Key Features:
 - Step dependencies and sequential execution
@@ -19,6 +19,7 @@ import time
 import sqlite3
 import os
 import asyncio
+import sys
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -26,6 +27,13 @@ from pathlib import Path
 
 from .models import UnifiedProfile
 from .unified_service import UnifiedProfileService
+
+# Import Tool 17 (EIN Validator Tool)
+tool17_root = Path(__file__).parent.parent.parent / "tools" / "ein_validator_tool"
+if str(tool17_root) not in sys.path:
+    sys.path.insert(0, str(tool17_root))
+
+from app.ein_tool import EINValidatorTool, EINValidatorInput, EINValidationStatus
 
 logger = logging.getLogger(__name__)
 
@@ -164,12 +172,14 @@ class ProfileEnhancementOrchestrator:
     Orchestrates the multi-step profile enhancement workflow.
 
     Workflow Steps:
+    0. Tool 17 EIN Validation (REQUIRED) - EIN format validation
     1. BMF Discovery (REQUIRED) - Organization validation
     2. Form 990 Query (HIGH PRIORITY) - Financial intelligence
     3. Tool 25 Web Intelligence (MEDIUM PRIORITY) - Website scraping
     4. Tool 2 AI Analysis (OPTIONAL) - Deep intelligence
 
     Quality Gates:
+    - After Tool 17: Must have valid EIN format
     - After BMF: Must have all required fields (score >= 1.0)
     - After 990: Must have at least one financial metric (score >= 0.33)
     - After Tool 25: Must have medium confidence (score >= 0.60)
@@ -183,6 +193,7 @@ class ProfileEnhancementOrchestrator:
         self.db_path = db_path
         self.profile_service = UnifiedProfileService()
         self.quality_gate = QualityGate()
+        self.ein_validator = EINValidatorTool()
 
     def execute_profile_building(
         self,
@@ -222,8 +233,21 @@ class ProfileEnhancementOrchestrator:
 
         logger.info(f"Starting profile building workflow for EIN: {ein}")
 
+        # Step 0: Tool 17 EIN Validation (REQUIRED)
+        ein_validation_result = self._step_ein_validation(ein)
+        result.steps_completed.append(ein_validation_result)
+        result.total_cost_dollars += ein_validation_result.cost_dollars
+
+        if not ein_validation_result.success:
+            result.errors.append(f"EIN validation failed: {ein_validation_result.errors[0] if ein_validation_result.errors else 'Invalid EIN format'}")
+            result.total_duration_seconds = time.time() - start_time
+            return result
+
+        # Use cleaned EIN from validation result
+        ein_clean = ein_validation_result.data.get('ein', ein) if ein_validation_result.data else ein
+
         # Step 1: BMF Discovery (REQUIRED)
-        bmf_result = self._step_bmf_discovery(ein)
+        bmf_result = self._step_bmf_discovery(ein_clean)
         result.steps_completed.append(bmf_result)
         result.total_cost_dollars += bmf_result.cost_dollars
 
@@ -291,6 +315,86 @@ class ProfileEnhancementOrchestrator:
                    f"Time={result.total_duration_seconds:.1f}s")
 
         return result
+
+    def _step_ein_validation(self, ein: str) -> StepResult:
+        """
+        Step 0: Tool 17 EIN Validation - Validate EIN format before processing.
+
+        Required step - workflow fails if EIN format is invalid.
+        Uses Tool 17 (EIN Validator Tool) from tools/ein_validator_tool.
+
+        Returns:
+            StepResult with validated EIN or error details
+        """
+        start_time = time.time()
+        step_name = "Tool 17 EIN Validation"
+
+        try:
+            from src.core.tool_framework import ToolExecutionContext
+
+            # Create validation input
+            ein_input = EINValidatorInput(
+                ein=ein.strip(),
+                perform_lookup=False  # Just validate format, don't lookup
+            )
+
+            # Create execution context
+            context = ToolExecutionContext(
+                tool_name="EIN Validator Tool",
+                tool_version="1.0.0",
+                execution_id=f"ein_validation_{ein}_{int(time.time())}",
+                config={}
+            )
+
+            # Execute Tool 17 validation (async)
+            import concurrent.futures
+            async def run_validation():
+                return await self.ein_validator._execute(context, ein_input)
+
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, run_validation())
+                validation_output = future.result(timeout=5)  # 5 second timeout
+
+            # Check validation result
+            if not validation_output.is_valid_format:
+                logger.error(f"EIN format validation failed for {ein}: {validation_output.validation_message}")
+                return StepResult(
+                    step_name=step_name,
+                    success=False,
+                    data={'ein': ein},
+                    errors=[validation_output.validation_message],
+                    duration_seconds=time.time() - start_time,
+                    cost_dollars=0.0,
+                    quality_score=0.0
+                )
+
+            # Success - return validated EIN
+            logger.info(f"EIN validation passed for {ein}")
+            return StepResult(
+                step_name=step_name,
+                success=True,
+                data={
+                    'ein': validation_output.ein,
+                    'is_valid_format': True,
+                    'validation_status': validation_output.validation_status.value
+                },
+                errors=[],
+                duration_seconds=time.time() - start_time,
+                cost_dollars=0.0,
+                quality_score=1.0
+            )
+
+        except Exception as e:
+            logger.error(f"Tool 17 EIN validation error for {ein}: {e}", exc_info=True)
+            return StepResult(
+                step_name=step_name,
+                success=False,
+                data={'ein': ein},
+                errors=[f"EIN validation failed: {str(e)}"],
+                duration_seconds=time.time() - start_time,
+                cost_dollars=0.0,
+                quality_score=0.0
+            )
 
     def _step_bmf_discovery(self, ein: str) -> StepResult:
         """

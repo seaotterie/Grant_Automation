@@ -140,26 +140,40 @@ Grant_Automation/
 
 **Purpose**: Create and enhance organization profiles
 
+**Architecture**: Hybrid approach - 12-factor tools for generic tasks + service layer for profile-specific logic
+
 #### Tools Used
 
-##### Primary Tools
-- ✅ **Tool 25: Web Intelligence Tool** (Profile Builder use case)
+##### Integrated 12-Factor Tools
+- ✅ **Tool 17: EIN Validator Tool** (INTEGRATED)
+  - EIN format validation before profile creation
+  - Integration: `ProfileEnhancementOrchestrator._step_ein_validation()`
+  - Validates format, detects invalid prefixes
+  - Cost: $0.00 (no AI)
+  - Status: **Active in workflow** (Step 0)
+
+- ✅ **Tool 25: Web Intelligence Tool** (INTEGRATED)
   - Scrape YOUR organization's website for profile data
   - Integration: `POST /api/v2/profiles/{id}/enhance`
   - Cost: $0.05-0.10 per profile
+  - Status: **Active in workflow** (Step 3)
 
-- ✅ **Tool 16: Data Validator Tool**
-  - Validate profile completeness and quality
-  - Cost: $0.00 (no AI)
-
-- ✅ **Tool 17: EIN Validator Tool**
-  - Validate EIN format and lookup
-  - Cost: $0.00 (no AI)
+##### Available But Not Used
+- 🟡 **Tool 16: Data Validator Tool** (NOT USED)
+  - Generic data validation tool
+  - **Why not used**: Profile-specific validation requires deep nonprofit domain knowledge
+  - **Alternative**: `ProfileQualityScorer` service layer (weighted scoring, confidence analysis, financial health checks)
+  - Available for other use cases (opportunity validation, foundation data, etc.)
 
 ##### Supporting Services (Not Tools - Keep Active)
 - `UnifiedProfileService` - Profile database CRUD operations
 - `ProfileEnhancementOrchestrator` - Multi-step workflow coordination
-- `ProfileQualityScorer` - Profile data quality assessment
+- `ProfileQualityScorer` - **Profile-specific quality scoring** (replaces Tool 16 for profiles)
+  - Weighted scoring: BMF (20%), 990 (35%), Tool25 (25%), Tool2 (20%)
+  - Confidence-aware Tool 25 validation
+  - Financial health analysis (margins, sustainability)
+  - Contextual recommendations
+- `DataCompletenessValidator` - **Multi-source completeness validation**
 
 #### API Endpoints
 - `POST /api/v2/profiles/create` - Create new profile
@@ -173,17 +187,25 @@ Grant_Automation/
 1. Create Profile
    └─→ UnifiedProfileService.create_profile()
 
-2. Validate EIN
-   └─→ Tool 17: EIN Validator Tool
+2. Validate EIN Format (STEP 0 in orchestrator)
+   └─→ Tool 17: EIN Validator Tool ✅ INTEGRATED
+   └─→ Validates format, detects invalid prefixes
+   └─→ Returns clean EIN or error
 
-3. Scrape Website
-   └─→ Tool 25: Web Intelligence Tool (Profile Builder use case)
+3. BMF Discovery (STEP 1)
+   └─→ Query nonprofit_intelligence.db for organization data
 
-4. Validate Data
-   └─→ Tool 16: Data Validator Tool
+4. Form 990 Query (STEP 2)
+   └─→ Get financial data from 990 filings
 
-5. Quality Check
-   └─→ ProfileQualityScorer.score_profile()
+5. Scrape Website (STEP 3)
+   └─→ Tool 25: Web Intelligence Tool ✅ INTEGRATED
+   └─→ Profile Builder use case
+
+6. Quality Scoring & Validation
+   └─→ ProfileQualityScorer.calculate_profile_quality()
+   └─→ DataCompletenessValidator.validate_profile_completeness()
+   └─→ Uses weighted scoring with domain knowledge
 ```
 
 ---

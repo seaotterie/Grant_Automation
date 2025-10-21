@@ -171,13 +171,6 @@
 - Completeness and quality scoring
 - Cost: $0.00 (no AI calls)
 
-**Tool 15: EIN Validator Tool** ✅
-- EIN format validation
-- Invalid prefix detection
-- Organization lookup capability
-- Cost: $0.00 (no AI calls)
-- Replaces: ein_lookup.py
-
 **Tool 16: Data Validator Tool** ✅
 - Required field validation
 - Type checking and validation
@@ -185,8 +178,17 @@
 - Schema compliance verification
 - Cost: $0.00 (no AI calls)
 - Replaces: data_validator.py
+- **Note**: Available but not used in PROFILES workflow (ProfileQualityScorer provides profile-specific domain intelligence instead)
 
-**Tool 17: BMF Discovery Tool** ✅
+**Tool 17: EIN Validator Tool** ✅ **[INTEGRATED IN PROFILES]**
+- **EIN format validation (Step 0 in profile building workflow)**
+- Invalid prefix detection
+- Organization lookup capability
+- Cost: $0.00 (no AI calls)
+- Replaces: ein_lookup.py
+- **Integration**: ProfileEnhancementOrchestrator._step_ein_validation()
+
+**Tool 4: BMF Discovery Tool** ✅
 - IRS Business Master File filtering
 - Multi-criteria nonprofit discovery
 - Geographic and NTEE code filtering
