@@ -77,6 +77,7 @@ class WebIntelligenceRequest:
             user_provided_url: Optional[str] = None,
             max_depth: Optional[int] = None,
             max_pages: Optional[int] = None,
+            timeout: Optional[int] = None,
             require_990_verification: bool = True,
             min_confidence_score: float = 0.7
     ):
@@ -86,6 +87,7 @@ class WebIntelligenceRequest:
         self.user_provided_url = user_provided_url
         self.max_depth = max_depth
         self.max_pages = max_pages
+        self.timeout = timeout
         self.require_990_verification = require_990_verification
         self.min_confidence_score = min_confidence_score
 
@@ -333,7 +335,7 @@ class WebIntelligenceTool:
         )
 
         # Run spider and collect results
-        result = await self._run_spider(spider, settings)
+        result = await self._run_spider(spider, settings, timeout=request.timeout)
 
         return result
 
@@ -362,7 +364,7 @@ class WebIntelligenceTool:
         """
         raise NotImplementedError("Foundation Research spider not yet implemented")
 
-    async def _run_spider(self, spider, settings) -> Optional[Any]:
+    async def _run_spider(self, spider, settings, timeout: Optional[int] = None) -> Optional[Any]:
         """
         Run a Scrapy spider in a separate process to avoid Twisted reactor conflicts.
 
@@ -372,6 +374,7 @@ class WebIntelligenceTool:
         Args:
             spider: Spider instance
             settings: Scrapy settings
+            timeout: Optional timeout in seconds (default: 60)
 
         Returns:
             Structured intelligence data or None
@@ -453,9 +456,12 @@ class WebIntelligenceTool:
             )
 
             try:
+                # Use custom timeout if provided, otherwise default to 60 seconds
+                timeout_seconds = timeout if timeout else 60
+                logger.info(f"Spider timeout set to {timeout_seconds} seconds")
                 stdout, stderr = await asyncio.wait_for(
                     process.communicate(),
-                    timeout=60.0
+                    timeout=float(timeout_seconds)
                 )
 
                 if process.returncode == 0:
