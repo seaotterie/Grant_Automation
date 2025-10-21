@@ -31,6 +31,9 @@ function profilesModule() {
         // Modal state (managed by event system)
         profileToDelete: null,
 
+        // Stage navigation (injected from parent)
+        switchStage: null,
+
         // =================================================================
         // LIFECYCLE
         // =================================================================
@@ -39,6 +42,39 @@ function profilesModule() {
          * Initialize profiles module
          */
         async init() {
+            // Get switchStage function from parent Alpine scope or window
+            // Try multiple methods to access the main app's switchStage
+            if (window.Alpine && window.Alpine.store) {
+                // Try Alpine store
+                const store = window.Alpine.store('app');
+                this.switchStage = store?.switchStage;
+            }
+
+            if (!this.switchStage && this.$root) {
+                // Try Alpine $root
+                this.switchStage = this.$root.switchStage;
+            }
+
+            if (!this.switchStage) {
+                // Fallback: Create a function that accesses the global Alpine data
+                this.switchStage = (stage) => {
+                    // Find the main app element (body has x-data="catalynxApp()")
+                    const appElement = document.querySelector('body[x-data]');
+                    if (appElement && appElement._x_dataStack && appElement._x_dataStack[0]) {
+                        const appData = appElement._x_dataStack[0];
+                        if (appData.switchStage) {
+                            appData.switchStage(stage);
+                            return true;
+                        }
+                    }
+                    // If Alpine method fails, dispatch event as final fallback
+                    window.dispatchEvent(new CustomEvent('navigate-to-stage', {
+                        detail: { stage }
+                    }));
+                    return false;
+                };
+            }
+
             await this.loadProfiles();
             this.setupModalListeners();
         },
@@ -361,6 +397,25 @@ function profilesModule() {
 
             // Dispatch event for other modules
             this.$dispatch?.('profile-selected', { profile });
+        },
+
+        /**
+         * Select a profile and navigate to screening stage
+         * @param {Object} profile
+         */
+        selectProfileForDiscovery(profile) {
+            // Select the profile (sets state + dispatches event)
+            this.selectProfile(profile);
+
+            // Navigate to screening stage
+            if (this.switchStage) {
+                this.switchStage('screening');
+            } else {
+                // Fallback: dispatch event for main app to handle
+                window.dispatchEvent(new CustomEvent('navigate-to-stage', {
+                    detail: { stage: 'screening' }
+                }));
+            }
         },
 
 

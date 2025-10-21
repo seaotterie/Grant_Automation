@@ -402,17 +402,15 @@
                 <!-- STAGE 2: SCREENING (Discovery & Screening) -->
                 <div x-show="activeStage === 'screening'" class="space-y-6" x-data="window.screeningModule ? window.screeningModule() : {}"
                      x-init="init()"
-                     @profile-selected.window="currentProfileId = $event.detail.profile.profile_id || $event.detail.profile.id; selectedProfile = $event.detail.profile; console.log('SCREENING: Profile set to', selectedProfile?.name, currentProfileId); loadSavedOpportunities(currentProfileId)"
-                     @stage-changed.window="if ($event.detail.stage === 'screening' && currentProfileId) { console.log('Stage switched to SCREENING - reloading opportunities'); loadSavedOpportunities(currentProfileId); }">
+                     @profile-selected.window="currentProfileId = $event.detail.profile.profile_id || $event.detail.profile.id; selectedProfile = $event.detail.profile; console.log('SCREENING: Profile set to', selectedProfile?.name, currentProfileId); loadSavedOpportunities && loadSavedOpportunities(currentProfileId)"
+                     @stage-changed.window="if ($event.detail.stage === 'screening' && window.currentProfileId && !selectedProfile) { console.log('Stage switched to SCREENING - checking for stored profile'); currentProfileId = window.currentProfileId; init && init(); }">
                     <!-- Header with Profile Context -->
                     <div class="bg-gradient-to-r from-teal-600 to-green-600 rounded-lg p-6 text-white">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-2xl font-bold">Discovery & Screening</h3>
-                                <p class="text-teal-100 mt-2">Find and screen opportunities using Tool 1 (Opportunity Screening)</p>
+                                <h3 class="text-2xl font-bold">Discovery & Screening <span class="text-lg font-normal">- Find and screen opportunities</span></h3>
                             </div>
                             <div class="text-right">
-                                <div class="text-sm opacity-80 mb-1">Selected Profile</div>
                                 <div class="flex items-center gap-3">
                                     <div class="text-right">
                                         <div class="font-semibold text-lg" x-text="selectedProfile?.name || 'None'"></div>
@@ -442,10 +440,7 @@
 
                     <!-- Discovery Controls -->
                     <div x-show="selectedProfile" class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Discovery Configuration</h4>
-                        <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                            Profile: <span class="font-semibold text-gray-900 dark:text-white" x-text="selectedProfile?.name || 'None selected'"></span>
-                        </div>
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Discovery Configuration</h4>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
@@ -628,10 +623,7 @@
 
                                             <!-- Actions -->
                                             <td class="px-4 py-3 text-center">
-                                                <button @click="viewOpportunityDetails(opp)"
-                                                        class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium">
-                                                    View Details
-                                                </button>
+                                                <button @click="viewOpportunityDetails(opp)" class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm font-medium whitespace-nowrap">View Details</button>
                                             </td>
                                         </tr>
                                     </template>
@@ -1684,7 +1676,7 @@
                                             <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l-4"
                                                 :class="selectedProfile?.profile_id === profile.profile_id ? 'profile-row-selected' : 'profile-row-selectable border-l-transparent'"
                                                 x-init="$nextTick(() => { if ($data.addProfileContextMenu && typeof $data.addProfileContextMenu === 'function') $data.addProfileContextMenu($el, profile); })"
-                                                @click="selectedProfile = profile">
+                                                @click="selectProfile(profile)">
                                                 <td class="px-6 py-4 whitespace-nowrap">
                                                     <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="profile.name"></div>
                                                 </td>

@@ -79,6 +79,22 @@ function screeningModule() {
                 this.currentProfileId = window.currentProfileId;
             }
 
+            // If we have a profile ID but no profile object, fetch it
+            if (this.currentProfileId && !this.selectedProfile) {
+                try {
+                    const response = await fetch(`/api/v2/profiles/${this.currentProfileId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.profile) {
+                            this.selectedProfile = data.profile;
+                            console.log('[Screening] Loaded profile from API:', this.selectedProfile.name);
+                        }
+                    }
+                } catch (error) {
+                    console.warn('[Screening] Could not load profile:', error);
+                }
+            }
+
             // Load saved opportunities if we have a currentProfileId
             if (this.currentProfileId) {
                 await this.loadSavedOpportunities(this.currentProfileId);

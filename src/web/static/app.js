@@ -774,6 +774,14 @@ function catalynxApp() {
                     this.activeStage = this.stateModule.activeStage || 'welcome';
                 }
 
+                // Set up event listener for navigate-to-stage (fallback for modules)
+                window.addEventListener('navigate-to-stage', (event) => {
+                    console.log('[Event] navigate-to-stage received:', event.detail.stage);
+                    if (event.detail && event.detail.stage) {
+                        this.switchStage(event.detail.stage);
+                    }
+                });
+
                 this.modulesReady = true;
 
                 console.log('[SUCCESS] Modular architecture initialized:');
@@ -4491,19 +4499,24 @@ function catalynxApp() {
                 console.log('Saving current profile scores before discovery profile switch...');
                 await this.saveCurrentOpportunityScores();
             }
-            
+
             // Clear previous profile data to prevent spillover
             this.clearProfileData();
-            
+
             this.selectedProfile = profile;
             this.selectedDiscoveryProfile = profile;
-            
+
             // Save selected profile to storage for persistence
             this.saveSelectedProfileToStorage(profile);
-            
+
+            // Dispatch event for new screening module to receive
+            window.dispatchEvent(new CustomEvent('profile-selected', {
+                detail: { profile }
+            }));
+
             this.showNotification('Profile Selected', `Selected ${profile.name} for discovery`, 'info');
-            this.switchStage('discover');
-            
+            this.switchStage('screening');  // FIX: Changed from 'discover' to 'screening'
+
             // Load existing opportunities for the selected profile
             if (!this.useMockData) {
                 this.loadRealOpportunities();

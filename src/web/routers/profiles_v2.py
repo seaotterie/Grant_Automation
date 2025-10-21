@@ -323,7 +323,17 @@ def _calculate_multi_dimensional_scores(
 
     # Get profile criteria
     target_ntee_codes = profile.ntee_codes or []
-    target_states = profile.government_criteria.get('states', ['VA']) if hasattr(profile, 'government_criteria') and profile.government_criteria else ['VA']
+
+    # Get target states from geographic_scope (for nonprofit location matching)
+    # Note: government_criteria is for government grant opportunities (not configured yet)
+    if hasattr(profile, 'geographic_scope') and profile.geographic_scope:
+        # Handle both dict and object forms of geographic_scope
+        if isinstance(profile.geographic_scope, dict):
+            target_states = profile.geographic_scope.get('states', ['VA'])
+        else:
+            target_states = profile.geographic_scope.states if profile.geographic_scope.states else ['VA']
+    else:
+        target_states = ['VA']  # Default to Virginia
 
     for org in enriched_orgs:
         # Calculate 6 dimensional scores
@@ -1646,13 +1656,25 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
                 ein_hash = hashlib.md5((opp_data.get('ein', '') or '').encode()).hexdigest()[:8]
                 opportunity_id = f"opp_discovery_{timestamp_ms}_{ein_hash}"
 
+                # Map category_level to database stage
+                # category_level: qualified, review, consider, low_priority
+                # database stages: prospects, qualified_prospects, candidates, targets, opportunities
+                category_to_stage = {
+                    'qualified': 'qualified_prospects',  # High score → Qualified
+                    'review': 'candidates',              # Medium-high → Candidates for review
+                    'consider': 'prospects',             # Medium → Prospects to consider
+                    'low_priority': 'prospects'          # Low → Initial prospects
+                }
+                category = opp_data.get('category_level', 'low_priority')
+                current_stage = category_to_stage.get(category, 'prospects')
+
                 # Create Opportunity object
                 opportunity = Opportunity(
                     id=opportunity_id,
                     profile_id=profile_id,
                     organization_name=opp_data['organization_name'],
                     ein=opp_data.get('ein'),
-                    current_stage='discovery',  # Initial stage for discovered opportunities
+                    current_stage=current_stage,  # Map from category_level
                     overall_score=opp_data.get('overall_score', 0.0),
                     confidence_level=0.8 if opp_data.get('confidence') == 'high' else 0.6,
                     scored_at=datetime.now(timezone.utc),
