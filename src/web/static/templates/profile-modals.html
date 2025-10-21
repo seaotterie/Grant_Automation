@@ -339,17 +339,20 @@
                 const result = await response.json();
                 console.log('[RETRY] Manual retry completed:', result);
 
-                // Fetch updated profile - IMPORTANT: Normalize EIN (remove dash) to match backend
-                const einClean = ein.replace('-', '');
-                const profileResponse = await fetch(`/api/v2/profiles/profile_${einClean}`);
-                if (profileResponse.ok) {
-                    const profileData = await profileResponse.json();
-                    if (profileData.success && profileData.profile) {
-                        // Trigger profile update event
-                        window.dispatchEvent(new CustomEvent('profile-updated', {
-                            detail: { profile: profileData.profile }
-                        }));
+                // Fetch updated profile - Use profile_id from result (handles random UUIDs)
+                if (result.profile && result.profile.profile_id) {
+                    const profileResponse = await fetch(`/api/v2/profiles/${result.profile.profile_id}`);
+                    if (profileResponse.ok) {
+                        const profileData = await profileResponse.json();
+                        if (profileData.success && profileData.profile) {
+                            // Trigger profile update event
+                            window.dispatchEvent(new CustomEvent('profile-updated', {
+                                detail: { profile: profileData.profile }
+                            }));
+                        }
                     }
+                } else {
+                    console.error('[RETRY] No profile_id in build response');
                 }
             } catch (error) {
                 console.error('[RETRY] Manual retry failed:', error);
