@@ -440,23 +440,41 @@
 
                     <!-- Discovery Controls - SIMPLIFIED -->
                     <div x-show="selectedProfile" class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                        <div class="text-center">
-                            <button @click="showDiscoveryModal = true"
-                                    :disabled="discoveryLoading"
-                                    class="px-8 py-4 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-semibold text-lg disabled:opacity-50 flex items-center justify-center gap-3 mx-auto shadow-lg">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                </svg>
-                                <span x-show="!discoveryLoading">Discover Opportunities</span>
-                                <span x-show="discoveryLoading" class="flex items-center gap-2">
-                                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <div class="flex flex-col items-center gap-4">
+                            <!-- Discovery Button and Freshness Badge Row -->
+                            <div class="flex items-center gap-4 w-full justify-center">
+                                <button @click="showDiscoveryModal = true"
+                                        :disabled="discoveryLoading"
+                                        class="px-8 py-4 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-semibold text-lg disabled:opacity-50 flex items-center justify-center gap-3 shadow-lg">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                                     </svg>
-                                    Discovering...
-                                </span>
-                            </button>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                    <span x-show="!discoveryLoading" x-text="discoveryMetadata.should_refresh ? 'Discover Opportunities' : 'Refresh Results'"></span>
+                                    <span x-show="discoveryLoading" class="flex items-center gap-2">
+                                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Discovering...
+                                    </span>
+                                </button>
+
+                                <!-- Freshness Indicator Badge -->
+                                <div x-show="discoveryMetadata.last_discovery_date"
+                                     x-cloak
+                                     class="px-4 py-2 rounded-full text-sm font-medium shadow-sm border"
+                                     :class="{
+                                         'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800': freshnessColor === 'green',
+                                         'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800': freshnessColor === 'yellow',
+                                         'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800': freshnessColor === 'red',
+                                         'bg-gray-50 dark:bg-gray-900/20 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-800': freshnessColor === 'gray'
+                                     }">
+                                    <span x-text="freshnessIcon"></span>
+                                    <span x-text="freshnessText"></span>
+                                </div>
+                            </div>
+
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
                                 Find funding opportunities from nonprofits, foundations, and government sources
                             </p>
                         </div>
