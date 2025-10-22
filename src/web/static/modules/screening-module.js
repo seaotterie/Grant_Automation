@@ -307,6 +307,16 @@ function screeningModule() {
                         'success'
                     );
 
+                    // Reload opportunities to get updated discovery_metadata (freshness info)
+                    await this.loadSavedOpportunities(profileId);
+                    console.log('[Screening] Reloaded opportunities after discovery to update freshness metadata');
+
+                    // Dispatch event to refresh profiles list (updates Last Discovery column in PROFILES tab)
+                    window.dispatchEvent(new CustomEvent('discovery-completed', {
+                        detail: { profile_id: profileId }
+                    }));
+                    console.log('[Screening] Dispatched discovery-completed event');
+
                     return data;
                 } else {
                     throw new Error(data.error || 'Unknown error');

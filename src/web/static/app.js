@@ -2901,6 +2901,13 @@ function catalynxApp() {
                 }
             });
 
+            // Listen for discovery-completed event to refresh profiles list
+            window.addEventListener('discovery-completed', async (event) => {
+                console.log('[App] Discovery completed event received, refreshing profiles list');
+                await this.loadProfiles();
+                console.log('[App] Profiles list refreshed - Last Discovery column should update');
+            });
+
             // Initialize theme
             this.applyTheme();
             
