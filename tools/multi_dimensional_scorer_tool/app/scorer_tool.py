@@ -29,6 +29,7 @@ try:
         TrackType,
         EnhancedData,
         STAGE_WEIGHTS,
+        FOUNDATION_WEIGHTS,
         DEFAULT_BOOST_FACTORS,
         DIMENSION_BOOST_MAP,
         MULTI_DIMENSIONAL_SCORER_COST
@@ -40,6 +41,7 @@ try:
         ExamineStageScorer,
         ApproachStageScorer
     )
+    from .foundation_scorer import FoundationStageScorer
 except ImportError:
     from scorer_models import (
         ScoringInput,
@@ -50,6 +52,7 @@ except ImportError:
         TrackType,
         EnhancedData,
         STAGE_WEIGHTS,
+        FOUNDATION_WEIGHTS,
         DEFAULT_BOOST_FACTORS,
         DIMENSION_BOOST_MAP,
         MULTI_DIMENSIONAL_SCORER_COST
@@ -61,6 +64,7 @@ except ImportError:
         ExamineStageScorer,
         ApproachStageScorer
     )
+    from foundation_scorer import FoundationStageScorer
 
 
 class MultiDimensionalScorerTool(BaseTool[MultiDimensionalScore]):
@@ -79,6 +83,7 @@ class MultiDimensionalScorerTool(BaseTool[MultiDimensionalScore]):
         # Load custom configurations
         self.stage_weights = config.get("stage_weights", STAGE_WEIGHTS) if config else STAGE_WEIGHTS
         self.boost_factors = config.get("boost_factors", DEFAULT_BOOST_FACTORS) if config else DEFAULT_BOOST_FACTORS
+        self.foundation_weights = config.get("foundation_weights", FOUNDATION_WEIGHTS) if config else FOUNDATION_WEIGHTS
 
         # Initialize stage scorers
         self.stage_scorers = {
@@ -88,6 +93,9 @@ class MultiDimensionalScorerTool(BaseTool[MultiDimensionalScore]):
             WorkflowStage.EXAMINE: ExamineStageScorer(),
             WorkflowStage.APPROACH: ApproachStageScorer()
         }
+
+        # Initialize foundation scorer (track-based, not stage-based)
+        self.foundation_scorer = FoundationStageScorer()
 
     def get_tool_name(self) -> str:
         return "Multi-Dimensional Scorer Tool"
@@ -111,21 +119,32 @@ class MultiDimensionalScorerTool(BaseTool[MultiDimensionalScore]):
             f"track={scoring_input.track_type.value if scoring_input.track_type else 'none'}"
         )
 
-        # Get stage-specific weights
-        weights = self._get_weights(scoring_input)
+        # Check if using foundation track (track-based scoring)
+        if scoring_input.track_type == TrackType.FOUNDATION:
+            self.logger.info("Using foundation-specific scorer (990-PF composite scoring)")
+            weights = self.foundation_weights
+            dimensional_scores = self.foundation_scorer.calculate_dimensions(
+                scoring_input.opportunity_data,
+                scoring_input.organization_profile,
+                weights,
+                scoring_input.track_type
+            )
+        else:
+            # Get stage-specific weights
+            weights = self._get_weights(scoring_input)
 
-        # Get stage-specific scorer
-        stage_scorer = self.stage_scorers.get(scoring_input.workflow_stage)
-        if not stage_scorer:
-            raise ValueError(f"No scorer for stage: {scoring_input.workflow_stage}")
+            # Get stage-specific scorer
+            stage_scorer = self.stage_scorers.get(scoring_input.workflow_stage)
+            if not stage_scorer:
+                raise ValueError(f"No scorer for stage: {scoring_input.workflow_stage}")
 
-        # Calculate dimensional scores
-        dimensional_scores = stage_scorer.calculate_dimensions(
-            scoring_input.opportunity_data,
-            scoring_input.organization_profile,
-            weights,
-            scoring_input.track_type
-        )
+            # Calculate dimensional scores
+            dimensional_scores = stage_scorer.calculate_dimensions(
+                scoring_input.opportunity_data,
+                scoring_input.organization_profile,
+                weights,
+                scoring_input.track_type
+            )
 
         # Apply boost factors
         boost_factors_applied = []

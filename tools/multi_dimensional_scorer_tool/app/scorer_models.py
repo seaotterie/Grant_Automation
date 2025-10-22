@@ -24,6 +24,7 @@ class TrackType(str, Enum):
     FEDERAL = "federal"
     STATE = "state"
     COMMERCIAL = "commercial"
+    FOUNDATION = "foundation"  # 990-PF foundation opportunities (Composite Scorer V2)
 
 
 @dataclass
@@ -163,6 +164,16 @@ APPROACH_WEIGHTS = {
     "strategic_value": 0.20,
     "resource_requirements": 0.15,
     "timeline_feasibility": 0.10
+}
+
+# Foundation-specific weights (990-PF Composite Scorer V2 integration)
+# 8 components mapped to 5 dimensions
+FOUNDATION_WEIGHTS = {
+    "mission_alignment": 0.30,  # NTEE alignment (30%)
+    "geographic_fit": 0.20,  # Geographic match (20%)
+    "financial_match": 0.28,  # Financial capacity (10%) + Grant size (10%) + Application policy (8%)
+    "strategic_alignment": 0.12,  # Recipient coherence (12%)
+    "timing": 0.10  # Filing recency (5%) + Foundation type (5%)
 }
 
 STAGE_WEIGHTS = {

@@ -1,6 +1,27 @@
 """
 990-PF Composite Scorer V2.0
 
+⚠️ DEPRECATED - 2025-10-21 ⚠️
+This module has been migrated to Tool 20's foundation mode.
+For new code, use: tools/multi_dimensional_scorer_tool/ with track_type=TrackType.FOUNDATION
+
+Migration Guide:
+    Before: from src.scoring.composite_scorer_v2 import CompositeScoreV2
+            scorer = CompositeScoreV2()
+            result = scorer.score_foundation_match(profile, foundation)
+
+    After:  from tools.multi_dimensional_scorer_tool.app.scorer_tool import score_opportunity
+            result = await score_opportunity(
+                opportunity_data=foundation_data,
+                organization_profile=org_profile,
+                workflow_stage="discover",
+                track_type="foundation"
+            )
+
+See: tools/multi_dimensional_scorer_tool/FOUNDATION_MODE.md for documentation
+
+---
+
 Unified scoring system integrating all Phase 1-3 components:
 - Two-part NTEE scoring (Phase 2 Week 3)
 - Schedule I recipient voting (Phase 2 Week 4-5)

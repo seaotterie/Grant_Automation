@@ -142,8 +142,20 @@ class GrantSizeAnalysis {
 }
 
 // ============================================================================
-// 990-PF Composite Scorer V2
+// 990-PF Composite Scorer V2 / Tool 20 Foundation Mode
 // ============================================================================
+
+// NOTE: Tool 20 (Multi-Dimensional Scorer Tool) with track_type=FOUNDATION
+// uses Python dataclasses (MultiDimensionalScore, DimensionalScore) for its
+// outputs rather than BAML schemas. The schemas below are maintained for
+// backward compatibility with legacy Composite Scorer V2.
+//
+// Tool 20 Foundation Mode Integration (2025-10-21):
+//   - Location: tools/multi_dimensional_scorer_tool/app/foundation_scorer.py
+//   - Input: ScoringInput with track_type=TrackType.FOUNDATION
+//   - Output: MultiDimensionalScore with 5 DimensionalScore objects
+//   - Architecture: 8 components → 5 dimensions mapping
+//   - Documentation: tools/multi_dimensional_scorer_tool/FOUNDATION_MODE.md
 
 class FoundationOpportunityData {
   foundation_ein string

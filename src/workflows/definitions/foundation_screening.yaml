@@ -1,0 +1,122 @@
+name: "Foundation Screening Workflow"
+description: "990-PF foundation opportunity screening using Tool 20 foundation mode"
+version: "1.0.0"
+
+metadata:
+  category: "screening"
+  track_type: "foundation"
+  estimated_cost_per_100_foundations: 0.00  # Algorithmic scoring only
+  typical_batch_size: 50-200
+  expected_output_count: 10-20
+
+# Workflow for screening private foundation (990-PF) opportunities
+# Uses Tool 20's foundation mode with 8-component composite scoring
+
+steps:
+  # Step 1: BMF Discovery - Find foundation opportunities
+  - name: "discover_foundations"
+    tool: "bmf-filter-tool"
+    inputs:
+      filter_criteria:
+        foundation_types: ["private_foundation_990pf"]
+        states: "${context.geographic_focus}"
+        ntee_codes: "${context.ntee_alignment}"
+        min_assets: "${context.min_foundation_assets}"
+      max_results: 200
+    optional: false
+    retry_count: 2
+    timeout_seconds: 60
+
+  # Step 2: Foundation Scoring - Multi-dimensional analysis
+  - name: "score_foundations"
+    tool: "multi-dimensional-scorer-tool"
+    depends_on: ["discover_foundations"]
+    inputs:
+      # Batch scoring multiple foundations
+      scoring_input:
+        opportunity_data: "${steps.discover_foundations.output.foundations}"
+        organization_profile: "${context.organization_profile}"
+        workflow_stage: "discover"
+        track_type: "foundation"  # ← Activates foundation mode
+    optional: false
+    retry_count: 2
+    timeout_seconds: 300
+
+    # Foundation mode returns MultiDimensionalScore with 5 dimensions:
+    # - mission_alignment (30%): NTEE alignment
+    # - geographic_fit (20%): State matching
+    # - financial_match (28%): Capacity + Grant size + Application policy
+    # - strategic_alignment (12%): Schedule I recipient coherence
+    # - timing (10%): Filing recency + Foundation type
+
+  # Step 3: Filter by threshold
+  - name: "filter_high_scoring"
+    tool: "data-export-tool"
+    depends_on: ["score_foundations"]
+    inputs:
+      data: "${steps.score_foundations.output}"
+      filter_condition:
+        overall_score_min: 0.58  # PASS threshold (58/100)
+        confidence_min: 0.50
+      sort_by: "overall_score"
+      sort_order: "desc"
+      max_results: 20
+    optional: false
+    timeout_seconds: 30
+
+  # Step 4: Generate screening report
+  - name: "generate_report"
+    tool: "report-generator-tool"
+    depends_on: ["filter_high_scoring"]
+    inputs:
+      data: "${steps.filter_high_scoring.output}"
+      template: "foundation_screening_summary"
+      output_format: "html"
+      output_path: "${context.output_directory}/foundation_screening_results.html"
+      include_sections:
+        - dimensional_breakdown
+        - top_opportunities
+        - abstain_queue  # Foundations scoring 45-58 (manual review)
+        - recommendations
+    optional: true
+    timeout_seconds: 60
+
+# Expected outputs:
+# - foundation_screening_results.html with 10-20 high-scoring foundations
+# - Each foundation has:
+#   * Overall score (0.0-1.0 scale)
+#   * Confidence level
+#   * 5 dimensional scores with explanations
+#   * PASS/ABSTAIN/FAIL recommendation
+#   * Boost factors applied (coherence, time-decay)
+# - Abstain queue for manual review (45-58 score range)
+# - Ready for deep intelligence analysis (Tool 2)
+
+# Decision Thresholds (Foundation Mode):
+# - PASS: ≥ 0.58 (58/100) - Proceed to deep analysis
+# - ABSTAIN: 0.45-0.58 (45-58/100) - Manual review queue
+# - FAIL: < 0.45 (45/100) - Skip opportunity
+
+# Abstain Triggers (Force ABSTAIN regardless of score):
+# - Missing NTEE codes
+# - Very low NTEE alignment (< 20%)
+# - Geographic mismatch
+# - Borderline scores
+
+# Usage Example:
+# POST /api/workflows/execute
+# {
+#   "workflow_name": "foundation_screening",
+#   "context": {
+#     "organization_profile": {
+#       "ein": "123456789",
+#       "ntee_codes": ["B25"],
+#       "state": "VA",
+#       "revenue": 500000
+#     },
+#     "geographic_focus": ["VA", "MD", "DC"],
+#     "ntee_alignment": ["B25", "B20", "E20"],
+#     "min_foundation_assets": 1000000,
+#     "output_directory": "./outputs"
+#   }
+# }

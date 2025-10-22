@@ -5,11 +5,11 @@ status = "operational"
 category = "scoring"
 
 [tool.metadata]
-description = "Unified multi-dimensional scoring across all workflow stages"
-purpose = "Sophisticated dimensional analysis with stage-specific weights and boost factors"
-single_responsibility = "Multi-dimensional opportunity scoring with confidence calculation"
+description = "Unified multi-dimensional scoring across all workflow stages and tracks"
+purpose = "Sophisticated dimensional analysis with stage-specific weights and boost factors, including 990-PF foundation scoring"
+single_responsibility = "Multi-dimensional opportunity scoring with confidence calculation (stage-based and track-based)"
 cost_per_operation = 0.00
-replaces = ["discovery_scorer.py", "success_scorer.py"]
+replaces = ["discovery_scorer.py", "success_scorer.py", "composite_scorer_v2.py"]
 
 [tool.factors]
 factor_1_codebase = "Single tool in tools/multi-dimensional-scorer-tool/"
@@ -56,9 +56,52 @@ nonprofit = "Nonprofit/foundation opportunities (990-based)"
 federal = "Federal grant opportunities (Grants.gov)"
 state = "State grant opportunities (state portals)"
 commercial = "Corporate foundation opportunities"
+foundation = "990-PF foundation opportunities (Composite Scorer V2 8-component scoring)"
 
 [tool.boost_factors]
 financial_data = 0.10
 network_data = 0.15
 historical_data = 0.12
 risk_assessment = 0.08
+
+[tool.foundation_track]
+# Foundation Track (990-PF Composite Scorer V2 Integration)
+description = "Specialized scoring for private foundation (990-PF) opportunities"
+replaces = ["src/scoring/composite_scorer_v2.py"]
+migration_date = "2025-10-21"
+
+# 8 Foundation Components → 5 Dimensions
+component_mapping = """
+8 Foundation Components:
+1. NTEE Alignment (30%) → mission_alignment dimension
+2. Geographic Match (20%) → geographic_fit dimension
+3. Financial Capacity (10%) → financial_match dimension (part 1)
+4. Grant Size Fit (10%) → financial_match dimension (part 2)
+5. Application Policy (8%) → financial_match dimension (part 3)
+6. Recipient Coherence (12%) → strategic_alignment dimension
+7. Filing Recency (5%) → timing dimension (part 1)
+8. Foundation Type (5%) → timing dimension (part 2)
+
+5 Dimensional Scores:
+- mission_alignment: 0.30 (NTEE two-part scoring with 30% cap)
+- geographic_fit: 0.20 (state-level matching)
+- financial_match: 0.28 (capacity + grant size + application policy)
+- strategic_alignment: 0.12 (Schedule I voting system)
+- timing: 0.10 (filing recency time-decay + foundation type)
+"""
+
+# Phase 1-3 Component Dependencies
+dependencies = [
+    "src.scoring.ntee_scorer.NTEEScorer",
+    "src.scoring.schedule_i_voting.ScheduleIVotingSystem",
+    "src.scoring.grant_size_scoring.GrantSizeScorer",
+    "src.scoring.time_decay_utils.TimeDecayCalculator"
+]
+
+# Performance Characteristics
+expected_accuracy_improvement = "70-90% vs V1"
+decision_thresholds = """
+- PASS: ≥ 58 (composite score)
+- ABSTAIN: 45-58 (manual review queue)
+- FAIL: < 45 (clear mismatch)
+"""
