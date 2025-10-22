@@ -1779,7 +1779,7 @@
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
                                                     <span class="text-sm text-gray-900 dark:text-white"
-                                                          x-text="profile.last_discovery_date ? new Date(profile.last_discovery_date).toLocaleDateString() : 'Not run'"></span>
+                                                          x-text="profile.last_discovery_at ? new Date(profile.last_discovery_at).toLocaleString() : 'Not run'"></span>
                                                 </td>
                                             </tr>
                                         </template>
@@ -1833,7 +1833,7 @@
                                 </div>
                                 <div class="bg-white dark:bg-gray-800 p-2 rounded">
                                     <div class="text-xs text-gray-600 dark:text-gray-400">Discovery Status</div>
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedDiscoveryProfile?.last_discovery_date ? formatDate(selectedDiscoveryProfile.last_discovery_date) : 'Not Run'">Not Run</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="selectedDiscoveryProfile?.last_discovery_at ? formatDate(selectedDiscoveryProfile.last_discovery_at) : 'Not Run'">Not Run</div>
                                 </div>
                                 <div class="bg-white dark:bg-gray-800 p-2 rounded">
                                     <div class="text-xs text-gray-600 dark:text-gray-400">Current Opportunities</div>
@@ -6121,9 +6121,9 @@
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="flex flex-col">
                                                     <span class="text-sm text-gray-900 dark:text-white"
-                                                          x-text="profile.last_discovery_date ? new Date(profile.last_discovery_date).toLocaleDateString() : 'Never'"></span>
+                                                          x-text="profile.last_discovery_at ? new Date(profile.last_discovery_at).toLocaleDateString() : 'Never'"></span>
                                                     <span class="text-xs text-gray-500 dark:text-gray-400"
-                                                          x-text="profile.last_discovery_date ? formatTimeAgo(profile.last_discovery_date) : 'Not run'"></span>
+                                                          x-text="profile.last_discovery_at ? formatTimeAgo(profile.last_discovery_at) : 'Not run'"></span>
                                                 </div>
                                             </td>
                                         </tr>
