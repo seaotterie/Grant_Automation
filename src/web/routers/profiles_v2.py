@@ -1786,6 +1786,7 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
             from src.database.database_manager import DatabaseManager
             from src.config.database_config import get_catalynx_db
 
+            logger.info(f"Updating profile {profile_id} discovery metadata...")
             db_manager = DatabaseManager(get_catalynx_db())
             db_profile = db_manager.get_profile(profile_id)
 
@@ -1793,10 +1794,19 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
                 db_profile.last_discovery_date = datetime.now(timezone.utc)
                 db_profile.discovery_count = (db_profile.discovery_count or 0) + 1
                 db_profile.opportunities_count = len(opportunities)
-                db_manager.update_profile(profile_id, db_profile)
-                logger.info(f"Updated profile {profile_id}: discovery_count={db_profile.discovery_count}, opportunities_count={db_profile.opportunities_count}")
+
+                logger.info(f"Profile before update: discovery_count={db_profile.discovery_count}, last_discovery_date={db_profile.last_discovery_date}")
+                success = db_manager.update_profile(profile_id, db_profile)
+                logger.info(f"Profile update result: {success}")
+
+                if success:
+                    logger.info(f"✅ Updated profile {profile_id}: discovery_count={db_profile.discovery_count}, opportunities_count={db_profile.opportunities_count}")
+                else:
+                    logger.error(f"❌ Profile update returned False for {profile_id}")
+            else:
+                logger.warning(f"Profile {profile_id} not found in database")
         except Exception as e:
-            logger.warning(f"Failed to update profile metadata: {e}")
+            logger.error(f"Failed to update profile metadata: {e}", exc_info=True)
 
         return {
             "status": "success",
