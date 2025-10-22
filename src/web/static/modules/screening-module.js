@@ -102,40 +102,91 @@ function screeningModule() {
 
             // Load saved opportunities if we have a currentProfileId
             if (this.currentProfileId) {
+                console.log('[Screening] init() - Loading saved opportunities for currentProfileId:', this.currentProfileId);
                 await this.loadSavedOpportunities(this.currentProfileId);
+            } else {
+                console.log('[Screening] init() - No currentProfileId, skipping loadSavedOpportunities');
             }
+
+            // Listen for profile selection events from PROFILES tab
+            window.addEventListener('profile-selected', async (event) => {
+                const newProfile = event.detail;
+                console.log('[Screening] Profile selected event received:', newProfile?.name);
+
+                if (newProfile && newProfile.profile_id !== this.currentProfileId) {
+                    console.log('[Screening] Switching from profile', this.currentProfileId, 'to', newProfile.profile_id);
+
+                    // Update profile references
+                    this.currentProfileId = newProfile.profile_id;
+                    this.selectedProfile = newProfile;
+
+                    // Clear old discovery results
+                    this.discoveryResults = [];
+                    this.summaryCounts = {
+                        total_found: 0,
+                        qualified: 0,
+                        review: 0,
+                        consider: 0,
+                        low_priority: 0,
+                        scrapy_completed: 0
+                    };
+
+                    // Load opportunities for new profile
+                    await this.loadSavedOpportunities(newProfile.profile_id);
+
+                    console.log('[Screening] Loaded', this.discoveryResults.length, 'saved opportunities for profile', newProfile.name);
+                }
+            });
         },
 
         /**
          * Load saved opportunities from database for current profile
          */
         async loadSavedOpportunities(profileId) {
-            if (!profileId) return;
+            if (!profileId) {
+                console.log('[Screening] loadSavedOpportunities called with no profileId');
+                return;
+            }
+
+            console.log('[Screening] Loading saved opportunities for profile:', profileId);
 
             try {
-                const response = await fetch(`/api/v2/profiles/${profileId}/opportunities?stage=discovery`);
+                const url = `/api/v2/profiles/${profileId}/opportunities?stage=discovery`;
+                console.log('[Screening] Fetching from URL:', url);
+
+                const response = await fetch(url);
+                console.log('[Screening] Response status:', response.status, response.statusText);
 
                 // 404 is OK - means no saved opportunities yet
                 if (response.status === 404) {
+                    console.log('[Screening] No saved opportunities found (404) - this is OK');
                     return;
                 }
 
                 if (!response.ok) {
-                    console.warn(`Failed to load opportunities: ${response.status} ${response.statusText}`);
+                    console.warn(`[Screening] Failed to load opportunities: ${response.status} ${response.statusText}`);
                     return;
                 }
 
                 const data = await response.json();
+                console.log('[Screening] Received data:', {
+                    status: data.status,
+                    opportunityCount: data.opportunities?.length || 0,
+                    summary: data.summary
+                });
 
                 if (data.status === 'success' && data.opportunities?.length > 0) {
+                    console.log('[Screening] Setting discoveryResults to', data.opportunities.length, 'opportunities');
                     this.discoveryResults = data.opportunities;
                     this.summaryCounts = data.summary;
 
                     this.showNotification?.(`Loaded ${data.opportunities.length} saved opportunities`, 'info');
+                } else {
+                    console.log('[Screening] No opportunities to load (empty array or unsuccessful status)');
                 }
 
             } catch (error) {
-                console.error('Failed to load saved opportunities:', error);
+                console.error('[Screening] Failed to load saved opportunities:', error);
                 // Don't show error notification - it's normal to have no saved opportunities
             }
         },

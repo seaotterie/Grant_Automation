@@ -209,14 +209,18 @@ async def research_opportunity(opportunity_id: str, profile_id: Optional[str] = 
             logger.info(f"Tool 25 path: {tools_dir}")
             logger.info(f"Tool 25 exists: {tools_dir.exists()}")
 
-            from app.web_intelligence_tool import WebIntelligenceTool, WebIntelligenceRequest, UseCase
+            from tools.web_intelligence_tool.app.web_intelligence_tool import (
+                WebIntelligenceTool,
+                WebIntelligenceRequest,
+                UseCase
+            )
 
             # Create Tool 25 instance and request
             tool = WebIntelligenceTool()
             request = WebIntelligenceRequest(
                 ein=ein,
                 organization_name=opportunity.organization_name,
-                use_case=UseCase.OPPORTUNITY_RESEARCH  # Use Case 2: Opportunity Research
+                use_case=UseCase.PROFILE_BUILDER  # Use Case 1: Profile Builder (implemented)
             )
 
             logger.info(f"Executing Tool 25 for EIN {ein}")

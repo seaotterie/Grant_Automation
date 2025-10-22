@@ -4728,12 +4728,18 @@ function catalynxApp() {
             this.clearProfileData();
             
             this.selectedProfile = profile;
-            
+
             // Save selected profile to storage for persistence
             this.saveSelectedProfileToStorage(profile);
-            
+
+            // Dispatch profile-selected event for other modules (e.g., screening module)
+            window.dispatchEvent(new CustomEvent('profile-selected', {
+                detail: profile
+            }));
+            console.log('[Profile] Dispatched profile-selected event for:', profile.name);
+
             this.showNotification('Profile Selected', `Selected ${profile.name}`, 'info');
-            
+
             // Load profile-specific data (including opportunities) if not in mock mode
             if (!this.useMockData) {
                 await this.loadProfileData(profile);
