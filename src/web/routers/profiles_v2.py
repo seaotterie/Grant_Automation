@@ -1781,11 +1781,22 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
         summary['save_success_rate'] = f"{saved_count + updated_count}/{len(opportunities)} ({((saved_count + updated_count)/len(opportunities)*100):.1f}%)" if opportunities else "0/0"
 
         # Update profile discovery metadata (for freshness tracking)
-        profile.last_discovery_date = datetime.now(timezone.utc)
-        profile.discovery_count = (profile.discovery_count or 0) + 1
-        profile.opportunities_count = len(opportunities)
-        profile_service.update_profile(profile)
-        logger.info(f"Updated profile {profile_id}: discovery_count={profile.discovery_count}, opportunities_count={profile.opportunities_count}")
+        # Need to update via database_manager since profile is UnifiedProfile (read-only)
+        try:
+            from src.database.database_manager import DatabaseManager
+            from src.config.database_config import get_catalynx_db
+
+            db_manager = DatabaseManager(get_catalynx_db())
+            db_profile = db_manager.get_profile(profile_id)
+
+            if db_profile:
+                db_profile.last_discovery_date = datetime.now(timezone.utc)
+                db_profile.discovery_count = (db_profile.discovery_count or 0) + 1
+                db_profile.opportunities_count = len(opportunities)
+                db_manager.update_profile(profile_id, db_profile)
+                logger.info(f"Updated profile {profile_id}: discovery_count={db_profile.discovery_count}, opportunities_count={db_profile.opportunities_count}")
+        except Exception as e:
+            logger.warning(f"Failed to update profile metadata: {e}")
 
         return {
             "status": "success",
@@ -1887,10 +1898,14 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
         hours_since_discovery = None
         freshness_status = "unknown"
         should_refresh = True
+        last_discovery_date = None
 
-        if profile and profile.last_discovery_date:
+        if profile and profile.last_discovery_at:
             from datetime import timezone
-            time_delta = datetime.now(timezone.utc) - profile.last_discovery_date
+            from dateutil.parser import parse
+            # UnifiedProfile.last_discovery_at is ISO string, parse it
+            last_discovery_date = parse(profile.last_discovery_at)
+            time_delta = datetime.now(timezone.utc) - last_discovery_date
             hours_since_discovery = time_delta.total_seconds() / 3600
 
             if hours_since_discovery < 6:
@@ -1904,11 +1919,11 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
                 should_refresh = True
 
         discovery_metadata = {
-            "last_discovery_date": profile.last_discovery_date.isoformat() if profile and profile.last_discovery_date else None,
+            "last_discovery_date": profile.last_discovery_at if profile and profile.last_discovery_at else None,
             "hours_since_discovery": round(hours_since_discovery, 1) if hours_since_discovery else None,
             "freshness_status": freshness_status,
             "should_refresh": should_refresh,
-            "total_discoveries_run": profile.discovery_count if profile else 0
+            "total_discoveries_run": profile.analytics.opportunity_count if profile and profile.analytics else 0
         }
 
         logger.info(f"Retrieved {len(opportunities)} opportunities for profile {profile_id} (freshness: {freshness_status})")
