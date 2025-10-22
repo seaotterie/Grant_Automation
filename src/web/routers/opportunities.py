@@ -376,7 +376,7 @@ async def research_opportunity_placeholder(opportunity_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/{opportunity_id}/promote")
+@router.post("/{opportunity_id}/promote-with-notes")
 async def promote_to_intelligence(opportunity_id: str, request: Dict[str, Any], profile_id: Optional[str] = None):
     """
     Promote opportunity from SCREENING to INTELLIGENCE stage.
@@ -569,8 +569,13 @@ async def promote_category_level(opportunity_id: str):
 
         # Parse current state
         opportunity_dict = dict(zip([col[0] for col in cursor.description], row))
-        current_category = opportunity_dict.get('category_level', 'low_priority')
         current_stage = opportunity_dict.get('current_stage', 'discovery')
+
+        # Get category_level from analysis_discovery JSON field
+        analysis_discovery = opportunity_dict.get('analysis_discovery', '{}')
+        if isinstance(analysis_discovery, str):
+            analysis_discovery = json.loads(analysis_discovery) if analysis_discovery else {}
+        current_category = analysis_discovery.get('category_level', 'low_priority')
 
         # Determine promotion action
         new_category = current_category
@@ -594,15 +599,18 @@ async def promote_category_level(opportunity_id: str):
             conn.close()
             raise HTTPException(status_code=400, detail=f"Cannot promote from {current_category}")
 
+        # Update category_level in analysis_discovery JSON
+        analysis_discovery['category_level'] = new_category
+
         # Update database
         timestamp = datetime.now().isoformat()
         cursor.execute("""
             UPDATE opportunities
-            SET category_level = ?,
+            SET analysis_discovery = ?,
                 current_stage = ?,
                 updated_at = ?
             WHERE id = ?
-        """, (new_category, new_stage, timestamp, opportunity_id))
+        """, (json.dumps(analysis_discovery), new_stage, timestamp, opportunity_id))
 
         conn.commit()
         conn.close()
@@ -655,11 +663,16 @@ async def demote_category_level(opportunity_id: str):
 
         # Parse current state
         opportunity_dict = dict(zip([col[0] for col in cursor.description], row))
-        current_category = opportunity_dict.get('category_level', 'low_priority')
         current_stage = opportunity_dict.get('current_stage', 'discovery')
 
+        # Get category_level from analysis_discovery JSON field
+        analysis_discovery = opportunity_dict.get('analysis_discovery', '{}')
+        if isinstance(analysis_discovery, str):
+            analysis_discovery = json.loads(analysis_discovery) if analysis_discovery else {}
+        current_category = analysis_discovery.get('category_level', 'low_priority')
+
         # Cannot demote if already moved past discovery
-        if current_stage not in ['discovery', 'screening']:
+        if current_stage not in ['discovery', 'screening', 'prospects', 'qualified_prospects', 'candidates']:
             conn.close()
             raise HTTPException(
                 status_code=400,
@@ -686,14 +699,17 @@ async def demote_category_level(opportunity_id: str):
             conn.close()
             raise HTTPException(status_code=400, detail=f"Unknown category level: {current_category}")
 
+        # Update category_level in analysis_discovery JSON
+        analysis_discovery['category_level'] = new_category
+
         # Update database
         timestamp = datetime.now().isoformat()
         cursor.execute("""
             UPDATE opportunities
-            SET category_level = ?,
+            SET analysis_discovery = ?,
                 updated_at = ?
             WHERE id = ?
-        """, (new_category, timestamp, opportunity_id))
+        """, (json.dumps(analysis_discovery), timestamp, opportunity_id))
 
         conn.commit()
         conn.close()

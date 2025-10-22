@@ -15,6 +15,7 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field, validator
 import logging
 import sqlite3
+import json
 from datetime import datetime, timezone
 
 from src.profiles.unified_service import UnifiedProfileService
@@ -1643,69 +1644,126 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
 
         logger.info(f"Discovery complete: {len(bmf_results)} BMF → {len(scored_results)} scored → {len(qualified_results)} qualified in {execution_time:.2f}s ({performance['orgs_per_second']} orgs/sec)")
 
-        # Step 4: Save discovered opportunities to database
+        # Step 4: Save discovered opportunities to database (with UPSERT deduplication)
         saved_count = 0
+        updated_count = 0
         failed_saves = []
         import hashlib
         import time as time_module
 
         for opp_data in opportunities:
             try:
-                # Generate unique opportunity ID: opp_discovery_{timestamp}_{ein_hash}
-                timestamp_ms = int(time_module.time() * 1000)
-                ein_hash = hashlib.md5((opp_data.get('ein', '') or '').encode()).hexdigest()[:8]
-                opportunity_id = f"opp_discovery_{timestamp_ms}_{ein_hash}"
+                ein = opp_data.get('ein')
+
+                # Check if opportunity already exists for this profile + EIN
+                existing_opp = None
+                if ein:
+                    conn = database_manager.get_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        SELECT id FROM opportunities
+                        WHERE profile_id = ? AND ein = ? AND source = 'nonprofit'
+                        ORDER BY created_at DESC LIMIT 1
+                    """, (profile_id, ein))
+                    row = cursor.fetchone()
+                    conn.close()
+
+                    if row:
+                        existing_opp = row[0]
 
                 # Map category_level to database stage
-                # category_level: qualified, review, consider, low_priority
-                # database stages: prospects, qualified_prospects, candidates, targets, opportunities
                 category_to_stage = {
-                    'qualified': 'qualified_prospects',  # High score → Qualified
-                    'review': 'candidates',              # Medium-high → Candidates for review
-                    'consider': 'prospects',             # Medium → Prospects to consider
-                    'low_priority': 'prospects'          # Low → Initial prospects
+                    'qualified': 'qualified_prospects',
+                    'review': 'candidates',
+                    'consider': 'prospects',
+                    'low_priority': 'prospects'
                 }
                 category = opp_data.get('category_level', 'low_priority')
                 current_stage = category_to_stage.get(category, 'prospects')
 
-                # Create Opportunity object
-                opportunity = Opportunity(
-                    id=opportunity_id,
-                    profile_id=profile_id,
-                    organization_name=opp_data['organization_name'],
-                    ein=opp_data.get('ein'),
-                    current_stage=current_stage,  # Map from category_level
-                    overall_score=opp_data.get('overall_score', 0.0),
-                    confidence_level=0.8 if opp_data.get('confidence') == 'high' else 0.6,
-                    scored_at=datetime.now(timezone.utc),
-                    scorer_version='multi_dimensional_v1.0',
-                    analysis_discovery={
+                if existing_opp:
+                    # UPDATE existing opportunity with new scores
+                    opportunity_id = existing_opp
+                    timestamp = datetime.now(timezone.utc)
+
+                    analysis_discovery = {
                         'dimensional_scores': opp_data.get('dimensional_scores', {}),
                         'category_level': opp_data.get('category_level'),
                         '990_data': opp_data.get('990_data'),
                         'grant_history': opp_data.get('grant_history'),
                         'location': opp_data.get('location')
-                    },
-                    source='nonprofit',  # Discovery source
-                    discovery_date=datetime.now(timezone.utc),
-                    processing_status='discovered',
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc)
-                )
+                    }
 
-                # Save to database
-                success = database_manager.create_opportunity(opportunity)
-                if success:
-                    saved_count += 1
-                    # Add ID to response for frontend reference
+                    conn = database_manager.get_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        UPDATE opportunities
+                        SET overall_score = ?,
+                            confidence_level = ?,
+                            current_stage = ?,
+                            scored_at = ?,
+                            analysis_discovery = ?,
+                            discovery_date = ?,
+                            updated_at = ?
+                        WHERE id = ?
+                    """, (
+                        opp_data.get('overall_score', 0.0),
+                        0.8 if opp_data.get('confidence') == 'high' else 0.6,
+                        current_stage,
+                        timestamp.isoformat(),
+                        json.dumps(analysis_discovery),
+                        timestamp.isoformat(),
+                        timestamp.isoformat(),
+                        opportunity_id
+                    ))
+                    conn.commit()
+                    conn.close()
+
+                    updated_count += 1
                     opp_data['opportunity_id'] = opportunity_id
+                    logger.debug(f"Updated existing opportunity {opportunity_id} for EIN {ein}")
+
                 else:
-                    failed_saves.append({
-                        'organization': opp_data.get('organization_name'),
-                        'ein': opp_data.get('ein'),
-                        'reason': 'Database save failed'
-                    })
-                    logger.warning(f"Failed to save opportunity {opportunity_id}")
+                    # CREATE new opportunity
+                    timestamp_ms = int(time_module.time() * 1000)
+                    ein_hash = hashlib.md5((ein or '').encode()).hexdigest()[:8]
+                    opportunity_id = f"opp_discovery_{timestamp_ms}_{ein_hash}"
+
+                    opportunity = Opportunity(
+                        id=opportunity_id,
+                        profile_id=profile_id,
+                        organization_name=opp_data['organization_name'],
+                        ein=ein,
+                        current_stage=current_stage,
+                        overall_score=opp_data.get('overall_score', 0.0),
+                        confidence_level=0.8 if opp_data.get('confidence') == 'high' else 0.6,
+                        scored_at=datetime.now(timezone.utc),
+                        scorer_version='multi_dimensional_v1.0',
+                        analysis_discovery={
+                            'dimensional_scores': opp_data.get('dimensional_scores', {}),
+                            'category_level': opp_data.get('category_level'),
+                            '990_data': opp_data.get('990_data'),
+                            'grant_history': opp_data.get('grant_history'),
+                            'location': opp_data.get('location')
+                        },
+                        source='nonprofit',
+                        discovery_date=datetime.now(timezone.utc),
+                        processing_status='discovered',
+                        created_at=datetime.now(timezone.utc),
+                        updated_at=datetime.now(timezone.utc)
+                    )
+
+                    success = database_manager.create_opportunity(opportunity)
+                    if success:
+                        saved_count += 1
+                        opp_data['opportunity_id'] = opportunity_id
+                    else:
+                        failed_saves.append({
+                            'organization': opp_data.get('organization_name'),
+                            'ein': ein,
+                            'reason': 'Database save failed'
+                        })
+                        logger.warning(f"Failed to save opportunity {opportunity_id}")
 
             except Exception as e:
                 failed_saves.append({
@@ -1715,10 +1773,12 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
                 })
                 logger.error(f"Error saving opportunity {opp_data.get('organization_name')}: {e}", exc_info=True)
 
-        logger.info(f"Saved {saved_count}/{len(opportunities)} opportunities to database")
+        logger.info(f"Discovery persistence: {saved_count} new, {updated_count} updated, {len(failed_saves)} failed")
         summary['saved_to_database'] = saved_count
+        summary['updated_in_database'] = updated_count
         summary['failed_saves'] = failed_saves
-        summary['save_success_rate'] = f"{saved_count}/{len(opportunities)} ({(saved_count/len(opportunities)*100):.1f}%)" if opportunities else "0/0"
+        summary['total_persisted'] = saved_count + updated_count
+        summary['save_success_rate'] = f"{saved_count + updated_count}/{len(opportunities)} ({((saved_count + updated_count)/len(opportunities)*100):.1f}%)" if opportunities else "0/0"
 
         return {
             "status": "success",

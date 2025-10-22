@@ -59,6 +59,11 @@ function screeningModule() {
         showDetailsModal: false,
         selectedOpportunity: null,
         detailsModalTab: 'scores', // 'scores', 'details', 'grants', 'website', 'notes'
+        showDiscoveryModal: false,
+        discoverySourcesSelected: ['nonprofits'], // Default to nonprofits checked
+        showLowPriority: false, // Hide low priority by default
+        selectedOpportunities: [], // Track selected opportunities for batch actions
+        categoryFilter: null, // Filter by category level (null = show all, 'qualified', 'review', 'consider', 'low_priority')
 
         // Notes State
         opportunityNotes: '',
@@ -777,6 +782,16 @@ function screeningModule() {
         async promoteOpportunity() {
             if (!this.selectedOpportunity) return;
 
+            // Validate opportunity_id exists
+            if (!this.selectedOpportunity.opportunity_id) {
+                console.error('Missing opportunity_id:', this.selectedOpportunity);
+                this.showNotification?.(
+                    'Cannot promote: This opportunity needs to be re-discovered. Please run Discovery again.',
+                    'error'
+                );
+                return;
+            }
+
             try {
                 const response = await fetch(`/api/v2/opportunities/${this.selectedOpportunity.opportunity_id}/promote`, {
                     method: 'POST',
@@ -798,11 +813,15 @@ function screeningModule() {
                         this.closeDetailsModal();
                         this.$dispatch?.('opportunity-promoted', this.selectedOpportunity);
                         // Reload opportunities to update counts
-                        await this.loadOpportunities();
+                        if (this.currentProfileId) {
+                            await this.loadSavedOpportunities(this.currentProfileId);
+                        }
                     } else {
                         // Just update the display for category level changes
                         // Reload opportunities to update counts
-                        await this.loadOpportunities();
+                        if (this.currentProfileId) {
+                            await this.loadSavedOpportunities(this.currentProfileId);
+                        }
                     }
                 } else {
                     const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
@@ -819,6 +838,16 @@ function screeningModule() {
          */
         async demoteOpportunity() {
             if (!this.selectedOpportunity) return;
+
+            // Validate opportunity_id exists
+            if (!this.selectedOpportunity.opportunity_id) {
+                console.error('Missing opportunity_id:', this.selectedOpportunity);
+                this.showNotification?.(
+                    'Cannot demote: This opportunity needs to be re-discovered. Please run Discovery again.',
+                    'error'
+                );
+                return;
+            }
 
             // Don't demote if already at low_priority
             if (this.selectedOpportunity.category_level === 'low_priority') {
@@ -842,7 +871,9 @@ function screeningModule() {
                     this.showNotification?.(data.message, 'success');
 
                     // Reload opportunities to update counts
-                    await this.loadOpportunities();
+                    if (this.currentProfileId) {
+                        await this.loadSavedOpportunities(this.currentProfileId);
+                    }
                 } else {
                     const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
                     throw new Error(errorData.detail || 'Demotion failed');
@@ -918,6 +949,118 @@ function screeningModule() {
                 console.error('Notes save error:', error);
                 this.notesSaving = false;
                 this.showNotification?.(`❌ Failed to save notes: ${error.message}`, 'error');
+            }
+        },
+
+        // =================================================================
+        // NEW SIMPLIFIED UI HELPERS
+        // =================================================================
+
+        /**
+         * Get filtered discovery results (by category filter)
+         */
+        get filteredDiscoveryResults() {
+            if (!this.discoveryResults || this.discoveryResults.length === 0) {
+                return [];
+            }
+
+            let results = this.discoveryResults;
+
+            // Apply category filter if set
+            if (this.categoryFilter !== null) {
+                results = results.filter(opp => opp.category_level === this.categoryFilter);
+            }
+
+            // Sort by current sort criteria
+            return this.sortOpportunitiesByField(results, this.sortBy);
+        },
+
+        /**
+         * Sort opportunities by field
+         */
+        sortOpportunitiesByField(opportunities, field) {
+            const sorted = [...opportunities];
+
+            if (field === 'overall_score') {
+                return sorted.sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0));
+            } else if (field === 'organization_name') {
+                return sorted.sort((a, b) => (a.organization_name || '').localeCompare(b.organization_name || ''));
+            } else if (field === 'revenue') {
+                return sorted.sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
+            }
+
+            return sorted;
+        },
+
+        /**
+         * Sort discovery results (triggered by dropdown)
+         */
+        sortDiscoveryResults() {
+            // Sorting is handled by computed property filteredDiscoveryResults
+            console.log(`Sorting by: ${this.sortBy}`);
+        },
+
+        /**
+         * Check if opportunity is selected
+         */
+        isOpportunitySelected(opportunity) {
+            return this.selectedOpportunities.some(
+                opp => opp.ein === opportunity.ein
+            );
+        },
+
+        /**
+         * Toggle opportunity selection
+         */
+        toggleOpportunitySelection(opportunity) {
+            const index = this.selectedOpportunities.findIndex(
+                opp => opp.ein === opportunity.ein
+            );
+
+            if (index > -1) {
+                // Deselect
+                this.selectedOpportunities.splice(index, 1);
+            } else {
+                // Select
+                this.selectedOpportunities.push(opportunity);
+            }
+
+            console.log(`Selected opportunities: ${this.selectedOpportunities.length}`);
+        },
+
+        /**
+         * Promote selected opportunities to INTELLIGENCE tab
+         */
+        async promoteSelectedOpportunities() {
+            if (this.selectedOpportunities.length === 0) {
+                this.showNotification?.('Please select at least one opportunity', 'warning');
+                return;
+            }
+
+            try {
+                // Promote each selected opportunity
+                const promotePromises = this.selectedOpportunities.map(opp =>
+                    fetch(`/api/v2/opportunities/${opp.opportunity_id}/promote`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                );
+
+                const responses = await Promise.all(promotePromises);
+                const successful = responses.filter(r => r.ok).length;
+
+                this.showNotification?.(
+                    `Successfully promoted ${successful} of ${this.selectedOpportunities.length} opportunities`,
+                    'success'
+                );
+
+                // Clear selections and reload
+                this.selectedOpportunities = [];
+                await this.loadSavedOpportunities(this.currentProfileId);
+
+            } catch (error) {
+                console.error('Batch promotion error:', error);
+                this.showNotification?.(`Failed to promote opportunities: ${error.message}`, 'error');
             }
         }
     };
