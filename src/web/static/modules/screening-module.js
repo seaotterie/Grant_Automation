@@ -163,7 +163,9 @@ function screeningModule() {
             console.log('[Screening] Loading saved opportunities for profile:', profileId);
 
             try {
-                const url = `/api/v2/profiles/${profileId}/opportunities?stage=discovery`;
+                // Don't filter by stage - load all opportunities for this profile
+                // Discovery creates opportunities with stages: qualified_prospects, candidates, prospects
+                const url = `/api/v2/profiles/${profileId}/opportunities`;
                 console.log('[Screening] Fetching from URL:', url);
 
                 const response = await fetch(url);
