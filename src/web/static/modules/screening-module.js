@@ -30,6 +30,18 @@ function screeningModule() {
             scrapy_completed: 0
         },
 
+        // Discovery Freshness Metadata
+        discoveryMetadata: {
+            last_discovery_date: null,
+            hours_since_discovery: null,
+            freshness_status: 'unknown',
+            should_refresh: false,
+            total_discoveries_run: 0
+        },
+        freshnessIcon: '⚪',
+        freshnessText: 'No discoveries yet',
+        freshnessColor: 'gray',
+
         // Screening State
         screeningResults: [],
         screeningLoading: false,
@@ -172,23 +184,75 @@ function screeningModule() {
                 console.log('[Screening] Received data:', {
                     status: data.status,
                     opportunityCount: data.opportunities?.length || 0,
-                    summary: data.summary
+                    summary: data.summary,
+                    discovery_metadata: data.discovery_metadata
                 });
 
-                if (data.status === 'success' && data.opportunities?.length > 0) {
-                    console.log('[Screening] Setting discoveryResults to', data.opportunities.length, 'opportunities');
-                    this.discoveryResults = data.opportunities;
-                    this.summaryCounts = data.summary;
+                if (data.status === 'success') {
+                    // Update opportunities and summary
+                    this.discoveryResults = data.opportunities || [];
+                    this.summaryCounts = data.summary || {};
 
-                    this.showNotification?.(`Loaded ${data.opportunities.length} saved opportunities`, 'info');
+                    // Update freshness metadata
+                    this.discoveryMetadata = data.discovery_metadata || {};
+                    this.updateFreshnessIndicators();
+
+                    if (data.opportunities?.length > 0) {
+                        console.log('[Screening] Setting discoveryResults to', data.opportunities.length, 'opportunities');
+                        this.showNotification?.(`Loaded ${data.opportunities.length} opportunities (${this.freshnessText})`, 'info');
+                    } else {
+                        console.log('[Screening] No opportunities to load (empty array)');
+                    }
                 } else {
-                    console.log('[Screening] No opportunities to load (empty array or unsuccessful status)');
+                    console.log('[Screening] Unsuccessful status or no data');
                 }
 
             } catch (error) {
                 console.error('[Screening] Failed to load saved opportunities:', error);
                 // Don't show error notification - it's normal to have no saved opportunities
             }
+        },
+
+        /**
+         * Update freshness indicators based on discovery metadata
+         */
+        updateFreshnessIndicators() {
+            const meta = this.discoveryMetadata;
+
+            if (!meta.last_discovery_date) {
+                this.freshnessIcon = '⚪';
+                this.freshnessText = 'No discoveries yet';
+                this.freshnessColor = 'gray';
+                return;
+            }
+
+            const hours = meta.hours_since_discovery || 0;
+
+            if (meta.freshness_status === 'fresh') {
+                this.freshnessIcon = '🟢';
+                this.freshnessText = `Fresh (${Math.floor(hours)}h ago)`;
+                this.freshnessColor = 'green';
+            } else if (meta.freshness_status === 'aging') {
+                this.freshnessIcon = '🟡';
+                this.freshnessText = `${Math.floor(hours)}h ago`;
+                this.freshnessColor = 'yellow';
+            } else if (meta.freshness_status === 'stale') {
+                this.freshnessIcon = '🔴';
+                const days = Math.floor(hours / 24);
+                this.freshnessText = days === 0 ? `${Math.floor(hours)}h ago` : `Stale (${days}d ago)`;
+                this.freshnessColor = 'red';
+            } else {
+                this.freshnessIcon = '⚪';
+                this.freshnessText = 'Unknown freshness';
+                this.freshnessColor = 'gray';
+            }
+
+            console.log('[Screening] Freshness updated:', {
+                status: meta.freshness_status,
+                hours: hours,
+                icon: this.freshnessIcon,
+                text: this.freshnessText
+            });
         },
 
         // =================================================================

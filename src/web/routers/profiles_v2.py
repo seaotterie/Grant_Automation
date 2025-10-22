@@ -1780,6 +1780,13 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
         summary['total_persisted'] = saved_count + updated_count
         summary['save_success_rate'] = f"{saved_count + updated_count}/{len(opportunities)} ({((saved_count + updated_count)/len(opportunities)*100):.1f}%)" if opportunities else "0/0"
 
+        # Update profile discovery metadata (for freshness tracking)
+        profile.last_discovery_date = datetime.now(timezone.utc)
+        profile.discovery_count = (profile.discovery_count or 0) + 1
+        profile.opportunities_count = len(opportunities)
+        profile_service.update_profile(profile)
+        logger.info(f"Updated profile {profile_id}: discovery_count={profile.discovery_count}, opportunities_count={profile.opportunities_count}")
+
         return {
             "status": "success",
             "profile_id": profile_id,
@@ -1875,14 +1882,44 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
             "scrapy_completed": 0
         }
 
-        logger.info(f"Retrieved {len(opportunities)} opportunities for profile {profile_id}")
+        # Calculate discovery freshness metadata
+        profile = profile_service.get_profile(profile_id)
+        hours_since_discovery = None
+        freshness_status = "unknown"
+        should_refresh = True
+
+        if profile and profile.last_discovery_date:
+            from datetime import timezone
+            time_delta = datetime.now(timezone.utc) - profile.last_discovery_date
+            hours_since_discovery = time_delta.total_seconds() / 3600
+
+            if hours_since_discovery < 6:
+                freshness_status = "fresh"
+                should_refresh = False
+            elif hours_since_discovery < 24:
+                freshness_status = "aging"
+                should_refresh = False
+            else:
+                freshness_status = "stale"
+                should_refresh = True
+
+        discovery_metadata = {
+            "last_discovery_date": profile.last_discovery_date.isoformat() if profile and profile.last_discovery_date else None,
+            "hours_since_discovery": round(hours_since_discovery, 1) if hours_since_discovery else None,
+            "freshness_status": freshness_status,
+            "should_refresh": should_refresh,
+            "total_discoveries_run": profile.discovery_count if profile else 0
+        }
+
+        logger.info(f"Retrieved {len(opportunities)} opportunities for profile {profile_id} (freshness: {freshness_status})")
 
         return {
             "status": "success",
             "profile_id": profile_id,
             "opportunities": opportunities,
             "total_count": len(opportunities),
-            "summary": summary
+            "summary": summary,
+            "discovery_metadata": discovery_metadata
         }
 
     except Exception as e:
