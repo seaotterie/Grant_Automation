@@ -1796,7 +1796,7 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
                 db_profile.opportunities_count = len(opportunities)
 
                 logger.info(f"Profile before update: discovery_count={db_profile.discovery_count}, last_discovery_date={db_profile.last_discovery_date}")
-                success = db_manager.update_profile(profile_id, db_profile)
+                success = db_manager.update_profile(db_profile)  # Fixed: only pass profile, not profile_id
                 logger.info(f"Profile update result: {success}")
 
                 if success:
