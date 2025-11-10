@@ -17424,7 +17424,7 @@ function addDesktopKeyboardShortcuts(appData) {
         
         // Quick actions
         'space': () => appData.quickViewSelected(),
-        'enter': () => appData.openSelectedDetails(),
+        // 'enter': () => appData.openSelectedDetails(), // REMOVED: Was opening modal unexpectedly
         'ctrl+enter': () => appData.promoteSelected(),
         
         // Help and system

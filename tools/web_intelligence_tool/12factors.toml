@@ -10,7 +10,7 @@ category = "intelligence"
 
 [tool.metadata]
 replaces = ["verification_enhanced_scraper.py (enhanced with Scrapy framework)"]
-cost_per_execution = "0.05-0.25 USD"  # Variable based on use case
+cost_per_execution = "$0.00"  # Pure Scrapy web scraping, no AI APIs
 execution_time = "10-60 seconds"  # Depends on website size and depth
 requires_api_key = false
 requires_database = false

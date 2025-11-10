@@ -71,7 +71,7 @@ function stateModule() {
          * Clear all state (for testing/reset)
          */
         resetState() {
-            this.activeStage = 'profiles';
+            this.activeStage = 'welcome';
             this.selectedProfile = null;
             this.discoveryResults = [];
             this.screeningResults = [];

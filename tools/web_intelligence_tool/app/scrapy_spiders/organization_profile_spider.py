@@ -49,9 +49,9 @@ class OrganizationProfileSpider(scrapy.Spider):
 
     # Target page keywords for different content types
     TARGET_PAGES = {
-        'mission': ['about', 'mission', 'who-we-are', 'our-story', 'vision', 'values'],
+        'mission': ['mission', 'who-we-are', 'our-story', 'vision', 'values'],
         'programs': ['programs', 'services', 'what-we-do', 'our-work', 'initiatives'],
-        'leadership': ['board', 'staff', 'team', 'leadership', 'directors', 'people', 'governance'],
+        'leadership': ['about', 'board', 'staff', 'team', 'leadership', 'directors', 'people', 'governance', 'attorney', 'attorneys', 'officers', 'trustees'],
         'contact': ['contact', 'connect', 'reach-us', 'get-in-touch'],
         'financial': ['financials', 'annual-report', 'transparency', '990', 'financial-info']
     }
@@ -385,40 +385,188 @@ class OrganizationProfileSpider(scrapy.Spider):
 
         return programs
 
+    def _is_valid_leader_name(self, name: str, title: str) -> bool:
+        """Validate that a name looks like a real person, not junk data."""
+        # Skip if name contains organizational keywords or looks invalid
+        junk_keywords = ['foundation', 'board member', 'opera', 'arts society', 'was also', 'the chair', 'omaha', 'member\n',
+                         'vice chair', 'also the', 'treasurer', 'secretary']
+        name_lower = name.lower()
+
+        for keyword in junk_keywords:
+            if keyword in name_lower:
+                logger.debug(f"Rejected (junk keyword '{keyword}'): {name}")
+                return False
+
+        # Skip if name starts with title/role prefixes (indicates bad extraction)
+        bad_prefixes = ['member ', 'board ', 'director ', 'officer ', 'trustee ', 'chair ', 'president ',
+                        'ceo ', 'cfo ', 'executive ', 'the ']
+        for prefix in bad_prefixes:
+            if name_lower.startswith(prefix):
+                logger.debug(f"Rejected (starts with '{prefix}'): {name}")
+                return False
+
+        # Skip if name is too short or too long (should be 2-5 words for a person's name)
+        word_count = len(name.split())
+        if word_count < 2 or word_count > 5:
+            logger.debug(f"Rejected (word count {word_count}): {name}")
+            return False
+
+        # Skip if has camelCase concatenation in middle of word (like "HobermanBoard")
+        # Look for pattern: lowercase followed by uppercase in middle of a word
+        import re
+        if re.search(r'[a-z][A-Z]', name):
+            # Check if this is NOT just standard name capitalization (like "McDonald")
+            # by seeing if the uppercase letter is at the start of a word
+            words = name.split()
+            for word in words:
+                if re.search(r'[a-z][A-Z]', word) and not re.match(r'^Mc[A-Z]|^O\'[A-Z]', word):
+                    logger.debug(f"Rejected (camelCase concatenation): {name}")
+                    return False
+
+        # Skip if title contains the name (usually means bad extraction)
+        if name.lower() in title.lower() and len(name) > 5:
+            logger.debug(f"Rejected (name in title): {name} - {title}")
+            return False
+
+        # Skip if name contains line breaks (bad extraction)
+        if '\n' in name or '\r' in name:
+            logger.debug(f"Rejected (contains linebreaks): {name}")
+            return False
+
+        return True
+
     def _extract_leadership(self, soup: BeautifulSoup, url: str) -> List[Dict]:
-        """Extract leadership/staff information."""
+        """Extract leadership/staff information with improved pattern matching."""
         leadership = []
 
         try:
-            # Look for staff/board listings
-            people_sections = soup.find_all(['div', 'li'], class_=re.compile(r'staff|board|team|member|person', re.I))
+            # Strategy 1: Look for H3/H4/H5 tags followed by titles (common pattern)
+            # This handles structures like: <h4>Name</h4><p>Title</p> or <h4>Name</h4><h4><span>Title</span></h4>
+            title_keywords = re.compile(r'president|chair|director|officer|member|ceo|cfo|coo|executive|treasurer|secretary|board|trustee', re.I)
+
+            for heading in soup.find_all(['h3', 'h4', 'h5']):
+                name_text = heading.get_text(strip=True)
+
+                # Skip if looks like a section heading
+                if len(name_text) < 3 or name_text.lower() in ['board', 'staff', 'team', 'leadership', 'board members', 'directors']:
+                    continue
+
+                # Look for title in next sibling elements
+                title = None
+                current = heading.find_next_sibling()
+
+                # Check next few siblings for title
+                for _ in range(3):
+                    if current is None:
+                        break
+
+                    sibling_text = current.get_text(strip=True)
+
+                    # Check if this sibling contains a title keyword
+                    if title_keywords.search(sibling_text) and len(sibling_text) < 100:
+                        title = sibling_text
+                        break
+
+                    current = current.find_next_sibling()
+
+                # If we found a valid name and title
+                if title and len(name_text) > 2:
+                    # Clean zero-width spaces and other invisible characters
+                    clean_name = name_text.replace('\u200b', '').replace('\ufeff', '').strip()
+                    clean_title = title.replace('\u200b', '').replace('\ufeff', '').strip()
+
+                    # Validate the extracted data
+                    if self._is_valid_leader_name(clean_name, clean_title):
+                        # Check if not already added
+                        if not any(l['name'] == clean_name for l in leadership):
+                            leadership.append({
+                                'name': clean_name,
+                                'title': clean_title,
+                                'bio': ''
+                            })
+                            logger.debug(f"Extracted leader (Strategy 1 - Heading+Title): {clean_name} - {clean_title}")
+
+            # Strategy 2: Look for staff/board listings with class names
+            people_sections = soup.find_all(['div', 'li', 'tr'], class_=re.compile(r'staff|board|team|member|person|director|trustee', re.I))
 
             for section in people_sections[:20]:  # Limit to 20 people
                 # Try to extract name and title
-                name_elem = section.find(['h3', 'h4', 'strong', 'b'])
+                name_elem = section.find(['h3', 'h4', 'h5', 'strong', 'b'])
                 if name_elem:
                     name = name_elem.get_text(strip=True)
+
+                    # Skip if name is too short or looks like a heading
+                    if len(name) < 3 or name.lower() in ['board', 'staff', 'team', 'leadership']:
+                        continue
 
                     # Try to find title
                     title_patterns = [
                         section.find(class_=re.compile(r'title|position|role', re.I)),
                         section.find('p'),
+                        section.find('em'),
+                        section.find('i'),
                     ]
 
                     title = ''
                     for pattern in title_patterns:
-                        if pattern:
+                        if pattern and pattern != name_elem:
                             title = pattern.get_text(strip=True)
-                            break
+                            if title and title != name:
+                                break
 
                     if name and title:
-                        leadership.append({
-                            'name': name,
-                            'title': title,
-                            'bio': section.get_text(strip=True)[:300]  # Short bio
-                        })
+                        # Validate the extracted data
+                        if self._is_valid_leader_name(name, title):
+                            # Check if not already added
+                            if not any(l['name'] == name for l in leadership):
+                                leadership.append({
+                                    'name': name,
+                                    'title': title,
+                                    'bio': section.get_text(strip=True)[:300]
+                                })
+                                logger.debug(f"Extracted leader (Strategy 2 - Class): {name} - {title}")
 
-                        logger.debug(f"Extracted leader: {name} - {title}")
+            # Strategy 3: Look for table rows (common for board listings)
+            tables = soup.find_all('table')
+            for table in tables:
+                rows = table.find_all('tr')
+                for row in rows[1:21]:  # Skip header, limit to 20
+                    cells = row.find_all(['td', 'th'])
+                    if len(cells) >= 2:
+                        # Assume first cell is name, second is title
+                        name = cells[0].get_text(strip=True)
+                        title = cells[1].get_text(strip=True)
+
+                        if len(name) > 3 and len(title) > 2:
+                            # Validate the extracted data
+                            if self._is_valid_leader_name(name, title):
+                                # Check if not already added
+                                if not any(l['name'] == name for l in leadership):
+                                    leadership.append({
+                                        'name': name,
+                                        'title': title,
+                                        'bio': row.get_text(strip=True)[:300]
+                                    })
+                                    logger.debug(f"Extracted leader (Strategy 3 - Table): {name} - {title}")
+
+            # Strategy 4: Look for text patterns like "Name, Title" or "Name - Title"
+            text_content = soup.get_text()
+            name_title_pattern = re.compile(r'([A-Z][a-z]+(?:\s+\([A-Z][a-z]+\))?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*[,\-–—]?\s*((?:Vice\s+)?(?:President|Chair|Chairman|Director|Officer|Member|CEO|CFO|COO|Executive|Treasurer|Secretary|Board\s+Member))', re.MULTILINE | re.IGNORECASE)
+
+            matches = name_title_pattern.findall(text_content)
+            for name, title in matches[:15]:  # Limit to 15 matches
+                name = name.strip()
+                title = title.strip()
+                # Validate and check if not already added
+                if len(name) > 3 and len(title) > 2:
+                    if self._is_valid_leader_name(name, title):
+                        if not any(l['name'] == name for l in leadership):
+                            leadership.append({
+                                'name': name,
+                                'title': title,
+                                'bio': ''
+                            })
+                            logger.debug(f"Extracted leader (Strategy 4 - Pattern): {name} - {title}")
 
         except Exception as e:
             logger.error(f"Error extracting leadership from {url}: {e}")

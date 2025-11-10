@@ -204,7 +204,6 @@ class WebIntelligenceTool:
                     # Dict returned from FEEDS export - check if it's BAML structure
                     if 'scraping_metadata' in intelligence_data:
                         # Try to reconstruct BAML OrganizationIntelligence from dict
-                        from app.scrapy_pipelines.structured_output_pipeline import OrganizationIntelligence
                         try:
                             intelligence_data = OrganizationIntelligence(**intelligence_data)
                             metadata = intelligence_data.scraping_metadata

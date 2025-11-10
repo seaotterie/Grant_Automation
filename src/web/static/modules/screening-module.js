@@ -76,6 +76,35 @@ function screeningModule() {
         showLowPriority: false, // Hide low priority by default
         selectedOpportunities: [], // Track selected opportunities for batch actions
         categoryFilter: null, // Filter by category level (null = show all, 'qualified', 'review', 'consider', 'low_priority')
+        webResearchLoading: false, // Web research loading state
+        opportunityWebsiteUrl: '', // Website URL for web research
+
+        // URL Discovery State (Phase 5)
+        urlDiscoveryInProgress: false,
+        excludeLowPriority: true,  // Skip low_priority by default
+        urlDiscoveryProgress: {
+            total: 0,
+            processed: 0,
+            found: 0,
+            not_found: 0,
+            cached: 0,
+            discovered: 0,
+            elapsed_seconds: 0,
+            skipped: 0  // Low priority opportunities skipped
+        },
+        urlStatistics: {
+            total: 0,
+            available: 0,
+            missing: 0,
+            percentage_available: 0,
+            by_source: {},
+            by_verification: {}
+        },
+        showUrlStatsModal: false,
+
+        // Discovery Funnel Statistics (Phase 2)
+        funnelStatistics: null,
+        showFunnelStatsModal: false,
 
         // Notes State
         opportunityNotes: '',
@@ -279,7 +308,10 @@ function screeningModule() {
             try {
                 const requestData = {
                     max_results: options.max_results || 200,
-                    auto_scrapy_count: options.auto_scrapy_count || 20
+                    auto_scrapy_count: options.auto_scrapy_count || 20,
+                    min_score_threshold: options.min_score_threshold || 0.50,  // Lower threshold to show more results (was 0.62)
+                    apply_score_filter: options.apply_score_filter !== undefined ? options.apply_score_filter : true,
+                    include_funnel_stats: true  // Always include funnel stats for transparency
                 };
 
                 const response = await fetch(`/api/v2/profiles/${profileId}/discover`, {
@@ -302,10 +334,19 @@ function screeningModule() {
                     this.discoveryResults = data.opportunities || [];
                     this.summaryCounts = data.summary;
 
+                    // Capture funnel statistics if included (Phase 2)
+                    if (data.funnel_statistics) {
+                        this.funnelStatistics = data.funnel_statistics;
+                        console.log('[FUNNEL_STATS] Captured:', this.funnelStatistics);
+                    }
+
                     this.showNotification?.(
                         `✅ Found ${data.summary.total_found} opportunities (${data.summary.qualified} qualified, ${data.summary.review} for review)`,
                         'success'
                     );
+
+                    // Load URL statistics after discovery
+                    await this.loadUrlStatistics();
 
                     // Reload opportunities to get updated discovery_metadata (freshness info)
                     await this.loadSavedOpportunities(profileId);
@@ -857,21 +898,46 @@ function screeningModule() {
         async runWebResearch() {
             if (!this.selectedOpportunity) return;
 
+            this.webResearchLoading = true;
             this.showNotification?.('🕷️ Starting web research with Scrapy (Tool 25)...', 'info');
 
             try {
+                // Prepare request body with optional website URL
+                const requestBody = {};
+                if (this.opportunityWebsiteUrl && this.opportunityWebsiteUrl.trim()) {
+                    requestBody.website_url = this.opportunityWebsiteUrl.trim();
+                    console.log('[WEB_RESEARCH] Using user-provided URL:', requestBody.website_url);
+                }
+
                 const response = await fetch(`/api/v2/opportunities/${this.selectedOpportunity.opportunity_id}/research`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
                 });
 
                 if (response.ok) {
                     const data = await response.json();
 
                     if (data.success) {
-                        // Update opportunity with web data
+                        // Update opportunity with web data (in selectedOpportunity AND opportunities array)
                         this.selectedOpportunity.web_search_complete = data.web_search_complete;
                         this.selectedOpportunity.web_data = data.web_data;
+
+                        // CRITICAL: Also update the opportunity in the opportunities array so results persist
+                        if (this.opportunities && Array.isArray(this.opportunities)) {
+                            const oppIndex = this.opportunities.findIndex(
+                                opp => opp.opportunity_id === this.selectedOpportunity.opportunity_id
+                            );
+                            if (oppIndex !== -1) {
+                                this.opportunities[oppIndex].web_search_complete = data.web_search_complete;
+                                this.opportunities[oppIndex].web_data = data.web_data;
+                                console.log('[WEB_RESEARCH] Updated opportunities array at index', oppIndex);
+                            } else {
+                                console.log('[WEB_RESEARCH] Opportunity not found in array, ID:', this.selectedOpportunity.opportunity_id);
+                            }
+                        } else {
+                            console.log('[WEB_RESEARCH] No opportunities array available, web data stored in selectedOpportunity only');
+                        }
 
                         // Show success notification with stats
                         const leadershipCount = data.web_data?.leadership?.length || 0;
@@ -882,8 +948,7 @@ function screeningModule() {
                             'success'
                         );
 
-                        // Auto-switch to Website Data tab to show results
-                        this.detailsModalTab = 'website';
+                        // Don't auto-switch tabs - let user control navigation
                     } else {
                         // Log full response for debugging
                         console.error('Web research response:', data);
@@ -900,6 +965,8 @@ function screeningModule() {
                     `❌ Web research failed: ${error.message}`,
                     'error'
                 );
+            } finally {
+                this.webResearchLoading = false;
             }
         },
 
@@ -1189,6 +1256,133 @@ function screeningModule() {
                 console.error('Batch promotion error:', error);
                 this.showNotification?.(`Failed to promote opportunities: ${error.message}`, 'error');
             }
+        },
+
+        // =================================================================
+        // URL DISCOVERY FUNCTIONS (Phase 5 - $0.00 Cost)
+        // =================================================================
+
+        /**
+         * Discover URLs for all opportunities in current profile
+         * Cost: $0.00 (pure database queries)
+         */
+        async discoverAllUrls(forceRefresh = false) {
+            if (!this.currentProfileId) {
+                this.showNotification?.('No profile selected', 'warning');
+                return;
+            }
+
+            this.urlDiscoveryInProgress = true;
+            this.urlDiscoveryProgress = {
+                total: 0,
+                processed: 0,
+                found: 0,
+                not_found: 0,
+                cached: 0,
+                discovered: 0,
+                elapsed_seconds: 0,
+                skipped: 0
+            };
+
+            try {
+                console.log('[URL_DISCOVERY] Starting bulk URL discovery...');
+
+                // Calculate skipped count (low_priority)
+                const skippedCount = this.excludeLowPriority ? this.summaryCounts.low_priority : 0;
+                const eligibleCount = this.summaryCounts.total_found - skippedCount;
+
+                const skipMsg = this.excludeLowPriority ? ` (skipping ${skippedCount} low priority)` : '';
+                this.showNotification?.(`🔍 Discovering URLs for ${eligibleCount} opportunities${skipMsg}... ($0.00)`, 'info');
+
+                const response = await fetch(
+                    `/api/v2/profiles/${this.currentProfileId}/discover-urls?force_refresh=${forceRefresh}&exclude_low_priority=${this.excludeLowPriority}`,
+                    { method: 'POST' }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`URL discovery failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Update progress with final results (reuse skippedCount from above)
+                this.urlDiscoveryProgress = {
+                    ...data.result,
+                    skipped: skippedCount
+                };
+                this.urlStatistics = data.statistics;
+
+                console.log('[URL_DISCOVERY] Complete:', data.result);
+
+                // Show success notification with X/Y format
+                const found = data.result.found;
+                const notFound = data.result.not_found;
+                const total = data.result.total;
+                const time = Math.round(data.result.elapsed_seconds);
+
+                const skipSummary = skippedCount > 0 ? `, ${skippedCount} skipped` : '';
+                this.showNotification?.(
+                    `✅ Searched ${total} opportunities: ${found} URLs found, ${notFound} missing${skipSummary} (${time}s, $0.00)`,
+                    'success'
+                );
+
+                // Reload opportunities to show URLs
+                await this.loadSavedOpportunities(this.currentProfileId);
+
+            } catch (error) {
+                console.error('[URL_DISCOVERY] Error:', error);
+                this.showNotification?.(`URL discovery failed: ${error.message}`, 'error');
+            } finally {
+                this.urlDiscoveryInProgress = false;
+            }
+        },
+
+        /**
+         * Load URL statistics for current profile
+         */
+        async loadUrlStatistics() {
+            if (!this.currentProfileId) return;
+
+            try {
+                const response = await fetch(`/api/v2/profiles/${this.currentProfileId}/url-statistics`);
+                if (response.ok) {
+                    const data = await response.json();
+                    this.urlStatistics = data.statistics;
+                    console.log('[URL_STATS] Loaded:', this.urlStatistics);
+                }
+            } catch (error) {
+                console.error('[URL_STATS] Error loading statistics:', error);
+            }
+        },
+
+        /**
+         * Get computed URL discovery percentage
+         */
+        get urlDiscoveryPercent() {
+            if (this.urlDiscoveryProgress.total === 0) return 0;
+            return Math.round((this.urlDiscoveryProgress.processed / this.urlDiscoveryProgress.total) * 100);
+        },
+
+        /**
+         * Get eligible opportunity count for URL discovery (excludes low_priority if filter enabled)
+         */
+        get urlDiscoveryEligibleCount() {
+            const skipped = this.excludeLowPriority ? this.summaryCounts.low_priority : 0;
+            return this.summaryCounts.total_found - skipped;
+        },
+
+        /**
+         * Show URL statistics modal
+         */
+        showUrlStatisticsModal() {
+            this.showUrlStatsModal = true;
+        },
+
+        /**
+         * Show funnel statistics modal
+         */
+        showFunnelStatisticsModal() {
+            this.showFunnelStatsModal = true;
         }
     };
 }

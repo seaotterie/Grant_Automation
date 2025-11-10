@@ -92,6 +92,12 @@ class Opportunity:
     source: Optional[str] = None
     discovery_date: Optional[datetime] = None
     last_analysis_date: Optional[datetime] = None
+    # URL Metadata (for Tool 25 web intelligence caching)
+    website_url: Optional[str] = None
+    url_source: Optional[str] = None  # "990_xml", "user_provided", "not_found"
+    url_discovered_at: Optional[datetime] = None
+    url_last_verified_at: Optional[datetime] = None
+    url_verification_status: Optional[str] = None  # "pending", "valid", "invalid", "timeout"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

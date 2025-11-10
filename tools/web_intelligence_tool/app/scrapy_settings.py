@@ -22,8 +22,8 @@ sys.path.insert(0, str(project_root))
 
 BOT_NAME = 'catalynx_web_intelligence'
 
-SPIDER_MODULES = ['app.scrapy_spiders']
-NEWSPIDER_MODULE = 'app.scrapy_spiders'
+SPIDER_MODULES = ['tools.web_intelligence_tool.app.scrapy_spiders']
+NEWSPIDER_MODULE = 'tools.web_intelligence_tool.app.scrapy_spiders'
 
 # ============================================================================
 # RESPECTFUL SCRAPING CONFIGURATION (from 12factors.toml)
@@ -97,13 +97,13 @@ DOWNLOADER_MIDDLEWARES = {
 
 ITEM_PIPELINES = {
     # Validation pipeline - verify against 990 data
-    'app.scrapy_pipelines.validation_pipeline.NinetyValidationPipeline': 100,
+    'tools.web_intelligence_tool.app.scrapy_pipelines.validation_pipeline.NinetyValidationPipeline': 100,
 
     # Deduplication pipeline - remove duplicate entries
-    'app.scrapy_pipelines.deduplication_pipeline.DeduplicationPipeline': 200,
+    'tools.web_intelligence_tool.app.scrapy_pipelines.deduplication_pipeline.DeduplicationPipeline': 200,
 
     # Structured output pipeline - convert to BAML models
-    'app.scrapy_pipelines.structured_output_pipeline.StructuredOutputPipeline': 300,
+    'tools.web_intelligence_tool.app.scrapy_pipelines.structured_output_pipeline.StructuredOutputPipeline': 300,
 }
 
 # ============================================================================

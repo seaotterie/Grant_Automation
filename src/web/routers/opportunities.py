@@ -6,6 +6,7 @@ Endpoints for viewing opportunity details, running web research, and promoting t
 
 from fastapi import APIRouter, HTTPException
 from typing import Dict, Any, Optional
+from pydantic import BaseModel
 import logging
 import sqlite3
 import json
@@ -20,6 +21,12 @@ router = APIRouter(prefix="/api/v2/opportunities", tags=["opportunities"])
 
 # Initialize database manager
 database_manager = DatabaseManager(get_catalynx_db())
+
+
+# Request models
+class WebResearchRequest(BaseModel):
+    """Request body for web research endpoint"""
+    website_url: Optional[str] = None
 
 
 @router.get("/{opportunity_id}/details")
@@ -128,8 +135,8 @@ async def get_opportunity_details(opportunity_id: str, profile_id: Optional[str]
             "dimensional_scores": dimensional_scores,
             "990_data": discovery_analysis.get('990_data'),
             "grant_history": discovery_analysis.get('grant_history'),
-            "web_search_complete": False,  # Will be updated by research endpoint
-            "web_data": None,  # Will be populated by research endpoint
+            "web_search_complete": discovery_analysis.get('web_search_complete', False),
+            "web_data": discovery_analysis.get('web_data'),  # Return stored web intelligence data
             "current_stage": opportunity.current_stage,
             "discovery_date": discovery_date_iso,
             "notes": opportunity.notes,
@@ -146,7 +153,11 @@ async def get_opportunity_details(opportunity_id: str, profile_id: Optional[str]
 
 
 @router.post("/{opportunity_id}/research")
-async def research_opportunity(opportunity_id: str, profile_id: Optional[str] = None):
+async def research_opportunity(
+    opportunity_id: str,
+    request_body: WebResearchRequest = WebResearchRequest(),
+    profile_id: Optional[str] = None
+):
     """
     Run on-demand Web Intelligence (Scrapy) for an opportunity.
 
@@ -156,6 +167,11 @@ async def research_opportunity(opportunity_id: str, profile_id: Optional[str] = 
     - Recent news and updates
     - Contact information
     - Social media presence
+
+    Args:
+        opportunity_id: ID of the opportunity to research
+        request_body: Optional website URL to use for scraping
+        profile_id: Optional profile ID for database lookup
 
     Returns enriched opportunity data.
     """
@@ -217,11 +233,20 @@ async def research_opportunity(opportunity_id: str, profile_id: Optional[str] = 
 
             # Create Tool 25 instance and request
             tool = WebIntelligenceTool()
-            request = WebIntelligenceRequest(
-                ein=ein,
-                organization_name=opportunity.organization_name,
-                use_case=UseCase.PROFILE_BUILDER  # Use Case 1: Profile Builder (implemented)
-            )
+
+            # Build request with optional user-provided URL
+            tool_request_params = {
+                'ein': ein,
+                'organization_name': opportunity.organization_name,
+                'use_case': UseCase.PROFILE_BUILDER  # Use Case 1: Profile Builder (implemented)
+            }
+
+            # Add user-provided URL if available
+            if request_body.website_url:
+                tool_request_params['user_provided_url'] = request_body.website_url
+                logger.info(f"Using user-provided URL: {request_body.website_url}")
+
+            request = WebIntelligenceRequest(**tool_request_params)
 
             logger.info(f"Executing Tool 25 for EIN {ein}")
 

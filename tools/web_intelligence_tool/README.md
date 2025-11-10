@@ -12,27 +12,28 @@ Tool 25 is a 12-factor compliant web intelligence gathering tool that uses the S
    - **Purpose**: Auto-populate organization profiles from websites
    - **Targets**: Mission, programs, leadership, contact info, financials
    - **Integration**: `POST /api/profiles/fetch-ein`
-   - **Cost**: $0.05-0.10 per organization
+   - **Cost**: **$0.00** (pure Scrapy, no AI APIs)
 
 2. **Opportunity Research** (Use Case 2)
    - **Purpose**: Discover grant opportunities from grantmaking nonprofits
    - **Targets**: Grant programs, funding priorities, application requirements, deadlines
    - **Examples**: United Way chapters, community foundations, nonprofit grantmakers
    - **Integration**: Tool 2 (Deep Intelligence Tool)
-   - **Cost**: $0.15-0.25 per organization
+   - **Cost**: **$0.00** (pure Scrapy, no AI APIs)
 
 3. **Foundation Research** (Use Case 3)
    - **Purpose**: Discover grant opportunities and application details
    - **Targets**: Guidelines, deadlines, priorities, trustees, recent grants
    - **Integration**: Tool 13 (Schedule I Grant Analyzer Tool)
-   - **Cost**: $0.10-0.20 per foundation
+   - **Cost**: **$0.00** (pure Scrapy, no AI APIs)
 
 ## Key Features
 
 ### ✅ Smart URL Resolution
-- **Priority**: User-provided → 990-declared → GPT-predicted
+- **Priority**: User-provided → 990-declared → Manual Entry Required
 - **Integration**: `SmartURLResolutionService` via `SmartURLMiddleware`
 - **Confidence Scoring**: Every URL has source attribution and confidence score
+- **No AI**: Pure data lookup from user input and tax filings ($0.00 cost)
 
 ### ✅ 990 Tax Filing Verification
 - **Cross-Validation**: Scraped leadership verified against IRS 990 Part VII
@@ -217,7 +218,7 @@ Every output includes comprehensive metadata:
 
 - **Data Quality Score** (0.0-1.0): Overall quality of extracted data
 - **Verification Confidence** (0.0-1.0): How well web data matches 990
-- **URL Source**: Where the URL came from (user, 990, GPT)
+- **URL Source**: Where the URL came from (user_provided, 990_declared, not_found)
 - **URL Confidence**: Confidence in URL (0.0-1.0)
 - **Extraction Flags**: What data was successfully extracted
 
@@ -299,15 +300,15 @@ foundation_intel = await foundation_tool.execute(foundation_request)
 
 | Use Case | Pages Scraped | Execution Time | Cost Estimate |
 |----------|--------------|----------------|---------------|
-| Profile Builder | 2-10 | 10-30s | $0.05-0.10 |
-| Opportunity Research | 5-15 | 30-60s | $0.15-0.25 |
-| Foundation Research | 3-12 | 20-45s | $0.10-0.20 |
+| Profile Builder | 2-10 | 10-30s | **$0.00** |
+| Opportunity Research | 5-15 | 30-60s | **$0.00** |
+| Foundation Research | 3-12 | 20-45s | **$0.00** |
 
 **Cost Breakdown:**
 - Scrapy framework: $0.00 (open source)
-- GPT URL discovery: $0.05-0.10 (if no user/990 URL)
+- URL resolution: $0.00 (user input + 990 tax filing lookup, no AI)
 - 990 verification: $0.00 (local data)
-- Total: $0.05-0.25 per organization
+- **Total: $0.00 per organization** (pure web scraping, no AI APIs)
 
 ## Testing
 

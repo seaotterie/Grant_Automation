@@ -76,7 +76,7 @@ class ScrapingMetadata {
 
     // URL resolution
     url_scraped string
-    url_source string  // "user_provided", "990_declared", "gpt_predicted"
+    url_source string  // "user_provided", "990_declared", "not_found"
     url_confidence float
 
     // Extraction success rates

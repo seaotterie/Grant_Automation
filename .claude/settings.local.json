@@ -14,7 +14,10 @@
       "Bash(timeout 10 bash -c 'until curl -s http://localhost:8000/api/health > /dev/null 2>&1; do sleep 0.5; done; echo \"\"Server ready with Enhanced Search fix!\"\"')",
       "Bash(git commit -m \"Fix Enhanced Search tab display logic to show Run button correctly\n\nResolves issue where ''Run Enhanced Search'' button was missing because\ntemplate showed results section when only website_url existed.\n\n**Root Cause**:\n- Template condition: x-show=\"\"web_enhanced_data OR website_url\"\"\n- Now that website_url persists, this was always true\n- Template showed results section even without enhanced data\n\n**Solution - Three Clear States**:\n1. **Has enhanced data**: Show results grid + \"\"Re-run\"\" button\n2. **Ready to search**: Show blue prompt + \"\"Run Enhanced Search\"\" button\n   (when website_url exists but no web_enhanced_data yet)\n3. **No website**: Show \"\"Go to Basic Info\"\" button\n   (when no website_url and no web_enhanced_data)\n\n**Changes**:\n- Line 552: Changed to only show if web_enhanced_data exists\n- Lines 609-628: New \"\"Ready to Search\"\" state with prominent button\n- Removed duplicate yellow warning section\n- Better UX: Blue prompt tells user website is ready, click to search\n\n**Testing**:\n- Profile with website but no enhanced data shows Run button ✓\n- After search completes, shows results with Re-run button ✓\n- Profile without website shows Go to Basic Info button ✓\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")",
       "Bash(sqlite3 \"C:\\Users\\cotte\\Documents\\Home\\03_Dad\\_Projects\\2025\\ClaudeCode\\Grant_Automation\\data\\catalynx.db\" \"SELECT id, name, website_url FROM profiles LIMIT 10;\")",
-      "Bash(sqlite3 \"C:\\Users\\cotte\\Documents\\Home\\03_Dad\\_Projects\\2025\\ClaudeCode\\Grant_Automation\\data\\catalynx.db\" \"PRAGMA table_info(profiles);\")"
+      "Bash(sqlite3 \"C:\\Users\\cotte\\Documents\\Home\\03_Dad\\_Projects\\2025\\ClaudeCode\\Grant_Automation\\data\\catalynx.db\" \"PRAGMA table_info(profiles);\")",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(tasklist:*)"
     ],
     "deny": [],
     "ask": [],

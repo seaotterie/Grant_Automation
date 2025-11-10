@@ -27,6 +27,7 @@ from src.profiles.quality_scoring import (
     QualityScore
 )
 from src.profiles.models import UnifiedProfile
+from src.profiles.url_discovery_service import URLDiscoveryService, URLDiscoveryResult
 from src.database.database_manager import DatabaseManager, Opportunity
 from src.config.database_config import get_nonprofit_intelligence_db, get_catalynx_db
 
@@ -43,6 +44,8 @@ class DiscoveryRequest(BaseModel):
     max_return_limit: int = Field(default=500, ge=1, le=10000, description="Maximum results to return")
     auto_scrapy_count: int = Field(default=20, ge=0, le=100, description="Number of top orgs to auto-scrape")
     max_results: int = Field(default=200, ge=1, le=10000, description="Maximum orgs to query from BMF")
+    apply_score_filter: bool = Field(default=True, description="Apply min_score_threshold filter to results")
+    include_funnel_stats: bool = Field(default=True, description="Include detailed funnel statistics in response")
 
     @validator('min_score_threshold')
     def validate_score(cls, v):
@@ -58,6 +61,7 @@ profile_scorer = ProfileQualityScorer()
 opportunity_scorer = OpportunityQualityScorer()
 completeness_validator = DataCompletenessValidator()
 database_manager = DatabaseManager(get_catalynx_db())
+url_discovery_service = URLDiscoveryService()
 
 
 # Helper Functions for SCREENING Stage
@@ -1555,9 +1559,11 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
         max_return_limit = request.max_return_limit  # Validated 1-10000
         auto_scrapy_count = request.auto_scrapy_count  # Validated 0-100
         max_results = request.max_results  # Validated 1-10000
+        apply_score_filter = request.apply_score_filter  # Whether to filter by score
+        include_funnel_stats = request.include_funnel_stats  # Whether to include detailed stats
 
         logger.info(f"Starting discovery for profile {profile_id} with NTEE codes: {target_ntee_codes}")
-        logger.info(f"Parameters: min_score={min_score_threshold}, max_return={max_return_limit}")
+        logger.info(f"Parameters: min_score={min_score_threshold}, max_return={max_return_limit}, apply_filter={apply_score_filter}")
 
         # Step 1: BMF Filter - Query nonprofit_intelligence.db (NO LIMIT - score all)
         bmf_start = time.time()
@@ -1577,10 +1583,17 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
         scoring_time = time.time() - scoring_start
         logger.info(f"Multi-dimensional scoring completed for {len(scored_results)} organizations in {scoring_time:.2f}s")
 
-        # Step 4: Filter by score threshold and apply safety cap
-        qualified_results = [org for org in scored_results if org['overall_score'] >= min_score_threshold]
+        # Step 4: Filter by score threshold (conditional) and apply safety cap
+        if apply_score_filter:
+            qualified_results = [org for org in scored_results if org['overall_score'] >= min_score_threshold]
+            logger.info(f"After score filter (≥{min_score_threshold}): {len(qualified_results)} qualified organizations")
+        else:
+            qualified_results = scored_results  # No filtering, return all scored results
+            logger.info(f"Score filter disabled - returning all {len(qualified_results)} scored organizations")
+
+        above_threshold_count = len([org for org in scored_results if org['overall_score'] >= min_score_threshold])
         qualified_results = qualified_results[:max_return_limit]  # Safety cap
-        logger.info(f"After score filter (≥{min_score_threshold}): {len(qualified_results)} qualified organizations")
+        logger.info(f"After safety cap ({max_return_limit} max): {len(qualified_results)} organizations returned")
 
         # TODO: Step 4 - Web Intelligence Tool Scrapy (integrate in next task)
 
@@ -1617,6 +1630,7 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
             category = opp["category_level"]
             summary_counts[category] = summary_counts.get(category, 0) + 1
 
+        # Basic summary (always included)
         summary = {
             "total_found": len(opportunities),  # Total opportunities returned to UI
             "total_bmf_matches": len(bmf_results),
@@ -1633,7 +1647,35 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
 
         execution_time = time.time() - start_time
 
-        # Performance breakdown
+        # Funnel statistics (detailed pipeline breakdown)
+        funnel_statistics = None
+        if include_funnel_stats:
+            funnel_statistics = {
+                "bmf_query_matches": len(bmf_results),  # Total BMF matches before any filtering
+                "after_990_enrichment": len(enriched_results),  # After 990 data added
+                "after_scoring": len(scored_results),  # After multi-dimensional scoring
+                "above_threshold": above_threshold_count,  # Score >= min_score_threshold
+                "after_safety_cap": len(qualified_results),  # After max_return_limit cap
+                "returned_to_ui": len(opportunities),  # Final count returned
+                "filter_applied": apply_score_filter,  # Whether score filter was applied
+                "threshold_used": min_score_threshold,  # Score threshold value
+                "safety_cap": max_return_limit  # Max return limit
+            }
+
+        # Performance breakdown (detailed timing)
+        performance_breakdown = None
+        if include_funnel_stats:
+            filtering_time = execution_time - bmf_time - enrichment_time - scoring_time
+            performance_breakdown = {
+                "total_ms": int(execution_time * 1000),
+                "bmf_query_ms": int(bmf_time * 1000),
+                "enrichment_ms": int(enrichment_time * 1000),
+                "scoring_ms": int(scoring_time * 1000),
+                "filtering_ms": int(filtering_time * 1000) if filtering_time > 0 else 0,
+                "orgs_per_second": int(len(scored_results) / execution_time) if execution_time > 0 else 0
+            }
+
+        # Legacy performance object for backward compatibility
         performance = {
             "total_time": execution_time,
             "bmf_query_time": bmf_time,
@@ -1642,7 +1684,7 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
             "orgs_per_second": int(len(scored_results) / execution_time) if execution_time > 0 else 0
         }
 
-        logger.info(f"Discovery complete: {len(bmf_results)} BMF → {len(scored_results)} scored → {len(qualified_results)} qualified in {execution_time:.2f}s ({performance['orgs_per_second']} orgs/sec)")
+        logger.info(f"Discovery complete: {len(bmf_results)} BMF → {len(scored_results)} scored → {above_threshold_count} above threshold → {len(qualified_results)} returned in {execution_time:.2f}s")
 
         # Step 4: Save discovered opportunities to database (with UPSERT deduplication)
         saved_count = 0
@@ -1808,7 +1850,8 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
         except Exception as e:
             logger.error(f"Failed to update profile metadata: {e}", exc_info=True)
 
-        return {
+        # Build response with optional funnel statistics
+        response = {
             "status": "success",
             "profile_id": profile_id,
             "opportunities": opportunities,
@@ -1816,6 +1859,13 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
             "performance": performance,
             "execution_time": execution_time
         }
+
+        # Add funnel statistics if requested
+        if include_funnel_stats and funnel_statistics:
+            response["funnel_statistics"] = funnel_statistics
+            response["performance_breakdown"] = performance_breakdown
+
+        return response
 
     except HTTPException:
         raise
@@ -1891,7 +1941,16 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
                 "source_type": opp_raw.get('source', 'nonprofit'),  # Map source to source_type with default
                 "discovery_source": opp_raw.get('source', 'nonprofit'),  # Frontend alias for source
                 "discovery_date": opp_raw.get('discovery_date'),
-                "discovered_at": opp_raw.get('discovery_date')  # Frontend alias for discovery_date
+                "discovered_at": opp_raw.get('discovery_date'),  # Frontend alias for discovery_date
+                # URL metadata (Phase 5 - URL Discovery)
+                "website_url": opp_raw.get('website_url'),
+                "url_source": opp_raw.get('url_source'),
+                "url_discovered_at": opp_raw.get('url_discovered_at'),
+                "url_verification_status": opp_raw.get('url_verification_status'),
+                # Additional financial data for table display
+                "revenue": discovery_data.get('990_data', {}).get('revenue') if discovery_data.get('990_data') else None,
+                "assets": discovery_data.get('990_data', {}).get('assets') if discovery_data.get('990_data') else None,
+                "foundation_code": opp_raw.get('foundation_code')
             })
 
         summary = {
@@ -1949,4 +2008,132 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
 
     except Exception as e:
         logger.error(f"Failed to retrieve opportunities for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =====================================================================================
+# URL DISCOVERY ENDPOINTS ($0.00 COST - Pure Database Queries)
+# =====================================================================================
+
+@router.post("/{profile_id}/discover-urls")
+async def discover_urls_for_profile(
+    profile_id: str,
+    force_refresh: bool = False,
+    exclude_low_priority: bool = True
+):
+    """
+    Bulk URL discovery for opportunities in a profile (skips low priority by default).
+
+    Queries:
+    1. Opportunities table cache (instant if already discovered)
+    2. Form 990 XML data (WebsiteAddressTxt field)
+    3. Form 990-PF for private foundations
+    4. Form 990-EZ for smaller nonprofits
+
+    Cost: $0.00 (no AI APIs, pure XML parsing)
+    Performance: 2-4 seconds per organization
+
+    Query Params:
+    - force_refresh: Re-discover URLs even if cached (default: False)
+    - exclude_low_priority: Skip low_priority category opportunities (default: True)
+
+    Response:
+    {
+        "status": "success",
+        "profile_id": "...",
+        "result": {
+            "total": 26,
+            "processed": 26,
+            "found": 18,
+            "not_found": 8,
+            "cached": 10,
+            "discovered": 8,
+            "elapsed_seconds": 45.2
+        },
+        "statistics": {
+            "total": 26,
+            "available": 18,
+            "missing": 8,
+            "percentage_available": 69.2,
+            "by_source": {"990_xml": 18, "not_found": 8}
+        },
+        "exclude_low_priority": true
+    }
+    """
+    try:
+        logger.info(f"Starting URL discovery for profile {profile_id} (force_refresh={force_refresh}, exclude_low_priority={exclude_low_priority})")
+
+        # Run URL discovery
+        result = await url_discovery_service.discover_urls_for_opportunities(
+            profile_id=profile_id,
+            force_refresh=force_refresh,
+            exclude_low_priority=exclude_low_priority
+        )
+
+        # Get updated statistics
+        statistics = await url_discovery_service.get_url_statistics(profile_id)
+
+        logger.info(f"URL discovery complete for profile {profile_id}: {result.found} found, {result.not_found} not found, {result.cached} cached")
+
+        return {
+            "status": "success",
+            "profile_id": profile_id,
+            "result": {
+                "total": result.total,
+                "processed": result.processed,
+                "found": result.found,
+                "not_found": result.not_found,
+                "cached": result.cached,
+                "discovered": result.discovered,
+                "elapsed_seconds": result.elapsed_seconds
+            },
+            "statistics": statistics,
+            "discoveries": result.discoveries[:20],  # First 20 for UI display
+            "exclude_low_priority": exclude_low_priority
+        }
+
+    except Exception as e:
+        logger.error(f"URL discovery failed for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{profile_id}/url-statistics")
+async def get_url_statistics(profile_id: str):
+    """
+    Get URL availability statistics for a profile.
+
+    Returns:
+    {
+        "status": "success",
+        "profile_id": "...",
+        "statistics": {
+            "total": 80,
+            "available": 45,
+            "missing": 35,
+            "percentage_available": 56.3,
+            "by_source": {
+                "990_xml": 40,
+                "990pf_xml": 3,
+                "990ez_xml": 2,
+                "not_found": 35
+            },
+            "by_verification": {
+                "pending": 45,
+                "valid": 0,
+                "invalid": 0
+            }
+        }
+    }
+    """
+    try:
+        statistics = await url_discovery_service.get_url_statistics(profile_id)
+
+        return {
+            "status": "success",
+            "profile_id": profile_id,
+            "statistics": statistics
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get URL statistics for profile {profile_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
