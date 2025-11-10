@@ -923,20 +923,20 @@ function screeningModule() {
                         this.selectedOpportunity.web_search_complete = data.web_search_complete;
                         this.selectedOpportunity.web_data = data.web_data;
 
-                        // CRITICAL: Also update the opportunity in the opportunities array so results persist
-                        if (this.opportunities && Array.isArray(this.opportunities)) {
-                            const oppIndex = this.opportunities.findIndex(
+                        // CRITICAL: Also update the opportunity in the discoveryResults array so results persist
+                        if (this.discoveryResults && Array.isArray(this.discoveryResults)) {
+                            const oppIndex = this.discoveryResults.findIndex(
                                 opp => opp.opportunity_id === this.selectedOpportunity.opportunity_id
                             );
                             if (oppIndex !== -1) {
-                                this.opportunities[oppIndex].web_search_complete = data.web_search_complete;
-                                this.opportunities[oppIndex].web_data = data.web_data;
-                                console.log('[WEB_RESEARCH] Updated opportunities array at index', oppIndex);
+                                this.discoveryResults[oppIndex].web_search_complete = data.web_search_complete;
+                                this.discoveryResults[oppIndex].web_data = data.web_data;
+                                console.log('[WEB_RESEARCH] Updated discoveryResults array at index', oppIndex);
                             } else {
-                                console.log('[WEB_RESEARCH] Opportunity not found in array, ID:', this.selectedOpportunity.opportunity_id);
+                                console.log('[WEB_RESEARCH] Opportunity not found in discoveryResults array, ID:', this.selectedOpportunity.opportunity_id);
                             }
                         } else {
-                            console.log('[WEB_RESEARCH] No opportunities array available, web data stored in selectedOpportunity only');
+                            console.log('[WEB_RESEARCH] No discoveryResults array available, web data stored in selectedOpportunity only');
                         }
 
                         // Show success notification with stats
