@@ -17,7 +17,9 @@
       "Bash(sqlite3 \"C:\\Users\\cotte\\Documents\\Home\\03_Dad\\_Projects\\2025\\ClaudeCode\\Grant_Automation\\data\\catalynx.db\" \"PRAGMA table_info(profiles);\")",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(git stash:*)",
+      "Bash(git count-objects:*)"
     ],
     "deny": [],
     "ask": [],
