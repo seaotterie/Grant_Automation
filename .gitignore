@@ -87,6 +87,15 @@ dmypy.json
 api_keys.json
 secrets.json
 
+# Large data files - IRS SOI extracts and backups (DO NOT COMMIT TO GITHUB)
+SOI_Files/
+*.db.backup
+*_test_*.html
+*_demo_*.html
+
+# Test data files
+test_framework/monte_carlo_data/*.csv
+
 # Large data files (optional - comment out if you want to track them)
 # *.csv
 # *.xlsx
