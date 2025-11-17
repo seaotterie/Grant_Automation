@@ -15,7 +15,26 @@
         searchQuery: '',
         criteriaData: {}
      }"
-     x-init="fetch('/static/data/government-criteria.js').then(r => r.text()).then(data => { eval(data); criteriaData = GOVERNMENT_CRITERIA; console.log('Government criteria loaded:', Object.keys(criteriaData).length, 'categories'); });"
+     x-init="fetch('/static/data/government-criteria.js').then(r => r.text()).then(data => {
+                // Safely extract GOVERNMENT_CRITERIA without eval
+                const jsonStart = data.indexOf('{');
+                const jsonData = data.substring(jsonStart);
+                // Find the last closing brace
+                let braceCount = 0;
+                let lastBrace = 0;
+                for (let i = 0; i < jsonData.length; i++) {
+                    if (jsonData[i] === '{') braceCount++;
+                    if (jsonData[i] === '}') {
+                        braceCount--;
+                        if (braceCount === 0) {
+                            lastBrace = i + 1;
+                            break;
+                        }
+                    }
+                }
+                criteriaData = JSON.parse(jsonData.substring(0, lastBrace));
+                console.log('Government criteria loaded:', Object.keys(criteriaData).length, 'categories');
+            }).catch(err => console.error('Failed to load government criteria:', err));"
      x-show="modalOpen"
      x-cloak
      @open-government-criteria-modal.window="
