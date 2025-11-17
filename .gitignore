@@ -56,10 +56,13 @@ tmp/
 *.tmp
 *.temp
 
-# Environment variables
+# Environment variables - NEVER commit these files
 .env
 .env.local
 .env.*.local
+.env.*
+**/.env
+**/.env.*
 
 # Database
 *.db
