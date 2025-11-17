@@ -7,12 +7,10 @@ Cost: $0.0004-$0.04 per opportunity depending on mode
 Replaces: ai_lite_unified, ai_heavy_light processors
 """
 
-import sys
-from pathlib import Path
+from src.core.tool_framework.path_helper import setup_tool_paths
 
-# Add src to path for imports
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root))
+# Setup paths for imports
+project_root = setup_tool_paths(__file__)
 
 from typing import List, Optional
 import asyncio

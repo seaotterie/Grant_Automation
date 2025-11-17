@@ -7,12 +7,10 @@ Cost: $0.03 per analysis
 Replaces: financial_scorer.py processor
 """
 
-import sys
-from pathlib import Path
+from src.core.tool_framework.path_helper import setup_tool_paths
 
-# Add src to path for imports
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root))
+# Setup paths for imports
+project_root = setup_tool_paths(__file__)
 
 from typing import Optional
 import time
