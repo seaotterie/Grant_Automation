@@ -1,0 +1,25 @@
+ID,Title,Severity,OWASP,CWE,Status,Location,Effort,Priority,Remediation_Time,Impact
+VUL-001,JWT Secret Key Generated at Runtime,CRITICAL,A07:2021,CWE-798,Open,src/auth/jwt_auth.py:20,Low,P0,5 minutes,All user sessions invalidated on restart
+VUL-002,Hardcoded Default User Credentials,CRITICAL,A07:2021,CWE-798,Open,src/auth/jwt_auth.py:62-85,Low,P0,10 minutes,Full admin access to attackers
+VUL-003,SQL Injection via Sort Field,CRITICAL,A03:2021,CWE-89,Open,src/database/query_interface.py:131-133,Medium,P0,30 minutes,Database compromise and data theft
+VUL-004,Missing Environment Configuration,CRITICAL,A02:2021,CWE-526,Open,Root directory,Low,P0,5 minutes,Secrets exposed in code
+VUL-005,Cross-Site Scripting via innerHTML,HIGH,A03:2021,CWE-79,Open,src/web/static/app.js:multiple,Medium,P1,1 hour,Session hijacking and data theft
+VUL-006,CORS Wildcard Configuration,HIGH,A05:2021,CWE-942,Open,src/web/main_modular.py:57,Low,P1,5 minutes,Cross-origin data exfiltration
+VUL-007,CSP Allows Unsafe Operations,HIGH,A05:2021,CWE-16,Open,src/middleware/security.py:32,Medium,P1,15 minutes,XSS attacks not blocked
+VUL-008,No Rate Limiting on Critical Endpoints,HIGH,A07:2021,CWE-307,Open,Multiple routers,Medium,P1,1 hour,Brute force and DoS attacks
+VUL-009,Missing Input Validation,HIGH,A03:2021,CWE-20,Open,src/web/routers/profiles.py,High,P2,2 hours,Various injection attacks
+VUL-010,Authentication Disabled on Endpoints,HIGH,A01:2021,CWE-306,Open,Multiple router files,Low,P2,30 minutes,Unauthorized access
+VUL-011,No CSRF Protection,HIGH,A01:2021,CWE-352,Open,All state-changing endpoints,Medium,P2,1 hour,Unauthorized actions
+VUL-012,Insufficient Password Policy,MEDIUM,A07:2021,CWE-521,Open,src/auth/jwt_auth.py,Low,P3,30 minutes,Weak passwords allowed
+VUL-013,Missing Security Headers,MEDIUM,A05:2021,CWE-16,Open,src/middleware/security.py,Low,P3,15 minutes,Various security bypasses
+VUL-014,Outdated Dependency Versions,MEDIUM,A06:2021,CWE-1035,Open,requirements.txt,Low,P3,15 minutes,Known CVE exploitation
+VUL-015,Information Disclosure in Errors,MEDIUM,A04:2021,CWE-209,Open,src/web/main.py,Medium,P3,30 minutes,Information leakage
+VUL-016,No Session Timeout,MEDIUM,A07:2021,CWE-613,Open,src/auth/jwt_auth.py,Low,P3,30 minutes,Session hijacking
+VUL-017,Sensitive Data in Logs,MEDIUM,A09:2021,CWE-532,Open,Multiple files,Medium,P3,1 hour,Credential exposure in logs
+VUL-018,No Integrity Check for Client Code,MEDIUM,A08:2021,CWE-353,Open,src/web/static/index.html,Low,P4,30 minutes,CDN compromise attacks
+VUL-019,Missing Security.txt,LOW,RFC-9116,N/A,Open,.well-known/,Low,P4,10 minutes,Delayed security disclosure
+VUL-020,Weak Random Number Generation,LOW,N/A,CWE-338,Open,Multiple files,Low,P4,15 minutes,Predictable tokens
+VUL-021,No Account Lockout Policy,MEDIUM,A07:2021,CWE-307,Open,src/auth/jwt_auth.py,Low,P3,20 minutes,Brute force attacks
+VUL-022,Improper Error Handling,MEDIUM,A04:2021,CWE-755,Open,Multiple files,Medium,P3,1 hour,Application crashes
+VUL-023,No Security Logging,MEDIUM,A09:2021,CWE-778,Open,All endpoints,Medium,P3,2 hours,Attacks go undetected
+VUL-024,Insecure Direct Object References,HIGH,A01:2021,CWE-639,Open,src/web/routers/profiles.py,Medium,P2,1 hour,Unauthorized data access
