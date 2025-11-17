@@ -16,14 +16,32 @@
         nteeCodes: {} // Loaded from ntee-codes.js
      }"
      x-init="
-        // Load NTEE codes data
+        // Load NTEE codes data securely (without eval)
         fetch('/static/data/ntee-codes.js')
             .then(r => r.text())
             .then(data => {
-                // Extract NTEE_CODES object from JS file
-                eval(data);
-                nteeCodes = NTEE_CODES;
+                // Safely extract NTEE_CODES by parsing as module
+                // Remove 'const NTEE_CODES = ' and trailing semicolon/comments
+                const jsonStart = data.indexOf('{');
+                const jsonData = data.substring(jsonStart);
+                // Find the last closing brace for the object
+                let braceCount = 0;
+                let lastBrace = 0;
+                for (let i = 0; i < jsonData.length; i++) {
+                    if (jsonData[i] === '{') braceCount++;
+                    if (jsonData[i] === '}') {
+                        braceCount--;
+                        if (braceCount === 0) {
+                            lastBrace = i + 1;
+                            break;
+                        }
+                    }
+                }
+                nteeCodes = JSON.parse(jsonData.substring(0, lastBrace));
                 console.log('NTEE codes loaded:', Object.keys(nteeCodes).length, 'categories');
+            })
+            .catch(err => {
+                console.error('Failed to load NTEE codes:', err);
             });
      "
      x-show="modalOpen"

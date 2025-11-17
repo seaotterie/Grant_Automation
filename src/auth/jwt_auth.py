@@ -7,6 +7,7 @@ Implements secure JWT-based authentication for API endpoints
 import jwt
 import secrets
 import hashlib
+import os
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from fastapi import HTTPException, Request, Depends
@@ -16,10 +17,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Security configuration
-JWT_SECRET_KEY = secrets.token_urlsafe(32)  # Generate random secret key
-JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION_HOURS = 24
+# Security configuration - Load from environment
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    raise ValueError(
+        "JWT_SECRET_KEY environment variable is required. "
+        "Please set it in your .env file. "
+        "Generate a secure key with: python3 -c 'import secrets; print(secrets.token_urlsafe(64))'"
+    )
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+JWT_EXPIRATION_HOURS = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -60,31 +67,50 @@ class AuthenticationService:
         self._init_default_users()
     
     def _init_default_users(self):
-        """Initialize default users for testing"""
+        """Initialize default users from environment variables"""
+        # Load credentials from environment - fail if not set
+        admin_username = os.getenv("ADMIN_USERNAME", "admin")
+        admin_password = os.getenv("ADMIN_PASSWORD")
+        user_username = os.getenv("USER_USERNAME", "user")
+        user_password = os.getenv("USER_PASSWORD")
+
+        if not admin_password:
+            raise ValueError(
+                "ADMIN_PASSWORD environment variable is required. "
+                "Please set it in your .env file for security."
+            )
+
+        if not user_password:
+            raise ValueError(
+                "USER_PASSWORD environment variable is required. "
+                "Please set it in your .env file for security."
+            )
+
         # Create default admin user
         admin_user = User(
             user_id="admin",
-            username="admin", 
+            username=admin_username,
             email="admin@catalynx.com",
             role="admin",
-            hashed_password=self.hash_password("catalynx_admin_2024"),
+            hashed_password=self.hash_password(admin_password),
             is_active=True
         )
-        
+
         # Create default user
         regular_user = User(
             user_id="user",
-            username="user",
-            email="user@catalynx.com", 
+            username=user_username,
+            email="user@catalynx.com",
             role="user",
-            hashed_password=self.hash_password("catalynx_user_2024"),
+            hashed_password=self.hash_password(user_password),
             is_active=True
         )
-        
+
         self.users[admin_user.username] = admin_user
         self.users[regular_user.username] = regular_user
-        
-        logger.info("Default users initialized for Catalynx authentication")
+
+        logger.info(f"Default users initialized for Catalynx authentication: {admin_username}, {user_username}")
+        logger.warning("Remember to change default passwords immediately after first login!")
     
     def hash_password(self, password: str) -> str:
         """Hash password using bcrypt"""

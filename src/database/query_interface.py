@@ -47,10 +47,60 @@ class DatabaseQueryInterface:
     Enhanced query interface with advanced filtering and search capabilities
     Built on top of DatabaseManager for the grant research platform
     """
-    
+
+    # Whitelists for SQL injection prevention
+    ALLOWED_PROFILE_SORT_FIELDS = {
+        'id', 'name', 'ein', 'organization_type', 'stage', 'priority',
+        'overall_score', 'created_at', 'updated_at', 'revenue', 'assets',
+        'website_url', 'city', 'state', 'ntee_code', 'user_rating'
+    }
+
+    ALLOWED_OPPORTUNITY_SORT_FIELDS = {
+        'id', 'profile_id', 'organization_name', 'opportunity_title',
+        'opportunity_number', 'posted_date', 'close_date', 'award_ceiling',
+        'award_floor', 'overall_score', 'stage', 'priority', 'created_at',
+        'updated_at', 'status', 'user_rating', 'confidence_level'
+    }
+
     def __init__(self, database_path: Optional[str] = None):
         self.db = DatabaseManager(database_path)
-        
+
+    def _validate_sort_fields(self, sort: QuerySort, allowed_fields: set, entity_type: str) -> None:
+        """
+        Validate sort fields against whitelist to prevent SQL injection
+
+        Args:
+            sort: QuerySort object with field names
+            allowed_fields: Set of allowed field names
+            entity_type: Type of entity (for error messages)
+
+        Raises:
+            ValueError: If field names are not in whitelist or direction is invalid
+        """
+        if sort.field not in allowed_fields:
+            raise ValueError(
+                f"Invalid sort field '{sort.field}' for {entity_type}. "
+                f"Allowed fields: {', '.join(sorted(allowed_fields))}"
+            )
+
+        if sort.direction.upper() not in ('ASC', 'DESC'):
+            raise ValueError(
+                f"Invalid sort direction '{sort.direction}'. Must be 'ASC' or 'DESC'"
+            )
+
+        if sort.secondary_field:
+            if sort.secondary_field not in allowed_fields:
+                raise ValueError(
+                    f"Invalid secondary sort field '{sort.secondary_field}' for {entity_type}. "
+                    f"Allowed fields: {', '.join(sorted(allowed_fields))}"
+                )
+
+            if sort.secondary_direction.upper() not in ('ASC', 'DESC'):
+                raise ValueError(
+                    f"Invalid secondary sort direction '{sort.secondary_direction}'. "
+                    f"Must be 'ASC' or 'DESC'"
+                )
+
     # =====================================================================================
     # PROFILE QUERIES
     # =====================================================================================
@@ -125,9 +175,10 @@ class DatabaseQueryInterface:
                 count_query = base_query.replace("SELECT *", "SELECT COUNT(*)")
                 cursor.execute(count_query, count_params)
                 total_count = cursor.fetchone()[0]
-                
-                # Apply sorting
+
+                # Apply sorting with validation to prevent SQL injection
                 if sort:
+                    self._validate_sort_fields(sort, self.ALLOWED_PROFILE_SORT_FIELDS, "profiles")
                     base_query += f" ORDER BY {sort.field} {sort.direction}"
                     if sort.secondary_field:
                         base_query += f", {sort.secondary_field} {sort.secondary_direction}"
@@ -298,9 +349,10 @@ class DatabaseQueryInterface:
                 )
                 cursor.execute(count_query, count_params)
                 total_count = cursor.fetchone()[0]
-                
-                # Apply sorting
+
+                # Apply sorting with validation to prevent SQL injection
                 if sort:
+                    self._validate_sort_fields(sort, self.ALLOWED_OPPORTUNITY_SORT_FIELDS, "opportunities")
                     base_query += f" ORDER BY o.{sort.field} {sort.direction}"
                     if sort.secondary_field:
                         base_query += f", o.{sort.secondary_field} {sort.secondary_direction}"
