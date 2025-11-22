@@ -19,7 +19,11 @@
       "Bash(findstr:*)",
       "Bash(tasklist:*)",
       "Bash(git stash:*)",
-      "Bash(git count-objects:*)"
+      "Bash(git count-objects:*)",
+      "Bash(dir:*)",
+      "Bash(timeout 5 python:*)",
+      "Bash(start /B python:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": [],

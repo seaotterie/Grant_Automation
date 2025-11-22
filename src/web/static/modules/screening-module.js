@@ -702,8 +702,9 @@ function screeningModule() {
 
         /**
          * Proceed to intelligence stage with selected opportunities
+         * Promotes selected opportunities to intelligence stage via API
          */
-        proceedToIntelligence() {
+        async proceedToIntelligence() {
             if (this.selectedForIntelligence.length === 0) {
                 this.showNotification?.('Please select at least one opportunity', 'warning');
                 return false;
@@ -711,13 +712,60 @@ function screeningModule() {
 
             console.log(`Proceeding to intelligence with ${this.selectedForIntelligence.length} opportunities`);
 
-            // Dispatch event to switch to intelligence stage
-            this.$dispatch?.('proceed-to-intelligence', {
-                opportunities: this.selectedForIntelligence,
-                notes: this.selectionNotes
-            });
+            // Promote each selected opportunity to intelligence stage
+            let promoted = 0;
+            let failed = 0;
 
-            // Switch stage
+            for (const opp of this.selectedForIntelligence) {
+                try {
+                    const notes = this.selectionNotes[opp.opportunity_id] || '';
+                    const response = await fetch(`/api/v2/opportunities/${opp.opportunity_id}/promote-with-notes`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            notes: notes,
+                            priority_level: 'high',
+                            promoted_to: 'intelligence'
+                        })
+                    });
+
+                    if (response.ok) {
+                        promoted++;
+                    } else {
+                        failed++;
+                        console.error(`Failed to promote ${opp.organization_name}`);
+                    }
+                } catch (error) {
+                    failed++;
+                    console.error(`Error promoting ${opp.organization_name}:`, error);
+                }
+            }
+
+            // Show result notification
+            if (promoted > 0) {
+                this.showNotification?.(
+                    `✅ Promoted ${promoted} opportunities to Intelligence stage`,
+                    'success'
+                );
+            }
+
+            if (failed > 0) {
+                this.showNotification?.(
+                    `⚠️ Failed to promote ${failed} opportunities`,
+                    'warning'
+                );
+            }
+
+            // Clear selections
+            this.selectedForIntelligence = [];
+            this.selectionNotes = {};
+
+            // Reload opportunities to reflect changes
+            if (this.currentProfileId) {
+                await this.loadSavedOpportunities(this.currentProfileId);
+            }
+
+            // Switch to intelligence stage
             this.switchStage?.('intelligence');
 
             return true;

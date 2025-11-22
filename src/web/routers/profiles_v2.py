@@ -1714,8 +1714,9 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
                         existing_opp = row[0]
 
                 # Map category_level to database stage
+                # AUTO-PROMOTION: qualified opportunities automatically move to intelligence stage
                 category_to_stage = {
-                    'qualified': 'qualified_prospects',
+                    'qualified': 'intelligence',  # Auto-promote qualified to intelligence
                     'review': 'candidates',
                     'consider': 'prospects',
                     'low_priority': 'prospects'
@@ -1953,7 +1954,9 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
                 # Additional financial data for table display
                 "revenue": discovery_data.get('990_data', {}).get('revenue') if discovery_data.get('990_data') else None,
                 "assets": discovery_data.get('990_data', {}).get('assets') if discovery_data.get('990_data') else None,
-                "foundation_code": opp_raw.get('foundation_code')
+                "foundation_code": opp_raw.get('foundation_code'),
+                # User notes
+                "notes": opp_raw.get('notes', '')
             })
 
         summary = {

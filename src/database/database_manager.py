@@ -400,18 +400,40 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                    SELECT * FROM profile_summary 
+                    SELECT * FROM profile_summary
                     ORDER BY last_discovery DESC, name ASC
                 """)
-                
+
                 profiles = []
                 for row in cursor.fetchall():
                     # Convert row to profile format
                     profile_dict = dict(row)
+
+                    # Parse JSON fields to ensure frontend receives arrays, not strings
+                    json_fields = [
+                        'focus_areas', 'program_areas', 'target_populations',
+                        'ntee_codes', 'government_criteria', 'service_areas',
+                        'geographic_scope', 'funding_preferences', 'foundation_grants',
+                        'board_members', 'performance_metrics', 'processing_history',
+                        'verification_data', 'web_enhanced_data'
+                    ]
+
+                    for field in json_fields:
+                        if field in profile_dict and profile_dict[field]:
+                            try:
+                                profile_dict[field] = json.loads(profile_dict[field])
+                            except (json.JSONDecodeError, TypeError):
+                                # If parsing fails, keep original value or set to None/empty list
+                                if field in ['focus_areas', 'program_areas', 'target_populations',
+                                            'ntee_codes', 'government_criteria', 'service_areas']:
+                                    profile_dict[field] = []
+                                else:
+                                    profile_dict[field] = None
+
                     profiles.append(profile_dict)
-                    
+
                 return profiles
-                
+
         except Exception as e:
             logger.error(f"Failed to get all profiles: {e}")
             return []
