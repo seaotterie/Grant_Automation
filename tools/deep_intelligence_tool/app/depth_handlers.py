@@ -3,7 +3,7 @@ Depth-Specific Analysis Handlers
 Implements the 4 intelligence depth levels with progressive feature sets.
 """
 
-from typing import Optional
+from typing import Optional, List
 import time
 
 from .intelligence_models import (

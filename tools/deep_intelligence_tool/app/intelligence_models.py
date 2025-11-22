@@ -318,10 +318,10 @@ class DeepIntelligenceOutput:
     policy_analysis: Optional[PolicyAnalysis] = None
     strategic_consulting: Optional[StrategicConsultingInsights] = None
 
-    # Metadata
-    depth_executed: str
-    processing_time_seconds: float
-    api_cost_usd: float
+    # Metadata (required fields with defaults)
+    depth_executed: str = ""
+    processing_time_seconds: float = 0.0
+    api_cost_usd: float = 0.0
     timestamp: datetime = field(default_factory=datetime.now)
     tool_version: str = "1.0.0"
 
