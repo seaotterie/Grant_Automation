@@ -279,7 +279,35 @@ class AsyncDatabaseManager:
             async with self._lock:
                 async with self._connection.execute(query, tuple(params)) as cursor:
                     rows = await cursor.fetchall()
-                    profiles = [dict(row) for row in rows]
+                    profiles = []
+
+                    # Parse JSON fields for each profile
+                    for row in rows:
+                        profile_dict = dict(row)
+
+                        # Parse JSON fields to ensure frontend receives arrays, not strings
+                        json_fields = [
+                            'focus_areas', 'program_areas', 'target_populations',
+                            'ntee_codes', 'government_criteria', 'service_areas',
+                            'geographic_scope', 'funding_preferences', 'foundation_grants',
+                            'board_members', 'performance_metrics', 'processing_history',
+                            'verification_data', 'web_enhanced_data'
+                        ]
+
+                        for field in json_fields:
+                            if field in profile_dict and profile_dict[field]:
+                                try:
+                                    import json
+                                    profile_dict[field] = json.loads(profile_dict[field])
+                                except (json.JSONDecodeError, TypeError):
+                                    # If parsing fails, set to empty list for array fields
+                                    if field in ['focus_areas', 'program_areas', 'target_populations',
+                                                'ntee_codes', 'government_criteria', 'service_areas']:
+                                        profile_dict[field] = []
+                                    else:
+                                        profile_dict[field] = None
+
+                        profiles.append(profile_dict)
 
             logger.info(
                 f"Optimized query: {len(profiles)}/{total_count} profiles "

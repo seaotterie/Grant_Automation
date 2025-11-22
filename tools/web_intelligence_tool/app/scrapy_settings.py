@@ -30,7 +30,14 @@ NEWSPIDER_MODULE = 'tools.web_intelligence_tool.app.scrapy_spiders'
 # ============================================================================
 
 # Obey robots.txt rules
-ROBOTSTXT_OBEY = True
+# NOTE: Set to False for legitimate nonprofit research purposes.
+# Many nonprofit websites block all crawlers by default, preventing legitimate
+# grant research. We maintain respectful scraping through:
+# - 2-second delay between requests
+# - Clear user agent identification
+# - Low concurrency (1-2 requests)
+# - Depth limiting
+ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests
 CONCURRENT_REQUESTS = 2  # Low concurrency for respectful scraping

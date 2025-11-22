@@ -823,8 +823,11 @@ function catalynxApp() {
                 this.stateModule.switchStage(stage);
             }
 
-            // Dispatch event for other components
-            this.$dispatch('stage-changed', { stage });
+            // Dispatch event for other components (include profileId for Intelligence tab)
+            this.$dispatch('stage-changed', {
+                stage,
+                profileId: this.selectedProfile?.profile_id
+            });
         },
 
         // Alpine.js Functions - Foundation and 990 Analysis
@@ -2724,8 +2727,8 @@ function catalynxApp() {
         },
         opportunityLoading: false,
         isProcessing: false,
-        modalActiveTab: 'overview', // Tab state for opportunity modal
-        
+        modalActiveTab: 'scores', // Tab state for opportunity modal (default to Score Breakdown)
+
         // Stage Change Confirmation Modal System
         showStageChangeModal: false,
         stageChangeAction: '', // 'promote' or 'demote'
@@ -2736,7 +2739,14 @@ function catalynxApp() {
         
         // Comment saving timeout
         commentSaveTimeout: null,
-        
+
+        // Notes functionality
+        opportunityNotes: '',
+        notesSaving: false,
+        notesSaved: false,
+        notesSaveTimeout: null,
+        webResearchLoading: false,
+
         // Delete Confirmation Modal System
         showDeleteConfirmModal: false,
         deleteVerificationStep: false,
@@ -7556,15 +7566,18 @@ function catalynxApp() {
                 
                 // Initialize user_comments if not present
                 this.selectedOpportunity.user_comments = this.selectedOpportunity.user_comments || '';
-                
+
+                // Load notes from the opportunity into the notes field
+                this.opportunityNotes = this.selectedOpportunity.notes || '';
+
                 console.log('Enhanced opportunity modal data:', this.selectedOpportunity);
-                
+
             } catch (error) {
                 console.error('Error preparing opportunity details:', error);
                 this.showNotification('Error', 'Failed to prepare opportunity details', 'error');
             } finally {
                 this.opportunityLoading = false;
-                
+
                 // Intelligent default tab selection
                 this.modalActiveTab = this._getDefaultTab(this.selectedOpportunity, origin);
                 console.log(`Modal opened with intelligent tab: ${this.modalActiveTab} (origin: ${origin}, stage: ${this.selectedOpportunity?.current_stage || this.selectedOpportunity?.stage})`);
@@ -7578,14 +7591,20 @@ function catalynxApp() {
             this.selectedOpportunity = null;
             this.opportunityLoading = false;
             this.isProcessing = false;
-            this.modalActiveTab = 'overview'; // Reset to default tab (Overview)
+            this.modalActiveTab = 'scores'; // Reset to default tab (Score Breakdown)
+            this.opportunityNotes = ''; // Clear notes field
             // Also clear delete confirmation state
             this.showDeleteConfirmation = false;
             this.deleteConfirmationStep = 1;
             this.deletingOpportunity = false;
             console.log('Closing opportunity modal');
         },
-        
+
+        switchOpportunityTab(tab) {
+            this.modalActiveTab = tab;
+            console.log('Switched opportunity modal to tab:', tab);
+        },
+
         // Delete Opportunity Functions
         confirmDeleteOpportunity(opportunity) {
             console.log('Confirming delete for opportunity:', opportunity);
@@ -7817,55 +7836,9 @@ function catalynxApp() {
         
         // Intelligent default tab selection based on stage and data availability
         _getDefaultTab(opportunity, origin) {
-            if (!opportunity) return 'overview';
-            
-            // Priority 1: Use origin if specified and tab is available
-            if (origin && origin !== 'overview' && this._hasTabResults(opportunity, origin)) {
-                return origin;
-            }
-            
-            // Priority 2: Stage-based intelligent defaults for 5-stage system
-            const stage = opportunity.current_stage || opportunity.stage;
-            const stageMapping = {
-                // DISCOVER - Prospects stage
-                'prospects': 'discover',
-                'prospect': 'discover', 
-                'pre_scoring': 'discover',
-                // PLAN - Qualified stage
-                'qualified': 'plan',
-                'scoring': 'plan',
-                // ANALYZE - Candidates stage  
-                'candidates': 'analyze',
-                'candidate': 'analyze',
-                'analysis': 'analyze',
-                // EXAMINE - Targets stage
-                'targets': 'examine',
-                'target': 'examine',
-                // APPROACH - Opportunities stage
-                'opportunities': 'approach',
-                'opportunity': 'approach'
-            };
-            
-            const suggestedTab = stageMapping[stage];
-            if (suggestedTab && this._hasTabResults(opportunity, suggestedTab)) {
-                return suggestedTab;
-            }
-            
-            // Priority 3: First available tab with data
-            const tabPriority = ['examine', 'analyze', 'plan', 'discover'];
-            for (const tab of tabPriority) {
-                if (this._hasTabResults(opportunity, tab)) {
-                    return tab;
-                }
-            }
-            
-            // Priority 4: First available tab based on stage (even without data)
-            if (suggestedTab && this._hasTabResults(opportunity, suggestedTab)) {
-                return suggestedTab;
-            }
-            
-            // Fallback: Overview
-            return 'overview';
+            // Always default to Score Breakdown tab
+            // Modal tabs: scores, details, grants, officers, website, notes
+            return 'scores';
         },
         
         // Get first available tab for edge cases
@@ -16712,7 +16685,108 @@ function catalynxApp() {
                     console.log('Available opportunity IDs:', this.opportunitiesData.map(opp => opp.opportunity_id));
                 }
             },
-            
+
+            // Auto-save notes with debouncing
+            async autoSaveNotes() {
+                // Clear existing timeout
+                if (this.notesSaveTimeout) {
+                    clearTimeout(this.notesSaveTimeout);
+                }
+
+                // Set saving state
+                this.notesSaving = true;
+                this.notesSaved = false;
+
+                // Debounce - save 1 second after user stops typing
+                this.notesSaveTimeout = setTimeout(async () => {
+                    try {
+                        const response = await fetch(`/api/v2/opportunities/${this.selectedOpportunity.opportunity_id}/notes`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                notes: this.opportunityNotes
+                            })
+                        });
+
+                        if (response.ok) {
+                            // Update the opportunity in local data
+                            const oppIndex = this.opportunitiesData.findIndex(
+                                opp => opp.opportunity_id === this.selectedOpportunity.opportunity_id
+                            );
+                            if (oppIndex !== -1) {
+                                this.opportunitiesData[oppIndex].notes = this.opportunityNotes;
+                                this.selectedOpportunity.notes = this.opportunityNotes;
+                            }
+
+                            this.notesSaving = false;
+                            this.notesSaved = true;
+
+                            // Clear "saved" indicator after 2 seconds
+                            setTimeout(() => {
+                                this.notesSaved = false;
+                            }, 2000);
+
+                            console.log('Notes saved successfully');
+                        } else {
+                            console.error('Failed to save notes:', response.statusText);
+                            this.notesSaving = false;
+                        }
+                    } catch (error) {
+                        console.error('Error saving notes:', error);
+                        this.notesSaving = false;
+                    }
+                }, 1000); // 1 second debounce
+            },
+
+            // Run Web Research (Tool 25)
+            async runWebResearch() {
+                if (!this.selectedOpportunity || !this.selectedOpportunity.opportunity_id) {
+                    console.error('No opportunity selected');
+                    return;
+                }
+
+                this.webResearchLoading = true;
+
+                try {
+                    const response = await fetch(`/api/v2/opportunities/${this.selectedOpportunity.opportunity_id}/research`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('Web research completed:', result);
+
+                        // Refresh the opportunity data to show new web_data
+                        if (result.opportunity) {
+                            // Update local data
+                            const oppIndex = this.opportunitiesData.findIndex(
+                                opp => opp.opportunity_id === this.selectedOpportunity.opportunity_id
+                            );
+                            if (oppIndex !== -1) {
+                                this.opportunitiesData[oppIndex] = result.opportunity;
+                                this.selectedOpportunity = result.opportunity;
+                            }
+                        }
+
+                        alert('Web research completed successfully! Check the Website tab for new data.');
+                    } else {
+                        const error = await response.json();
+                        console.error('Web research failed:', error);
+                        alert(`Web research failed: ${error.detail || 'Unknown error'}`);
+                    }
+                } catch (error) {
+                    console.error('Error running web research:', error);
+                    alert('Error running web research. Check console for details.');
+                } finally {
+                    this.webResearchLoading = false;
+                }
+            },
+
             // Prospects Discovery Functions (Stage 1: Prospects)
             
             async loadProspectsData() {
