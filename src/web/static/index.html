@@ -764,8 +764,22 @@
 
                                             <!-- Organization Name -->
                                             <td class="px-4 py-3">
-                                                <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="opp.organization_name"></div>
-                                                <div class="text-xs text-gray-500 dark:text-gray-400" x-text="'EIN: ' + opp.ein"></div>
+                                                <div class="flex items-center gap-2">
+                                                    <div class="flex-1">
+                                                        <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="opp.organization_name"></div>
+                                                        <div class="text-xs text-gray-500 dark:text-gray-400" x-text="'EIN: ' + opp.ein"></div>
+                                                    </div>
+                                                    <!-- Intelligence Stage Indicator -->
+                                                    <template x-if="opp.current_stage === 'intelligence'">
+                                                        <span class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full text-xs font-semibold border border-purple-200 dark:border-purple-800"
+                                                              title="Already in Intelligence stage">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                                            </svg>
+                                                            Intelligence
+                                                        </span>
+                                                    </template>
+                                                </div>
                                             </td>
 
                                             <!-- Category Badge -->
@@ -846,7 +860,7 @@
 
                                             <!-- Actions -->
                                             <td class="px-4 py-3 whitespace-nowrap">
-                                                <button @click="viewOpportunityDetails(opp)"
+                                                <button @click="openOpportunityModal(opp, 'overview')"
                                                         class="px-3 py-1 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded transition-colors">
                                                     View Details
                                                 </button>
@@ -955,23 +969,35 @@
                     </div>
 
                     <!-- Opportunity Details Modal (4 Tabs) -->
-                    <div x-show="showDetailsModal"
+                    <div x-show="showOpportunityModal"
                          x-cloak
-                         @click.self="closeDetailsModal()"
+                         @click.self="closeOpportunityModal()"
                          class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden"
                              @click.stop>
                             <!-- Modal Header -->
-                            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                                <div>
-                                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white"
-                                        x-text="selectedOpportunity?.organization_name"></h3>
+                            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3">
+                                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white"
+                                            x-text="selectedOpportunity?.organization_name"></h3>
+                                        <!-- Intelligence Stage Indicator -->
+                                        <template x-if="selectedOpportunity?.current_stage === 'intelligence'">
+                                            <span class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-full text-xs font-semibold border border-purple-200 dark:border-purple-800"
+                                                  title="Already in Intelligence stage">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                                </svg>
+                                                Intelligence
+                                            </span>
+                                        </template>
+                                    </div>
                                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                         EIN: <span x-text="selectedOpportunity?.ein"></span> |
                                         <span x-text="selectedOpportunity?.location?.city + ', ' + selectedOpportunity?.location?.state"></span>
                                     </p>
                                 </div>
-                                <button @click="closeDetailsModal()"
+                                <button @click="closeOpportunityModal()"
                                         class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -980,43 +1006,43 @@
                             </div>
 
                             <!-- Tab Navigation -->
-                            <div class="flex border-b border-gray-200 dark:border-gray-700 px-6">
-                                <button @click="switchDetailsTab('scores')"
-                                        :class="detailsModalTab === 'scores' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                            <div class="flex border-b border-gray-200 dark:border-gray-700 px-6 flex-shrink-0">
+                                <button @click="switchOpportunityTab('scores')"
+                                        :class="modalActiveTab === 'scores' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
                                     Score Breakdown
                                 </button>
-                                <button @click="switchDetailsTab('details')"
-                                        :class="detailsModalTab === 'details' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                <button @click="switchOpportunityTab('details')"
+                                        :class="modalActiveTab === 'details' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
                                     Organization Details
                                 </button>
-                                <button @click="switchDetailsTab('grants')"
-                                        :class="detailsModalTab === 'grants' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                <button @click="switchOpportunityTab('grants')"
+                                        :class="modalActiveTab === 'grants' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
                                     Grant History
                                 </button>
-                                <button @click="switchDetailsTab('officers')"
-                                        :class="detailsModalTab === 'officers' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                <button @click="switchOpportunityTab('officers')"
+                                        :class="modalActiveTab === 'officers' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
                                     Officers & Directors
                                 </button>
-                                <button @click="switchDetailsTab('website')"
-                                        :class="detailsModalTab === 'website' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                <button @click="switchOpportunityTab('website')"
+                                        :class="modalActiveTab === 'website' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
                                     Website Data
                                 </button>
-                                <button @click="switchDetailsTab('notes')"
-                                        :class="detailsModalTab === 'notes' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                <button @click="switchOpportunityTab('notes')"
+                                        :class="modalActiveTab === 'notes' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
                                     Notes
                                 </button>
                             </div>
 
                             <!-- Tab Content -->
-                            <div class="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+                            <div class="p-6 overflow-y-auto flex-1">
                                 <!-- Tab 1: Score Breakdown -->
-                                <div x-show="detailsModalTab === 'scores'" class="space-y-4">
+                                <div x-show="modalActiveTab === 'scores'" class="space-y-4">
                                     <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4">
                                         <div class="flex items-center justify-between">
                                             <span class="text-sm font-medium text-gray-700 dark:text-white">Overall Score</span>
@@ -1109,7 +1135,7 @@
                                 </div>
 
                                 <!-- Tab 2: Organization Details -->
-                                <div x-show="detailsModalTab === 'details'" class="space-y-4">
+                                <div x-show="modalActiveTab === 'details'" class="space-y-4">
                                     <template x-if="selectedOpportunity?.['990_data']">
                                         <div>
                                             <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Financial Summary (IRS Form 990)</h4>
@@ -1231,7 +1257,7 @@
                                 </div>
 
                                 <!-- Tab 3: Grant History (990-PF only) -->
-                                <div x-show="detailsModalTab === 'grants'" class="space-y-4">
+                                <div x-show="modalActiveTab === 'grants'" class="space-y-4">
                                     <template x-if="selectedOpportunity?.grant_history">
                                         <div>
                                             <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Foundation Grant-Making (Schedule I)</h4>
@@ -1347,7 +1373,7 @@
                                 </div>
 
                                 <!-- Tab 4: Officers & Directors (990-PF Part VIII) -->
-                                <div x-show="detailsModalTab === 'officers'" class="space-y-4">
+                                <div x-show="modalActiveTab === 'officers'" class="space-y-4">
                                     <template x-if="selectedOpportunity?.['990_data']?.officers && selectedOpportunity['990_data'].officers.length > 0">
                                         <div>
                                             <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Officers, Directors, Trustees & Foundation Managers (Part VIII)</h4>
@@ -1446,7 +1472,7 @@
                                 </div>
 
                                 <!-- Tab 5: Website Data -->
-                                <div x-show="detailsModalTab === 'website'" class="space-y-4">
+                                <div x-show="modalActiveTab === 'website'" class="space-y-4">
                                     <!-- Discovered Website URL (Phase 5 - URL Discovery) -->
                                     <template x-if="selectedOpportunity?.website_url && selectedOpportunity.url_source !== 'not_found'">
                                         <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -1690,7 +1716,7 @@
                                 </div>
 
                                 <!-- Tab 6: Notes -->
-                                <div x-show="detailsModalTab === 'notes'" class="space-y-4">
+                                <div x-show="modalActiveTab === 'notes'" class="space-y-4">
                                     <!-- User Notes Section -->
                                     <div>
                                         <div class="flex items-center justify-between mb-3">
@@ -1754,36 +1780,33 @@
                             </div>
 
                             <!-- Modal Footer -->
-                            <div class="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700">
-                                <!-- Left: Demote Button -->
-                                <button @click="demoteOpportunity()"
-                                        :disabled="selectedOpportunity?.category_level === 'low_priority'"
-                                        class="px-4 py-2 rounded-lg transition-colors font-medium"
-                                        :class="selectedOpportunity?.category_level === 'low_priority'
-                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                                            : 'bg-orange-500 text-white hover:bg-orange-600'">
-                                    ⬇️ Demote
-                                </button>
-
-                                <!-- Center: Current Category Level Badge -->
+                            <div class="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                                <!-- Left: Category Badge -->
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm text-gray-500 dark:text-gray-400">Category:</span>
                                     <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold"
                                           :class="{
-                                              'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200': selectedOpportunity?.category_level === 'qualified',
-                                              'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': selectedOpportunity?.category_level === 'review',
-                                              'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200': selectedOpportunity?.category_level === 'consider',
-                                              'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200': selectedOpportunity?.category_level === 'low_priority'
+                                              'bg-green-600 text-white dark:bg-green-600 dark:text-white': selectedOpportunity?.category_level === 'qualified',
+                                              'bg-orange-600 text-white dark:bg-orange-600 dark:text-white': selectedOpportunity?.category_level === 'review',
+                                              'bg-red-600 text-white dark:bg-red-600 dark:text-white': selectedOpportunity?.category_level === 'consider',
+                                              'bg-gray-600 text-white dark:bg-gray-600 dark:text-white': selectedOpportunity?.category_level === 'low_priority'
                                           }"
                                           x-text="selectedOpportunity?.category_level?.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')"></span>
                                 </div>
 
-                                <!-- Right: Close + Promote Buttons -->
+                                <!-- Right: Action Buttons (Demote | Promote | Run Web Research | Close/Save) -->
                                 <div class="flex items-center gap-2">
-                                    <button @click="closeDetailsModal()"
-                                            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                                        Close
+                                    <!-- Demote Button -->
+                                    <button @click="demoteOpportunity()"
+                                            :disabled="selectedOpportunity?.category_level === 'low_priority'"
+                                            class="px-4 py-2 rounded-lg transition-colors font-medium"
+                                            :class="selectedOpportunity?.category_level === 'low_priority'
+                                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                                                : 'bg-orange-500 text-white hover:bg-orange-600'">
+                                        ⬇️ Demote
                                     </button>
+
+                                    <!-- Promote Button -->
                                     <button @click="promoteOpportunity()"
                                             class="px-6 py-2 rounded-lg transition-colors font-medium"
                                             :class="selectedOpportunity?.category_level === 'qualified'
@@ -1791,6 +1814,29 @@
                                                 : 'bg-teal-600 text-white hover:bg-teal-700'">
                                         <span x-show="selectedOpportunity?.category_level === 'qualified'">🚀 Move to Intelligence</span>
                                         <span x-show="selectedOpportunity?.category_level !== 'qualified'">⬆️ Promote</span>
+                                    </button>
+
+                                    <!-- Run Web Research Button -->
+                                    <button @click="runWebResearch()"
+                                            :disabled="webResearchLoading"
+                                            class="px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2"
+                                            :class="webResearchLoading
+                                                ? 'bg-gray-400 cursor-not-allowed text-white'
+                                                : 'bg-blue-600 text-white hover:bg-blue-700'">
+                                        <svg x-show="!webResearchLoading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                                        </svg>
+                                        <svg x-show="webResearchLoading" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span x-text="webResearchLoading ? 'Running...' : 'Run Web Research'"></span>
+                                    </button>
+
+                                    <!-- Close/Save Button -->
+                                    <button @click="closeOpportunityModal()"
+                                            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium">
+                                        Close/Save
                                     </button>
                                 </div>
                             </div>
@@ -1998,17 +2044,71 @@
                 </div>
 
                 <!-- STAGE 3: INTELLIGENCE (Deep Analysis & Reports) -->
-                <div x-show="activeStage === 'intelligence'" class="space-y-6" x-data="window.intelligenceModule ? window.intelligenceModule() : {}" x-init="init && init(selectedOpportunities, selectionNotes)">
-                    <!-- Header -->
+                <div x-show="activeStage === 'intelligence'"
+                     class="space-y-6"
+                     x-data="window.intelligenceModule ? window.intelligenceModule() : {}"
+                     @profile-selected.window="currentProfileId = $event.detail.profile.profile_id || $event.detail.profile.id; selectedProfile = $event.detail.profile; console.log('[Intelligence] Profile set to', selectedProfile?.name, currentProfileId); loadIntelligenceOpportunities && loadIntelligenceOpportunities(currentProfileId)"
+                     @stage-changed.window="
+                        console.log('[Intelligence] Stage changed event received:', $event.detail);
+                        const eventProfileId = $event.detail.profileId;
+                        const rootProfileId = $root.selectedProfile?.profile_id || $root.selectedProfile?.id;
+                        const localProfileId = selectedProfile?.profile_id || selectedProfile?.id;
+                        const windowProfileId = window.currentProfileId;
+                        const profileId = eventProfileId || rootProfileId || localProfileId || windowProfileId;
+                        console.log('[Intelligence] Profile ID sources - event:', eventProfileId, 'root:', rootProfileId, 'local:', localProfileId, 'window:', windowProfileId, 'final:', profileId);
+                        if ($event.detail.stage === 'intelligence' && profileId) {
+                            console.log('[Intelligence] Calling loadIntelligenceOpportunities with:', profileId);
+                            if (typeof loadIntelligenceOpportunities === 'function') {
+                                loadIntelligenceOpportunities(profileId);
+                            } else {
+                                console.error('[Intelligence] loadIntelligenceOpportunities is not a function:', typeof loadIntelligenceOpportunities);
+                            }
+                        } else {
+                            console.log('[Intelligence] Cannot load - Stage:', $event.detail.stage, 'ProfileId:', profileId);
+                        }
+                     "
+                     x-init="
+                        // Auto-load intelligence opportunities on tab initialization
+                        console.log('[Intelligence] x-init started');
+
+                        // Check if there's already a profile selected (from PROFILER or previous session)
+                        if (window.currentProfileId && !selectedProfile) {
+                            console.log('[Intelligence] Found existing profile ID in window:', window.currentProfileId);
+                            // Try to get profile from window or set currentProfileId for later use
+                            currentProfileId = window.currentProfileId;
+
+                            // Load opportunities if we have the function
+                            if (typeof loadIntelligenceOpportunities === 'function') {
+                                console.log('[Intelligence] Auto-loading opportunities for stored profile');
+                                loadIntelligenceOpportunities(currentProfileId);
+                            }
+                        } else if (selectedProfile) {
+                            console.log('[Intelligence] Profile already set:', selectedProfile.name);
+                            const profileId = selectedProfile.profile_id || selectedProfile.id;
+                            if (typeof loadIntelligenceOpportunities === 'function') {
+                                loadIntelligenceOpportunities(profileId);
+                            }
+                        } else {
+                            console.log('[Intelligence] No profile available on init');
+                        }
+                     ">
+                    <!-- Header with Profile Context -->
                     <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-2xl font-bold">Deep Intelligence Analysis</h3>
-                                <p class="text-blue-100 mt-2">Comprehensive analysis using Tool 2, reports, and packages</p>
+                                <h3 class="text-2xl font-bold">Deep Intelligence Analysis <span class="text-lg font-normal">- Comprehensive analysis using Tool 2, reports, and packages</span></h3>
                             </div>
                             <div class="text-right">
-                                <div class="text-sm opacity-80">Opportunities</div>
-                                <div class="font-semibold" x-text="selectedOpportunities.length"></div>
+                                <div class="flex items-center gap-3">
+                                    <div class="text-right">
+                                        <div class="font-semibold text-lg" x-text="selectedProfile?.name || 'None'"></div>
+                                        <div class="text-xs text-blue-200" x-show="selectedProfile" x-text="'EIN: ' + (selectedProfile?.ein || 'N/A')"></div>
+                                    </div>
+                                    <button @click="switchStage('profiler')"
+                                            class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm font-medium border border-white/30">
+                                        Change Profile
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2016,46 +2116,795 @@
                     <!-- No Opportunities Selected -->
                     <div x-show="selectedOpportunities.length === 0"
                          class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
-                        <h4 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">No Opportunities Selected</h4>
-                        <p class="text-yellow-700 dark:text-yellow-300 mb-4">
-                            Select opportunities from the Screening stage to begin deep intelligence analysis.
-                        </p>
-                        <button @click="switchStage('screening')"
-                                class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
-                            Go to Screening
-                        </button>
+                        <div class="flex items-start gap-4">
+                            <svg class="w-12 h-12 text-yellow-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">No Opportunities in Intelligence Stage</h4>
+                                <p class="text-yellow-700 dark:text-yellow-300 mb-4">
+                                    Qualified opportunities from SCREENING tab will appear here automatically.
+                                </p>
+                                <p class="text-sm text-yellow-600 dark:text-yellow-400 mb-4">
+                                    <strong>To add opportunities:</strong>
+                                </p>
+                                <ol class="text-sm text-yellow-700 dark:text-yellow-300 list-decimal list-inside space-y-1 mb-4">
+                                    <li>Go to SCREENING tab</li>
+                                    <li>Run discovery and screening</li>
+                                    <li>Qualified opportunities automatically move here</li>
+                                    <li>Or manually select and promote opportunities</li>
+                                </ol>
+                                <button @click="switchStage('screening')"
+                                        class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
+                                    Go to Screening Tab
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Analysis Configuration -->
-                    <div x-show="selectedOpportunities.length > 0" class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Analysis Depth</h4>
+                    <!-- Analysis Configuration - Compact Design -->
+                    <div x-show="selectedOpportunities.length > 0" class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Select Analysis Depth</h4>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Compact Two-Column Depth Selector -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                             <template x-for="depth in depths" :key="depth.id">
                                 <div @click="selectDepth(depth.id)"
-                                     :class="selectedDepth === depth.id ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700'"
-                                     class="border-2 rounded-lg p-4 cursor-pointer hover:border-blue-400 transition-colors">
-                                    <div class="text-lg font-semibold text-gray-900 dark:text-white" x-text="depth.name"></div>
-                                    <div class="text-2xl font-bold text-blue-600 mt-1">$<span x-text="depth.price"></span></div>
-                                    <div class="text-sm text-gray-500 dark:text-gray-400 mt-1" x-text="depth.time"></div>
-                                    <div class="text-xs text-gray-600 dark:text-gray-300 mt-2" x-text="depth.description"></div>
+                                     :class="selectedDepth === depth.id ? 'border-teal-600 bg-teal-50 dark:bg-teal-900/20' : 'border-gray-200 dark:border-gray-700'"
+                                     class="border-2 rounded-lg p-3 cursor-pointer hover:border-teal-400 transition-colors">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex-1">
+                                            <span class="font-semibold text-gray-900 dark:text-white" x-text="depth.name"></span>
+                                            <span class="text-xs text-gray-500 dark:text-gray-400 ml-2" x-text="depth.time"></span>
+                                            <div class="text-xs text-gray-600 dark:text-gray-300 mt-1" x-text="depth.description"></div>
+                                        </div>
+                                        <div class="ml-3">
+                                            <span class="text-xl font-bold"
+                                                  :class="depth.id === 'essentials' ? 'text-teal-600' : 'text-purple-600'">
+                                                $<span x-text="depth.price.toFixed(2)"></span>
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </template>
                         </div>
 
-                        <div class="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div class="flex items-center justify-between text-sm">
-                                <span class="text-gray-600 dark:text-gray-400">Estimated Cost:</span>
-                                <span class="text-lg font-semibold text-gray-900 dark:text-white">$<span x-text="getEstimatedCost().toFixed(2)"></span></span>
+                        <!-- Estimated Cost and Analyze Button - Single Row -->
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="text-sm text-gray-600 dark:text-gray-400">
+                                Estimated Cost: <strong class="text-gray-900 dark:text-white">$<span x-text="getEstimatedCost().toFixed(2)"></span></strong>
                             </div>
+                            <button @click="analyzeAll()"
+                                    :disabled="analyzing"
+                                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm">
+                                <span x-show="!analyzing">Analyze All</span>
+                                <span x-show="analyzing">Analyzing...</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Enhanced Opportunities Table -->
+                    <div x-show="selectedOpportunities.length > 0" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                Opportunities Identified for Analysis (<span x-text="selectedOpportunities.length"></span>)
+                            </h4>
                         </div>
 
-                        <button @click="analyzeAll()"
-                                :disabled="analyzing"
-                                class="w-full mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50">
-                            <span x-show="!analyzing">Analyze All Opportunities</span>
-                            <span x-show="analyzing">Analyzing...</span>
-                        </button>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="px-4 py-3 text-center">
+                                            <input type="checkbox" class="w-4 h-4 text-teal-600 rounded focus:ring-teal-500">
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization</th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Score</th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Analysis Type</th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Analysis Date</th>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Revenue</th>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Assets</th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    <template x-for="(opp, index) in selectedOpportunities" :key="opp.opportunity_id || index">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                            <!-- Checkbox -->
+                                            <td class="px-4 py-3 text-center">
+                                                <input type="checkbox" class="w-4 h-4 text-teal-600 rounded focus:ring-teal-500">
+                                            </td>
+
+                                            <!-- Organization -->
+                                            <td class="px-4 py-3">
+                                                <div class="font-medium text-gray-900 dark:text-white" x-text="opp.organization_name"></div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                    <span x-text="'EIN: ' + opp.ein"></span> |
+                                                    <span x-text="opp.location?.city + ', ' + opp.location?.state"></span>
+                                                </div>
+                                            </td>
+
+                                            <!-- Score -->
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="font-semibold text-blue-600" x-text="Math.round((opp.overall_score || 0) * 100) + '%'"></span>
+                                            </td>
+
+                                            <!-- Category -->
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold"
+                                                      :class="{
+                                                          'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300': opp.category_level === 'qualified',
+                                                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300': opp.category_level === 'review',
+                                                          'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300': opp.category_level === 'consider',
+                                                          'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300': opp.category_level === 'low_priority'
+                                                      }"
+                                                      x-text="opp.category_level ? opp.category_level.replace('_', ' ').toUpperCase() : 'N/A'">
+                                                </span>
+                                            </td>
+
+                                            <!-- Analysis Type (ESSENTIAL or PREMIUM) -->
+                                            <td class="px-4 py-3 text-center">
+                                                <template x-if="hasIntelligence(opp.opportunity_id)">
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold"
+                                                          :class="getIntelligence(opp.opportunity_id)?.depth === 'essentials' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/20 dark:text-teal-300' : 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300'"
+                                                          x-text="getIntelligence(opp.opportunity_id)?.depth === 'essentials' ? 'ESSENTIAL' : 'PREMIUM'">
+                                                    </span>
+                                                </template>
+                                                <template x-if="!hasIntelligence(opp.opportunity_id)">
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400"
+                                                          x-text="selectedDepth === 'essentials' ? 'ESSENTIAL' : 'PREMIUM'">
+                                                    </span>
+                                                </template>
+                                            </td>
+
+                                            <!-- Analysis Date -->
+                                            <td class="px-4 py-3 text-center">
+                                                <template x-if="hasIntelligence(opp.opportunity_id)">
+                                                    <div class="text-sm text-gray-900 dark:text-white">
+                                                        <div x-text="new Date(getIntelligence(opp.opportunity_id)?.timestamp).toLocaleDateString()"></div>
+                                                        <div class="text-xs text-gray-500 dark:text-gray-400"
+                                                             x-text="new Date(getIntelligence(opp.opportunity_id)?.timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})"></div>
+                                                    </div>
+                                                </template>
+                                                <template x-if="!hasIntelligence(opp.opportunity_id)">
+                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Pending</span>
+                                                </template>
+                                            </td>
+
+                                            <!-- Revenue -->
+                                            <td class="px-4 py-3 text-right">
+                                                <span class="text-sm font-medium text-gray-900 dark:text-white"
+                                                      x-text="opp.revenue ? '$' + (opp.revenue / 1000000).toFixed(1) + 'M' : '-'">
+                                                </span>
+                                            </td>
+
+                                            <!-- Assets -->
+                                            <td class="px-4 py-3 text-right">
+                                                <span class="text-sm font-medium text-gray-900 dark:text-white"
+                                                      x-text="opp.assets ? '$' + (opp.assets / 1000000).toFixed(1) + 'M' : '-'">
+                                                </span>
+                                            </td>
+
+                                            <!-- Actions -->
+                                            <td class="px-4 py-3 text-center">
+                                                <button @click="openIntelligenceModal(opp.opportunity_id)"
+                                                        class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors">
+                                                    View Details
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Intelligence View Details Modal (8 Tabs) -->
+                    <div x-show="showIntelligenceModal"
+                         x-cloak
+                         @click.self="closeIntelligenceModal()"
+                         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-7xl w-full h-[90vh] flex flex-col overflow-hidden"
+                             @click.stop>
+                            <!-- Modal Header -->
+                            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3">
+                                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white"
+                                            x-text="selectedIntelligenceOpp?.organization_name"></h3>
+                                        <!-- Analysis Status Badge -->
+                                        <template x-if="hasIntelligence(selectedIntelligenceOpp?.opportunity_id)">
+                                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold"
+                                                  :class="getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.depth === 'essentials' ? 'bg-teal-100 text-teal-800 border border-teal-200' : 'bg-purple-100 text-purple-800 border border-purple-200'">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                <span x-text="(getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.depth || '').toUpperCase() + ' Analysis'"></span>
+                                            </span>
+                                        </template>
+                                        <template x-if="!hasIntelligence(selectedIntelligenceOpp?.opportunity_id)">
+                                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold border border-gray-200">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                Pending Analysis
+                                            </span>
+                                        </template>
+                                    </div>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                        EIN: <span x-text="selectedIntelligenceOpp?.ein"></span> |
+                                        <span x-text="selectedIntelligenceOpp?.location?.city + ', ' + selectedIntelligenceOpp?.location?.state"></span>
+                                    </p>
+                                </div>
+                                <button @click="closeIntelligenceModal()"
+                                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Tab Navigation (8 Tabs) -->
+                            <div class="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700 px-6 flex-shrink-0 scrollbar-thin">
+                                <button @click="switchIntelligenceTab('summary')"
+                                        :class="intelligenceModalTab === 'summary' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
+                                    Summary
+                                </button>
+                                <button @click="switchIntelligenceTab('scores')"
+                                        :class="intelligenceModalTab === 'scores' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
+                                    Score Breakdown
+                                </button>
+                                <button @click="switchIntelligenceTab('analysis')"
+                                        :class="intelligenceModalTab === 'analysis' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
+                                    Analysis Results
+                                </button>
+                                <button @click="switchIntelligenceTab('details')"
+                                        :class="intelligenceModalTab === 'details' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
+                                    Organization Details
+                                </button>
+                                <button @click="switchIntelligenceTab('grants')"
+                                        :class="intelligenceModalTab === 'grants' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
+                                    Grant History
+                                </button>
+                                <button @click="switchIntelligenceTab('officers')"
+                                        :class="intelligenceModalTab === 'officers' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
+                                    Officers & Directors
+                                </button>
+                                <button @click="switchIntelligenceTab('website')"
+                                        :class="intelligenceModalTab === 'website' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
+                                    Website Data
+                                </button>
+                                <button @click="switchIntelligenceTab('notes')"
+                                        :class="intelligenceModalTab === 'notes' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
+                                    Notes & Actions
+                                </button>
+                            </div>
+
+                            <!-- Tab Content -->
+                            <div class="p-6 overflow-y-auto flex-1">
+                                <!-- Tab 1: Summary -->
+                                <div x-show="intelligenceModalTab === 'summary'" class="space-y-6">
+                                    <template x-if="hasIntelligence(selectedIntelligenceOpp?.opportunity_id)">
+                                        <div>
+                                            <!-- Recommendation Banner -->
+                                            <div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-6 text-white mb-6">
+                                                <div class="flex items-start gap-4">
+                                                    <svg class="w-8 h-8 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    <div>
+                                                        <h4 class="text-xl font-bold mb-2">Recommendation</h4>
+                                                        <p class="text-lg opacity-95" x-text="getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.recommendation || 'Proceed with application - strong alignment with mission and capacity'"></p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Key Highlights Grid -->
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                                <div class="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-lg p-4">
+                                                    <div class="flex items-center gap-3 mb-2">
+                                                        <svg class="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                                                        </svg>
+                                                        <h5 class="font-semibold text-teal-900 dark:text-teal-100">Match Score</h5>
+                                                    </div>
+                                                    <p class="text-3xl font-bold text-teal-600" x-text="Math.round((selectedIntelligenceOpp?.overall_score || 0) * 100) + '%'"></p>
+                                                    <p class="text-sm text-teal-700 dark:text-teal-300 mt-1">Overall alignment and fit</p>
+                                                </div>
+
+                                                <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                                                    <div class="flex items-center gap-3 mb-2">
+                                                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                        </svg>
+                                                        <h5 class="font-semibold text-purple-900 dark:text-purple-100">Financial Capacity</h5>
+                                                    </div>
+                                                    <p class="text-3xl font-bold text-purple-600">
+                                                        <span x-text="selectedIntelligenceOpp?.revenue ? '$' + (selectedIntelligenceOpp.revenue / 1000000).toFixed(1) + 'M' : 'N/A'"></span>
+                                                    </p>
+                                                    <p class="text-sm text-purple-700 dark:text-purple-300 mt-1">Annual revenue</p>
+                                                </div>
+
+                                                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                                                    <div class="flex items-center gap-3 mb-2">
+                                                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                                        </svg>
+                                                        <h5 class="font-semibold text-blue-900 dark:text-blue-100">Network Connections</h5>
+                                                    </div>
+                                                    <p class="text-3xl font-bold text-blue-600">
+                                                        <span x-text="(selectedIntelligenceOpp?.web_data?.leadership?.length || 0) + ' Leaders'"></span>
+                                                    </p>
+                                                    <p class="text-sm text-blue-700 dark:text-blue-300 mt-1">Leadership team members</p>
+                                                </div>
+
+                                                <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                                                    <div class="flex items-center gap-3 mb-2">
+                                                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                                        </svg>
+                                                        <h5 class="font-semibold text-green-900 dark:text-green-100">Risk Level</h5>
+                                                    </div>
+                                                    <p class="text-3xl font-bold text-green-600">Low</p>
+                                                    <p class="text-sm text-green-700 dark:text-green-300 mt-1">Overall risk assessment</p>
+                                                </div>
+                                            </div>
+
+                                            <!-- Next Steps -->
+                                            <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                                                <h5 class="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                                                    </svg>
+                                                    Recommended Next Steps
+                                                </h5>
+                                                <ol class="space-y-3">
+                                                    <li class="flex gap-3">
+                                                        <span class="flex-shrink-0 w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm font-semibold">1</span>
+                                                        <span class="text-gray-700 dark:text-gray-300">Review full analysis results in the "Analysis Results" tab</span>
+                                                    </li>
+                                                    <li class="flex gap-3">
+                                                        <span class="flex-shrink-0 w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm font-semibold">2</span>
+                                                        <span class="text-gray-700 dark:text-gray-300">Research board connections and warm introduction pathways</span>
+                                                    </li>
+                                                    <li class="flex gap-3">
+                                                        <span class="flex-shrink-0 w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm font-semibold">3</span>
+                                                        <span class="text-gray-700 dark:text-gray-300">Prepare grant application package with tailored messaging</span>
+                                                    </li>
+                                                    <li class="flex gap-3">
+                                                        <span class="flex-shrink-0 w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm font-semibold">4</span>
+                                                        <span class="text-gray-700 dark:text-gray-300">Schedule outreach to identified connection points</span>
+                                                    </li>
+                                                </ol>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Pending Analysis State -->
+                                    <template x-if="!hasIntelligence(selectedIntelligenceOpp?.opportunity_id)">
+                                        <div class="text-center py-12">
+                                            <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Analysis Pending</h4>
+                                            <p class="text-gray-600 dark:text-gray-400 mb-6">This opportunity has not been analyzed yet</p>
+                                            <button @click="analyzeOpportunity(selectedIntelligenceOpp?.opportunity_id)"
+                                                    class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                                                Run Analysis Now
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Tab 2: Score Breakdown (Reuse SCREENING pattern) -->
+                                <div x-show="intelligenceModalTab === 'scores'" class="space-y-4">
+                                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium text-gray-700 dark:text-white">Overall Score</span>
+                                            <span class="text-2xl font-bold"
+                                                  :class="{
+                                                      'text-green-600': selectedIntelligenceOpp?.category_level === 'qualified',
+                                                      'text-yellow-600': selectedIntelligenceOpp?.category_level === 'review',
+                                                      'text-orange-600': selectedIntelligenceOpp?.category_level === 'consider',
+                                                      'text-gray-600': selectedIntelligenceOpp?.category_level === 'low_priority'
+                                                  }"
+                                                  x-text="Math.round((selectedIntelligenceOpp?.overall_score || 0) * 100) + '%'"></span>
+                                        </div>
+                                    </div>
+
+                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Dimensional Scores</h4>
+
+                                    <!-- Mission Alignment -->
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between text-sm">
+                                            <span class="font-medium text-gray-700 dark:text-gray-300">Mission Alignment (30%)</span>
+                                            <span class="font-semibold" x-text="Math.round((selectedIntelligenceOpp?.dimensional_scores?.mission_alignment?.raw_score || 0) * 100) + '%'"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div class="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                                                 :style="`width: ${(selectedIntelligenceOpp?.dimensional_scores?.mission_alignment?.raw_score || 0) * 100}%`"></div>
+                                        </div>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400" x-text="selectedIntelligenceOpp?.dimensional_scores?.mission_alignment?.reasoning"></p>
+                                    </div>
+
+                                    <!-- Geographic Fit -->
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between text-sm">
+                                            <span class="font-medium text-gray-700 dark:text-gray-300">Geographic Fit (20%)</span>
+                                            <span class="font-semibold" x-text="Math.round((selectedIntelligenceOpp?.dimensional_scores?.geographic_fit?.raw_score || 0) * 100) + '%'"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                                 :style="`width: ${(selectedIntelligenceOpp?.dimensional_scores?.geographic_fit?.raw_score || 0) * 100}%`"></div>
+                                        </div>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400" x-text="selectedIntelligenceOpp?.dimensional_scores?.geographic_fit?.reasoning"></p>
+                                    </div>
+
+                                    <!-- Financial Capacity -->
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between text-sm">
+                                            <span class="font-medium text-gray-700 dark:text-gray-300">Financial Capacity (20%)</span>
+                                            <span class="font-semibold" x-text="Math.round((selectedIntelligenceOpp?.dimensional_scores?.financial_capacity?.raw_score || 0) * 100) + '%'"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div class="bg-green-600 h-2 rounded-full transition-all duration-300"
+                                                 :style="`width: ${(selectedIntelligenceOpp?.dimensional_scores?.financial_capacity?.raw_score || 0) * 100}%`"></div>
+                                        </div>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400" x-text="selectedIntelligenceOpp?.dimensional_scores?.financial_capacity?.reasoning"></p>
+                                    </div>
+
+                                    <!-- Network Potential -->
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between text-sm">
+                                            <span class="font-medium text-gray-700 dark:text-gray-300">Network Potential (15%)</span>
+                                            <span class="font-semibold" x-text="Math.round((selectedIntelligenceOpp?.dimensional_scores?.network_potential?.raw_score || 0) * 100) + '%'"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div class="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                                                 :style="`width: ${(selectedIntelligenceOpp?.dimensional_scores?.network_potential?.raw_score || 0) * 100}%`"></div>
+                                        </div>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400" x-text="selectedIntelligenceOpp?.dimensional_scores?.network_potential?.reasoning"></p>
+                                    </div>
+
+                                    <!-- Strategic Value -->
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between text-sm">
+                                            <span class="font-medium text-gray-700 dark:text-gray-300">Strategic Value (15%)</span>
+                                            <span class="font-semibold" x-text="Math.round((selectedIntelligenceOpp?.dimensional_scores?.strategic_value?.raw_score || 0) * 100) + '%'"></span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                            <div class="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                                                 :style="`width: ${(selectedIntelligenceOpp?.dimensional_scores?.strategic_value?.raw_score || 0) * 100}%`"></div>
+                                        </div>
+                                        <p class="text-xs text-gray-600 dark:text-gray-400" x-text="selectedIntelligenceOpp?.dimensional_scores?.strategic_value?.reasoning"></p>
+                                    </div>
+                                </div>
+
+                                <!-- Tab 3: Analysis Results (NEW - 4-stage AI output) -->
+                                <div x-show="intelligenceModalTab === 'analysis'" class="space-y-6">
+                                    <template x-if="hasIntelligence(selectedIntelligenceOpp?.opportunity_id)">
+                                        <div>
+                                            <!-- Analysis Metadata -->
+                                            <div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4 mb-6">
+                                                <div class="grid grid-cols-3 gap-4 text-center">
+                                                    <div>
+                                                        <p class="text-sm text-gray-600 dark:text-gray-400">Analysis Depth</p>
+                                                        <p class="text-lg font-bold text-purple-600"
+                                                           x-text="(getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.depth || '').toUpperCase()"></p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm text-gray-600 dark:text-gray-400">Cost</p>
+                                                        <p class="text-lg font-bold text-purple-600">
+                                                            $<span x-text="(getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.cost || 0).toFixed(2)"></span>
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm text-gray-600 dark:text-gray-400">Completed</p>
+                                                        <p class="text-lg font-bold text-purple-600"
+                                                           x-text="getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.completed_at || 'Recently'"></p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- AI Analysis Stages -->
+                                            <div class="space-y-4">
+                                                <!-- Stage 1: PLAN -->
+                                                <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
+                                                    <div class="flex items-center gap-3 mb-3">
+                                                        <span class="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                                                        <h5 class="text-lg font-semibold text-gray-900 dark:text-white">Strategic Planning</h5>
+                                                    </div>
+                                                    <p class="text-gray-700 dark:text-gray-300 leading-relaxed"
+                                                       x-text="getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.analysis?.plan || 'Initial strategic assessment and approach planning...'"></p>
+                                                </div>
+
+                                                <!-- Stage 2: ANALYZE -->
+                                                <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
+                                                    <div class="flex items-center gap-3 mb-3">
+                                                        <span class="flex-shrink-0 w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                                                        <h5 class="text-lg font-semibold text-gray-900 dark:text-white">Deep Analysis</h5>
+                                                    </div>
+                                                    <p class="text-gray-700 dark:text-gray-300 leading-relaxed"
+                                                       x-text="getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.analysis?.analyze || 'Comprehensive analysis of financial health, network connections, and strategic fit...'"></p>
+                                                </div>
+
+                                                <!-- Stage 3: EXAMINE -->
+                                                <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
+                                                    <div class="flex items-center gap-3 mb-3">
+                                                        <span class="flex-shrink-0 w-8 h-8 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                                                        <h5 class="text-lg font-semibold text-gray-900 dark:text-white">Risk Examination</h5>
+                                                    </div>
+                                                    <p class="text-gray-700 dark:text-gray-300 leading-relaxed"
+                                                       x-text="getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.analysis?.examine || 'Risk assessment including eligibility, competition, capacity, and compliance factors...'"></p>
+                                                </div>
+
+                                                <!-- Stage 4: APPROACH -->
+                                                <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-5">
+                                                    <div class="flex items-center gap-3 mb-3">
+                                                        <span class="flex-shrink-0 w-8 h-8 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center text-sm font-bold">4</span>
+                                                        <h5 class="text-lg font-semibold text-gray-900 dark:text-white">Strategic Approach</h5>
+                                                    </div>
+                                                    <p class="text-gray-700 dark:text-gray-300 leading-relaxed"
+                                                       x-text="getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.analysis?.approach || 'Recommended cultivation strategy, messaging approach, and action plan...'"></p>
+                                                </div>
+                                            </div>
+
+                                            <!-- Key Recommendations -->
+                                            <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-5 mt-6">
+                                                <h5 class="font-semibold text-yellow-900 dark:text-yellow-100 mb-3 flex items-center gap-2">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    Key Recommendations
+                                                </h5>
+                                                <ul class="space-y-2 text-yellow-900 dark:text-yellow-100">
+                                                    <li class="flex gap-2">
+                                                        <span>•</span>
+                                                        <span x-text="getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.recommendations?.[0] || 'Leverage existing network connections for warm introductions'"></span>
+                                                    </li>
+                                                    <li class="flex gap-2">
+                                                        <span>•</span>
+                                                        <span x-text="getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.recommendations?.[1] || 'Highlight program alignment with foundation priorities'"></span>
+                                                    </li>
+                                                    <li class="flex gap-2">
+                                                        <span>•</span>
+                                                        <span x-text="getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.recommendations?.[2] || 'Address potential capacity concerns proactively'"></span>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Pending Analysis State -->
+                                    <template x-if="!hasIntelligence(selectedIntelligenceOpp?.opportunity_id)">
+                                        <div class="text-center py-12">
+                                            <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                            </svg>
+                                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Analysis Available</h4>
+                                            <p class="text-gray-600 dark:text-gray-400">Run intelligence analysis to see comprehensive results</p>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Tabs 4-7: Organization Details, Grant History, Officers, Website (Reuse SCREENING pattern with selectedIntelligenceOpp) -->
+                                <!-- Tab 4: Organization Details -->
+                                <div x-show="intelligenceModalTab === 'details'" class="space-y-4">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">Organization Name</p>
+                                            <p class="font-medium text-gray-900 dark:text-white" x-text="selectedIntelligenceOpp?.organization_name || 'N/A'"></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">EIN</p>
+                                            <p class="font-medium text-gray-900 dark:text-white" x-text="selectedIntelligenceOpp?.ein || 'N/A'"></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">Revenue</p>
+                                            <p class="font-medium text-gray-900 dark:text-white" x-text="selectedIntelligenceOpp?.revenue ? '$' + (selectedIntelligenceOpp.revenue / 1000000).toFixed(1) + 'M' : 'N/A'"></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">Assets</p>
+                                            <p class="font-medium text-gray-900 dark:text-white" x-text="selectedIntelligenceOpp?.assets ? '$' + (selectedIntelligenceOpp.assets / 1000000).toFixed(1) + 'M' : 'N/A'"></p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Mission Statement (from 990_data or web_data like SCREENING) -->
+                                    <template x-if="selectedIntelligenceOpp?.['990_data']?.mission || selectedIntelligenceOpp?.web_data?.mission">
+                                        <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Mission Statement</p>
+                                            <p class="text-gray-700 dark:text-gray-300 leading-relaxed" x-text="selectedIntelligenceOpp?.['990_data']?.mission || selectedIntelligenceOpp?.web_data?.mission"></p>
+                                        </div>
+                                    </template>
+
+                                    <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Full Address</p>
+                                        <p class="text-gray-700 dark:text-gray-300" x-text="selectedIntelligenceOpp?.location?.street || 'N/A'"></p>
+                                        <p class="text-gray-700 dark:text-gray-300"
+                                           x-text="`${selectedIntelligenceOpp?.location?.city || ''}, ${selectedIntelligenceOpp?.location?.state || ''} ${selectedIntelligenceOpp?.location?.zip || ''}`"></p>
+                                    </div>
+                                </div>
+
+                                <!-- Tab 5: Grant History -->
+                                <div x-show="intelligenceModalTab === 'grants'" class="space-y-4">
+                                    <template x-if="selectedIntelligenceOpp?.grant_history">
+                                        <div class="space-y-4">
+                                            <div class="grid grid-cols-2 gap-4">
+                                                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400">Total Grants Paid</div>
+                                                    <div class="text-xl font-bold text-gray-900 dark:text-white"
+                                                         x-text="'$' + (selectedIntelligenceOpp.grant_history.grants_paid || 0).toLocaleString()"></div>
+                                                </div>
+                                                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400">Grants to Organizations</div>
+                                                    <div class="text-xl font-bold text-gray-900 dark:text-white"
+                                                         x-text="'$' + (selectedIntelligenceOpp.grant_history.grants_to_orgs || 0).toLocaleString()"></div>
+                                                </div>
+                                                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400">Grants to Individuals</div>
+                                                    <div class="text-xl font-bold text-gray-900 dark:text-white"
+                                                         x-text="'$' + (selectedIntelligenceOpp.grant_history.grants_to_individuals || 0).toLocaleString()"></div>
+                                                </div>
+                                                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                                    <div class="text-sm text-gray-500 dark:text-gray-400">Tax Year</div>
+                                                    <div class="text-xl font-bold text-gray-900 dark:text-white"
+                                                         x-text="selectedIntelligenceOpp.grant_history.tax_year || 'N/A'"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedIntelligenceOpp?.grant_history">
+                                        <div class="text-center py-12 text-gray-500 dark:text-gray-400">
+                                            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                            <p>No grant history available</p>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Tab 6: Officers & Directors -->
+                                <div x-show="intelligenceModalTab === 'officers'" class="space-y-4">
+                                    <!-- Web Research Leadership (Tool 25 - from web_data.leadership) -->
+                                    <template x-if="selectedIntelligenceOpp?.web_data?.leadership && selectedIntelligenceOpp.web_data.leadership.length > 0">
+                                        <div class="space-y-4">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h4 class="font-semibold text-gray-900 dark:text-white">Leadership Team (Web Research)</h4>
+                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
+                                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                                                    </svg>
+                                                    Tool 25
+                                                </span>
+                                            </div>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                <template x-for="leader in selectedIntelligenceOpp.web_data.leadership" :key="leader.name">
+                                                    <div class="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-lg p-3">
+                                                        <div class="flex items-start justify-between">
+                                                            <div class="flex-1">
+                                                                <div class="font-medium text-gray-900 dark:text-white" x-text="leader.name"></div>
+                                                                <div class="text-sm text-gray-600 dark:text-gray-400" x-text="leader.title"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedIntelligenceOpp?.web_data?.leadership || selectedIntelligenceOpp.web_data.leadership.length === 0">
+                                        <div class="text-center py-12 text-gray-500 dark:text-gray-400">
+                                            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                            </svg>
+                                            <p>No leadership information available</p>
+                                            <p class="text-sm mt-2">Run web research to discover leadership team members</p>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Tab 7: Website Data -->
+                                <div x-show="intelligenceModalTab === 'website'" class="space-y-4">
+                                    <template x-if="selectedIntelligenceOpp?.web_data || selectedIntelligenceOpp?.website_url">
+                                        <div class="space-y-4">
+                                            <div>
+                                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Website URL</p>
+                                                <a :href="selectedIntelligenceOpp.website_url || selectedIntelligenceOpp.web_data?.url"
+                                                   target="_blank"
+                                                   class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline"
+                                                   x-text="selectedIntelligenceOpp.website_url || selectedIntelligenceOpp.web_data?.url || 'N/A'"></a>
+                                            </div>
+                                            <template x-if="selectedIntelligenceOpp.web_data?.description">
+                                                <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Description</p>
+                                                    <p class="text-gray-700 dark:text-gray-300 leading-relaxed" x-text="selectedIntelligenceOpp.web_data.description"></p>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedIntelligenceOpp?.web_data && !selectedIntelligenceOpp?.website_url">
+                                        <div class="text-center py-12 text-gray-500 dark:text-gray-400">
+                                            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                                            </svg>
+                                            <p>No website data available</p>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Tab 8: Notes & Actions -->
+                                <div x-show="intelligenceModalTab === 'notes'" class="space-y-4">
+                                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                                        <h5 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">Action Items</h5>
+                                        <ul class="space-y-2 text-sm">
+                                            <li class="flex items-start gap-2">
+                                                <input type="checkbox" class="mt-1 w-4 h-4 text-blue-600 rounded">
+                                                <span class="text-blue-900 dark:text-blue-100">Schedule board member outreach</span>
+                                            </li>
+                                            <li class="flex items-start gap-2">
+                                                <input type="checkbox" class="mt-1 w-4 h-4 text-blue-600 rounded">
+                                                <span class="text-blue-900 dark:text-blue-100">Draft grant proposal narrative</span>
+                                            </li>
+                                            <li class="flex items-start gap-2">
+                                                <input type="checkbox" class="mt-1 w-4 h-4 text-blue-600 rounded">
+                                                <span class="text-blue-900 dark:text-blue-100">Prepare budget and financial documents</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <template x-if="selectedIntelligenceOpp">
+                                        <div>
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your Notes</label>
+                                                <textarea rows="6"
+                                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                          placeholder="Add notes about this opportunity, strategy considerations, or action items..."
+                                                          x-model="selectedIntelligenceOpp.notes"></textarea>
+                                            </div>
+
+                                            <div class="flex justify-end gap-3 mt-4">
+                                                <button @click="saveNotes(selectedIntelligenceOpp?.opportunity_id)"
+                                                        class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                                                    Save Notes
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Modal Footer with Action Buttons -->
+                            <div class="border-t border-gray-200 dark:border-gray-700 p-6 flex-shrink-0">
+                                <div class="flex items-center justify-between gap-4">
+                                    <div class="flex gap-3">
+                                        <button @click="generateReport(selectedIntelligenceOpp?.opportunity_id)"
+                                                class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm">
+                                            Generate Report
+                                        </button>
+                                        <button @click="exportData(selectedIntelligenceOpp?.opportunity_id, 'pdf')"
+                                                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+                                            Export PDF
+                                        </button>
+                                        <button @click="generatePackage(selectedIntelligenceOpp?.opportunity_id)"
+                                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                                            Create Package
+                                        </button>
+                                    </div>
+                                    <button @click="closeIntelligenceModal()"
+                                            class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Analysis Results -->
@@ -9184,7 +10033,7 @@
     </script>
 
     <!-- Phase 9: API Helper Utilities for V2/Tool-based APIs -->
-    <script src="/static/api-helpers.js?v=ALPINE_DEFER_FIX" onerror="console.error('Failed to load api-helpers.js')"></script>
+    <script src="/static/api-helpers.js?v=TOOL_API_FIX_V2_20251122" onerror="console.error('Failed to load api-helpers.js')"></script>
 
     <!-- Phase 9 Week 2: Modular Architecture - 5 Modules (1,920 lines) -->
     <!-- IMPORTANT: These must load BEFORE Alpine.js initializes -->
@@ -9192,7 +10041,7 @@
     <script src="/static/modules/shared-module.js?v=ALPINE_DEFER_FIX" onerror="console.error('Failed to load shared-module.js')"></script>
     <script src="/static/modules/profiles-module.js?v=20251018_ENHANCED_SEARCH_FIX" onerror="console.error('Failed to load profiles-module.js')"></script>
     <script src="/static/modules/screening-module.js?v=ALPINE_DEFER_FIX" onerror="console.error('Failed to load screening-module.js')"></script>
-    <script src="/static/modules/intelligence-module.js?v=ALPINE_DEFER_FIX" onerror="console.error('Failed to load intelligence-module.js')"></script>
+    <script src="/static/modules/intelligence-module.js?v=TOOL_API_FIX_V2_20251122" onerror="console.error('Failed to load intelligence-module.js')"></script>
 
     <!-- app.js contains catalynxApp() - must load before Alpine -->
     <script src="/static/app.js?v=20251020_DEPTH_FIX" onerror="console.error('Failed to load app.js')"></script>

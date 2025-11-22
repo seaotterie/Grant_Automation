@@ -161,7 +161,7 @@ async function fetchWithDeprecationCheck(url, options = {}) {
  * @returns {Promise<object>} Screening results
  */
 async function screenOpportunities(opportunities, profile, mode = 'fast', config = {}) {
-    return await executeToolAPI('opportunity-screening-tool', {
+    return await executeToolAPI('Opportunity Screening Tool', {
         opportunities: opportunities,
         profile: profile,
         mode: mode
@@ -173,19 +173,134 @@ async function screenOpportunities(opportunities, profile, mode = 'fast', config
 }
 
 /**
- * Execute deep intelligence analysis (Tool 11)
+ * Execute deep intelligence analysis (Tool 2 - Deep Intelligence Tool)
  *
  * @param {object} opportunity - Opportunity to analyze
  * @param {object} profile - Profile data
- * @param {string} depth - 'quick', 'standard', 'enhanced', or 'complete'
+ * @param {string} depth - 'essentials' or 'premium' (deprecated: 'quick', 'standard', 'enhanced', 'complete')
  * @returns {Promise<object>} Analysis results
  */
-async function analyzeOpportunityDeep(opportunity, profile, depth = 'quick') {
-    return await executeToolAPI('deep-intelligence-tool', {
-        opportunity: opportunity,
-        profile: profile,
-        depth: depth
-    });
+async function analyzeOpportunityDeep(opportunity, profile, depth = 'essentials') {
+    try {
+        // Map deprecated depths to new 2-tier system
+        const depthMapping = {
+            'quick': 'essentials',
+            'current': 'essentials',
+            'standard': 'essentials',
+            'enhanced': 'premium',
+            'complete': 'premium'
+        };
+
+        const tier = depthMapping[depth] || depth;
+
+        // Get profile ID from profile object or current active profile
+        let profileId = profile?.id || profile?.profile_id;
+        if (!profileId) {
+            // Try to get from Alpine.js global state
+            if (typeof Alpine !== 'undefined' && Alpine.store) {
+                const appStore = Alpine.store('app');
+                profileId = appStore?.selectedProfile?.profile_id || appStore?.selectedDiscoveryProfile?.profile_id;
+            }
+            // Fallback: Try window.currentProfileId or window.appData
+            if (!profileId && typeof window !== 'undefined') {
+                profileId = window.currentProfileId || window.appData?.selectedProfile?.profile_id;
+            }
+            if (!profileId) {
+                console.error('[analyzeOpportunityDeep] No profile ID found. Tried:', {
+                    'profile.id': profile?.id,
+                    'profile.profile_id': profile?.profile_id,
+                    'Alpine.store': typeof Alpine !== 'undefined' ? 'available' : 'unavailable',
+                    'window.currentProfileId': window?.currentProfileId,
+                    'window.appData': window?.appData
+                });
+                throw new Error('Profile ID is required for intelligence analysis. Please select a profile first.');
+            }
+        }
+
+        const response = await fetch(`/api/intelligence/profiles/${profileId}/analysis`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                opportunity_id: opportunity.id || opportunity.opportunity_id,
+                tier: tier,
+                add_ons: []
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || error.message || 'Intelligence analysis failed');
+        }
+
+        const result = await response.json();
+
+        console.log(`✅ Deep intelligence analysis initiated (tier: ${tier}, cost: $${result.estimated_cost})`);
+
+        // If async processing, poll for results
+        if (result.task_id) {
+            return await pollIntelligenceResults(result.task_id);
+        }
+
+        // Return immediate result
+        return {
+            success: true,
+            data: result.result,
+            cost: result.actual_cost || result.estimated_cost,
+            execution_time_ms: null,
+            tool_name: 'Deep Intelligence Tool',
+            tool_version: '2.0.0'
+        };
+
+    } catch (error) {
+        console.error(`❌ Deep intelligence analysis failed:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Poll intelligence analysis results
+ *
+ * @param {string} taskId - Intelligence task ID
+ * @param {number} maxAttempts - Maximum polling attempts (default: 120)
+ * @param {number} pollInterval - Milliseconds between polls (default: 2000)
+ * @returns {Promise<object>} Analysis results
+ */
+async function pollIntelligenceResults(taskId, maxAttempts = 120, pollInterval = 2000) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            const response = await fetch(`/api/intelligence/analysis/${taskId}`);
+            const status = await response.json();
+
+            console.log(`⏳ Intelligence task ${taskId} status: ${status.status} (${status.progress_percentage}%)`);
+
+            if (status.status === 'completed') {
+                console.log(`✅ Intelligence analysis completed`);
+                return {
+                    success: true,
+                    data: status.result,
+                    cost: status.processing_cost,
+                    execution_time_ms: null,
+                    tool_name: 'Deep Intelligence Tool',
+                    tool_version: '2.0.0'
+                };
+            }
+
+            if (status.status === 'failed') {
+                throw new Error(status.error_message || 'Intelligence analysis failed');
+            }
+
+            // Still running, wait and poll again
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+        } catch (error) {
+            if (error.message.includes('failed')) {
+                throw error;
+            }
+            console.error(`Error polling intelligence task ${taskId}:`, error);
+        }
+    }
+
+    throw new Error(`Intelligence analysis timeout: Task ${taskId} did not complete after ${maxAttempts} attempts`);
 }
 
 /**
@@ -197,7 +312,7 @@ async function analyzeOpportunityDeep(opportunity, profile, depth = 'quick') {
  * @returns {Promise<object>} Scoring results
  */
 async function scoreOpportunity(opportunity, profile, stage = 'DISCOVER') {
-    return await executeToolAPI('multi-dimensional-scorer-tool', {
+    return await executeToolAPI('Multi-Dimensional Scorer Tool', {
         opportunity: opportunity,
         profile: profile,
         stage: stage
@@ -224,7 +339,7 @@ async function exportData(data, dataType, format = 'excel', fields = null) {
         inputs.fields = fields;
     }
 
-    return await executeToolAPI('data-export-tool', inputs);
+    return await executeToolAPI('Data Export Tool', inputs);
 }
 
 /**
@@ -237,7 +352,7 @@ async function exportData(data, dataType, format = 'excel', fields = null) {
  * @returns {Promise<object>} Report generation result
  */
 async function generateReport(opportunity, profile, template = 'comprehensive', format = 'html') {
-    return await executeToolAPI('report-generator-tool', {
+    return await executeToolAPI('Report Generator Tool', {
         opportunity: opportunity,
         profile: profile,
         template: template,
@@ -310,6 +425,7 @@ if (typeof module !== 'undefined' && module.exports) {
         executeToolAPI,
         executeWorkflow,
         pollWorkflowResults,
+        pollIntelligenceResults,
         checkDeprecationHeaders,
         fetchWithDeprecationCheck,
         screenOpportunities,
