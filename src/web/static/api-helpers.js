@@ -15,7 +15,7 @@
  */
 async function executeToolAPI(toolName, inputs, config = {}) {
     try {
-        const response = await fetch(`/api/v1/tools/${toolName}/execute`, {
+        const response = await fetch(`/api/v1/tools/${encodeURIComponent(toolName)}/execute`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({inputs, config})

@@ -423,9 +423,18 @@ function intelligenceModule() {
                     throw new Error('Report generation function not available');
                 }
 
+                // Get the opportunity and profile data
+                const opportunity = intelligence.opportunity;
+                const profile = {
+                    profile_id: this.currentProfileId || window.currentProfileId,
+                    ...intelligence.profile
+                };
+
                 const result = await generateReport(
-                    intelligence.analysis,
-                    reportTemplate
+                    opportunity,
+                    profile,
+                    reportTemplate,
+                    'html'
                 );
 
                 if (result.success) {
