@@ -75,6 +75,7 @@ from src.web.auth_routes import router as auth_router
 from src.web.routers.intelligence import router as intelligence_router
 from src.web.routers.workflows import router as workflows_router
 from src.web.routers.gateway import router as gateway_router
+from src.web.routers.learning import router as learning_router
 from src.web.routers.profiles import router as profiles_router  # Phase 9: Fix duplicate fetch-ein endpoint
 from src.web.routers.profiles_v2 import router as profiles_v2_router
 from src.web.routers.discovery_v2 import router as discovery_v2_router
@@ -436,6 +437,7 @@ app.include_router(workflows_router)
 
 # Human Gateway (Phase E)
 app.include_router(gateway_router)
+app.include_router(learning_router)
 
 # Include unified tool execution routes (Phase 6)
 from src.web.routers.tools import router as tools_router
