@@ -166,6 +166,9 @@ async def record_decision(session_id: str, opportunity_id: str, request: Decisio
         f"decision={request.decision}"
     )
 
+    # Persist decision to database for learning loop
+    _persist_gateway_decision(session_id, opportunity_id, item, session.organization)
+
     return {
         "opportunity_id": opportunity_id,
         "decision": request.decision,
@@ -188,6 +191,7 @@ async def batch_decision(session_id: str, request: BatchDecisionRequest):
             session.items[opp_id]["decision_reason"] = request.reason
             session.items[opp_id]["decided_at"] = datetime.utcnow().isoformat()
             updated.append(opp_id)
+            _persist_gateway_decision(session_id, opp_id, session.items[opp_id], session.organization)
 
     return {
         "updated": len(updated),
@@ -361,3 +365,65 @@ def _format_opportunities(session: GatewaySession) -> List[Dict[str, Any]]:
         })
     opps.sort(key=lambda x: x["overall_score"], reverse=True)
     return opps
+
+
+def _persist_gateway_decision(
+    session_id: str,
+    opportunity_id: str,
+    item: Dict[str, Any],
+    organization: Dict[str, Any],
+):
+    """Persist a gateway decision to the database for the learning loop."""
+    try:
+        import os
+        import sqlite3
+        from pathlib import Path
+
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        db_path = os.path.join(project_root, "data", "catalynx.db")
+
+        # Ensure the learning loop tables exist
+        migration_path = os.path.join(project_root, "src", "database", "migrations", "002_learning_loop.sql")
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='gateway_decisions'")
+            if not cursor.fetchone():
+                if os.path.exists(migration_path):
+                    conn.executescript(open(migration_path).read())
+
+            dimensions = json.dumps({
+                "strategic_fit": item.get("strategic_fit_score"),
+                "eligibility": item.get("eligibility_score"),
+                "timing": item.get("timing_score"),
+                "financial": item.get("financial_score"),
+                "competition": item.get("competition_score"),
+            })
+
+            decision_id = f"gwd_{uuid.uuid4().hex[:12]}"
+            profile_id = organization.get("profile_id") or organization.get("id")
+
+            conn.execute(
+                """INSERT OR REPLACE INTO gateway_decisions (
+                    id, session_id, opportunity_id, profile_id,
+                    screening_overall_score, screening_confidence, screening_dimensions,
+                    decision, decision_reason, selected_depth,
+                    investigation_notes, decided_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    decision_id, session_id, opportunity_id, profile_id,
+                    item.get("overall_score"),
+                    item.get("confidence_level"),
+                    dimensions,
+                    item.get("decision"),
+                    item.get("decision_reason"),
+                    item.get("selected_depth"),
+                    json.dumps(item.get("investigation_notes")) if item.get("investigation_notes") else None,
+                    item.get("decided_at"),
+                ),
+            )
+            conn.commit()
+            logger.debug(f"Persisted gateway decision {decision_id} for {opportunity_id}")
+
+    except Exception as e:
+        # Don't fail the main request if persistence fails
+        logger.warning(f"Failed to persist gateway decision: {e}")
