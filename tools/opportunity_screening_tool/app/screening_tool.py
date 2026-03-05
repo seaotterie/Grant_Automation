@@ -18,7 +18,7 @@ from src.core.tool_framework.path_helper import setup_tool_paths
 # Setup paths for imports
 project_root = setup_tool_paths(__file__)
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 import asyncio
 import json
 import logging
@@ -30,6 +30,11 @@ from src.core.anthropic_service import (
     AnthropicService,
     PipelineStage,
     get_anthropic_service,
+)
+from .funder_enrichment import (
+    FunderIntelligence,
+    enrich_opportunities_batch,
+    lookup_funder,
 )
 from .screening_models import (
     ScreeningInput,
@@ -101,6 +106,7 @@ def _build_fast_screening_prompt(
 def _build_thorough_screening_prompt(
     opportunity: Opportunity,
     organization: OrganizationProfile,
+    funder_intel: Optional[FunderIntelligence] = None,
 ) -> str:
     """Build the system + user prompt for thorough (sonnet) screening."""
     system = (
@@ -170,8 +176,17 @@ def _build_thorough_screening_prompt(
         f"  Focus Areas: {focus}\n"
         f"  Past Recipients: {past}\n"
         f"  Application Requirements: {reqs}\n\n"
-        f"Provide comprehensive scoring for this opportunity."
     )
+
+    # Inject funder intelligence if available
+    if funder_intel and (funder_intel.capacity_tier or funder_intel.total_assets):
+        user += funder_intel.to_prompt_context() + "\n\n"
+        user += (
+            "Use the funder intelligence above to inform your scoring — "
+            "especially competition, financial fit, and geographic alignment.\n\n"
+        )
+
+    user += "Provide comprehensive scoring for this opportunity."
 
     return system, user
 
@@ -431,14 +446,19 @@ class OpportunityScreeningTool(BaseTool[ScreeningOutput]):
         opportunities: List[Opportunity],
         organization: OrganizationProfile,
     ) -> List[OpportunityScore]:
-        """Thorough screening — parallel batches of 5."""
+        """Thorough screening — enrich funders, then parallel batches of 5."""
         self.logger.info(f"Thorough screening {len(opportunities)} opportunities")
+
+        # Pre-enrich all funders in one pass (dedupes by funder name)
+        funder_cache = enrich_opportunities_batch(opportunities)
+
         scores = []
         batch_size = 5
         for i in range(0, len(opportunities), batch_size):
             batch = opportunities[i:i + batch_size]
             batch_scores = await asyncio.gather(*[
-                self._screen_thorough_single(opp, organization) for opp in batch
+                self._screen_thorough_single(opp, organization, funder_cache)
+                for opp in batch
             ])
             scores.extend(batch_scores)
         return scores
@@ -447,19 +467,24 @@ class OpportunityScreeningTool(BaseTool[ScreeningOutput]):
         self,
         opportunity: Opportunity,
         organization: OrganizationProfile,
+        funder_cache: Optional[Dict[str, FunderIntelligence]] = None,
     ) -> OpportunityScore:
         """Screen a single opportunity — Claude sonnet or rule-based fallback."""
+        funder_intel = (funder_cache or {}).get(opportunity.funder)
         if self._ai_available:
-            return await self._screen_thorough_ai(opportunity, organization)
+            return await self._screen_thorough_ai(opportunity, organization, funder_intel)
         return self._screen_thorough_rules(opportunity, organization)
 
     async def _screen_thorough_ai(
         self,
         opportunity: Opportunity,
         organization: OrganizationProfile,
+        funder_intel: Optional[FunderIntelligence] = None,
     ) -> OpportunityScore:
-        """Thorough screening via Claude sonnet."""
-        system, user = _build_thorough_screening_prompt(opportunity, organization)
+        """Thorough screening via Claude sonnet, enriched with funder intelligence."""
+        system, user = _build_thorough_screening_prompt(
+            opportunity, organization, funder_intel
+        )
         try:
             result = await self._anthropic.create_json_completion(
                 messages=[{"role": "user", "content": user}],
