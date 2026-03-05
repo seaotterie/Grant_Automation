@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catalynx - Human Gateway</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .score-bar { transition: width 0.5s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen" x-data="gateway()" x-cloak>
+
+    <!-- Header -->
+    <header class="bg-white border-b shadow-sm sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold text-gray-900">Human Gateway</h1>
+                <p class="text-sm text-gray-500" x-show="session">
+                    Review AI-screened opportunities and select for deep analysis
+                </p>
+            </div>
+            <div class="flex items-center gap-4" x-show="session">
+                <div class="text-sm text-gray-600">
+                    <span class="font-medium" x-text="summary.decided"></span>/<span x-text="summary.total_opportunities"></span> decided
+                </div>
+                <button @click="showPassedModal = true"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                    :disabled="summary.passed === 0">
+                    Send to Deep Analysis (<span x-text="summary.passed"></span>)
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- No session — load or create -->
+    <div x-show="!session" class="max-w-2xl mx-auto mt-16 p-6">
+        <div class="bg-white rounded-xl shadow p-8 text-center">
+            <h2 class="text-2xl font-bold mb-4">Start a Review Session</h2>
+            <p class="text-gray-600 mb-6">
+                Paste screening results JSON or load from a previous screening run.
+            </p>
+            <textarea x-model="importJson" rows="8" placeholder='[{"opportunity_id": "...", "overall_score": 0.8, ...}]'
+                class="w-full border rounded-lg p-3 font-mono text-sm mb-4"></textarea>
+            <button @click="createSession()"
+                class="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700">
+                Start Review
+            </button>
+            <p x-show="error" class="text-red-500 text-sm mt-3" x-text="error"></p>
+        </div>
+    </div>
+
+    <!-- Main review interface -->
+    <div x-show="session" class="max-w-7xl mx-auto px-4 py-6">
+
+        <!-- Summary bar -->
+        <div class="grid grid-cols-5 gap-3 mb-6">
+            <template x-for="stat in statCards" :key="stat.label">
+                <div class="bg-white rounded-lg shadow-sm border p-4 text-center">
+                    <div class="text-2xl font-bold" :class="stat.color" x-text="stat.value"></div>
+                    <div class="text-xs text-gray-500 mt-1" x-text="stat.label"></div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex gap-2 mb-4">
+            <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'"
+                class="px-3 py-1.5 rounded-lg text-sm border">All</button>
+            <button @click="filter = 'pending'" :class="filter === 'pending' ? 'bg-yellow-600 text-white' : 'bg-white text-gray-700'"
+                class="px-3 py-1.5 rounded-lg text-sm border">Pending</button>
+            <button @click="filter = 'pass'" :class="filter === 'pass' ? 'bg-green-600 text-white' : 'bg-white text-gray-700'"
+                class="px-3 py-1.5 rounded-lg text-sm border">Passed</button>
+            <button @click="filter = 'reject'" :class="filter === 'reject' ? 'bg-red-600 text-white' : 'bg-white text-gray-700'"
+                class="px-3 py-1.5 rounded-lg text-sm border">Rejected</button>
+            <button @click="filter = 'investigate'" :class="filter === 'investigate' ? 'bg-purple-600 text-white' : 'bg-white text-gray-700'"
+                class="px-3 py-1.5 rounded-lg text-sm border">Investigating</button>
+            <div class="flex-1"></div>
+            <button @click="sortBy = sortBy === 'score' ? 'title' : 'score'"
+                class="px-3 py-1.5 rounded-lg text-sm border bg-white text-gray-700">
+                Sort: <span x-text="sortBy === 'score' ? 'Score' : 'Title'"></span>
+            </button>
+        </div>
+
+        <!-- Opportunity cards -->
+        <div class="space-y-3">
+            <template x-for="opp in filteredOpportunities" :key="opp.opportunity_id">
+                <div class="bg-white rounded-lg shadow-sm border overflow-hidden"
+                     :class="{
+                         'border-l-4 border-l-green-500': opp.decision === 'pass',
+                         'border-l-4 border-l-red-400': opp.decision === 'reject',
+                         'border-l-4 border-l-purple-500': opp.decision === 'investigate',
+                     }">
+                    <div class="p-4">
+                        <!-- Top row: title + score + actions -->
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-semibold text-gray-900 truncate" x-text="opp.title"></h3>
+                                <div class="flex items-center gap-3 mt-1 text-sm text-gray-500">
+                                    <span x-text="opp.funder"></span>
+                                    <span class="px-1.5 py-0.5 rounded text-xs font-medium"
+                                        :class="{
+                                            'bg-blue-100 text-blue-700': opp.funder_type === 'foundation',
+                                            'bg-green-100 text-green-700': opp.funder_type === 'government',
+                                            'bg-gray-100 text-gray-700': opp.funder_type !== 'foundation' && opp.funder_type !== 'government',
+                                        }"
+                                        x-text="opp.funder_type || 'unknown'"></span>
+                                    <span class="px-1.5 py-0.5 rounded text-xs font-medium"
+                                        :class="{
+                                            'bg-green-100 text-green-700': opp.confidence_level === 'high',
+                                            'bg-yellow-100 text-yellow-700': opp.confidence_level === 'medium',
+                                            'bg-red-100 text-red-700': opp.confidence_level === 'low',
+                                        }"
+                                        x-text="opp.confidence_level + ' confidence'"></span>
+                                </div>
+                            </div>
+
+                            <!-- Score circle -->
+                            <div class="flex-shrink-0 w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                                :class="{
+                                    'bg-green-500': opp.overall_score >= 0.7,
+                                    'bg-yellow-500': opp.overall_score >= 0.5 && opp.overall_score < 0.7,
+                                    'bg-red-500': opp.overall_score < 0.5,
+                                }"
+                                x-text="Math.round(opp.overall_score * 100)"></div>
+                        </div>
+
+                        <!-- Summary -->
+                        <p class="text-sm text-gray-600 mt-2" x-text="opp.one_sentence_summary || opp.reasoning"></p>
+
+                        <!-- Score dimensions (collapsible) -->
+                        <div x-show="expandedId === opp.opportunity_id" class="mt-3 space-y-1.5">
+                            <template x-for="dim in scoreDimensions(opp)" :key="dim.label">
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="w-24 text-gray-500" x-text="dim.label"></span>
+                                    <div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                                        <div class="score-bar h-full rounded-full"
+                                            :class="{
+                                                'bg-green-400': dim.value >= 0.7,
+                                                'bg-yellow-400': dim.value >= 0.5 && dim.value < 0.7,
+                                                'bg-red-400': dim.value < 0.5,
+                                            }"
+                                            :style="{ width: (dim.value * 100) + '%' }"></div>
+                                    </div>
+                                    <span class="w-8 text-right font-mono" x-text="Math.round(dim.value * 100)"></span>
+                                </div>
+                            </template>
+
+                            <!-- Strengths & Concerns -->
+                            <div class="grid grid-cols-2 gap-4 mt-3 text-xs">
+                                <div x-show="opp.key_strengths && opp.key_strengths.length">
+                                    <div class="font-medium text-green-700 mb-1">Strengths</div>
+                                    <ul class="space-y-0.5 text-gray-600">
+                                        <template x-for="s in opp.key_strengths" :key="s">
+                                            <li x-text="'+ ' + s"></li>
+                                        </template>
+                                    </ul>
+                                </div>
+                                <div x-show="opp.key_concerns && opp.key_concerns.length">
+                                    <div class="font-medium text-red-700 mb-1">Concerns</div>
+                                    <ul class="space-y-0.5 text-gray-600">
+                                        <template x-for="c in opp.key_concerns" :key="c">
+                                            <li x-text="'- ' + c"></li>
+                                        </template>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Investigation notes -->
+                            <div x-show="opp.investigation_notes && opp.investigation_notes.length" class="mt-3 border-t pt-3">
+                                <div class="font-medium text-purple-700 text-xs mb-2">Investigation Notes</div>
+                                <template x-for="note in (opp.investigation_notes || [])" :key="note.timestamp">
+                                    <div class="bg-purple-50 rounded p-2 mb-2 text-xs">
+                                        <div class="font-medium text-purple-800" x-text="'Q: ' + note.question"></div>
+                                        <div class="text-gray-700 mt-1 whitespace-pre-line" x-text="note.answer"></div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- Investigate input -->
+                            <div x-show="opp.decision === 'investigate' || investigatingId === opp.opportunity_id" class="mt-2">
+                                <div class="flex gap-2">
+                                    <input type="text" x-model="investigateQuestion"
+                                        placeholder="Ask a specific question about this opportunity..."
+                                        class="flex-1 border rounded px-3 py-1.5 text-sm"
+                                        @keydown.enter="investigate(opp.opportunity_id)">
+                                    <button @click="investigate(opp.opportunity_id)"
+                                        class="bg-purple-600 text-white px-3 py-1.5 rounded text-sm"
+                                        :disabled="investigateLoading">
+                                        <span x-show="!investigateLoading">Ask</span>
+                                        <span x-show="investigateLoading">...</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom bar: expand + decision buttons -->
+                        <div class="flex items-center justify-between mt-3 pt-3 border-t">
+                            <button @click="expandedId = expandedId === opp.opportunity_id ? null : opp.opportunity_id"
+                                class="text-xs text-blue-600 hover:text-blue-800">
+                                <span x-text="expandedId === opp.opportunity_id ? 'Collapse' : 'Expand details'"></span>
+                            </button>
+
+                            <div class="flex gap-2">
+                                <button @click="decide(opp.opportunity_id, 'pass')"
+                                    class="px-3 py-1 rounded text-sm font-medium transition-colors"
+                                    :class="opp.decision === 'pass' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 hover:bg-green-100'">
+                                    Pass
+                                </button>
+                                <button @click="investigatingId = opp.opportunity_id; decide(opp.opportunity_id, 'investigate'); expandedId = opp.opportunity_id"
+                                    class="px-3 py-1 rounded text-sm font-medium transition-colors"
+                                    :class="opp.decision === 'investigate' ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'">
+                                    Investigate
+                                </button>
+                                <button @click="decide(opp.opportunity_id, 'reject')"
+                                    class="px-3 py-1 rounded text-sm font-medium transition-colors"
+                                    :class="opp.decision === 'reject' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700 hover:bg-red-100'">
+                                    Reject
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Deep Analysis Modal -->
+    <div x-show="showPassedModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" x-cloak>
+        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6" @click.away="showPassedModal = false">
+            <h3 class="text-lg font-bold mb-4">Send to Deep Analysis</h3>
+            <div class="space-y-2 max-h-64 overflow-y-auto mb-4">
+                <template x-for="opp in passedOpportunities" :key="opp.opportunity_id">
+                    <div class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div class="text-sm font-medium truncate flex-1" x-text="opp.title"></div>
+                        <select x-model="opp.selected_depth" @change="updateDepth(opp)"
+                            class="ml-2 border rounded px-2 py-1 text-sm">
+                            <option value="essentials">Essentials ($2)</option>
+                            <option value="premium">Premium ($8)</option>
+                        </select>
+                    </div>
+                </template>
+            </div>
+            <div class="flex items-center justify-between pt-3 border-t">
+                <div class="text-sm text-gray-600">
+                    Estimated cost: <span class="font-bold text-green-700" x-text="'$' + estimatedCost.toFixed(2)"></span>
+                </div>
+                <div class="flex gap-2">
+                    <button @click="showPassedModal = false"
+                        class="px-4 py-2 rounded-lg border text-sm">Cancel</button>
+                    <button @click="launchDeepAnalysis()"
+                        class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+                        Launch Analysis
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function gateway() {
+        return {
+            session: null,
+            sessionId: null,
+            summary: {},
+            opportunities: [],
+            filter: 'all',
+            sortBy: 'score',
+            expandedId: null,
+            investigatingId: null,
+            investigateQuestion: '',
+            investigateLoading: false,
+            showPassedModal: false,
+            importJson: '',
+            error: null,
+
+            get statCards() {
+                const s = this.summary;
+                return [
+                    { label: 'Total', value: s.total_opportunities || 0, color: 'text-gray-900' },
+                    { label: 'Pending', value: s.pending || 0, color: 'text-yellow-600' },
+                    { label: 'Passed', value: s.passed || 0, color: 'text-green-600' },
+                    { label: 'Rejected', value: s.rejected || 0, color: 'text-red-600' },
+                    { label: 'Investigating', value: s.investigating || 0, color: 'text-purple-600' },
+                ];
+            },
+
+            get filteredOpportunities() {
+                let opps = this.opportunities;
+                if (this.filter === 'pending') opps = opps.filter(o => !o.decision);
+                else if (this.filter !== 'all') opps = opps.filter(o => o.decision === this.filter);
+
+                if (this.sortBy === 'score') {
+                    opps = [...opps].sort((a, b) => b.overall_score - a.overall_score);
+                } else {
+                    opps = [...opps].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+                }
+                return opps;
+            },
+
+            get passedOpportunities() {
+                return this.opportunities.filter(o => o.decision === 'pass');
+            },
+
+            get estimatedCost() {
+                const costs = { essentials: 2.00, premium: 8.00 };
+                return this.passedOpportunities.reduce(
+                    (sum, o) => sum + (costs[o.selected_depth] || 2.00), 0
+                );
+            },
+
+            scoreDimensions(opp) {
+                return [
+                    { label: 'Strategic Fit', value: opp.strategic_fit_score || 0 },
+                    { label: 'Eligibility', value: opp.eligibility_score || 0 },
+                    { label: 'Timing', value: opp.timing_score || 0 },
+                    { label: 'Financial', value: opp.financial_score || 0 },
+                    { label: 'Competition', value: opp.competition_score || 0 },
+                ];
+            },
+
+            async createSession() {
+                this.error = null;
+                try {
+                    const data = JSON.parse(this.importJson);
+                    const results = Array.isArray(data) ? data : (data.opportunity_scores || data.results || [data]);
+                    const resp = await fetch('/api/gateway/sessions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ screening_results: results, organization: {} }),
+                    });
+                    if (!resp.ok) throw new Error(await resp.text());
+                    const body = await resp.json();
+                    this.sessionId = body.session_id;
+                    this.session = true;
+                    this.summary = body;
+                    this.opportunities = body.opportunities || [];
+                } catch (e) {
+                    this.error = 'Failed to parse JSON: ' + e.message;
+                }
+            },
+
+            async decide(oppId, decision) {
+                const resp = await fetch(
+                    `/api/gateway/sessions/${this.sessionId}/opportunities/${oppId}/decision`,
+                    {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ decision }),
+                    }
+                );
+                if (!resp.ok) return;
+                const body = await resp.json();
+                this.summary = body.summary;
+                const opp = this.opportunities.find(o => o.opportunity_id === oppId);
+                if (opp) opp.decision = decision;
+            },
+
+            async investigate(oppId) {
+                if (!this.investigateQuestion.trim()) return;
+                this.investigateLoading = true;
+                try {
+                    const resp = await fetch(
+                        `/api/gateway/sessions/${this.sessionId}/investigate/${oppId}`,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ question: this.investigateQuestion }),
+                        }
+                    );
+                    if (!resp.ok) throw new Error(await resp.text());
+                    const body = await resp.json();
+                    const opp = this.opportunities.find(o => o.opportunity_id === oppId);
+                    if (opp) {
+                        if (!opp.investigation_notes) opp.investigation_notes = [];
+                        opp.investigation_notes.push({
+                            question: this.investigateQuestion,
+                            answer: body.answer,
+                            timestamp: new Date().toISOString(),
+                        });
+                    }
+                    this.investigateQuestion = '';
+                } finally {
+                    this.investigateLoading = false;
+                }
+            },
+
+            async updateDepth(opp) {
+                await fetch(
+                    `/api/gateway/sessions/${this.sessionId}/opportunities/${opp.opportunity_id}/decision`,
+                    {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            decision: 'pass',
+                            selected_depth: opp.selected_depth
+                        }),
+                    }
+                );
+            },
+
+            async launchDeepAnalysis() {
+                const resp = await fetch(`/api/gateway/sessions/${this.sessionId}/passed`);
+                const body = await resp.json();
+                alert(
+                    `Ready to launch deep analysis for ${body.passed_count} opportunities.\n` +
+                    `Estimated cost: $${body.estimated_cost.toFixed(2)}\n\n` +
+                    `(Deep analysis workflow integration coming in Phase D)`
+                );
+                this.showPassedModal = false;
+            },
+        };
+    }
+    </script>
+</body>
+</html>

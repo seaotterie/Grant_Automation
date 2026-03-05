@@ -74,6 +74,7 @@ from src.web.auth_routes import router as auth_router
 # from src.web.routers.ai_processing import router as ai_processing_router
 from src.web.routers.intelligence import router as intelligence_router
 from src.web.routers.workflows import router as workflows_router
+from src.web.routers.gateway import router as gateway_router
 from src.web.routers.profiles import router as profiles_router  # Phase 9: Fix duplicate fetch-ein endpoint
 from src.web.routers.profiles_v2 import router as profiles_v2_router
 from src.web.routers.discovery_v2 import router as discovery_v2_router
@@ -432,6 +433,9 @@ app.include_router(intelligence_router)
 
 # Include Workflow execution routes
 app.include_router(workflows_router)
+
+# Human Gateway (Phase E)
+app.include_router(gateway_router)
 
 # Include unified tool execution routes (Phase 6)
 from src.web.routers.tools import router as tools_router
@@ -961,6 +965,17 @@ async def serve_static(file_path: str):
 static_path = Path(__file__).parent / "static"
 if static_path.exists():
     app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+
+# Human Gateway interface
+@app.get("/gateway", response_class=HTMLResponse)
+async def gateway_page():
+    """Serve the Human Gateway review interface."""
+    html_file = Path(__file__).parent / "static" / "gateway.html"
+    if html_file.exists():
+        return FileResponse(html_file, headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+        })
+    raise HTTPException(status_code=404, detail="Gateway page not found")
 
 # Root endpoint - serve main interface
 @app.get("/", response_class=HTMLResponse)
