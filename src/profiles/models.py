@@ -98,13 +98,50 @@ class GeographicScope(BaseModel):
 class FundingPreferences(BaseModel):
     """Funding preferences and requirements"""
     min_amount: Optional[int] = Field(default=None, description="Minimum funding amount")
-    max_amount: Optional[int] = Field(default=None, description="Maximum funding amount") 
+    max_amount: Optional[int] = Field(default=None, description="Maximum funding amount")
     funding_types: List[FundingType] = Field(default=[FundingType.GRANTS], description="Preferred funding types")
     recurring: bool = Field(default=False, description="Seeks recurring funding")
     multi_year: bool = Field(default=False, description="Multi-year funding acceptable")
-    
+
     # Grants.gov Classifications
     grants_gov_categories: List[GrantsGovCategory] = Field(default=[], description="Preferred Grants.gov funding categories")
+
+
+class FundingHistoryRecord(BaseModel):
+    """Record of a past or current funding relationship"""
+    funder_name: str = Field(..., description="Name of the funding organization")
+    funder_ein: Optional[str] = Field(default=None, description="Funder EIN if known")
+    award_amount: Optional[int] = Field(default=None, description="Award amount in dollars")
+    award_year: Optional[int] = Field(default=None, description="Year of award")
+    purpose: Optional[str] = Field(default=None, description="Purpose/program funded")
+    is_current: bool = Field(default=True, description="Whether this is an active funding relationship")
+    renewal_likelihood: Optional[str] = Field(default=None, description="Likelihood of renewal: high, medium, low")
+
+
+class CapacityProfile(BaseModel):
+    """Organizational capacity for grant management"""
+    typical_grant_size_managed: Optional[int] = Field(default=None, description="Typical grant size the org manages")
+    largest_grant_ever_managed: Optional[int] = Field(default=None, description="Largest single grant ever managed")
+    can_manage_federal_reporting: bool = Field(default=False, description="Has capacity for federal grant reporting")
+    compliance_capability: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Compliance capability score 0-1.0")
+    grant_management_staff_count: Optional[int] = Field(default=None, description="Number of staff dedicated to grant management")
+
+
+class GovernmentFundingCriteria(BaseModel):
+    """Structured government funding eligibility criteria"""
+    eligible_federal_agencies: List[str] = Field(default=[], description="Federal agencies the org is eligible for (e.g., NSF, ED, HHS)")
+    sam_registration_uei: Optional[str] = Field(default=None, description="SAM.gov Unique Entity Identifier")
+    cfda_numbers: List[str] = Field(default=[], description="CFDA/Assistance Listing numbers of interest")
+    sbir_sttr_eligible: bool = Field(default=False, description="Eligible for SBIR/STTR programs")
+    indirect_cost_rate: Optional[float] = Field(default=None, description="Negotiated indirect cost rate")
+
+
+class NTEEAssignment(BaseModel):
+    """NTEE code assignment with source and confidence tracking"""
+    code: str = Field(..., description="NTEE code (e.g., P20)")
+    source: str = Field(default="user_selected", description="Source: 990_filing, user_selected, ai_inferred")
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Confidence in assignment")
+    rationale: Optional[str] = Field(default=None, description="Why this code was assigned")
 
 
 class ScheduleIGrantee(BaseModel):
@@ -308,15 +345,20 @@ class OrganizationProfile(BaseModel):
     ntee_codes: List[str] = Field(default=[], description="NTEE (National Taxonomy of Exempt Entities) classification codes")
     ntee_description: Optional[str] = Field(default=None, max_length=500, description="Human-readable description of NTEE classifications")
     government_criteria: List[str] = Field(default=[], description="Government funding criteria preferences (agencies, funding types, etc.)")
-    
+    government_funding_criteria: Optional[GovernmentFundingCriteria] = Field(default=None, description="Structured government funding eligibility criteria")
+    ntee_codes_detailed: List[NTEEAssignment] = Field(default=[], description="NTEE codes with source and confidence tracking")
+
     # Geographic and Scope
     geographic_scope: GeographicScope = Field(default_factory=GeographicScope)
     service_areas: List[str] = Field(default=[], description="Areas where services are provided")
-    
+    primarily_rural: bool = Field(default=False, description="Primarily serves rural areas")
+    serves_tribal_lands: bool = Field(default=False, description="Serves tribal lands or indigenous communities")
+
     # Funding Information
     funding_preferences: FundingPreferences = Field(default_factory=FundingPreferences)
     current_funders: List[str] = Field(default=[], description="Current funding sources")
     past_grants: List[str] = Field(default=[], description="Previous grant awards")
+    funding_history: List[FundingHistoryRecord] = Field(default=[], description="Structured funding history with amounts, years, and purposes")
     schedule_i_grantees: List[ScheduleIGrantee] = Field(default=[], description="Organizations this profile has granted to (from Schedule I)")
     schedule_i_status: Optional[str] = Field(default=None, description="Status of Schedule I data: 'found', 'no_grantees', 'no_xml', 'not_checked'")
     
@@ -344,6 +386,11 @@ class OrganizationProfile(BaseModel):
     staff_size: Optional[int] = Field(default=None, description="Number of staff")
     volunteer_count: Optional[int] = Field(default=None, description="Number of volunteers")
     board_size: Optional[int] = Field(default=None, description="Board of directors size")
+    capacity_profile: Optional[CapacityProfile] = Field(default=None, description="Grant management capacity assessment")
+
+    # Problem Statement (for mission matching)
+    problem_statement: Optional[str] = Field(default=None, max_length=500, description="The specific problem the organization addresses")
+    beneficiary_description: Optional[str] = Field(default=None, max_length=500, description="Description of who directly benefits from the work")
     
     # Strategic Information
     strategic_priorities: List[str] = Field(default=[], description="Current strategic priorities")

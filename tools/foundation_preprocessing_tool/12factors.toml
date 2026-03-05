@@ -1,0 +1,31 @@
+[tool]
+name = "Foundation Preprocessing Tool"
+version = "1.0.0"
+description = "Monthly batch preprocessing of foundation intelligence for instant profile matching"
+status = "operational"
+category = "preprocessing"
+
+[factors]
+factor_1 = true   # One codebase
+factor_2 = true   # Dependencies declared
+factor_3 = true   # Config in environment
+factor_4 = true   # Structured outputs
+factor_5 = true   # Build/run separation
+factor_6 = true   # Stateless execution
+factor_7 = true   # Port binding / function calls
+factor_8 = true   # Scale out
+factor_9 = true   # Fast startup
+factor_10 = true  # Single responsibility
+factor_11 = true  # Autonomous operation
+factor_12 = true  # API first
+
+[inputs]
+database_path = "Path to nonprofit_intelligence.db"
+batch_size = "Number of foundations to process per batch (default: 1000)"
+
+[outputs]
+foundations_processed = "Count of foundations indexed"
+capacity_tiers = "Distribution of capacity tiers"
+compliance_filtered = "Count of ineligible foundations filtered"
+giving_trends = "Distribution of giving trends"
+execution_time_ms = "Total processing time"
