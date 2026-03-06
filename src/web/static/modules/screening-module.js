@@ -79,6 +79,14 @@ function screeningModule() {
         webResearchLoading: false, // Web research loading state
         opportunityWebsiteUrl: '', // Website URL for web research
 
+        // 990 Filing History state
+        filingHistoryOpen: false,
+        filingHistoryLoading: false,
+        filingHistoryData: null,
+        filingAnalysisLoading: false,
+        filingAnalysisResult: null,
+        filingAnalysisPdfUrl: null,
+
         // URL Discovery State (Phase 5)
         urlDiscoveryInProgress: false,
         excludeLowPriority: true,  // Skip low_priority by default
@@ -908,6 +916,14 @@ function screeningModule() {
             this.opportunityNotes = opportunity.notes || '';
             this.notesSaved = false;
             this.notesSaving = false;
+
+            // Reset filing history state for new opportunity
+            this.filingHistoryOpen = false;
+            this.filingHistoryLoading = false;
+            this.filingHistoryData = null;
+            this.filingAnalysisLoading = false;
+            this.filingAnalysisResult = null;
+            this.filingAnalysisPdfUrl = null;
         },
 
         /**
@@ -988,11 +1004,22 @@ function screeningModule() {
                         }
 
                         // Show success notification with stats
-                        const leadershipCount = data.web_data?.leadership?.length || 0;
+                        const wd = data.web_data || {};
                         const executionTime = data.execution_time?.toFixed(1) || '?';
+                        const parts = [];
+                        const leadershipCount = wd.leadership?.length || 0;
+                        const programCount = wd.programs?.length || 0;
+                        const factCount = wd.key_facts?.length || 0;
+                        if (leadershipCount > 0) parts.push(`${leadershipCount} leader${leadershipCount > 1 ? 's' : ''}`);
+                        if (programCount > 0) parts.push(`${programCount} program${programCount > 1 ? 's' : ''}`);
+                        if (factCount > 0) parts.push(`${factCount} key facts`);
+                        if (wd.mission) parts.push('mission');
+                        if ((wd.contact?.email || wd.contact?.phone)) parts.push('contact');
+                        const aiLabel = wd.ai_interpreted ? ' (AI interpreted)' : '';
+                        const summary = parts.length > 0 ? parts.join(', ') : 'website & contact';
 
                         this.showNotification?.(
-                            `✅ Web research complete! Found ${leadershipCount} leadership members (${data.pages_scraped} pages in ${executionTime}s)`,
+                            `✅ Web research complete${aiLabel}: ${summary} — ${data.pages_scraped} pages in ${executionTime}s`,
                             'success'
                         );
 
@@ -1015,6 +1042,67 @@ function screeningModule() {
                 );
             } finally {
                 this.webResearchLoading = false;
+            }
+        },
+
+        /**
+         * Load 990 filing history with PDF links for selected opportunity
+         */
+        async load990Filings() {
+            if (!this.selectedOpportunity) return;
+            this.filingHistoryLoading = true;
+            this.filingHistoryData = null;
+            this.filingAnalysisResult = null;
+            this.filingAnalysisPdfUrl = null;
+            try {
+                const response = await fetch(
+                    `/api/v2/opportunities/${this.selectedOpportunity.opportunity_id}/990-filings`
+                );
+                if (response.ok) {
+                    const data = await response.json();
+                    this.filingHistoryData = data.filings || [];
+                } else {
+                    const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    this.showNotification?.(`Failed to load filing history: ${err.detail}`, 'error');
+                }
+            } catch (error) {
+                console.error('Filing history error:', error);
+                this.showNotification?.(`Filing history error: ${error.message}`, 'error');
+            } finally {
+                this.filingHistoryLoading = false;
+            }
+        },
+
+        /**
+         * Send a 990 PDF to Claude for grant-intelligence extraction
+         */
+        async analyze990PDF(pdfUrl, taxYear) {
+            if (!this.selectedOpportunity || !pdfUrl) return;
+            this.filingAnalysisLoading = true;
+            this.filingAnalysisResult = null;
+            this.filingAnalysisPdfUrl = pdfUrl;
+            try {
+                const response = await fetch(
+                    `/api/v2/opportunities/${this.selectedOpportunity.opportunity_id}/analyze-990-pdf`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pdf_url: pdfUrl, tax_year: taxYear })
+                    }
+                );
+                if (response.ok) {
+                    const data = await response.json();
+                    this.filingAnalysisResult = data.extraction;
+                    this.showNotification?.('990 PDF analysis complete', 'success');
+                } else {
+                    const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    this.showNotification?.(`PDF analysis failed: ${err.detail}`, 'error');
+                }
+            } catch (error) {
+                console.error('990 PDF analysis error:', error);
+                this.showNotification?.(`PDF analysis error: ${error.message}`, 'error');
+            } finally {
+                this.filingAnalysisLoading = false;
             }
         },
 

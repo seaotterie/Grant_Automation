@@ -4,7 +4,7 @@ XML Fetcher Utility - Fetch XML data from ProPublica for Schedule I extraction
 import aiohttp
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -134,6 +134,96 @@ class XMLFetcher:
         except Exception as e:
             logger.error(f"Error downloading XML for object_id {object_id}: {e}")
             return None
+
+    async def find_filing_pdf_links(self, ein: str) -> List[Dict[str, Any]]:
+        """
+        Scrape ProPublica org page to find PDF and schedule download links.
+
+        Extends _find_object_id() pattern — same page, different href patterns.
+        Returns list of {year, form_type, pdf_url, link_text, source} dicts.
+        """
+        url = f"{self.propublica_base}/organizations/{ein}"
+        headers = {"User-Agent": "Grant Research Automation Tool"}
+        results: List[Dict[str, Any]] = []
+
+        try:
+            async with aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=self.timeout)
+            ) as session:
+                async with session.get(url, headers=headers) as response:
+                    if response.status != 200:
+                        logger.warning(f"ProPublica page returned {response.status} for EIN {ein}")
+                        return []
+
+                    html_content = await response.text()
+                    soup = BeautifulSoup(html_content, "html.parser")
+
+                    for a_tag in soup.find_all("a", href=True):
+                        href = a_tag["href"]
+                        link_text = a_tag.get_text(strip=True)
+
+                        # Build absolute URL
+                        if href.startswith("/"):
+                            abs_url = f"https://projects.propublica.org{href}"
+                        elif href.startswith("http"):
+                            abs_url = href
+                        else:
+                            continue
+
+                        # Skip generic IRS form PDFs (not specific filings)
+                        if "irs.gov" in abs_url and "/pub/irs-pdf/" in abs_url:
+                            continue
+
+                        if "/download-pdf" in href or "/download-filing" in href:
+                            results.append({
+                                "year": self._extract_year_from_text(link_text),
+                                "form_type": self._extract_form_type_from_text(link_text) or "990",
+                                "pdf_url": abs_url,
+                                "link_text": link_text,
+                                "source": "scraped",
+                            })
+                        elif "/download-schedule" in href:
+                            results.append({
+                                "year": self._extract_year_from_text(link_text),
+                                "form_type": self._extract_form_type_from_text(link_text) or "Schedule",
+                                "pdf_url": abs_url,
+                                "link_text": link_text,
+                                "source": "scraped",
+                            })
+                        elif href.endswith(".pdf"):
+                            results.append({
+                                "year": self._extract_year_from_text(link_text),
+                                "form_type": self._extract_form_type_from_text(link_text) or "990",
+                                "pdf_url": abs_url,
+                                "link_text": link_text,
+                                "source": "scraped",
+                            })
+
+        except Exception as e:
+            logger.error(f"Error finding PDF links for EIN {ein}: {e}")
+
+        return results
+
+    def _extract_year_from_text(self, text: str) -> Optional[int]:
+        """Extract 4-digit year from text string."""
+        import re
+        match = re.search(r'\b(20\d{2})\b', text)
+        return int(match.group(1)) if match else None
+
+    def _extract_form_type_from_text(self, text: str) -> Optional[str]:
+        """Extract IRS form type from text string."""
+        text_upper = text.upper()
+        if "990-PF" in text_upper:
+            return "990-PF"
+        elif "990-EZ" in text_upper:
+            return "990-EZ"
+        elif "SCHEDULE" in text_upper:
+            import re
+            m = re.search(r'SCHEDULE\s+([A-Z])', text_upper)
+            return f"Schedule {m.group(1)}" if m else "Schedule"
+        elif "990" in text_upper:
+            return "990"
+        return None
 
 
 async def fetch_xml_for_ein(ein: str, context: str = "opportunity") -> Optional[bytes]:

@@ -5,8 +5,10 @@ Endpoints for viewing opportunity details, running web research, and promoting t
 """
 
 from fastapi import APIRouter, HTTPException
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from pydantic import BaseModel
+import asyncio
+import aiohttp
 import logging
 import sqlite3
 import json
@@ -23,10 +25,81 @@ router = APIRouter(prefix="/api/v2/opportunities", tags=["opportunities"])
 database_manager = DatabaseManager(get_catalynx_db())
 
 
+# Claude web interpretation system prompt
+INTERPRET_SYSTEM_PROMPT = """You are extracting structured data from scraped nonprofit website pages.
+Return JSON with this exact structure:
+{
+  "mission": string or null,
+  "leadership": [{"name": string, "title": string, "email": string or null, "confidence": "high" or "medium" or "low"}, ...],
+  "programs": [{"name": string, "description": string}, ...],
+  "contact": {"email": string or null, "phone": string or null, "address": string or null},
+  "key_facts": [string, ...],
+  "interpretation_notes": string
+}
+Only include data you actually see in the text. Use confidence="low" for anything uncertain.
+Return ONLY the JSON object, no markdown or other text."""
+
+
 # Request models
 class WebResearchRequest(BaseModel):
     """Request body for web research endpoint"""
     website_url: Optional[str] = None
+
+
+class Analyze990PDFRequest(BaseModel):
+    """Request body for 990 PDF analysis endpoint"""
+    pdf_url: str
+    tax_year: Optional[int] = None
+
+
+async def _interpret_with_claude(
+    scraped_urls: List[str],
+    org_name: str,
+    ein: str
+) -> Optional[Dict[str, Any]]:
+    """
+    Fetch raw page text from scraped URLs and use Claude Sonnet for intelligent extraction.
+    Returns parsed dict matching INTERPRET_SYSTEM_PROMPT schema, or None on failure.
+    """
+    from bs4 import BeautifulSoup
+    from src.core.anthropic_service import get_anthropic_service, PipelineStage
+
+    page_texts = []
+    headers = {"User-Agent": "CatalynxResearch/1.0"}
+
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as client:
+        for url in scraped_urls[:5]:
+            try:
+                async with client.get(url, headers=headers, allow_redirects=True) as resp:
+                    if resp.status == 200:
+                        html = await resp.text(errors="replace")
+                        text = BeautifulSoup(html, "html.parser").get_text(
+                            separator="\n", strip=True
+                        )
+                        page_texts.append(f"--- PAGE: {url} ---\n{text[:3000]}")
+            except Exception:
+                pass
+
+    if not page_texts:
+        return None
+
+    combined = "\n\n".join(page_texts)
+    try:
+        svc = get_anthropic_service()
+        result = await svc.create_json_completion(
+            system=INTERPRET_SYSTEM_PROMPT,
+            messages=[{
+                "role": "user",
+                "content": f"Organization: {org_name} (EIN: {ein})\n\n{combined}"
+            }],
+            stage=PipelineStage.THOROUGH_SCREENING,
+            max_tokens=2048,
+            temperature=0.0,
+        )
+        return result
+    except Exception as e:
+        logger.warning(f"Claude web interpretation failed for EIN {ein}: {e}")
+        return None
 
 
 @router.get("/{opportunity_id}/details")
@@ -259,7 +332,8 @@ async def research_opportunity(
                 # Convert OrganizationIntelligence to dict for storage
                 intelligence = result.intelligence_data
 
-                web_data = {
+                # Build Scrapy-extracted data
+                scrapy_web_data = {
                     "website": intelligence.website_url,
                     "website_verified": intelligence.scraping_metadata.verification_confidence > 0.7,
                     "leadership": [
@@ -289,12 +363,62 @@ async def research_opportunity(
                         }
                         for program in intelligence.programs
                     ],
-                    "grant_application_url": None,  # Would need custom detection logic
-                    "recent_news": [],  # Would need news extraction spider
+                    "grant_application_url": None,
+                    "recent_news": [],
                     "data_quality_score": result.data_quality_score,
                     "pages_scraped": result.pages_scraped,
                     "execution_time": result.execution_time_seconds
                 }
+
+                # Attempt Claude AI interpretation of raw page text
+                scraped_urls = getattr(
+                    intelligence.scraping_metadata, "scraped_urls", []
+                ) or []
+                claude_result = None
+                if scraped_urls:
+                    logger.info(f"Running Claude interpretation on {len(scraped_urls)} scraped URLs for {ein}")
+                    claude_result = await _interpret_with_claude(scraped_urls, opportunity.organization_name, ein)
+
+                if claude_result:
+                    # Claude succeeded: use its output as primary web_data
+                    web_data = {
+                        "website": scrapy_web_data["website"],
+                        "website_verified": scrapy_web_data["website_verified"],
+                        "leadership": [
+                            {
+                                "name": ldr.get("name", ""),
+                                "title": ldr.get("title", ""),
+                                "email": ldr.get("email"),
+                                "phone": None,
+                                "bio": None,
+                                "matches_990": False,
+                                "confidence": ldr.get("confidence", "medium"),
+                            }
+                            for ldr in (claude_result.get("leadership") or [])
+                        ],
+                        "leadership_cross_validated": scrapy_web_data["leadership_cross_validated"],
+                        "contact": claude_result.get("contact") or scrapy_web_data["contact"],
+                        "social_media": scrapy_web_data["social_media"],
+                        "mission": claude_result.get("mission") or scrapy_web_data["mission"],
+                        "programs": [
+                            {"name": p.get("name", ""), "description": p.get("description", ""), "target_population": None}
+                            for p in (claude_result.get("programs") or [])
+                        ],
+                        "key_facts": claude_result.get("key_facts") or [],
+                        "interpretation_notes": claude_result.get("interpretation_notes"),
+                        "grant_application_url": scrapy_web_data["grant_application_url"],
+                        "recent_news": scrapy_web_data["recent_news"],
+                        "data_quality_score": scrapy_web_data["data_quality_score"],
+                        "pages_scraped": scrapy_web_data["pages_scraped"],
+                        "execution_time": scrapy_web_data["execution_time"],
+                        "ai_interpreted": True,
+                        "web_data_scrapy_raw": scrapy_web_data,
+                    }
+                    logger.info(f"Claude web interpretation complete for {ein}")
+                else:
+                    # Fall back to Scrapy extraction
+                    web_data = scrapy_web_data
+                    web_data["ai_interpreted"] = False
 
                 # Update opportunity in database with web data
                 conn = database_manager.get_connection()
@@ -817,6 +941,156 @@ async def update_opportunity_notes(opportunity_id: str, request: Dict[str, Any])
         raise
     except Exception as e:
         logger.error(f"Failed to update notes for opportunity {opportunity_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{opportunity_id}/990-filings")
+async def get_990_filings(opportunity_id: str):
+    """
+    Return 990 filing history with PDF links for an opportunity.
+
+    Merges ProPublica API filings (with pdf_url) and scraped PDF links
+    from the ProPublica org page.
+    """
+    try:
+        conn = database_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT ein, organization_name FROM opportunities WHERE id = ?", (opportunity_id,))
+        row = cursor.fetchone()
+        conn.close()
+
+        if not row:
+            raise HTTPException(status_code=404, detail=f"Opportunity {opportunity_id} not found")
+
+        ein, org_name = row[0], row[1]
+        if not ein:
+            raise HTTPException(status_code=400, detail="Opportunity has no EIN")
+
+        filings: List[Dict[str, Any]] = []
+
+        # 1. ProPublica API filings (structured data + pdf_url)
+        try:
+            from src.clients.propublica_client import ProPublicaClient
+            client = ProPublicaClient()
+            org_data = await client.get_organization_by_ein(ein)
+            if org_data:
+                api_filings = org_data.get("filings_with_data", [])
+                for f in api_filings[:10]:
+                    filings.append({
+                        "tax_year": f.get("tax_prd_yr") or f.get("tax_year"),
+                        "form_type": f.get("formtype") or f.get("form_type", "990"),
+                        "pdf_url": f.get("pdf_url"),
+                        "revenue": f.get("totrevenue"),
+                        "expenses": f.get("totfuncexpns"),
+                        "assets": f.get("totassetsend"),
+                        "filing_date": f.get("updated"),
+                        "source": "api",
+                    })
+        except Exception as e:
+            logger.warning(f"ProPublica API call failed for EIN {ein}: {e}")
+
+        # 2. Scraped PDF links from ProPublica org page (catches links API misses)
+        try:
+            from src.utils.xml_fetcher import XMLFetcher
+            fetcher = XMLFetcher()
+            scraped_links = await fetcher.find_filing_pdf_links(ein)
+            # Only add scraped links not already covered by API (match by year)
+            api_years = {f["tax_year"] for f in filings if f.get("tax_year")}
+            for link in scraped_links:
+                year = link.get("year")
+                if year not in api_years or link.get("form_type", "").startswith("Schedule"):
+                    filings.append({
+                        "tax_year": year,
+                        "form_type": link.get("form_type", "990"),
+                        "pdf_url": link.get("pdf_url"),
+                        "revenue": None,
+                        "expenses": None,
+                        "assets": None,
+                        "filing_date": None,
+                        "link_text": link.get("link_text"),
+                        "source": "scraped",
+                    })
+        except Exception as e:
+            logger.warning(f"PDF link scraping failed for EIN {ein}: {e}")
+
+        # Sort by tax year descending
+        filings.sort(key=lambda x: (x.get("tax_year") or 0), reverse=True)
+
+        return {
+            "success": True,
+            "opportunity_id": opportunity_id,
+            "ein": ein,
+            "organization_name": org_name,
+            "filings": filings,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get 990 filings for {opportunity_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{opportunity_id}/analyze-990-pdf")
+async def analyze_990_pdf(opportunity_id: str, body: Analyze990PDFRequest):
+    """
+    Send a 990 PDF URL to Claude for grant-intelligence extraction.
+
+    Reuses NarrativeExtractor.extract_from_pdf_url() from the foundation
+    preprocessing tool (already implements Anthropic document URL source format).
+    Cost: ~$0.01-0.03 per PDF (Claude Haiku).
+    """
+    try:
+        conn = database_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT ein FROM opportunities WHERE id = ?", (opportunity_id,))
+        row = cursor.fetchone()
+        conn.close()
+
+        if not row:
+            raise HTTPException(status_code=404, detail=f"Opportunity {opportunity_id} not found")
+        ein = row[0] or ""
+
+        if not body.pdf_url or not body.pdf_url.startswith("http"):
+            raise HTTPException(status_code=400, detail="Valid pdf_url required")
+
+        logger.info(f"Analyzing 990 PDF for {opportunity_id} (EIN: {ein}): {body.pdf_url}")
+
+        from tools.foundation_preprocessing_tool.app.pdf_narrative_extractor import PDFNarrativeExtractor
+        from src.config.database_config import get_nonprofit_intelligence_db
+
+        extractor = PDFNarrativeExtractor(intelligence_db_path=get_nonprofit_intelligence_db())
+        result = await extractor.extract_from_pdf_url(
+            ein=ein,
+            pdf_url=body.pdf_url,
+            tax_year=body.tax_year,
+        )
+
+        return {
+            "success": True,
+            "opportunity_id": opportunity_id,
+            "ein": ein,
+            "pdf_url": body.pdf_url,
+            "tax_year": body.tax_year,
+            "extraction": {
+                "mission_statement": result.mission_statement,
+                "accepts_applications": result.accepts_applications,
+                "application_deadlines": result.application_deadlines,
+                "application_process": result.application_process,
+                "required_documents": result.required_documents,
+                "stated_priorities": result.stated_priorities,
+                "geographic_limitations": result.geographic_limitations,
+                "population_focus": result.population_focus,
+                "program_descriptions": result.program_descriptions,
+                "contact_information": result.contact_information,
+                "extraction_confidence": result.extraction_confidence,
+            },
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to analyze 990 PDF for {opportunity_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
