@@ -96,10 +96,15 @@ def _build_fast_screening_prompt(
         f"  Amount: {amount}\n"
         f"  Deadline: {opportunity.deadline or 'Not specified'}\n"
         f"  Geographic Restrictions: {geo}\n"
-        f"  Focus Areas: {focus}\n\n"
-        f"Score this opportunity for the organization above."
+        f"  Focus Areas: {focus}\n"
     )
 
+    # Inject funder intelligence summary if available
+    if opportunity.funder_intelligence and hasattr(opportunity.funder_intelligence, 'to_screening_context'):
+        user += f"\n{opportunity.funder_intelligence.to_screening_context(mode='fast')}\n"
+        user += "\nConsider the funder intelligence above when scoring accepts_applications and eligibility.\n"
+
+    user += "\nScore this opportunity for the organization above."
     return system, user
 
 
@@ -178,12 +183,21 @@ def _build_thorough_screening_prompt(
         f"  Application Requirements: {reqs}\n\n"
     )
 
-    # Inject funder intelligence if available
+    # Inject BMF funder intelligence (existing FunderIntelligence from discovery data)
     if funder_intel and (funder_intel.capacity_tier or funder_intel.total_assets):
         user += funder_intel.to_prompt_context() + "\n\n"
         user += (
             "Use the funder intelligence above to inform your scoring — "
             "especially competition, financial fit, and geographic alignment.\n\n"
+        )
+
+    # Inject W/9 funder intelligence (GrantFunderIntelligence from website/990 fetch)
+    if opportunity.funder_intelligence and hasattr(opportunity.funder_intelligence, 'to_screening_context'):
+        user += opportunity.funder_intelligence.to_screening_context(mode='thorough') + "\n\n"
+        user += (
+            "Use the detailed funder intelligence above to inform all scoring dimensions — "
+            "especially eligibility (accepts_applications, deadlines), strategic fit "
+            "(priorities, programs), and competitive positioning.\n\n"
         )
 
     user += "Provide comprehensive scoring for this opportunity."

@@ -4,7 +4,7 @@ Opportunities API Endpoints - SCREENING Stage Support
 Endpoints for viewing opportunity details, running web research, and promoting to INTELLIGENCE stage.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from typing import Dict, Any, Optional, List
 from pydantic import BaseModel
 import asyncio
@@ -12,7 +12,8 @@ import aiohttp
 import logging
 import sqlite3
 import json
-from datetime import datetime
+import uuid
+from datetime import datetime, timezone
 
 from src.database.database_manager import DatabaseManager
 from src.config.database_config import get_nonprofit_intelligence_db, get_catalynx_db
@@ -23,6 +24,13 @@ router = APIRouter(prefix="/api/v2/opportunities", tags=["opportunities"])
 
 # Initialize database manager
 database_manager = DatabaseManager(get_catalynx_db())
+
+# Cache TTL constants (in days)
+_WEB_DATA_TTL_DAYS = 30
+_FILING_HISTORY_TTL_DAYS = 7
+
+# In-memory batch job store (single-user app — no persistence needed)
+_batch_jobs: Dict[str, Dict] = {}
 
 
 # Claude web interpretation system prompt
@@ -50,6 +58,12 @@ class Analyze990PDFRequest(BaseModel):
     """Request body for 990 PDF analysis endpoint"""
     pdf_url: str
     tax_year: Optional[int] = None
+
+
+class BatchAnalyze990PDFsRequest(BaseModel):
+    """Request body for batch 990 PDF analysis endpoint"""
+    opportunity_ids: List[str]
+    force_refresh: bool = False
 
 
 async def _interpret_with_claude(
@@ -286,6 +300,45 @@ async def research_opportunity(
 
         logger.info(f"Starting web research for opportunity {opportunity_id} (EIN: {ein})")
 
+        # --- EIN Intelligence Cache check ---
+        cached = database_manager.get_ein_intelligence(ein)
+        if cached and cached.get("web_data") and cached.get("web_data_fetched_at"):
+            try:
+                fetched_dt = datetime.fromisoformat(cached["web_data_fetched_at"])
+                age_days = (datetime.now() - fetched_dt).days
+                if age_days < _WEB_DATA_TTL_DAYS:
+                    logger.info(f"Cache hit: web_data for EIN {ein} (age {age_days}d) — skipping Tool 25")
+                    web_data = cached["web_data"]
+                    # Write back to this opportunity's analysis_discovery so the modal shows it
+                    conn = database_manager.get_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT analysis_discovery FROM opportunities WHERE id = ?", (opportunity_id,))
+                    row = cursor.fetchone()
+                    if row and row[0]:
+                        ad = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+                        ad["web_data"] = web_data
+                        ad["web_search_complete"] = True
+                        cursor.execute(
+                            "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                            (json.dumps(ad), datetime.now().isoformat(), opportunity_id),
+                        )
+                        conn.commit()
+                    conn.close()
+                    return {
+                        "success": True,
+                        "opportunity_id": opportunity_id,
+                        "web_data": web_data,
+                        "web_search_complete": True,
+                        "execution_time": 0.0,
+                        "pages_scraped": 0,
+                        "data_quality_score": web_data.get("data_quality_score"),
+                        "ein": ein,
+                        "organization_name": opportunity.organization_name,
+                        "cache_hit": True,
+                    }
+            except Exception as cache_err:
+                logger.warning(f"Cache read error for EIN {ein}: {cache_err}")
+
         # Integrate Tool 25 Web Intelligence
         try:
             import sys
@@ -329,96 +382,123 @@ async def research_opportunity(
             logger.info(f"Tool 25 result: success={result.success}, errors={result.errors if hasattr(result, 'errors') else 'N/A'}")
 
             if result.success and result.intelligence_data:
-                # Convert OrganizationIntelligence to dict for storage
                 intelligence = result.intelligence_data
 
-                # Build Scrapy-extracted data
-                scrapy_web_data = {
-                    "website": intelligence.website_url,
-                    "website_verified": intelligence.scraping_metadata.verification_confidence > 0.7,
-                    "leadership": [
-                        {
-                            "name": leader.name,
-                            "title": leader.title,
-                            "email": leader.email,
-                            "phone": leader.phone,
-                            "bio": leader.bio,
-                            "matches_990": leader.matches_990
-                        }
-                        for leader in intelligence.leadership
-                    ],
-                    "leadership_cross_validated": any(leader.matches_990 for leader in intelligence.leadership),
-                    "contact": {
-                        "email": intelligence.contact_info.email if intelligence.contact_info else None,
-                        "phone": intelligence.contact_info.phone if intelligence.contact_info else None,
-                        "address": intelligence.contact_info.mailing_address if intelligence.contact_info else None
-                    } if intelligence.contact_info else None,
-                    "social_media": intelligence.contact_info.social_media_links if intelligence.contact_info else {},
-                    "mission": intelligence.mission_statement,
-                    "programs": [
-                        {
-                            "name": program.name,
-                            "description": program.description,
-                            "target_population": program.target_population
-                        }
-                        for program in intelligence.programs
-                    ],
-                    "grant_application_url": None,
-                    "recent_news": [],
-                    "data_quality_score": result.data_quality_score,
-                    "pages_scraped": result.pages_scraped,
-                    "execution_time": result.execution_time_seconds
-                }
-
-                # Attempt Claude AI interpretation of raw page text
-                scraped_urls = getattr(
-                    intelligence.scraping_metadata, "scraped_urls", []
-                ) or []
-                claude_result = None
-                if scraped_urls:
-                    logger.info(f"Running Claude interpretation on {len(scraped_urls)} scraped URLs for {ein}")
-                    claude_result = await _interpret_with_claude(scraped_urls, opportunity.organization_name, ein)
-
-                if claude_result:
-                    # Claude succeeded: use its output as primary web_data
+                # Check if result is new GrantFunderIntelligence (Haiku agent) or
+                # legacy OrganizationIntelligence (Scrapy path, kept for compat)
+                from tools.shared_schemas.grant_funder_intelligence import GrantFunderIntelligence as GFI
+                if isinstance(intelligence, GFI):
+                    # --- Haiku agent path ---
+                    contact_obj = None
+                    if intelligence.contact_information:
+                        contact_obj = {"email": None, "phone": None, "address": intelligence.contact_information}
                     web_data = {
-                        "website": scrapy_web_data["website"],
-                        "website_verified": scrapy_web_data["website_verified"],
+                        "website": intelligence.source_url,
+                        "website_verified": intelligence.confidence_score > 0.6,
+                        "mission": intelligence.mission_statement,
+                        "leadership": [
+                            {"name": m, "title": "", "email": None, "confidence": "medium"}
+                            for m in (intelligence.board_members or [])
+                        ],
+                        "leadership_cross_validated": False,
+                        "contact": contact_obj,
+                        "social_media": {},
+                        "programs": [
+                            {"name": "", "description": d, "target_population": intelligence.population_focus}
+                            for d in (intelligence.program_descriptions or [])
+                        ],
+                        "key_facts": intelligence.funding_priorities or [],
+                        "grant_application_url": None,
+                        "recent_news": [],
+                        "data_quality_score": intelligence.confidence_score,
+                        "pages_scraped": result.pages_scraped,
+                        "execution_time": result.execution_time_seconds,
+                        "ai_interpreted": True,
+                        # Grant-specific fields stored alongside standard web_data
+                        "accepts_applications": intelligence.accepts_applications,
+                        "application_deadlines": intelligence.application_deadlines,
+                        "application_process": intelligence.application_process,
+                        "required_documents": intelligence.required_documents,
+                        "geographic_limitations": intelligence.geographic_limitations,
+                        "grant_size_range": intelligence.grant_size_range,
+                        "grant_funder_intelligence": intelligence.to_dict(),
+                    }
+                    logger.info(f"Haiku web intelligence complete for {ein} (confidence={intelligence.confidence_score:.0%})")
+                else:
+                    # --- Legacy Scrapy path ---
+                    scrapy_web_data = {
+                        "website": intelligence.website_url,
+                        "website_verified": intelligence.scraping_metadata.verification_confidence > 0.7,
                         "leadership": [
                             {
-                                "name": ldr.get("name", ""),
-                                "title": ldr.get("title", ""),
-                                "email": ldr.get("email"),
-                                "phone": None,
-                                "bio": None,
-                                "matches_990": False,
-                                "confidence": ldr.get("confidence", "medium"),
+                                "name": leader.name,
+                                "title": leader.title,
+                                "email": leader.email,
+                                "phone": leader.phone,
+                                "bio": leader.bio,
+                                "matches_990": leader.matches_990
                             }
-                            for ldr in (claude_result.get("leadership") or [])
+                            for leader in intelligence.leadership
                         ],
-                        "leadership_cross_validated": scrapy_web_data["leadership_cross_validated"],
-                        "contact": claude_result.get("contact") or scrapy_web_data["contact"],
-                        "social_media": scrapy_web_data["social_media"],
-                        "mission": claude_result.get("mission") or scrapy_web_data["mission"],
+                        "leadership_cross_validated": any(leader.matches_990 for leader in intelligence.leadership),
+                        "contact": {
+                            "email": intelligence.contact_info.email if intelligence.contact_info else None,
+                            "phone": intelligence.contact_info.phone if intelligence.contact_info else None,
+                            "address": intelligence.contact_info.mailing_address if intelligence.contact_info else None
+                        } if intelligence.contact_info else None,
+                        "social_media": intelligence.contact_info.social_media_links if intelligence.contact_info else {},
+                        "mission": intelligence.mission_statement,
                         "programs": [
-                            {"name": p.get("name", ""), "description": p.get("description", ""), "target_population": None}
-                            for p in (claude_result.get("programs") or [])
+                            {"name": program.name, "description": program.description,
+                             "target_population": program.target_population}
+                            for program in intelligence.programs
                         ],
-                        "key_facts": claude_result.get("key_facts") or [],
-                        "interpretation_notes": claude_result.get("interpretation_notes"),
-                        "grant_application_url": scrapy_web_data["grant_application_url"],
-                        "recent_news": scrapy_web_data["recent_news"],
-                        "data_quality_score": scrapy_web_data["data_quality_score"],
-                        "pages_scraped": scrapy_web_data["pages_scraped"],
-                        "execution_time": scrapy_web_data["execution_time"],
-                        "ai_interpreted": True,
-                        "web_data_scrapy_raw": scrapy_web_data,
+                        "grant_application_url": None,
+                        "recent_news": [],
+                        "data_quality_score": result.data_quality_score,
+                        "pages_scraped": result.pages_scraped,
+                        "execution_time": result.execution_time_seconds
                     }
-                    logger.info(f"Claude web interpretation complete for {ein}")
-                else:
-                    # Fall back to Scrapy extraction
-                    web_data = scrapy_web_data
-                    web_data["ai_interpreted"] = False
+
+                    scraped_urls = getattr(intelligence.scraping_metadata, "scraped_urls", []) or []
+                    claude_result = None
+                    if scraped_urls:
+                        logger.info(f"Running Claude interpretation on {len(scraped_urls)} scraped URLs for {ein}")
+                        claude_result = await _interpret_with_claude(scraped_urls, opportunity.organization_name, ein)
+
+                    if claude_result:
+                        web_data = {
+                            "website": scrapy_web_data["website"],
+                            "website_verified": scrapy_web_data["website_verified"],
+                            "leadership": [
+                                {"name": ldr.get("name", ""), "title": ldr.get("title", ""),
+                                 "email": ldr.get("email"), "phone": None, "bio": None,
+                                 "matches_990": False, "confidence": ldr.get("confidence", "medium")}
+                                for ldr in (claude_result.get("leadership") or [])
+                            ],
+                            "leadership_cross_validated": scrapy_web_data["leadership_cross_validated"],
+                            "contact": claude_result.get("contact") or scrapy_web_data["contact"],
+                            "social_media": scrapy_web_data["social_media"],
+                            "mission": claude_result.get("mission") or scrapy_web_data["mission"],
+                            "programs": [
+                                {"name": p.get("name", ""), "description": p.get("description", ""),
+                                 "target_population": None}
+                                for p in (claude_result.get("programs") or [])
+                            ],
+                            "key_facts": claude_result.get("key_facts") or [],
+                            "interpretation_notes": claude_result.get("interpretation_notes"),
+                            "grant_application_url": scrapy_web_data["grant_application_url"],
+                            "recent_news": scrapy_web_data["recent_news"],
+                            "data_quality_score": scrapy_web_data["data_quality_score"],
+                            "pages_scraped": scrapy_web_data["pages_scraped"],
+                            "execution_time": scrapy_web_data["execution_time"],
+                            "ai_interpreted": True,
+                            "web_data_scrapy_raw": scrapy_web_data,
+                        }
+                        logger.info(f"Claude web interpretation complete for {ein}")
+                    else:
+                        web_data = scrapy_web_data
+                        web_data["ai_interpreted"] = False
 
                 # Update opportunity in database with web data
                 conn = database_manager.get_connection()
@@ -444,6 +524,19 @@ async def research_opportunity(
                 conn.close()
 
                 logger.info(f"Web research completed successfully for {opportunity_id} - scraped {result.pages_scraped} pages in {result.execution_time_seconds:.2f}s")
+
+                # --- Store in EIN intelligence cache ---
+                try:
+                    database_manager.upsert_ein_intelligence(
+                        ein=ein,
+                        org_name=opportunity.organization_name,
+                        web_data=web_data,
+                        web_data_fetched_at=datetime.now().isoformat(),
+                        web_data_source="claude_interpreted" if web_data.get("ai_interpreted") else "scrapy_raw",
+                    )
+                    logger.info(f"Cached web_data for EIN {ein}")
+                except Exception as cache_err:
+                    logger.warning(f"Failed to cache web_data for EIN {ein}: {cache_err}")
 
                 return {
                     "success": True,
@@ -966,6 +1059,25 @@ async def get_990_filings(opportunity_id: str):
         if not ein:
             raise HTTPException(status_code=400, detail="Opportunity has no EIN")
 
+        # --- EIN Intelligence Cache check ---
+        cached = database_manager.get_ein_intelligence(ein)
+        if cached and cached.get("filing_history") and cached.get("filing_history_fetched_at"):
+            try:
+                fetched_dt = datetime.fromisoformat(cached["filing_history_fetched_at"])
+                age_days = (datetime.now() - fetched_dt).days
+                if age_days < _FILING_HISTORY_TTL_DAYS:
+                    logger.info(f"Cache hit: filing_history for EIN {ein} (age {age_days}d)")
+                    return {
+                        "success": True,
+                        "opportunity_id": opportunity_id,
+                        "ein": ein,
+                        "organization_name": org_name,
+                        "filings": cached["filing_history"],
+                        "cache_hit": True,
+                    }
+            except Exception as cache_err:
+                logger.warning(f"Cache read error for EIN {ein}: {cache_err}")
+
         filings: List[Dict[str, Any]] = []
 
         # 1. ProPublica API filings (structured data + pdf_url)
@@ -1016,6 +1128,19 @@ async def get_990_filings(opportunity_id: str):
         # Sort by tax year descending
         filings.sort(key=lambda x: (x.get("tax_year") or 0), reverse=True)
 
+        # --- Store in EIN intelligence cache ---
+        if filings:
+            try:
+                database_manager.upsert_ein_intelligence(
+                    ein=ein,
+                    org_name=org_name,
+                    filing_history=filings,
+                    filing_history_fetched_at=datetime.now().isoformat(),
+                )
+                logger.info(f"Cached filing_history for EIN {ein} ({len(filings)} filings)")
+            except Exception as cache_err:
+                logger.warning(f"Failed to cache filing_history for EIN {ein}: {cache_err}")
+
         return {
             "success": True,
             "opportunity_id": opportunity_id,
@@ -1031,14 +1156,179 @@ async def get_990_filings(opportunity_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ---------------------------------------------------------------------------
+# Shared helper: 990 PDF analysis (reused by single-opp modal + batch)
+# ---------------------------------------------------------------------------
+
+async def _analyze_990_pdf_for_ein(
+    ein: str,
+    pdf_url: str,
+    tax_year: Optional[int],
+    force_refresh: bool = False,
+) -> dict:
+    """
+    Shared logic for 990 PDF analysis used by both:
+      - POST /{opportunity_id}/analyze-990-pdf  (single-opp modal)
+      - POST /batch-analyze-990-pdfs            (batch toolbar button)
+
+    Returns the extraction dict (same shape as stored in pdf_analyses cache).
+    Raises on hard errors; returns cached result when available.
+    """
+    cache_key = str(tax_year) if tax_year else pdf_url[-40:]
+
+    if not force_refresh:
+        cached = database_manager.get_ein_intelligence(ein)
+        if cached and isinstance(cached.get("pdf_analyses"), dict):
+            cached_extraction = cached["pdf_analyses"].get(cache_key)
+            if cached_extraction:
+                logger.info(f"Cache hit: pdf_analyses[{cache_key}] for EIN {ein}")
+                return {"extraction": cached_extraction, "cache_hit": True}
+
+    from tools.foundation_preprocessing_tool.app.pdf_narrative_extractor import PDFNarrativeExtractor
+    from src.config.database_config import get_nonprofit_intelligence_db
+
+    extractor = PDFNarrativeExtractor(intelligence_db_path=get_nonprofit_intelligence_db())
+    result = await extractor.extract_from_pdf_url(
+        ein=ein,
+        pdf_url=pdf_url,
+        tax_year=tax_year,
+    )
+
+    extraction = {
+        "mission_statement": result.mission_statement,
+        "accepts_applications": result.accepts_applications,
+        "application_deadlines": result.application_deadlines,
+        "application_process": result.application_process,
+        "required_documents": result.required_documents,
+        "stated_priorities": result.stated_priorities,
+        "geographic_limitations": result.geographic_limitations,
+        "population_focus": result.population_focus,
+        "program_descriptions": result.program_descriptions,
+        "contact_information": result.contact_information,
+        "extraction_confidence": result.extraction_confidence,
+    }
+
+    # Store in EIN intelligence cache
+    try:
+        existing = database_manager.get_ein_intelligence(ein)
+        existing_analyses = {}
+        if existing and isinstance(existing.get("pdf_analyses"), dict):
+            existing_analyses = existing["pdf_analyses"]
+        existing_analyses[cache_key] = extraction
+        database_manager.upsert_ein_intelligence(
+            ein=ein,
+            pdf_analyses=existing_analyses,
+        )
+        logger.info(f"Cached pdf_analyses[{cache_key}] for EIN {ein}")
+    except Exception as cache_err:
+        logger.warning(f"Failed to cache pdf_analyses for EIN {ein}: {cache_err}")
+
+    return {"extraction": extraction, "cache_hit": False}
+
+
+@router.post("/batch-analyze-990-pdfs")
+async def batch_analyze_990_pdfs(body: BatchAnalyze990PDFsRequest):
+    """
+    Batch analyze 990 PDFs for multiple opportunities.
+
+    For each EIN: uses most recent filing from cached filing_history.
+    Reuses _analyze_990_pdf_for_ein() — same logic as per-opportunity modal.
+    Cost: ~$0.01-0.03 per PDF (Claude Haiku), cached across calls.
+
+    Returns per-EIN results with extraction data and cache/error status.
+    """
+    if not body.opportunity_ids:
+        raise HTTPException(status_code=400, detail="opportunity_ids must not be empty")
+
+    results = []
+    semaphore = asyncio.Semaphore(3)  # Max 3 concurrent PDF analyses
+
+    async def analyze_one(opp_id: str):
+        async with semaphore:
+            try:
+                conn = database_manager.get_connection()
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT ein, organization_name FROM opportunities WHERE id = ?", (opp_id,)
+                )
+                row = cursor.fetchone()
+                conn.close()
+
+                if not row or not row[0]:
+                    results.append({"opportunity_id": opp_id, "status": "skipped", "reason": "no EIN"})
+                    return
+
+                ein, org_name = row[0], row[1]
+
+                # Get most recent filing PDF URL from cached filing history
+                intel = database_manager.get_ein_intelligence(ein)
+                filing_history = intel.get("filing_history") if intel else None
+
+                pdf_url = None
+                tax_year = None
+                if isinstance(filing_history, list):
+                    # Sorted descending by tax_year; pick first with a pdf_url
+                    for filing in filing_history:
+                        if filing.get("pdf_url"):
+                            pdf_url = filing["pdf_url"]
+                            tax_year = filing.get("tax_year")
+                            break
+
+                if not pdf_url:
+                    results.append({
+                        "opportunity_id": opp_id,
+                        "ein": ein,
+                        "organization_name": org_name,
+                        "status": "skipped",
+                        "reason": "no pdf_url in filing history — run Find URLs first",
+                    })
+                    return
+
+                result = await _analyze_990_pdf_for_ein(
+                    ein=ein,
+                    pdf_url=pdf_url,
+                    tax_year=tax_year,
+                    force_refresh=body.force_refresh,
+                )
+                results.append({
+                    "opportunity_id": opp_id,
+                    "ein": ein,
+                    "organization_name": org_name,
+                    "pdf_url": pdf_url,
+                    "tax_year": tax_year,
+                    "status": "ok",
+                    "cache_hit": result.get("cache_hit", False),
+                    "extraction": result.get("extraction", {}),
+                })
+
+            except Exception as e:
+                logger.warning(f"Batch 990 analysis failed for {opp_id}: {e}")
+                results.append({"opportunity_id": opp_id, "status": "error", "error": str(e)})
+
+    await asyncio.gather(*[analyze_one(opp_id) for opp_id in body.opportunity_ids])
+
+    successful = [r for r in results if r.get("status") == "ok"]
+    cached = [r for r in successful if r.get("cache_hit")]
+    cost_estimate = (len(successful) - len(cached)) * 0.02  # ~$0.02 per Haiku PDF call
+
+    return {
+        "success": True,
+        "total": len(body.opportunity_ids),
+        "analyzed": len(successful),
+        "cached": len(cached),
+        "skipped": len([r for r in results if r.get("status") == "skipped"]),
+        "errors": len([r for r in results if r.get("status") == "error"]),
+        "estimated_cost_usd": cost_estimate,
+        "results": results,
+    }
+
+
 @router.post("/{opportunity_id}/analyze-990-pdf")
 async def analyze_990_pdf(opportunity_id: str, body: Analyze990PDFRequest):
     """
     Send a 990 PDF URL to Claude for grant-intelligence extraction.
-
-    Reuses NarrativeExtractor.extract_from_pdf_url() from the foundation
-    preprocessing tool (already implements Anthropic document URL source format).
-    Cost: ~$0.01-0.03 per PDF (Claude Haiku).
+    Delegates to _analyze_990_pdf_for_ein() — same logic as batch endpoint.
+    Cost: ~$0.01-0.03 per PDF (Claude Haiku), cached per EIN.
     """
     try:
         conn = database_manager.get_connection()
@@ -1056,11 +1346,7 @@ async def analyze_990_pdf(opportunity_id: str, body: Analyze990PDFRequest):
 
         logger.info(f"Analyzing 990 PDF for {opportunity_id} (EIN: {ein}): {body.pdf_url}")
 
-        from tools.foundation_preprocessing_tool.app.pdf_narrative_extractor import PDFNarrativeExtractor
-        from src.config.database_config import get_nonprofit_intelligence_db
-
-        extractor = PDFNarrativeExtractor(intelligence_db_path=get_nonprofit_intelligence_db())
-        result = await extractor.extract_from_pdf_url(
+        result = await _analyze_990_pdf_for_ein(
             ein=ein,
             pdf_url=body.pdf_url,
             tax_year=body.tax_year,
@@ -1072,19 +1358,8 @@ async def analyze_990_pdf(opportunity_id: str, body: Analyze990PDFRequest):
             "ein": ein,
             "pdf_url": body.pdf_url,
             "tax_year": body.tax_year,
-            "extraction": {
-                "mission_statement": result.mission_statement,
-                "accepts_applications": result.accepts_applications,
-                "application_deadlines": result.application_deadlines,
-                "application_process": result.application_process,
-                "required_documents": result.required_documents,
-                "stated_priorities": result.stated_priorities,
-                "geographic_limitations": result.geographic_limitations,
-                "population_focus": result.population_focus,
-                "program_descriptions": result.program_descriptions,
-                "contact_information": result.contact_information,
-                "extraction_confidence": result.extraction_confidence,
-            },
+            "extraction": result["extraction"],
+            "cache_hit": result.get("cache_hit", False),
         }
 
     except HTTPException:
@@ -1092,6 +1367,241 @@ async def analyze_990_pdf(opportunity_id: str, body: Analyze990PDFRequest):
     except Exception as e:
         logger.error(f"Failed to analyze 990 PDF for {opportunity_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Batch Screen Endpoint (Tool 1 fast-mode fan-out)
+# ---------------------------------------------------------------------------
+
+class BatchScreenRequest(BaseModel):
+    profile_id: str
+    opportunity_ids: List[str]
+    mode: str = "fast"         # "fast" | "thorough"
+    threshold: float = 0.50    # Min score to keep after screening
+
+
+async def _run_batch_screen(job_id: str, body: BatchScreenRequest) -> None:
+    """Background task: run Tool 1 on each opportunity, update DB and job state."""
+    job = _batch_jobs[job_id]
+    semaphore = asyncio.Semaphore(10)
+
+    # Load profile for OrganizationProfile context
+    try:
+        profile_conn = database_manager.get_connection()
+        pcursor = profile_conn.cursor()
+        pcursor.execute("SELECT * FROM profiles WHERE id = ?", (body.profile_id,))
+        profile_row = pcursor.fetchone()
+        profile_conn.close()
+        if not profile_row:
+            job["status"] = "failed"
+            job["error"] = f"Profile {body.profile_id} not found"
+            return
+        profile_dict = dict(profile_row)
+    except Exception as e:
+        job["status"] = "failed"
+        job["error"] = str(e)
+        return
+
+    # Import Tool 1
+    try:
+        from tools.opportunity_screening_tool.app.screening_tool import OpportunityScreeningTool
+        from tools.opportunity_screening_tool.app.screening_models import (
+            ScreeningInput, ScreeningMode, Opportunity as ScreeningOpportunity, OrganizationProfile
+        )
+        tool = OpportunityScreeningTool()
+    except Exception as e:
+        logger.error(f"Batch screen: Failed to import Tool 1: {e}")
+        job["status"] = "failed"
+        job["error"] = f"Tool 1 import error: {e}"
+        return
+
+    # Build OrganizationProfile from DB row
+    try:
+        focus_areas = json.loads(profile_dict.get("focus_areas") or "[]") or []
+        program_areas = json.loads(profile_dict.get("program_areas") or "[]") or []
+        ntee_codes = json.loads(profile_dict.get("ntee_codes") or "[]") or []
+        service_areas = json.loads(profile_dict.get("service_areas") or "[]") or []
+        org_profile = OrganizationProfile(
+            ein=profile_dict.get("ein") or "",
+            name=profile_dict.get("name") or "Unknown",
+            mission=profile_dict.get("mission_statement") or "",
+            ntee_codes=ntee_codes,
+            geographic_focus=service_areas or [profile_dict.get("location") or ""],
+            program_areas=program_areas or focus_areas,
+            annual_revenue=profile_dict.get("annual_revenue"),
+        )
+    except Exception as e:
+        job["status"] = "failed"
+        job["error"] = f"Profile parse error: {e}"
+        return
+
+    mode_enum = ScreeningMode.FAST if body.mode == "fast" else ScreeningMode.THOROUGH
+    results = []
+    processed = 0
+
+    async def screen_one(opp_id: str):
+        nonlocal processed
+        async with semaphore:
+            try:
+                opp_conn = database_manager.get_connection()
+                ocursor = opp_conn.cursor()
+                ocursor.execute(
+                    "SELECT id, organization_name, ein, analysis_discovery FROM opportunities WHERE id = ?",
+                    (opp_id,)
+                )
+                row = ocursor.fetchone()
+                opp_conn.close()
+                if not row:
+                    return
+
+                opp_id_db, org_name, ein, ad_raw = row[0], row[1], row[2], row[3]
+                ad = json.loads(ad_raw) if isinstance(ad_raw, str) and ad_raw else {}
+                data_990 = ad.get("990_data") or {}
+                ntee = ad.get("ntee_code") or ""
+
+                screening_opp = ScreeningOpportunity(
+                    opportunity_id=opp_id_db,
+                    title=org_name or "Unknown Organization",
+                    funder=org_name or "Unknown",
+                    funder_type="foundation" if ad.get("foundation_code") else "nonprofit",
+                    description=(
+                        f"Organization: {org_name}. "
+                        f"NTEE: {ntee}. "
+                        f"Revenue: ${data_990.get('revenue', 0):,.0f}. "
+                        f"Assets: ${data_990.get('assets', 0):,.0f}. "
+                        f"Location: {ad.get('location', {}).get('city', '')}, "
+                        f"{ad.get('location', {}).get('state', '')}."
+                    ),
+                    geographic_restrictions=[],  # Don't assume local-only restriction; most nonprofits give broadly
+                )
+
+                # Inject W/9 funder intelligence if available in ein_intelligence
+                if ein:
+                    try:
+                        from tools.shared_schemas.grant_funder_intelligence import build_from_ein_intelligence
+                        intel = database_manager.get_ein_intelligence(ein)
+                        if intel:
+                            funder_intel = build_from_ein_intelligence(
+                                web_data=intel.get("web_data"),
+                                pdf_analyses=intel.get("pdf_analyses"),
+                                ein=ein,
+                            )
+                            if funder_intel:
+                                screening_opp.funder_intelligence = funder_intel
+                                logger.debug(f"Injected funder intelligence for {ein} (source={funder_intel.source.value})")
+                    except Exception as fi_err:
+                        logger.debug(f"Funder intelligence injection skipped for {ein}: {fi_err}")
+
+                screening_input = ScreeningInput(
+                    opportunities=[screening_opp],
+                    organization_profile=org_profile,
+                    screening_mode=mode_enum,
+                    minimum_threshold=0.0,   # Don't filter here; we filter client-side
+                    max_recommendations=1,
+                )
+
+                result = await tool.execute(screening_input=screening_input)
+
+                if result.is_success and result.data and result.data.opportunity_scores:
+                    score_obj = result.data.opportunity_scores[0]
+                    tool1_result = {
+                        "overall_score": score_obj.overall_score,
+                        "strategic_fit_score": score_obj.strategic_fit_score,
+                        "eligibility_score": score_obj.eligibility_score,
+                        "timing_score": score_obj.timing_score,
+                        "confidence_level": score_obj.confidence_level,
+                        "one_sentence_summary": score_obj.one_sentence_summary,
+                        "key_strengths": score_obj.key_strengths,
+                        "key_concerns": score_obj.key_concerns,
+                        "mode": body.mode,
+                        "scored_at": datetime.now().isoformat(),
+                    }
+                    # Write back to analysis_discovery
+                    upd_conn = database_manager.get_connection()
+                    ucursor = upd_conn.cursor()
+                    ucursor.execute(
+                        "SELECT analysis_discovery FROM opportunities WHERE id = ?", (opp_id_db,)
+                    )
+                    upd_row = ucursor.fetchone()
+                    if upd_row:
+                        raw = upd_row[0]
+                        upd_ad = json.loads(raw) if isinstance(raw, str) and raw else {}
+                        upd_ad["tool1_score"] = tool1_result
+                        ucursor.execute(
+                            "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                            (json.dumps(upd_ad), datetime.now().isoformat(), opp_id_db),
+                        )
+                        upd_conn.commit()
+                    upd_conn.close()
+
+                    results.append({
+                        "opportunity_id": opp_id_db,
+                        "organization_name": org_name,
+                        "tool1_score": score_obj.overall_score,
+                        "summary": score_obj.one_sentence_summary,
+                    })
+            except Exception as e:
+                logger.warning(f"Batch screen error for {opp_id}: {e}")
+            finally:
+                processed += 1
+                job["progress"] = processed
+                job["processed"] = processed
+
+    await asyncio.gather(*[screen_one(opp_id) for opp_id in body.opportunity_ids])
+
+    job["status"] = "complete"
+    job["results"] = results
+    job["above_threshold"] = [r for r in results if r["tool1_score"] >= body.threshold]
+    cost_per_opp = 0.001 if body.mode == "fast" else 0.01
+    job["estimated_cost"] = len(body.opportunity_ids) * cost_per_opp
+
+
+@router.post("/batch-screen")
+async def start_batch_screen(body: BatchScreenRequest, background_tasks: BackgroundTasks):
+    """
+    Start a background batch screening job using Tool 1 (fast or thorough).
+
+    Returns a job_id. Poll GET /batch-screen/{job_id} for status and results.
+    Cost estimate: fast=$0.001/opp, thorough=$0.01/opp.
+    """
+    if not body.opportunity_ids:
+        raise HTTPException(status_code=400, detail="opportunity_ids must not be empty")
+
+    cost_per_opp = 0.001 if body.mode == "fast" else 0.01
+    estimated_cost = len(body.opportunity_ids) * cost_per_opp
+
+    job_id = str(uuid.uuid4())[:8]
+    _batch_jobs[job_id] = {
+        "status": "running",
+        "progress": 0,
+        "processed": 0,
+        "total": len(body.opportunity_ids),
+        "mode": body.mode,
+        "threshold": body.threshold,
+        "estimated_cost": estimated_cost,
+        "results": [],
+        "above_threshold": [],
+        "error": None,
+    }
+
+    background_tasks.add_task(_run_batch_screen, job_id, body)
+
+    return {
+        "job_id": job_id,
+        "total": len(body.opportunity_ids),
+        "mode": body.mode,
+        "estimated_cost": estimated_cost,
+        "status_url": f"/api/v2/opportunities/batch-screen/{job_id}",
+    }
+
+
+@router.get("/batch-screen/{job_id}")
+async def get_batch_screen_status(job_id: str):
+    """Poll batch screening job status and results."""
+    job = _batch_jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Batch job {job_id} not found")
+    return job
 
 
 @router.get("/health")
@@ -1105,6 +1615,8 @@ async def health_check():
             "POST /api/v2/opportunities/{id}/research",
             "POST /api/v2/opportunities/{id}/promote",
             "POST /api/v2/opportunities/{id}/demote",
-            "PATCH /api/v2/opportunities/{id}/notes"
+            "PATCH /api/v2/opportunities/{id}/notes",
+            "POST /api/v2/opportunities/batch-screen",
+            "GET /api/v2/opportunities/batch-screen/{job_id}",
         ]
     }

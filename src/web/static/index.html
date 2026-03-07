@@ -438,20 +438,21 @@
                         </button>
                     </div>
 
-                    <!-- Discovery Controls - SIMPLIFIED -->
-                    <div x-show="selectedProfile" class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-                        <div class="flex flex-col items-center gap-4">
-                            <!-- Discovery Button and Freshness Badge Row -->
-                            <div class="flex items-center gap-4 w-full justify-center">
+                    <!-- Discovery Controls + URL Panel (combined) -->
+                    <div x-show="selectedProfile" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-start gap-6 p-4">
+
+                            <!-- Left: Discover button + freshness badge -->
+                            <div class="flex flex-col items-start gap-3">
                                 <button @click="showDiscoveryModal = true"
                                         :disabled="discoveryLoading"
-                                        class="px-8 py-4 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-semibold text-lg disabled:opacity-50 flex items-center justify-center gap-3 shadow-lg">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        class="px-5 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-semibold disabled:opacity-50 flex items-center justify-center gap-2 shadow-md whitespace-nowrap">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                                     </svg>
-                                    <span x-show="!discoveryLoading" x-text="discoveryMetadata.should_refresh ? 'Discover Opportunities' : 'Refresh Results'"></span>
+                                    <span x-show="!discoveryLoading" x-text="discoveryMetadata.should_refresh ? 'Find Opportunities' : 'Refresh Results'"></span>
                                     <span x-show="discoveryLoading" class="flex items-center gap-2">
-                                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
@@ -462,7 +463,7 @@
                                 <!-- Freshness Indicator Badge -->
                                 <div x-show="discoveryMetadata.last_discovery_date"
                                      x-cloak
-                                     class="px-4 py-2 rounded-full text-sm font-medium shadow-sm border"
+                                     class="px-3 py-1 rounded-full text-xs font-medium border"
                                      :class="{
                                          'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800': freshnessColor === 'green',
                                          'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800': freshnessColor === 'yellow',
@@ -474,121 +475,218 @@
                                 </div>
                             </div>
 
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
-                                Find funding opportunities from nonprofits, foundations, and government sources
-                            </p>
-                        </div>
-                    </div>
+                            <!-- Divider -->
+                            <div x-show="summaryCounts.total_found > 0" class="self-stretch w-px bg-gray-200 dark:bg-gray-700"></div>
 
-                    <!-- URL Discovery & Statistics Panel (Phase 5 - $0.00 Cost) -->
-                    <div x-show="selectedProfile && summaryCounts.total_found > 0"
-                         class="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                            <!-- Right: Website Search panel -->
+                            <div x-show="summaryCounts.total_found > 0" class="flex flex-col gap-2 flex-1 min-w-0">
 
-                        <div class="flex items-center justify-between mb-4">
-                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Website URLs & Discovery Statistics</h4>
-                            <div class="flex gap-2">
-                                <!-- Funnel Statistics Button -->
-                                <button @click="showFunnelStatisticsModal()"
-                                        x-show="funnelStatistics"
-                                        class="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-sm font-medium border border-blue-200 dark:border-blue-800">
-                                    <span class="flex items-center gap-2">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <!-- Header row: label + modal buttons -->
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Website Search</span>
+                                    <button @click="showFunnelStatisticsModal()"
+                                            x-show="funnelStatistics"
+                                            class="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-xs font-medium border border-blue-200 dark:border-blue-800 flex items-center gap-1">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                         </svg>
                                         Discovery Funnel
-                                    </span>
-                                </button>
-
-                                <!-- URL Statistics Button -->
-                                <button @click="showUrlStatisticsModal()"
-                                        x-show="urlStatistics.total > 0"
-                                        class="px-3 py-2 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded-lg hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors text-sm font-medium border border-teal-200 dark:border-teal-800">
-                                    <span class="flex items-center gap-2">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    </button>
+                                    <button @click="showUrlStatisticsModal()"
+                                            x-show="urlStatistics.total > 0"
+                                            class="px-2 py-1 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors text-xs font-medium border border-teal-200 dark:border-teal-800 flex items-center gap-1">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                                         </svg>
                                         URL Stats
-                                    </span>
+                                    </button>
+                                </div>
+
+                                <!-- Inline stats row -->
+                                <div x-show="urlStatistics.total > 0" class="flex items-center gap-3 text-sm">
+                                    <span class="font-semibold text-green-700 dark:text-green-300" x-text="urlStatistics.available"></span>
+                                    <span class="text-gray-400">✓</span>
+                                    <span class="font-semibold text-red-600 dark:text-red-400" x-text="urlStatistics.missing"></span>
+                                    <span class="text-gray-400">✗</span>
+                                    <span class="text-gray-500 dark:text-gray-400" x-text="urlStatistics.percentage_available + '% coverage'"></span>
+                                </div>
+
+                                <!-- URL Discovery Progress Bar -->
+                                <div x-show="urlDiscoveryInProgress" x-cloak>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                            Searching: <span x-text="urlDiscoveryProgress.processed"></span> / <span x-text="urlDiscoveryProgress.total"></span>
+                                        </span>
+                                        <span class="text-xs text-teal-600 dark:text-teal-400 font-semibold" x-text="urlDiscoveryPercent + '%'"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                        <div class="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                                             :style="'width: ' + urlDiscoveryPercent + '%'"></div>
+                                    </div>
+                                    <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        <span><span class="font-medium text-green-600 dark:text-green-400" x-text="urlDiscoveryProgress.found"></span> URLs found</span>
+                                        <span x-show="urlDiscoveryProgress.skipped > 0" class="text-orange-600 dark:text-orange-400">
+                                            <span x-text="urlDiscoveryProgress.skipped"></span> low priority skipped
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Skip low priority + action button row -->
+                                <div class="flex items-center gap-3 flex-wrap">
+                                    <label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-600 dark:text-gray-400">
+                                        <input type="checkbox"
+                                               x-model="excludeLowPriority"
+                                               class="w-3.5 h-3.5 text-teal-600 bg-gray-100 border-gray-300 rounded focus:ring-teal-500 dark:focus:ring-teal-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                        Skip low priority
+                                        <span x-show="summaryCounts.low_priority > 0" class="text-gray-400">
+                                            (<span x-text="summaryCounts.low_priority"></span>)
+                                        </span>
+                                    </label>
+
+                                    <button @click="discoverAllUrls(false)"
+                                            :disabled="urlDiscoveryInProgress"
+                                            class="px-3 py-1.5 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5">
+                                        <svg x-show="!urlDiscoveryInProgress" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                                        </svg>
+                                        <svg x-show="urlDiscoveryInProgress" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span x-show="!urlDiscoveryInProgress">
+                                            Find URLs (<span x-text="urlDiscoveryEligibleCount"></span>)
+                                        </span>
+                                        <span x-show="urlDiscoveryInProgress">
+                                            Searching (<span x-text="urlDiscoveryProgress.processed"></span>/<span x-text="urlDiscoveryProgress.total"></span>)...
+                                        </span>
+                                    </button>
+                                </div>
+
+                                <p class="text-xs text-gray-400 dark:text-gray-500">
+                                    Queries 990 filings for website URLs. No AI cost.
+                                </p>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- AI Enrichment Pipeline Card -->
+                    <div x-show="selectedProfile && summaryCounts.total_found > 0"
+                         x-cloak
+                         class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 dark:border-gray-700">
+                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">AI Enrichment Pipeline</span>
+                            <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-full">✦ AI</span>
+                        </div>
+                        <div class="p-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+
+                            <!-- Step 1: Search Website -->
+                            <div class="flex flex-col gap-1.5">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-teal-100 text-teal-700 text-xs font-bold dark:bg-teal-900/40 dark:text-teal-300">①</span>
+                                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Search Website</span>
+                                </div>
+                                <span class="text-xs text-gray-400">$0.00 — URL lookup</span>
+                                <!-- Progress bar when running -->
+                                <div x-show="urlDiscoveryInProgress" x-cloak class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                    <div class="bg-teal-500 h-1.5 rounded-full transition-all duration-300"
+                                         :style="'width: ' + urlDiscoveryPercent + '%'"></div>
+                                </div>
+                                <button @click="discoverAllUrls(false)"
+                                        :disabled="urlDiscoveryInProgress"
+                                        class="px-2.5 py-1.5 bg-teal-600 text-white text-xs font-medium rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 flex items-center gap-1 self-start whitespace-nowrap">
+                                    <svg x-show="!urlDiscoveryInProgress" class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                                    </svg>
+                                    <svg x-show="urlDiscoveryInProgress" class="animate-spin w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span x-show="!urlDiscoveryInProgress">Find URLs (<span x-text="urlDiscoveryEligibleCount"></span>)</span>
+                                    <span x-show="urlDiscoveryInProgress"><span x-text="urlDiscoveryProgress.processed"></span>/<span x-text="urlDiscoveryProgress.total"></span></span>
                                 </button>
                             </div>
+
+                            <!-- Step 2: Search 990s -->
+                            <div class="flex flex-col gap-1.5">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold dark:bg-amber-900/40 dark:text-amber-300">②</span>
+                                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Search 990s</span>
+                                </div>
+                                <span class="text-xs text-gray-400">~$0.02/org</span>
+                                <!-- Progress bar when running -->
+                                <div x-show="ninetiesSearchInProgress" x-cloak class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                    <div class="bg-amber-500 h-1.5 rounded-full transition-all duration-300"
+                                         :style="ninetiesSearchProgress.total > 0 ? 'width: ' + Math.round(ninetiesSearchProgress.processed / ninetiesSearchProgress.total * 100) + '%' : 'width: 0%'"></div>
+                                </div>
+                                <button @click="batchAnalyze990Pdfs()"
+                                        :disabled="ninetiesSearchInProgress"
+                                        class="px-2.5 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 flex items-center gap-1 self-start whitespace-nowrap">
+                                    <svg x-show="!ninetiesSearchInProgress" class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    <svg x-show="ninetiesSearchInProgress" class="animate-spin w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span x-show="!ninetiesSearchInProgress">Search 990s (<span x-text="summaryCounts.total_found"></span>)</span>
+                                    <span x-show="ninetiesSearchInProgress"><span x-text="ninetiesSearchProgress.processed"></span>/<span x-text="ninetiesSearchProgress.total"></span></span>
+                                </button>
+                            </div>
+
+                            <!-- Step 3: Fast Screen -->
+                            <div class="flex flex-col gap-1.5">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold dark:bg-indigo-900/40 dark:text-indigo-300">③</span>
+                                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Fast Screen</span>
+                                </div>
+                                <span class="text-xs text-gray-400">$0.001/opp</span>
+                                <div x-show="batchScreenStatus === 'running' && batchScreenMode === 'fast'" x-cloak class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                    <div class="bg-indigo-500 h-1.5 rounded-full transition-all duration-300"
+                                         :style="batchScreenTotal > 0 ? 'width: ' + Math.round(batchScreenProgress / batchScreenTotal * 100) + '%' : 'width: 0%'"></div>
+                                </div>
+                                <button @click="screenAllFast()"
+                                        :disabled="batchScreenStatus === 'running' || discoveryResults.length === 0"
+                                        class="px-2.5 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-1 self-start whitespace-nowrap">
+                                    <svg x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'fast')" class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    </svg>
+                                    <svg x-show="batchScreenStatus === 'running' && batchScreenMode === 'fast'" class="animate-spin w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    <span x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'fast')">Fast Screen (<span x-text="_getUnscreenedIds().length"></span>)</span>
+                                    <span x-show="batchScreenStatus === 'running' && batchScreenMode === 'fast'"><span x-text="batchScreenProgress"></span>/<span x-text="batchScreenTotal"></span></span>
+                                </button>
+                            </div>
+
+                            <!-- Step 4: Thorough Screen -->
+                            <div class="flex flex-col gap-1.5">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-700 text-xs font-bold dark:bg-purple-900/40 dark:text-purple-300">④</span>
+                                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Thorough Screen</span>
+                                </div>
+                                <span class="text-xs text-gray-400">$0.01/opp</span>
+                                <div x-show="batchScreenStatus === 'running' && batchScreenMode === 'thorough'" x-cloak class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                    <div class="bg-purple-500 h-1.5 rounded-full transition-all duration-300"
+                                         :style="batchScreenTotal > 0 ? 'width: ' + Math.round(batchScreenProgress / batchScreenTotal * 100) + '%' : 'width: 0%'"></div>
+                                </div>
+                                <button @click="screenAllThorough()"
+                                        :disabled="batchScreenStatus === 'running' || discoveryResults.length === 0"
+                                        class="px-2.5 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-1 self-start whitespace-nowrap">
+                                    <svg x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'thorough')" class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                    </svg>
+                                    <svg x-show="batchScreenStatus === 'running' && batchScreenMode === 'thorough'" class="animate-spin w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    <span x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'thorough')">Thorough Screen (<span x-text="_getUnscreenedIds().length"></span>)</span>
+                                    <span x-show="batchScreenStatus === 'running' && batchScreenMode === 'thorough'"><span x-text="batchScreenProgress"></span>/<span x-text="batchScreenTotal"></span></span>
+                                </button>
+                            </div>
+
                         </div>
-
-                        <!-- URL Statistics Summary -->
-                        <div x-show="urlStatistics.total > 0" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                            <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-                                <div class="text-2xl font-bold text-green-700 dark:text-green-300" x-text="urlStatistics.available"></div>
-                                <div class="text-sm text-green-600 dark:text-green-400">URLs Available</div>
-                            </div>
-                            <div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-                                <div class="text-2xl font-bold text-red-700 dark:text-red-300" x-text="urlStatistics.missing"></div>
-                                <div class="text-sm text-red-600 dark:text-red-400">URLs Missing</div>
-                            </div>
-                            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                                <div class="text-2xl font-bold text-blue-700 dark:text-blue-300" x-text="urlStatistics.percentage_available + '%'"></div>
-                                <div class="text-sm text-blue-600 dark:text-blue-400">Coverage Rate</div>
-                            </div>
-                        </div>
-
-                        <!-- URL Discovery Progress Bar (Enhanced - X/Y Format) -->
-                        <div x-show="urlDiscoveryInProgress" class="mb-4" x-cloak>
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Searching: <span x-text="urlDiscoveryProgress.processed"></span> / <span x-text="urlDiscoveryProgress.total"></span> opportunities
-                                </span>
-                                <span class="text-sm text-teal-600 dark:text-teal-400 font-semibold" x-text="urlDiscoveryPercent + '%'"></span>
-                            </div>
-                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                                <div class="bg-teal-600 h-2.5 rounded-full transition-all duration-300"
-                                     :style="'width: ' + urlDiscoveryPercent + '%'"></div>
-                            </div>
-                            <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                <span><span class="font-medium text-green-600 dark:text-green-400" x-text="urlDiscoveryProgress.found"></span> URLs found</span>
-                                <span x-show="urlDiscoveryProgress.skipped > 0" class="text-orange-600 dark:text-orange-400">
-                                    <span x-text="urlDiscoveryProgress.skipped"></span> low priority skipped
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Low Priority Filter Toggle -->
-                        <div class="mb-3 flex items-center justify-center gap-2 text-sm">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox"
-                                       x-model="excludeLowPriority"
-                                       class="w-4 h-4 text-teal-600 bg-gray-100 border-gray-300 rounded focus:ring-teal-500 dark:focus:ring-teal-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                                <span class="text-gray-700 dark:text-gray-300">
-                                    Skip low priority opportunities
-                                    <span x-show="summaryCounts.low_priority > 0" class="text-gray-500 dark:text-gray-400">
-                                        (<span x-text="summaryCounts.low_priority"></span>)
-                                    </span>
-                                </span>
-                            </label>
-                        </div>
-
-                        <!-- Bulk URL Discovery Button -->
-                        <button @click="discoverAllUrls(false)"
-                                :disabled="urlDiscoveryInProgress"
-                                class="w-full px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                            <svg x-show="!urlDiscoveryInProgress" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
-                            </svg>
-                            <svg x-show="urlDiscoveryInProgress" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span x-show="!urlDiscoveryInProgress">
-                                🔍 Discover URLs for <span x-text="urlDiscoveryEligibleCount"></span> Opportunities ($0.00)
-                            </span>
-                            <span x-show="urlDiscoveryInProgress">
-                                Discovering URLs (<span x-text="urlDiscoveryProgress.processed"></span>/<span x-text="urlDiscoveryProgress.total"></span>)...
-                            </span>
-                        </button>
-
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-                            Queries 990 tax filings for website URLs. No AI cost - pure XML parsing (2-4 sec per org).
-                            <span x-show="excludeLowPriority && summaryCounts.low_priority > 0" class="text-orange-600 dark:text-orange-400">
-                                Skipping <span x-text="summaryCounts.low_priority"></span> low priority opportunities.
-                            </span>
-                        </p>
                     </div>
 
                     <!-- Discovery Source Selection Modal -->
@@ -658,74 +756,78 @@
                         </div>
                     </div>
 
-                    <!-- Stage Summary Badges - CLICKABLE FILTERS -->
-                    <div x-show="discoveryResults.length > 0"
-                         class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 mb-4">
-                        <div class="flex items-center gap-4 flex-wrap">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Results:</span>
-                                <button @click="categoryFilter = null"
-                                        :class="categoryFilter === null ? 'ring-2 ring-blue-500' : ''"
-                                        class="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-sm font-semibold hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors cursor-pointer">
-                                    Total: <span x-text="summaryCounts.total_found"></span>
-                                </button>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button @click="categoryFilter = 'qualified'"
-                                        :class="categoryFilter === 'qualified' ? 'ring-2 ring-green-500' : ''"
-                                        class="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-sm font-semibold hover:bg-green-200 dark:hover:bg-green-800 transition-colors cursor-pointer">
-                                    Qualified: <span x-text="summaryCounts.qualified"></span>
-                                </button>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button @click="categoryFilter = 'review'"
-                                        :class="categoryFilter === 'review' ? 'ring-2 ring-yellow-500' : ''"
-                                        class="px-3 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full text-sm font-semibold hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors cursor-pointer">
-                                    Review: <span x-text="summaryCounts.review"></span>
-                                </button>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button @click="categoryFilter = 'consider'"
-                                        :class="categoryFilter === 'consider' ? 'ring-2 ring-orange-500' : ''"
-                                        class="px-3 py-1 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 rounded-full text-sm font-semibold hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors cursor-pointer">
-                                    Consider: <span x-text="summaryCounts.consider"></span>
-                                </button>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button @click="categoryFilter = 'low_priority'"
-                                        :class="categoryFilter === 'low_priority' ? 'ring-2 ring-gray-500' : ''"
-                                        class="px-3 py-1 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-full text-sm font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer">
-                                    Low Priority: <span x-text="summaryCounts.low_priority"></span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Discovery Results - MINIMAL CARDS -->
                     <div x-show="filteredDiscoveryResults.length > 0"
                          class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                            <div>
-                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
+                        <div class="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 flex-wrap gap-2">
+                            <!-- Left: title + inline category filter badges -->
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
                                     Opportunities (<span x-text="filteredDiscoveryResults.length"></span>)
-                                </h4>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    <span x-text="selectedOpportunities.length"></span> selected •
-                                    <button @click="showLowPriority = !showLowPriority"
-                                            class="text-teal-600 hover:text-teal-700 underline">
-                                        <span x-show="!showLowPriority">Show</span>
-                                        <span x-show="showLowPriority">Hide</span>
-                                        low priority (<span x-text="summaryCounts.low_priority"></span>)
-                                    </button>
-                                </p>
+                                </span>
+                                <span class="text-gray-300 dark:text-gray-600">·</span>
+                                <button @click="categoryFilter = null"
+                                        :class="categoryFilter === null ? 'ring-2 ring-blue-500' : ''"
+                                        class="px-2 py-0.5 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-semibold hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                                        title="Show all">
+                                    All:<span x-text="summaryCounts.total_found"></span>
+                                </button>
+                                <button @click="categoryFilter = 'qualified'"
+                                        :class="categoryFilter === 'qualified' ? 'ring-2 ring-green-500' : ''"
+                                        class="px-2 py-0.5 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-semibold hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
+                                        title="Qualified">
+                                    Q:<span x-text="summaryCounts.qualified"></span>
+                                </button>
+                                <button @click="categoryFilter = 'review'"
+                                        :class="categoryFilter === 'review' ? 'ring-2 ring-yellow-500' : ''"
+                                        class="px-2 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full text-xs font-semibold hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors"
+                                        title="Review">
+                                    R:<span x-text="summaryCounts.review"></span>
+                                </button>
+                                <button @click="categoryFilter = 'consider'"
+                                        :class="categoryFilter === 'consider' ? 'ring-2 ring-orange-500' : ''"
+                                        class="px-2 py-0.5 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 rounded-full text-xs font-semibold hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                                        title="Consider">
+                                    C:<span x-text="summaryCounts.consider"></span>
+                                </button>
+                                <button @click="categoryFilter = 'low_priority'"
+                                        :class="categoryFilter === 'low_priority' ? 'ring-2 ring-gray-500' : ''"
+                                        class="px-2 py-0.5 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-full text-xs font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                        title="Low Priority">
+                                    LP:<span x-text="summaryCounts.low_priority"></span>
+                                </button>
+                                <span class="text-gray-300 dark:text-gray-600">·</span>
+                                <button @click="showLowPriority = !showLowPriority"
+                                        class="text-xs text-teal-600 hover:text-teal-700 underline whitespace-nowrap">
+                                    <span x-show="!showLowPriority">Show</span>
+                                    <span x-show="showLowPriority">Hide</span> LP
+                                </button>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm text-gray-500 dark:text-gray-400">Sort:</span>
+                            <!-- Right: filters + sort -->
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <!-- Apply Recommended Filters (shows after batch screen) -->
+                                <button x-show="batchScreenStatus === 'complete'"
+                                        @click="applyRecommendedFilters()"
+                                        class="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"></path>
+                                    </svg>
+                                    Filter ≥<span x-text="Math.round(batchScreenThreshold*100)+'%'"></span>
+                                    <span class="opacity-75 text-xs">(<span x-text="batchScreenAboveThreshold"></span>)</span>
+                                </button>
+
+                                <!-- Session API cost counter -->
+                                <span x-show="sessionApiCost > 0"
+                                      class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded border border-gray-200 dark:border-gray-600"
+                                      :title="'Cumulative API spend this session'"
+                                      x-text="'$' + sessionApiCost.toFixed(3)"></span>
+
+                                <span class="text-xs text-gray-500 dark:text-gray-400">Sort:</span>
                                 <select x-model="sortBy" @change="sortDiscoveryResults()"
-                                        class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-                                    <option value="overall_score">Score (High to Low)</option>
-                                    <option value="organization_name">Name (A-Z)</option>
-                                    <option value="revenue">Revenue (High to Low)</option>
+                                        class="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                    <option value="overall_score">Score ↓</option>
+                                    <option value="organization_name">Name A-Z</option>
+                                    <option value="revenue">Revenue ↓</option>
                                 </select>
                             </div>
                         </div>
@@ -747,6 +849,7 @@
                                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Revenue</th>
                                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
                                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Website</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" title="F=Fast · T=Thorough · W=Web · 9=990">Analysis</th>
                                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
@@ -797,18 +900,21 @@
 
                                             <!-- Score -->
                                             <td class="px-4 py-3 whitespace-nowrap">
-                                                <div class="flex items-center gap-2">
-                                                    <div class="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                                        <div class="h-2 rounded-full transition-all"
-                                                             :class="{
-                                                                 'bg-green-600': opp.overall_score >= 0.74,
-                                                                 'bg-yellow-600': opp.overall_score >= 0.71 && opp.overall_score < 0.74,
-                                                                 'bg-orange-600': opp.overall_score >= 0.68 && opp.overall_score < 0.71,
-                                                                 'bg-gray-600': opp.overall_score < 0.68
-                                                             }"
-                                                             :style="'width: ' + (opp.overall_score * 100) + '%'"></div>
+                                                <div class="space-y-1">
+                                                    <!-- Algorithmic score (Tool 20) -->
+                                                    <div class="flex items-center gap-2">
+                                                        <div class="w-14 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                            <div class="h-2 rounded-full transition-all"
+                                                                 :class="{
+                                                                     'bg-green-600': opp.overall_score >= 0.74,
+                                                                     'bg-yellow-600': opp.overall_score >= 0.71 && opp.overall_score < 0.74,
+                                                                     'bg-orange-600': opp.overall_score >= 0.68 && opp.overall_score < 0.71,
+                                                                     'bg-gray-600': opp.overall_score < 0.68
+                                                                 }"
+                                                                 :style="'width: ' + (opp.overall_score * 100) + '%'"></div>
+                                                        </div>
+                                                        <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="Math.round(opp.overall_score * 100) + '%'"></span>
                                                     </div>
-                                                    <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="Math.round(opp.overall_score * 100) + '%'"></span>
                                                 </div>
                                             </td>
 
@@ -856,6 +962,64 @@
                                                         No URL
                                                     </span>
                                                 </template>
+                                            </td>
+
+                                            <!-- Analysis Status Badges: F=Fast T=Thorough W=Web 9=990 -->
+                                            <td class="px-4 py-3 whitespace-nowrap">
+                                                <div class="grid grid-cols-2 gap-x-2 gap-y-1">
+                                                    <!-- [F] Fast screened -->
+                                                    <div class="flex items-center gap-1"
+                                                         :title="opp.tool1_score?.mode==='fast' ? 'Fast screened: '+Math.round((opp.tool1_score.overall_score||0)*100)+'%' : 'Not fast screened'">
+                                                        <span class="w-4 h-4 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
+                                                              :class="opp.tool1_score?.mode==='fast'
+                                                                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                                                                : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'">F</span>
+                                                        <template x-if="opp.tool1_score?.mode === 'fast'">
+                                                            <div class="flex items-center gap-1">
+                                                                <div class="w-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-full h-1.5">
+                                                                    <div class="h-1.5 rounded-full bg-indigo-500"
+                                                                         :style="'width:'+((opp.tool1_score.overall_score||0)*100)+'%'"></div>
+                                                                </div>
+                                                                <span class="text-xs text-indigo-600 dark:text-indigo-400"
+                                                                      x-text="Math.round((opp.tool1_score.overall_score||0)*100)+'%'"></span>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                    <!-- [T] Thorough screened -->
+                                                    <div class="flex items-center gap-1"
+                                                         :title="opp.tool1_score?.mode==='thorough' ? 'Thorough screened: '+Math.round((opp.tool1_score.overall_score||0)*100)+'%' : 'Not thorough screened'">
+                                                        <span class="w-4 h-4 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
+                                                              :class="opp.tool1_score?.mode==='thorough'
+                                                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                                                                : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'">T</span>
+                                                        <template x-if="opp.tool1_score?.mode === 'thorough'">
+                                                            <div class="flex items-center gap-1">
+                                                                <div class="w-8 bg-purple-100 dark:bg-purple-900/30 rounded-full h-1.5">
+                                                                    <div class="h-1.5 rounded-full bg-purple-500"
+                                                                         :style="'width:'+((opp.tool1_score.overall_score||0)*100)+'%'"></div>
+                                                                </div>
+                                                                <span class="text-xs text-purple-600 dark:text-purple-400"
+                                                                      x-text="Math.round((opp.tool1_score.overall_score||0)*100)+'%'"></span>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                    <!-- [W] Web researched -->
+                                                    <div class="flex items-center gap-1"
+                                                         :title="(opp.web_search_complete && opp.web_data) ? 'Web research complete' : 'No web research'">
+                                                        <span class="w-4 h-4 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
+                                                              :class="(opp.web_search_complete && opp.web_data)
+                                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                                                : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'">W</span>
+                                                    </div>
+                                                    <!-- [9] 990 filing history -->
+                                                    <div class="flex items-center gap-1"
+                                                         :title="opp.filing_history_loaded ? '990 filings loaded' : '990 filings not loaded'">
+                                                        <span class="w-4 h-4 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
+                                                              :class="opp.filing_history_loaded
+                                                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                                                : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'">9</span>
+                                                    </div>
+                                                </div>
                                             </td>
 
                                             <!-- Actions -->
@@ -1027,11 +1191,6 @@
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
                                     Officers & Directors
                                 </button>
-                                <button @click="switchOpportunityTab('website')"
-                                        :class="modalActiveTab === 'website' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
-                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
-                                    Website Data
-                                </button>
                                 <button @click="switchOpportunityTab('notes')"
                                         :class="modalActiveTab === 'notes' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
@@ -1042,96 +1201,137 @@
                             <!-- Tab Content -->
                             <div class="p-6 overflow-y-auto flex-1">
                                 <!-- Tab 1: Score Breakdown -->
-                                <div x-show="modalActiveTab === 'scores'" class="space-y-4">
-                                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-sm font-medium text-gray-700 dark:text-white">Overall Score</span>
-                                            <span class="text-2xl font-bold"
-                                                  :class="{
-                                                      'text-green-600': selectedOpportunity?.category_level === 'qualified',
-                                                      'text-yellow-600': selectedOpportunity?.category_level === 'review',
-                                                      'text-orange-600': selectedOpportunity?.category_level === 'consider',
-                                                      'text-gray-600': selectedOpportunity?.category_level === 'low_priority'
-                                                  }"
-                                                  x-text="Math.round((selectedOpportunity?.overall_score || 0) * 100) + '%'"></span>
+                                <div x-show="modalActiveTab === 'scores'" class="space-y-4" x-data="{showDimensions: false}">
+                                    <!-- Primary score display -->
+                                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Algorithmic Score (Tool 20)</div>
+                                                <span class="text-3xl font-bold"
+                                                      :class="{
+                                                          'text-green-600': selectedOpportunity?.category_level === 'qualified',
+                                                          'text-yellow-600': selectedOpportunity?.category_level === 'review',
+                                                          'text-orange-600': selectedOpportunity?.category_level === 'consider',
+                                                          'text-gray-600': selectedOpportunity?.category_level === 'low_priority'
+                                                      }"
+                                                      x-text="Math.round((selectedOpportunity?.overall_score || 0) * 100) + '%'"></span>
+                                            </div>
+                                            <div class="flex items-center gap-3">
+                                                <!-- Confidence badge -->
+                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                                                      :class="{
+                                                          'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': selectedOpportunity?.confidence === 'high',
+                                                          'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200': selectedOpportunity?.confidence === 'medium',
+                                                          'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200': selectedOpportunity?.confidence === 'low'
+                                                      }"
+                                                      x-text="(selectedOpportunity?.confidence?.charAt(0).toUpperCase() + selectedOpportunity?.confidence?.slice(1)) + ' confidence'"></span>
+                                                <!-- Toggle sub-scores -->
+                                                <button @click="showDimensions = !showDimensions"
+                                                        class="text-xs text-teal-600 hover:text-teal-700 dark:text-teal-400 underline">
+                                                    <span x-text="showDimensions ? 'Hide dimensions' : 'Show dimensions'"></span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <!-- Dimensional sub-scores (collapsible) -->
+                                        <div x-show="showDimensions" x-transition class="space-y-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                            <template x-for="[key, label, color] in [
+                                                ['mission_alignment', 'Mission Alignment (30%)', 'bg-teal-600'],
+                                                ['geographic_fit', 'Geographic Fit (25%)', 'bg-blue-600'],
+                                                ['financial_match', 'Financial Match (20%)', 'bg-green-600'],
+                                                ['eligibility', 'Eligibility (15%)', 'bg-purple-600'],
+                                                ['timing', 'Timing (10%)', 'bg-indigo-600']
+                                            ]" :key="key">
+                                                <div class="space-y-1">
+                                                    <div class="flex items-center justify-between text-sm">
+                                                        <span class="font-medium text-gray-700 dark:text-gray-300" x-text="label"></span>
+                                                        <span class="font-semibold" x-text="Math.round((selectedOpportunity?.dimensional_scores?.[key]?.raw_score || 0) * 100) + '%'"></span>
+                                                    </div>
+                                                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                                        <div class="h-2 rounded-full transition-all duration-300"
+                                                             :class="color"
+                                                             :style="'width: ' + ((selectedOpportunity?.dimensional_scores?.[key]?.raw_score || 0) * 100) + '%'"></div>
+                                                    </div>
+                                                </div>
+                                            </template>
                                         </div>
                                     </div>
 
-                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Dimensional Scores</h4>
-
-                                    <!-- Mission Alignment -->
-                                    <div class="space-y-2">
-                                        <div class="flex items-center justify-between text-sm">
-                                            <span class="font-medium text-gray-700 dark:text-gray-300">Mission Alignment (30%)</span>
-                                            <span class="font-semibold" x-text="Math.round((selectedOpportunity?.dimensional_scores?.mission_alignment?.raw_score || 0) * 100) + '%'"></span>
+                                    <!-- AI Screening Score (Tool 1) — shown when batch screening has been run -->
+                                    <template x-if="selectedOpportunity?.tool1_score">
+                                        <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h4 class="font-semibold text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                                    </svg>
+                                                    AI Screening Score (Tool 1)
+                                                </h4>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                                          :class="selectedOpportunity.tool1_score.confidence_level === 'high' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'"
+                                                          x-text="selectedOpportunity.tool1_score.confidence_level + ' confidence'"></span>
+                                                    <span class="text-2xl font-bold text-indigo-700 dark:text-indigo-300"
+                                                          x-text="Math.round((selectedOpportunity.tool1_score.overall_score || 0) * 100) + '%'"></span>
+                                                </div>
+                                            </div>
+                                            <!-- One-sentence summary -->
+                                            <p class="text-sm text-indigo-800 dark:text-indigo-200 italic mb-3"
+                                               x-text="selectedOpportunity.tool1_score.one_sentence_summary"></p>
+                                            <!-- Sub-scores -->
+                                            <div class="grid grid-cols-3 gap-3 mb-3">
+                                                <div class="text-center">
+                                                    <div class="text-xs text-indigo-600 dark:text-indigo-400">Strategic Fit</div>
+                                                    <div class="text-sm font-semibold text-indigo-900 dark:text-indigo-100"
+                                                         x-text="Math.round((selectedOpportunity.tool1_score.strategic_fit_score || 0) * 100) + '%'"></div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-xs text-indigo-600 dark:text-indigo-400">Eligibility</div>
+                                                    <div class="text-sm font-semibold text-indigo-900 dark:text-indigo-100"
+                                                         x-text="Math.round((selectedOpportunity.tool1_score.eligibility_score || 0) * 100) + '%'"></div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-xs text-indigo-600 dark:text-indigo-400">Timing</div>
+                                                    <div class="text-sm font-semibold text-indigo-900 dark:text-indigo-100"
+                                                         x-text="Math.round((selectedOpportunity.tool1_score.timing_score || 0) * 100) + '%'"></div>
+                                                </div>
+                                            </div>
+                                            <!-- Strengths & concerns -->
+                                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                                <template x-if="selectedOpportunity.tool1_score.key_strengths?.length > 0">
+                                                    <div>
+                                                        <div class="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Strengths</div>
+                                                        <ul class="space-y-0.5">
+                                                            <template x-for="s in selectedOpportunity.tool1_score.key_strengths.slice(0,3)" :key="s">
+                                                                <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                                    <span class="text-green-500 flex-shrink-0">+</span><span x-text="s"></span>
+                                                                </li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
+                                                </template>
+                                                <template x-if="selectedOpportunity.tool1_score.key_concerns?.length > 0">
+                                                    <div>
+                                                        <div class="text-xs font-medium text-red-600 dark:text-red-400 mb-1">Concerns</div>
+                                                        <ul class="space-y-0.5">
+                                                            <template x-for="c in selectedOpportunity.tool1_score.key_concerns.slice(0,3)" :key="c">
+                                                                <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                                    <span class="text-red-500 flex-shrink-0">−</span><span x-text="c"></span>
+                                                                </li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <p class="text-xs text-indigo-500 dark:text-indigo-400 mt-2"
+                                               x-text="'Screened: ' + (selectedOpportunity.tool1_score.scored_at ? new Date(selectedOpportunity.tool1_score.scored_at).toLocaleDateString() : 'N/A') + ' · ' + (selectedOpportunity.tool1_score.mode || 'fast') + ' mode'"></p>
                                         </div>
-                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div class="bg-teal-600 h-2 rounded-full transition-all duration-300"
-                                                 :style="'width: ' + ((selectedOpportunity?.dimensional_scores?.mission_alignment?.raw_score || 0) * 100) + '%'"></div>
+                                    </template>
+                                    <template x-if="!selectedOpportunity?.tool1_score">
+                                        <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">No AI screening score yet.</p>
+                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Use "Screen All" in the toolbar to run Tool 1 AI scoring on all opportunities.</p>
                                         </div>
-                                    </div>
-
-                                    <!-- Geographic Fit -->
-                                    <div class="space-y-2">
-                                        <div class="flex items-center justify-between text-sm">
-                                            <span class="font-medium text-gray-700 dark:text-gray-300">Geographic Fit (25%)</span>
-                                            <span class="font-semibold" x-text="Math.round((selectedOpportunity?.dimensional_scores?.geographic_fit?.raw_score || 0) * 100) + '%'"></span>
-                                        </div>
-                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                                 :style="'width: ' + ((selectedOpportunity?.dimensional_scores?.geographic_fit?.raw_score || 0) * 100) + '%'"></div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Financial Match -->
-                                    <div class="space-y-2">
-                                        <div class="flex items-center justify-between text-sm">
-                                            <span class="font-medium text-gray-700 dark:text-gray-300">Financial Match (20%)</span>
-                                            <span class="font-semibold" x-text="Math.round((selectedOpportunity?.dimensional_scores?.financial_match?.raw_score || 0) * 100) + '%'"></span>
-                                        </div>
-                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div class="bg-green-600 h-2 rounded-full transition-all duration-300"
-                                                 :style="'width: ' + ((selectedOpportunity?.dimensional_scores?.financial_match?.raw_score || 0) * 100) + '%'"></div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Eligibility -->
-                                    <div class="space-y-2">
-                                        <div class="flex items-center justify-between text-sm">
-                                            <span class="font-medium text-gray-700 dark:text-gray-300">Eligibility (15%)</span>
-                                            <span class="font-semibold" x-text="Math.round((selectedOpportunity?.dimensional_scores?.eligibility?.raw_score || 0) * 100) + '%'"></span>
-                                        </div>
-                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div class="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                                                 :style="'width: ' + ((selectedOpportunity?.dimensional_scores?.eligibility?.raw_score || 0) * 100) + '%'"></div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Timing -->
-                                    <div class="space-y-2">
-                                        <div class="flex items-center justify-between text-sm">
-                                            <span class="font-medium text-gray-700 dark:text-gray-300">Timing (10%)</span>
-                                            <span class="font-semibold" x-text="Math.round((selectedOpportunity?.dimensional_scores?.timing?.raw_score || 0) * 100) + '%'"></span>
-                                        </div>
-                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div class="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                                                 :style="'width: ' + ((selectedOpportunity?.dimensional_scores?.timing?.raw_score || 0) * 100) + '%'"></div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Confidence Badge -->
-                                    <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Data Quality Confidence</span>
-                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
-                                                  :class="{
-                                                      'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': selectedOpportunity?.confidence === 'high',
-                                                      'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200': selectedOpportunity?.confidence === 'medium',
-                                                      'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200': selectedOpportunity?.confidence === 'low'
-                                                  }"
-                                                  x-text="selectedOpportunity?.confidence?.charAt(0).toUpperCase() + selectedOpportunity?.confidence?.slice(1)"></span>
-                                        </div>
-                                    </div>
+                                    </template>
                                 </div>
 
                                 <!-- Tab 2: Organization Details -->
@@ -1385,6 +1585,112 @@
                                             No 990 financial data available for this organization.
                                         </div>
                                     </template>
+
+                                    <!-- Web Intelligence Section (merged from Website tab) -->
+                                    <div class="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <h4 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                                <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                                                </svg>
+                                                Web Intelligence
+                                            </h4>
+                                            <!-- Status badge -->
+                                            <template x-if="selectedOpportunity?.web_search_complete">
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
+                                                    <span>✓</span> Researched
+                                                    <template x-if="selectedOpportunity?.web_data?.ai_interpreted">
+                                                        <span class="ml-1 text-purple-600 dark:text-purple-400">· AI</span>
+                                                    </template>
+                                                </span>
+                                            </template>
+                                        </div>
+
+                                        <!-- Discovered URL -->
+                                        <template x-if="selectedOpportunity?.website_url && selectedOpportunity.url_source !== 'not_found'">
+                                            <div class="flex items-center gap-2 mb-3 text-sm">
+                                                <span class="text-gray-500 dark:text-gray-400">URL:</span>
+                                                <a :href="selectedOpportunity.website_url.startsWith('http') ? selectedOpportunity.website_url : 'https://' + selectedOpportunity.website_url"
+                                                   target="_blank"
+                                                   class="text-teal-600 hover:text-teal-700 dark:text-teal-400 font-medium flex items-center gap-1 break-all"
+                                                   x-text="selectedOpportunity.website_url">
+                                                </a>
+                                                <svg class="w-3 h-3 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                                </svg>
+                                            </div>
+                                        </template>
+
+                                        <!-- Web data summary when available -->
+                                        <template x-if="selectedOpportunity?.web_search_complete && selectedOpportunity?.web_data">
+                                            <div class="space-y-3 text-sm">
+                                                <template x-if="selectedOpportunity.web_data.mission">
+                                                    <div class="bg-teal-50 dark:bg-teal-900/10 rounded-lg p-3">
+                                                        <div class="text-xs text-teal-600 dark:text-teal-400 font-medium mb-1">Mission (web)</div>
+                                                        <div class="text-gray-800 dark:text-gray-200" x-text="selectedOpportunity.web_data.mission"></div>
+                                                    </div>
+                                                </template>
+                                                <template x-if="selectedOpportunity.web_data.key_facts?.length > 0">
+                                                    <div>
+                                                        <div class="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">Key Facts</div>
+                                                        <ul class="space-y-0.5">
+                                                            <template x-for="fact in selectedOpportunity.web_data.key_facts.slice(0,5)" :key="fact">
+                                                                <li class="flex items-start gap-1.5 text-gray-700 dark:text-gray-300">
+                                                                    <span class="text-teal-500 flex-shrink-0 mt-0.5">•</span>
+                                                                    <span x-text="fact"></span>
+                                                                </li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
+                                                </template>
+                                                <template x-if="selectedOpportunity.web_data.grant_application_url">
+                                                    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                                                        <div class="font-medium text-green-700 dark:text-green-400 text-xs mb-1">Grant Application Portal Detected</div>
+                                                        <a :href="selectedOpportunity.web_data.grant_application_url"
+                                                           target="_blank"
+                                                           class="text-green-600 hover:text-green-700 text-xs break-all"
+                                                           x-text="selectedOpportunity.web_data.grant_application_url"></a>
+                                                    </div>
+                                                </template>
+                                                <template x-if="selectedOpportunity.web_data.contact?.email || selectedOpportunity.web_data.contact?.phone">
+                                                    <div class="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
+                                                        <span x-show="selectedOpportunity.web_data.contact.email"
+                                                              x-text="'✉ ' + selectedOpportunity.web_data.contact.email"></span>
+                                                        <span x-show="selectedOpportunity.web_data.contact.phone"
+                                                              x-text="'☎ ' + selectedOpportunity.web_data.contact.phone"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        <!-- Run web research when not done -->
+                                        <template x-if="!selectedOpportunity?.web_search_complete && !webResearchLoading">
+                                            <div class="flex items-center gap-3 mt-2">
+                                                <input type="url"
+                                                       x-model="opportunityWebsiteUrl"
+                                                       placeholder="https://example.org (optional — auto-detects from 990)"
+                                                       class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                                <button @click="runWebResearch()"
+                                                        class="px-3 py-1.5 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 transition-colors flex-shrink-0">
+                                                    Run Research
+                                                </button>
+                                            </div>
+                                        </template>
+                                        <div x-show="webResearchLoading" class="flex items-center gap-2 mt-2 text-sm text-teal-600 dark:text-teal-400">
+                                            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                            </svg>
+                                            Running Scrapy + Claude interpretation...
+                                        </div>
+                                        <template x-if="selectedOpportunity?.web_search_complete">
+                                            <button @click="runWebResearch()"
+                                                    :disabled="webResearchLoading"
+                                                    class="mt-2 text-xs text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 underline">
+                                                Re-run web research
+                                            </button>
+                                        </template>
+                                    </div>
                                 </div>
 
                                 <!-- Tab 3: Grant History (990-PF only) -->
@@ -1602,8 +1908,8 @@
                                     </template>
                                 </div>
 
-                                <!-- Tab 5: Website Data -->
-                                <div x-show="modalActiveTab === 'website'" class="space-y-4">
+                                <!-- Tab 5: Website Data (removed - content merged into Organization Details tab) -->
+                                <div x-show="false" class="hidden">
                                     <!-- Discovered Website URL (Phase 5 - URL Discovery) -->
                                     <template x-if="selectedOpportunity?.website_url && selectedOpportunity.url_source !== 'not_found'">
                                         <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">

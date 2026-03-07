@@ -70,7 +70,7 @@ function screeningModule() {
         viewMode: 'grid', // 'grid' or 'list'
         showDetailsModal: false,
         selectedOpportunity: null,
-        detailsModalTab: 'scores', // 'scores', 'details', 'grants', 'website', 'notes'
+        detailsModalTab: 'scores', // 'scores', 'details', 'grants', 'officers', 'notes'
         showDiscoveryModal: false,
         discoverySourcesSelected: ['nonprofits'], // Default to nonprofits checked
         showLowPriority: false, // Hide low priority by default
@@ -100,6 +100,15 @@ function screeningModule() {
             elapsed_seconds: 0,
             skipped: 0  // Low priority opportunities skipped
         },
+
+        // 990 Batch Analysis State
+        ninetiesSearchInProgress: false,
+        ninetiesSearchProgress: {
+            total: 0,
+            processed: 0,
+            found: 0,
+            failed: 0,
+        },
         urlStatistics: {
             total: 0,
             available: 0,
@@ -119,6 +128,21 @@ function screeningModule() {
         notesSaving: false,
         notesSaved: false,
         notesDebounceTimer: null,
+
+        // Session Cost Tracking
+        sessionApiCost: 0,
+
+        // Batch Screen State
+        batchScreenJobId: null,
+        batchScreenStatus: null,   // null | 'running' | 'complete' | 'failed'
+        batchScreenProgress: 0,
+        batchScreenTotal: 0,
+        batchScreenMode: 'fast',
+        batchScreenThreshold: 0.50,
+        batchScreenResults: [],
+        batchScreenAboveThreshold: 0,
+        batchScreenEstimatedCost: 0,
+        batchScreenPollTimer: null,
 
         // =================================================================
         // LIFECYCLE & INITIALIZATION
@@ -656,6 +680,172 @@ function screeningModule() {
         },
 
         // =================================================================
+        // BATCH SCREENING (Screen All Unscreened)
+        // =================================================================
+
+        /**
+         * Return the IDs of all opportunities that have no Tool 1 score yet.
+         */
+        _getUnscreenedIds() {
+            return this.discoveryResults
+                .filter(opp => !opp.tool1_score)
+                .map(opp => opp.opportunity_id)
+                .filter(Boolean);
+        },
+
+        /**
+         * Return Tool 1 score for an opportunity (from analysis_discovery or local cache).
+         */
+        getAnalysisStatus(opp) {
+            return {
+                scored: opp.tool1_score != null,
+                web: !!(opp.web_search_complete && opp.web_data),
+                filing: !!(opp.filing_history_loaded),
+                pdf: !!(opp.pdf_analyzed),
+            };
+        },
+
+        async screenAllFast() {
+            this.batchScreenMode = 'fast';
+            await this.screenAllUnscreened();
+        },
+
+        async screenAllThorough() {
+            this.batchScreenMode = 'thorough';
+            await this.screenAllUnscreened();
+        },
+
+        /**
+         * Start a batch Tool 1 screening job for all unscreened opportunities.
+         */
+        async screenAllUnscreened() {
+            const ids = this._getUnscreenedIds();
+            if (ids.length === 0) {
+                this.showNotification?.('All opportunities already have Tool 1 scores', 'info');
+                return;
+            }
+
+            const costPerOpp = this.batchScreenMode === 'fast' ? 0.001 : 0.01;
+            const estimatedCost = (ids.length * costPerOpp).toFixed(2);
+
+            if (!confirm(`Screen ${ids.length} unscreened opportunities in ${this.batchScreenMode} mode?\n\nEstimated cost: $${estimatedCost}\n\nProceed?`)) {
+                return;
+            }
+
+            this.batchScreenStatus = 'running';
+            this.batchScreenProgress = 0;
+            this.batchScreenTotal = ids.length;
+            this.batchScreenEstimatedCost = parseFloat(estimatedCost);
+            this.batchScreenJobId = null;
+            this.batchScreenResults = [];
+
+            try {
+                const response = await fetch('/api/v2/opportunities/batch-screen', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        profile_id: this.currentProfileId,
+                        opportunity_ids: ids,
+                        mode: this.batchScreenMode,
+                        threshold: this.batchScreenThreshold,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    throw new Error(err.detail || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                this.batchScreenJobId = data.job_id;
+                this.showNotification?.(`Batch screening started (${ids.length} opportunities, $${estimatedCost} est.)`, 'info');
+
+                // Poll for completion
+                this._pollBatchScreenStatus();
+
+            } catch (error) {
+                console.error('Batch screen start error:', error);
+                this.batchScreenStatus = 'failed';
+                this.showNotification?.(`❌ Batch screen failed: ${error.message}`, 'error');
+            }
+        },
+
+        /**
+         * Poll batch screen job status every 2 seconds.
+         */
+        _pollBatchScreenStatus() {
+            if (this.batchScreenPollTimer) clearInterval(this.batchScreenPollTimer);
+
+            this.batchScreenPollTimer = setInterval(async () => {
+                if (!this.batchScreenJobId) return;
+                try {
+                    const response = await fetch(`/api/v2/opportunities/batch-screen/${this.batchScreenJobId}`);
+                    if (!response.ok) return;
+                    const job = await response.json();
+
+                    this.batchScreenProgress = job.processed || job.progress || 0;
+                    this.batchScreenTotal = job.total || this.batchScreenTotal;
+
+                    if (job.status === 'complete') {
+                        clearInterval(this.batchScreenPollTimer);
+                        this.batchScreenPollTimer = null;
+                        this.batchScreenStatus = 'complete';
+                        this.batchScreenResults = job.results || [];
+                        this.batchScreenAboveThreshold = (job.above_threshold || []).length;
+                        // Track session cost from actual batch screen cost
+                        this.sessionApiCost += job.estimated_cost || 0;
+
+                        this.showNotification?.(
+                            `✅ Batch screening complete: ${this.batchScreenResults.length} screened, ` +
+                            `${this.batchScreenAboveThreshold} above ${Math.round(this.batchScreenThreshold * 100)}% threshold`,
+                            'success'
+                        );
+
+                        // Refresh opportunity table so tool1_score values appear
+                        if (this.currentProfileId) {
+                            await this.loadSavedOpportunities(this.currentProfileId);
+                        }
+                    } else if (job.status === 'failed') {
+                        clearInterval(this.batchScreenPollTimer);
+                        this.batchScreenPollTimer = null;
+                        this.batchScreenStatus = 'failed';
+                        this.showNotification?.(`❌ Batch screen failed: ${job.error || 'Unknown error'}`, 'error');
+                    }
+                } catch (e) {
+                    console.warn('Batch screen poll error:', e);
+                }
+            }, 2000);
+        },
+
+        /**
+         * Filter discovery results to only show opportunities above the batch screen threshold.
+         */
+        applyRecommendedFilters() {
+            const threshold = this.batchScreenThreshold;
+            const total = this.discoveryResults.length;
+            // Only filter on Tool 1 AI score — do not fall back to algorithmic score
+            const screened = this.discoveryResults.filter(opp => opp.tool1_score != null);
+            if (screened.length === 0) {
+                this.showNotification?.('No AI screening scores found — run "Screen All" first, then reload the page', 'warning');
+                return;
+            }
+            const above = screened.filter(opp => (opp.tool1_score?.overall_score ?? 0) >= threshold);
+            if (above.length === 0) {
+                this.showNotification?.(
+                    `All ${screened.length} screened opportunities scored below ${Math.round(threshold * 100)}% — try lowering the threshold`,
+                    'warning'
+                );
+                return;
+            }
+            this.discoveryResults = above;
+            this.summaryCounts = { ...this.summaryCounts, total_found: above.length };
+            this.showNotification?.(
+                `Showing ${above.length} of ${total} opportunities with AI score ≥ ${Math.round(threshold * 100)}%`,
+                'success'
+            );
+        },
+
+        // =================================================================
         // HUMAN GATEWAY (Selection)
         // =================================================================
 
@@ -950,7 +1140,7 @@ function screeningModule() {
 
         /**
          * Switch details modal tab
-         * @param {string} tab - 'scores', 'details', 'grants', 'website'
+         * @param {string} tab - 'scores', 'details', 'grants', 'officers', 'notes'
          */
         switchDetailsTab(tab) {
             this.detailsModalTab = tab;
@@ -1017,6 +1207,9 @@ function screeningModule() {
                         if ((wd.contact?.email || wd.contact?.phone)) parts.push('contact');
                         const aiLabel = wd.ai_interpreted ? ' (AI interpreted)' : '';
                         const summary = parts.length > 0 ? parts.join(', ') : 'website & contact';
+
+                        // Track session cost (~$0.02 per web research run)
+                        if (!data.cache_hit) this.sessionApiCost += 0.02;
 
                         this.showNotification?.(
                             `✅ Web research complete${aiLabel}: ${summary} — ${data.pages_scraped} pages in ${executionTime}s`,
@@ -1093,6 +1286,8 @@ function screeningModule() {
                 if (response.ok) {
                     const data = await response.json();
                     this.filingAnalysisResult = data.extraction;
+                    // Track session cost (~$0.02 per PDF analysis)
+                    if (!data.cache_hit) this.sessionApiCost += 0.02;
                     this.showNotification?.('990 PDF analysis complete', 'success');
                 } else {
                     const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
@@ -1470,6 +1665,78 @@ function screeningModule() {
                 this.showNotification?.(`URL discovery failed: ${error.message}`, 'error');
             } finally {
                 this.urlDiscoveryInProgress = false;
+            }
+        },
+
+        /**
+         * Batch analyze 990 PDFs for all opportunities in current profile.
+         * Uses most recent filing from cached filing_history (run Find URLs first).
+         * Cost: ~$0.01-0.03 per PDF (Claude Haiku), cached per EIN.
+         */
+        async batchAnalyze990Pdfs() {
+            if (!this.currentProfileId) {
+                this.showNotification?.('No profile selected', 'warning');
+                return;
+            }
+
+            const ids = this.discoveryResults
+                .map(opp => opp.opportunity_id)
+                .filter(Boolean);
+
+            if (ids.length === 0) {
+                this.showNotification?.('No opportunities to analyze', 'warning');
+                return;
+            }
+
+            const estimatedCost = (ids.length * 0.02).toFixed(2);
+            if (!confirm(`Analyze 990 PDFs for ${ids.length} opportunities?\n\nEstimated cost: ~$${estimatedCost} (Claude Haiku, cached per EIN)\nRequires filing history — run Search Website (①) first if not done.\n\nProceed?`)) {
+                return;
+            }
+
+            this.ninetiesSearchInProgress = true;
+            this.ninetiesSearchProgress = { total: ids.length, processed: 0, found: 0, failed: 0 };
+            this.showNotification?.(`Starting 990 PDF analysis for ${ids.length} organizations...`, 'info');
+
+            try {
+                const response = await fetch('/api/v2/opportunities/batch-analyze-990-pdfs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        opportunity_ids: ids,
+                        force_refresh: false,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    throw new Error(err.detail || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                this.ninetiesSearchProgress = {
+                    total: data.total || ids.length,
+                    processed: data.analyzed + data.skipped + data.errors,
+                    found: data.analyzed || 0,
+                    failed: data.errors || 0,
+                };
+
+                // Track session API cost
+                this.sessionApiCost += data.estimated_cost_usd || 0;
+
+                this.showNotification?.(
+                    `✅ 990 analysis complete: ${data.analyzed} analyzed (${data.cached} cached), ` +
+                    `${data.skipped} skipped (no PDF), ${data.errors} errors`,
+                    'success'
+                );
+
+                console.log('[990_BATCH] Results:', data);
+
+            } catch (error) {
+                console.error('[990_BATCH] Error:', error);
+                this.showNotification?.(`990 batch analysis failed: ${error.message}`, 'error');
+            } finally {
+                this.ninetiesSearchInProgress = false;
             }
         },
 

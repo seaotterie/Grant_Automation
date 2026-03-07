@@ -3,44 +3,44 @@ Web Intelligence Tool - Main Entry Point
 
 Tool 25 in the Catalynx 12-Factor Tool Architecture.
 
-This is a Scrapy-powered web scraping tool for gathering nonprofit intelligence:
-- Use Case 1: Profile Builder - Auto-populate org profiles from websites
-- Use Case 2: Opportunity Research - Discover grants from grantmaking nonprofits
-- Use Case 3: Foundation Research - Find grant opportunities and details
+Uses an agentic Claude Haiku approach to gather nonprofit intelligence:
+- Use Case 1: PROFILE_BUILDER - Auto-populate org profiles from websites
+- Use Case 2: OPPORTUNITY_RESEARCH - Discover grants from grantmaking nonprofits
+- Use Case 3: FOUNDATION_RESEARCH - Find grant opportunities and details
+
+Replaces the previous Scrapy subprocess approach with semantic navigation:
+  Step 1: Fetch homepage via httpx
+  Step 2: Haiku identifies grant-relevant navigation links
+  Step 3: Fetch up to 5 targeted pages
+  Step 4: Haiku structures all content into GrantFunderIntelligence
+
+Cost: ~3-6 Haiku calls per org ≈ $0.003-0.01
+Scrapy spider files are kept in place but no longer called by this tool.
 
 12-Factor Compliance:
-- Factor 1: Codebase tracked in git
-- Factor 3: Config from 12factors.toml
-- Factor 4: Structured outputs (BAML schemas)
+- Factor 4: Structured outputs (GrantFunderIntelligence schema)
 - Factor 6: Stateless execution
 - Factor 10: Single responsibility (web intelligence gathering)
 """
 
-import logging
 import asyncio
+import logging
+import re
 import time
 from pathlib import Path
 from typing import Optional, Dict, Any
 from enum import Enum
+from urllib.parse import urljoin, urlparse
 import toml
 
-# Scrapy imports
-from scrapy.crawler import CrawlerProcess
-from scrapy.utils.project import get_project_settings
-from twisted.internet import reactor
+logger = logging.getLogger(__name__)
 
 # Add project root to path
 import sys
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-# Import spider (relative imports within tool)
-from .scrapy_spiders.organization_profile_spider import OrganizationProfileSpider
-
-# Import structured output models (relative imports within tool)
-from .scrapy_pipelines.structured_output_pipeline import OrganizationIntelligence
-
-logger = logging.getLogger(__name__)
+from tools.shared_schemas.grant_funder_intelligence import GrantFunderIntelligence, IntelligenceSource
 
 
 # ============================================================================
@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 class UseCase(str, Enum):
     """Use case selector"""
     PROFILE_BUILDER = "PROFILE_BUILDER"
-    OPPORTUNITY_RESEARCH = "OPPORTUNITY_RESEARCH"  # Grantmaking nonprofits
+    OPPORTUNITY_RESEARCH = "OPPORTUNITY_RESEARCH"
     FOUNDATION_RESEARCH = "FOUNDATION_RESEARCH"
 
 
@@ -63,9 +63,8 @@ class WebIntelligenceRequest:
         organization_name: Organization name
         use_case: Which use case to execute
         user_provided_url: Optional user URL (highest priority)
-        max_depth: Override default crawl depth
-        max_pages: Override default max pages
-        require_990_verification: Require 990 tax filing verification
+        timeout: Optional timeout in seconds
+        require_990_verification: (kept for API compat, not used in Haiku path)
         min_confidence_score: Minimum confidence to accept data
     """
 
@@ -75,18 +74,17 @@ class WebIntelligenceRequest:
             organization_name: str,
             use_case: UseCase = UseCase.PROFILE_BUILDER,
             user_provided_url: Optional[str] = None,
-            max_depth: Optional[int] = None,
-            max_pages: Optional[int] = None,
             timeout: Optional[int] = None,
             require_990_verification: bool = True,
-            min_confidence_score: float = 0.7
+            min_confidence_score: float = 0.7,
+            # Legacy Scrapy params — ignored
+            max_depth: Optional[int] = None,
+            max_pages: Optional[int] = None,
     ):
         self.ein = ein
         self.organization_name = organization_name
         self.use_case = use_case
         self.user_provided_url = user_provided_url
-        self.max_depth = max_depth
-        self.max_pages = max_pages
         self.timeout = timeout
         self.require_990_verification = require_990_verification
         self.min_confidence_score = min_confidence_score
@@ -97,19 +95,19 @@ class WebIntelligenceResponse:
     Output response with structured intelligence data.
 
     Attributes:
-        success: Whether scraping was successful
-        intelligence_data: Structured intelligence (OrganizationIntelligence, etc.)
-        execution_time_seconds: How long scraping took
-        pages_scraped: Number of pages successfully scraped
+        success: Whether fetching was successful
+        intelligence_data: GrantFunderIntelligence structured output
+        execution_time_seconds: How long it took
+        pages_scraped: Number of pages fetched
         data_quality_score: Overall data quality (0.0-1.0)
-        verification_confidence: 990 verification confidence (0.0-1.0)
+        verification_confidence: Confidence score
         errors: List of errors encountered
     """
 
     def __init__(
             self,
             success: bool,
-            intelligence_data: Optional[OrganizationIntelligence] = None,
+            intelligence_data: Optional[GrantFunderIntelligence] = None,
             execution_time_seconds: float = 0.0,
             pages_scraped: int = 0,
             data_quality_score: float = 0.0,
@@ -126,6 +124,35 @@ class WebIntelligenceResponse:
 
 
 # ============================================================================
+# HTML UTILITY
+# ============================================================================
+
+def _strip_html(html_text: str) -> str:
+    """Extract readable text from HTML, removing scripts, styles, and tags."""
+    # Remove script and style blocks
+    html_text = re.sub(r'<script[^>]*>.*?</script>', ' ', html_text, flags=re.DOTALL | re.IGNORECASE)
+    html_text = re.sub(r'<style[^>]*>.*?</style>', ' ', html_text, flags=re.DOTALL | re.IGNORECASE)
+    # Remove HTML tags
+    html_text = re.sub(r'<[^>]+>', ' ', html_text)
+    # Decode common HTML entities
+    html_text = html_text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>') \
+                         .replace('&nbsp;', ' ').replace('&#39;', "'").replace('&quot;', '"')
+    # Collapse whitespace
+    html_text = re.sub(r'\s+', ' ', html_text).strip()
+    return html_text
+
+
+def _is_same_domain(base_url: str, link_url: str) -> bool:
+    """Return True if link_url is on the same domain as base_url."""
+    try:
+        base_host = urlparse(base_url).netloc.lower().lstrip("www.")
+        link_host = urlparse(link_url).netloc.lower().lstrip("www.")
+        return not link_host or link_host == base_host
+    except Exception:
+        return True
+
+
+# ============================================================================
 # MAIN TOOL CLASS
 # ============================================================================
 
@@ -133,385 +160,304 @@ class WebIntelligenceTool:
     """
     Main web intelligence tool class.
 
-    Executes Scrapy spiders based on use case and returns structured intelligence.
+    Uses an agentic Claude Haiku pipeline (fetch → navigate → structure)
+    instead of Scrapy spider subprocesses.
     """
 
     def __init__(self):
         """Initialize tool and load configuration."""
         self.config = self._load_config()
         self.tool_dir = Path(__file__).parent.parent
-        logger.info("WebIntelligenceTool initialized")
+        logger.info("WebIntelligenceTool initialized (Haiku agent mode)")
 
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from 12factors.toml."""
         config_path = Path(__file__).parent.parent / '12factors.toml'
-
         if not config_path.exists():
-            logger.warning(f"12factors.toml not found at {config_path}. Using defaults.")
             return {}
-
         try:
-            config = toml.load(config_path)
-            logger.info("Loaded configuration from 12factors.toml")
-            return config
+            return toml.load(config_path)
         except Exception as e:
             logger.error(f"Error loading 12factors.toml: {e}")
             return {}
 
     async def execute(self, request: WebIntelligenceRequest) -> WebIntelligenceResponse:
         """
-        Execute web intelligence gathering.
+        Execute web intelligence gathering via agentic Haiku pipeline.
 
-        Args:
-            request: WebIntelligenceRequest with scraping parameters
-
-        Returns:
-            WebIntelligenceResponse with structured intelligence
+        All three use cases go through the same Haiku agent path;
+        only the URL resolution differs.
         """
         start_time = time.time()
 
         logger.info(
-            f"Executing Web Intelligence Tool:\n"
-            f"  Organization: {request.organization_name}\n"
-            f"  EIN: {request.ein}\n"
-            f"  Use Case: {request.use_case.value}\n"
-            f"  User URL: {request.user_provided_url or 'None (will auto-resolve)'}"
+            f"WebIntelligenceTool (Haiku) | org={request.organization_name} "
+            f"| ein={request.ein} | use_case={request.use_case.value}"
         )
 
         try:
-            # Execute appropriate spider based on use case
-            if request.use_case == UseCase.PROFILE_BUILDER:
-                intelligence_data = await self._execute_profile_builder_spider(request)
-            elif request.use_case == UseCase.OPPORTUNITY_RESEARCH:
-                intelligence_data = await self._execute_opportunity_spider(request)
-            elif request.use_case == UseCase.FOUNDATION_RESEARCH:
-                intelligence_data = await self._execute_foundation_spider(request)
-            else:
-                raise ValueError(f"Unknown use case: {request.use_case}")
+            url = await self._resolve_url(request)
+            if not url:
+                return WebIntelligenceResponse(
+                    success=False,
+                    errors=[f"Could not resolve URL for {request.organization_name}"]
+                )
+
+            intelligence = await self._fetch_with_haiku_agent(
+                url=url,
+                use_case=request.use_case,
+                ein=request.ein,
+                org_name=request.organization_name,
+                timeout=request.timeout or 90,
+            )
 
             execution_time = time.time() - start_time
-
-            # Extract metrics from intelligence data
-            if intelligence_data:
-                # Handle both structured objects and dicts
-                if hasattr(intelligence_data, 'scraping_metadata'):
-                    # Structured object with metadata attribute
-                    metadata = intelligence_data.scraping_metadata
-                    pages_scraped = metadata.pages_scraped
-                    data_quality_score = metadata.data_quality_score
-                    verification_confidence = metadata.verification_confidence
-                elif isinstance(intelligence_data, dict):
-                    # Dict returned from FEEDS export - check if it's BAML structure
-                    if 'scraping_metadata' in intelligence_data:
-                        # Try to reconstruct BAML OrganizationIntelligence from dict
-                        try:
-                            intelligence_data = OrganizationIntelligence(**intelligence_data)
-                            metadata = intelligence_data.scraping_metadata
-                            pages_scraped = metadata.pages_scraped
-                            data_quality_score = metadata.data_quality_score
-                            verification_confidence = metadata.verification_confidence
-                            logger.info(f"Reconstructed BAML structure: {pages_scraped} pages scraped, quality {data_quality_score:.0%}")
-                        except Exception as e:
-                            logger.warning(f"BAML reconstruction failed: {e}, using dict fallback")
-                            metadata = intelligence_data.get('scraping_metadata', {})
-                            pages_scraped = metadata.get('pages_scraped', 1) if metadata else 1
-                            data_quality_score = metadata.get('data_quality_score', 0.8) if metadata else 0.8
-                            verification_confidence = metadata.get('verification_confidence', 0.7) if metadata else 0.7
-                    else:
-                        # Raw dict without BAML structure (fallback)
-                        pages_scraped = intelligence_data.get('pages_scraped', 1)
-                        data_quality_score = 0.8
-                        verification_confidence = 0.7
-                        logger.info(f"Spider returned raw dict: {pages_scraped} pages, {len(intelligence_data)} fields")
-                else:
-                    pages_scraped = 0
-                    data_quality_score = 0.0
-                    verification_confidence = 0.0
-            else:
-                pages_scraped = 0
-                data_quality_score = 0.0
-                verification_confidence = 0.0
-
             logger.info(
-                f"Web intelligence complete:\n"
-                f"  Execution time: {execution_time:.2f}s\n"
-                f"  Pages scraped: {pages_scraped}\n"
-                f"  Data quality: {data_quality_score:.2%}\n"
-                f"  Verification confidence: {verification_confidence:.2%}"
+                f"WebIntelligenceTool complete | time={execution_time:.1f}s "
+                f"| confidence={intelligence.confidence_score:.0%}"
             )
 
             return WebIntelligenceResponse(
                 success=True,
-                intelligence_data=intelligence_data,
+                intelligence_data=intelligence,
                 execution_time_seconds=execution_time,
-                pages_scraped=pages_scraped,
-                data_quality_score=data_quality_score,
-                verification_confidence=verification_confidence
+                pages_scraped=intelligence._pages_fetched if hasattr(intelligence, '_pages_fetched') else 1,
+                data_quality_score=intelligence.confidence_score,
+                verification_confidence=intelligence.confidence_score,
             )
 
         except Exception as e:
             execution_time = time.time() - start_time
-            error_msg = f"Web intelligence failed: {str(e)}"
+            error_msg = f"Web intelligence failed: {e}"
             logger.error(error_msg, exc_info=True)
-
             return WebIntelligenceResponse(
                 success=False,
                 execution_time_seconds=execution_time,
                 errors=[error_msg]
             )
 
-    async def _execute_profile_builder_spider(
-            self,
-            request: WebIntelligenceRequest
-    ) -> Optional[OrganizationIntelligence]:
-        """
-        Execute Organization Profile Spider (Use Case 1).
+    # ------------------------------------------------------------------
+    # URL resolution
+    # ------------------------------------------------------------------
 
-        Args:
-            request: WebIntelligenceRequest
+    async def _resolve_url(self, request: WebIntelligenceRequest) -> Optional[str]:
+        """Resolve the starting URL for the given request."""
+        # Highest priority: user-provided
+        if request.user_provided_url:
+            return request.user_provided_url
 
-        Returns:
-            OrganizationIntelligence or None if failed
-        """
-        logger.info(f"Executing Profile Builder spider for {request.organization_name}")
-
-        # NEW: Resolve URL BEFORE creating spider (in main process where imports work)
-        from src.core.smart_url_resolution_service import SmartURLResolutionService
-
-        url_service = SmartURLResolutionService()
-        resolution = await url_service.resolve_organization_url(
-            ein=request.ein,
-            organization_name=request.organization_name,
-            user_provided_url=request.user_provided_url
-        )
-
-        start_url = None
-        if resolution and resolution.primary_url:
-            start_url = resolution.primary_url.url
-            logger.info(
-                f"Resolved URL for {request.organization_name}:\n"
-                f"  URL: {start_url}\n"
-                f"  Source: {resolution.primary_url.source}\n"
-                f"  Confidence: {resolution.primary_url.confidence_score:.2f}"
-            )
-        else:
-            logger.warning(f"Failed to resolve URL for {request.organization_name} - spider may fail")
-
-        # Configure Scrapy settings
-        settings = get_project_settings()
-
-        # Override settings from request
-        # Default DEPTH_LIMIT in scrapy_settings.py is 3
-        # If no max_depth specified, limit first run to depth 2 for faster initial search
-        if request.max_depth:
-            settings['DEPTH_LIMIT'] = request.max_depth
-            logger.info(f"DEPTH_LIMIT SET FROM REQUEST: {request.max_depth}")
-        else:
-            settings['DEPTH_LIMIT'] = 2  # Limit initial search to depth 2 (vs default 3)
-            logger.info(f"DEPTH_LIMIT SET TO DEFAULT: 2")
-
-        if request.max_pages:
-            settings['CLOSESPIDER_PAGECOUNT'] = request.max_pages
-            logger.info(f"CLOSESPIDER_PAGECOUNT SET FROM REQUEST: {request.max_pages}")
-        else:
-            logger.info(f"CLOSESPIDER_PAGECOUNT NOT SET (unlimited)")
-
-        logger.info(
-            f"Spider configuration for {request.organization_name}:\n"
-            f"  max_depth (request): {request.max_depth}\n"
-            f"  max_pages (request): {request.max_pages}\n"
-            f"  DEPTH_LIMIT (settings): {settings.get('DEPTH_LIMIT')}\n"
-            f"  CLOSESPIDER_PAGECOUNT (settings): {settings.get('CLOSESPIDER_PAGECOUNT', 'unlimited')}\n"
-            f"  Recursive discovery will be: {'ENABLED' if settings.get('DEPTH_LIMIT', 0) > 3 else 'DISABLED'} (depth > 3)"
-        )
-
-        # Create spider instance WITH pre-resolved URL
-        spider = OrganizationProfileSpider(
-            ein=request.ein,
-            organization_name=request.organization_name,
-            user_provided_url=request.user_provided_url,
-            start_url=start_url  # ← Pass resolved URL
-        )
-
-        # Run spider and collect results
-        result = await self._run_spider(spider, settings, timeout=request.timeout)
-
-        return result
-
-    async def _execute_opportunity_spider(
-            self,
-            request: WebIntelligenceRequest
-    ) -> Optional[Any]:
-        """
-        Execute Opportunity Research Spider (Use Case 2).
-
-        Scrapes grantmaking nonprofit websites (United Way, community foundations, etc.)
-        to discover grant opportunities.
-
-        TODO: Implement when spider is ready.
-        """
-        raise NotImplementedError("Opportunity Research spider not yet implemented")
-
-    async def _execute_foundation_spider(
-            self,
-            request: WebIntelligenceRequest
-    ) -> Optional[Any]:
-        """
-        Execute Foundation Research Spider (Use Case 3).
-
-        TODO: Implement when spider is ready.
-        """
-        raise NotImplementedError("Foundation Research spider not yet implemented")
-
-    async def _run_spider(self, spider, settings, timeout: Optional[int] = None) -> Optional[Any]:
-        """
-        Run a Scrapy spider in a separate process to avoid Twisted reactor conflicts.
-
-        When running in FastAPI, the Twisted reactor is already installed, so we
-        can't use CrawlerProcess directly. Instead, we run the spider in a subprocess.
-
-        Args:
-            spider: Spider instance
-            settings: Scrapy settings
-            timeout: Optional timeout in seconds (default: 60)
-
-        Returns:
-            Structured intelligence data or None
-        """
-        import subprocess
-        import json
-        import tempfile
-        import asyncio
-        from pathlib import Path
-
-        try:
-            # Create temp file for spider output
-            with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
-                result_file = Path(f.name)
-
-            # Clear Scrapy cache for retry attempts to ensure fresh data
-            if settings and settings.get('DEPTH_LIMIT') and settings['DEPTH_LIMIT'] > 1:
-                cache_dir = self.tool_dir / 'data' / 'scrapy_cache'
-                if cache_dir.exists():
-                    import shutil
-                    try:
-                        shutil.rmtree(cache_dir)
-                        logger.info(f"Cleared Scrapy cache directory for fresh crawl: {cache_dir}")
-                    except Exception as e:
-                        logger.warning(f"Failed to clear cache directory: {e}")
-
-            logger.info(f"Running spider {spider.name} in subprocess for EIN {spider.ein}")
-
-            # Build scrapy command
-            # Convert Windows path to proper file URI (forward slashes, triple slash)
-            # Windows: C:\path\file.json -> file:///C:/path/file.json
-            file_uri = result_file.as_posix()  # Convert to forward slashes
-            if file_uri[1] == ':':  # Windows absolute path (C:/)
-                file_uri = f"file:///{file_uri}"
-            else:
-                file_uri = f"file://{file_uri}"
-
-            feeds_json = json.dumps({file_uri: {"format": "json"}})
-            cmd = [
-                'scrapy', 'crawl', spider.name,
-                '-a', f'ein={spider.ein}',
-                '-a', f'organization_name={spider.organization_name}',
-                '-s', f'FEEDS={feeds_json}',
-                '--logfile', str(result_file.with_suffix('.log'))
-            ]
-
-            # CRITICAL FIX: Pass Scrapy settings from settings object to subprocess
-            if settings:
-                # Disable cache for retry attempts to get fresh data
-                if settings.get('DEPTH_LIMIT') and settings['DEPTH_LIMIT'] > 1:
-                    cmd.extend(['-s', 'HTTPCACHE_ENABLED=False'])
-                    logger.info("Disabling HTTP cache for deeper search (to fetch fresh data)")
-
-                if settings.get('DEPTH_LIMIT'):
-                    cmd.extend(['-s', f'DEPTH_LIMIT={settings["DEPTH_LIMIT"]}'])
-                    logger.info(f"Setting DEPTH_LIMIT={settings['DEPTH_LIMIT']}")
-                if settings.get('CLOSESPIDER_PAGECOUNT'):
-                    cmd.extend(['-s', f'CLOSESPIDER_PAGECOUNT={settings["CLOSESPIDER_PAGECOUNT"]}'])
-                    logger.info(f"Setting CLOSESPIDER_PAGECOUNT={settings['CLOSESPIDER_PAGECOUNT']}")
-
-            # Add user URL if provided (legacy)
-            if spider.user_provided_url:
-                cmd.extend(['-a', f'user_provided_url={spider.user_provided_url}'])
-
-            # NEW: Add start_url if spider has it (from URL resolution)
-            if hasattr(spider, 'start_urls') and spider.start_urls:
-                cmd.extend(['-a', f'start_url={spider.start_urls[0]}'])
-                logger.info(f"Passing start_url to subprocess: {spider.start_urls[0]}")
-
-            # Log full command for debugging
-            logger.info(f"Executing Scrapy command: {' '.join(cmd)}")
-
-            # Run spider in subprocess with timeout
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                cwd=str(self.tool_dir),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-
+        # For PROFILE_BUILDER: use SmartURLResolutionService (990 → GPT priority)
+        if request.use_case == UseCase.PROFILE_BUILDER:
             try:
-                # Use custom timeout if provided, otherwise default to 60 seconds
-                timeout_seconds = timeout if timeout else 60
-                logger.info(f"Spider timeout set to {timeout_seconds} seconds")
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(),
-                    timeout=float(timeout_seconds)
+                from src.core.smart_url_resolution_service import SmartURLResolutionService
+                service = SmartURLResolutionService()
+                resolution = await service.resolve_organization_url(
+                    ein=request.ein,
+                    organization_name=request.organization_name,
+                    user_provided_url=None,
+                )
+                if resolution and resolution.primary_url:
+                    url = resolution.primary_url.url
+                    logger.info(f"URL resolved: {url} (confidence {resolution.primary_url.confidence_score:.2f})")
+                    return url
+            except Exception as e:
+                logger.warning(f"SmartURLResolutionService failed: {e}")
+
+        # OPPORTUNITY_RESEARCH / FOUNDATION_RESEARCH: user_provided_url is expected
+        logger.warning(f"No URL available for {request.organization_name} ({request.use_case.value})")
+        return None
+
+    # ------------------------------------------------------------------
+    # Haiku agent pipeline
+    # ------------------------------------------------------------------
+
+    async def _fetch_with_haiku_agent(
+        self,
+        url: str,
+        use_case: UseCase,
+        ein: str,
+        org_name: str,
+        timeout: int = 90,
+    ) -> GrantFunderIntelligence:
+        """
+        Four-step Haiku agent pipeline:
+          1. Fetch homepage HTML via httpx
+          2. Haiku identifies grant-relevant navigation links
+          3. Fetch up to 5 targeted pages
+          4. Haiku structures combined content into GrantFunderIntelligence
+        """
+        import httpx
+        from src.core.anthropic_service import get_anthropic_service, PipelineStage
+
+        service = get_anthropic_service()
+        headers = {"User-Agent": "Catalynx Grant Research Bot (grant research platform)"}
+
+        # Step 1: Fetch homepage
+        homepage_text = ""
+        try:
+            async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
+                resp = await client.get(url, headers=headers)
+                resp.raise_for_status()
+                homepage_text = _strip_html(resp.text)
+                logger.info(f"Fetched homepage: {url} ({len(homepage_text)} chars)")
+        except Exception as e:
+            logger.warning(f"Homepage fetch failed for {url}: {e}")
+            if not homepage_text:
+                # Return minimal result with just the URL
+                return GrantFunderIntelligence(
+                    ein=ein,
+                    organization_name=org_name,
+                    source=IntelligenceSource.WEB,
+                    source_url=url,
+                    confidence_score=0.1,
                 )
 
-                if process.returncode == 0:
-                    # Read scraped data from output file
-                    if result_file.exists() and result_file.stat().st_size > 0:
-                        with open(result_file, 'r') as f:
-                            data = json.load(f)
-                            logger.info(f"Spider completed successfully, scraped {len(data) if isinstance(data, list) else 1} items")
-                            # Return first item (should be OrganizationIntelligence)
-                            return data[0] if isinstance(data, list) and data else data
-                    else:
-                        logger.warning(f"Spider completed but output file is empty")
-                        # Check Scrapy log for details
-                        log_file = result_file.with_suffix('.log')
-                        if log_file.exists():
-                            with open(log_file, 'r') as f:
-                                log_content = f.read()
-                                # Extract ERROR lines
-                                error_lines = [line for line in log_content.split('\n') if 'ERROR' in line]
-                                if error_lines:
-                                    logger.error(f"Scrapy errors found ({len(error_lines)} errors):")
-                                    for error_line in error_lines[:5]:  # Show first 5 errors
-                                        logger.error(f"  {error_line}")
-                                # Also show last 2000 chars for context
-                                logger.info(f"Scrapy log excerpt (last 2000 chars):\n{log_content[-2000:]}")
-                else:
-                    logger.error(f"Spider failed with return code {process.returncode}")
-                    if stderr:
-                        logger.error(f"Spider stderr: {stderr.decode()[:500]}")
-
-            except asyncio.TimeoutError:
-                logger.warning("Spider execution timed out after 60 seconds")
-                process.kill()
-                await process.wait()
-
-        except Exception as e:
-            logger.error(f"Error running spider in subprocess: {e}", exc_info=True)
-
-        finally:
-            # Cleanup temp files (but keep logs for debugging)
+        # Step 2: Haiku identifies grant-relevant links
+        relevant_links = []
+        if service.is_available:
+            nav_system = (
+                "You extract grant-relevant navigation links from nonprofit/foundation websites. "
+                "Return ONLY a JSON object: {\"links\": [{\"url\": \"...\", \"label\": \"...\", "
+                "\"relevance_reason\": \"...\"}]}. No markdown, no other text."
+            )
+            nav_user = (
+                f"Homepage URL: {url}\n\n"
+                f"Page text (first 6000 chars):\n{homepage_text[:6000]}\n\n"
+                "Extract up to 8 navigation links most likely to contain: grants, funding, apply, "
+                "programs, about us, board, leadership, contact, news, partners. "
+                "Include absolute URLs or relative paths as they appear in the text."
+            )
             try:
-                if result_file.exists():
-                    result_file.unlink()
-                # DON'T delete log files - keep them for debugging
-                # log_file = result_file.with_suffix('.log')
-                # if log_file.exists():
-                #     log_file.unlink()
-            except Exception:
-                pass
+                links_result = await service.create_json_completion(
+                    messages=[{"role": "user", "content": nav_user}],
+                    system=nav_system,
+                    stage=PipelineStage.FAST_SCREENING,
+                    max_tokens=800,
+                    temperature=0.0,
+                )
+                raw_links = links_result.get("links", [])
+                relevant_links = [lnk for lnk in raw_links if lnk.get("url")][:5]
+                logger.info(f"Haiku identified {len(relevant_links)} relevant links")
+            except Exception as e:
+                logger.warning(f"Link identification failed: {e}")
 
-        return None
+        # Step 3: Fetch targeted pages
+        page_texts = [("Homepage", homepage_text[:12000])]
+        pages_fetched = 1
+
+        async with httpx.AsyncClient(follow_redirects=True, timeout=10) as client:
+            for link in relevant_links:
+                raw_href = link.get("url", "").strip()
+                if not raw_href:
+                    continue
+
+                # Resolve relative URLs
+                if raw_href.startswith("//"):
+                    link_url = "https:" + raw_href
+                elif raw_href.startswith("/"):
+                    link_url = urljoin(url, raw_href)
+                elif raw_href.startswith("http"):
+                    link_url = raw_href
+                else:
+                    link_url = urljoin(url, raw_href)
+
+                # Stay on same domain
+                if not _is_same_domain(url, link_url):
+                    continue
+
+                try:
+                    await asyncio.sleep(1.5)  # Respectful crawl delay
+                    page_resp = await client.get(link_url, headers=headers)
+                    page_resp.raise_for_status()
+                    page_text = _strip_html(page_resp.text)[:10000]
+                    page_texts.append((link.get("label", "Page"), page_text))
+                    pages_fetched += 1
+                    logger.info(f"Fetched: {link_url} ({len(page_text)} chars)")
+                except Exception as e:
+                    logger.debug(f"Skipped {link_url}: {e}")
+
+        # Step 4: Haiku structures all content into GrantFunderIntelligence
+        combined_text = "\n\n--- PAGE BREAK ---\n\n".join(
+            [f"[{label}]\n{text}" for label, text in page_texts]
+        )
+
+        structure_system = (
+            "You are extracting grant-intelligence from nonprofit/foundation website pages. "
+            "Return ONLY a JSON object with exactly these fields — no markdown, no other text:\n"
+            "{\n"
+            '  "accepts_applications": "yes" or "no" or "invitation_only" or "unknown",\n'
+            '  "application_deadlines": "deadline info or null",\n'
+            '  "application_process": "how to apply or null",\n'
+            '  "required_documents": ["doc1", "doc2"],\n'
+            '  "funding_priorities": ["priority1", "priority2"],\n'
+            '  "geographic_limitations": "limitations or null",\n'
+            '  "grant_size_range": "range like \'$5,000-$50,000\' or null",\n'
+            '  "population_focus": "who they serve/fund or null",\n'
+            '  "mission_statement": "mission or null",\n'
+            '  "program_descriptions": ["program 1 description", "program 2"],\n'
+            '  "contact_information": "contact info or null",\n'
+            '  "board_members": ["Full Name", "Full Name"],\n'
+            '  "past_grantees": ["Org name", "Org name"],\n'
+            '  "confidence_score": 0.0\n'
+            "}\n"
+            "Only include what you actually see in the text. "
+            "Set confidence_score based on how much grant-relevant data you found (0.0-1.0)."
+        )
+        structure_user = (
+            f"Organization: {org_name} (EIN: {ein})\n"
+            f"Website: {url}\n\n"
+            f"Scraped pages:\n{combined_text[:18000]}\n\n"
+            "Extract grant-relevant intelligence."
+        )
+
+        if service.is_available:
+            try:
+                intel = await service.create_json_completion(
+                    messages=[{"role": "user", "content": structure_user}],
+                    system=structure_system,
+                    stage=PipelineStage.FAST_SCREENING,
+                    max_tokens=2048,
+                    temperature=0.0,
+                )
+
+                result = GrantFunderIntelligence(
+                    ein=ein,
+                    organization_name=org_name,
+                    source=IntelligenceSource.WEB,
+                    accepts_applications=intel.get("accepts_applications", "unknown"),
+                    application_deadlines=intel.get("application_deadlines"),
+                    application_process=intel.get("application_process"),
+                    required_documents=intel.get("required_documents") or [],
+                    funding_priorities=intel.get("funding_priorities") or [],
+                    geographic_limitations=intel.get("geographic_limitations"),
+                    grant_size_range=intel.get("grant_size_range"),
+                    population_focus=intel.get("population_focus"),
+                    mission_statement=intel.get("mission_statement"),
+                    program_descriptions=intel.get("program_descriptions") or [],
+                    contact_information=intel.get("contact_information"),
+                    board_members=intel.get("board_members") or [],
+                    past_grantees=intel.get("past_grantees") or [],
+                    confidence_score=float(intel.get("confidence_score", 0.7)),
+                    source_url=url,
+                )
+                logger.info(
+                    f"Intelligence structured | confidence={result.confidence_score:.0%} "
+                    f"| pages={pages_fetched}"
+                )
+                return result
+
+            except Exception as e:
+                logger.error(f"Intelligence structuring failed: {e}")
+
+        # Fallback: return minimal result with what we know from homepage text
+        return GrantFunderIntelligence(
+            ein=ein,
+            organization_name=org_name,
+            source=IntelligenceSource.WEB,
+            source_url=url,
+            confidence_score=0.3,
+            mission_statement=homepage_text[:300] if homepage_text else None,
+        )
 
 
 # ============================================================================
@@ -522,35 +468,22 @@ async def scrape_organization_profile(
         ein: str,
         organization_name: str,
         user_provided_url: Optional[str] = None,
+        timeout: Optional[int] = None,
+        # Legacy params ignored
         max_pages: Optional[int] = None,
         max_depth: Optional[int] = None,
-        timeout: Optional[int] = None
 ) -> WebIntelligenceResponse:
     """
-    Convenience function to scrape organization profile.
-
-    Args:
-        ein: Organization EIN
-        organization_name: Organization name
-        user_provided_url: Optional user URL
-        max_pages: Optional override for max pages to scrape (default: 5)
-        max_depth: Optional override for crawl depth (default: 1)
-        timeout: Optional override for timeout in seconds (default: 60)
-
-    Returns:
-        WebIntelligenceResponse with OrganizationIntelligence
+    Convenience function to gather organization intelligence via Haiku agent.
     """
     tool = WebIntelligenceTool()
-
     request = WebIntelligenceRequest(
         ein=ein,
         organization_name=organization_name,
         use_case=UseCase.PROFILE_BUILDER,
         user_provided_url=user_provided_url,
-        max_pages=max_pages,
-        max_depth=max_depth
+        timeout=timeout,
     )
-
     return await tool.execute(request)
 
 
@@ -562,7 +495,7 @@ async def main():
     """Command-line interface for testing."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Web Intelligence Tool - Test CLI")
+    parser = argparse.ArgumentParser(description="Web Intelligence Tool (Haiku Agent) - Test CLI")
     parser.add_argument('--ein', required=True, help='Organization EIN')
     parser.add_argument('--name', required=True, help='Organization name')
     parser.add_argument('--url', help='Organization website URL (optional)')
@@ -572,27 +505,22 @@ async def main():
 
     args = parser.parse_args()
 
-    # Create request
     request = WebIntelligenceRequest(
         ein=args.ein,
         organization_name=args.name,
         use_case=UseCase(args.use_case),
-        user_provided_url=args.url
+        user_provided_url=args.url,
     )
 
-    # Execute tool
     tool = WebIntelligenceTool()
     response = await tool.execute(request)
 
-    # Print results
     print(f"\n{'='*60}")
-    print(f"Web Intelligence Results")
+    print("Web Intelligence Results (Haiku Agent)")
     print(f"{'='*60}")
     print(f"Success: {response.success}")
     print(f"Execution Time: {response.execution_time_seconds:.2f}s")
-    print(f"Pages Scraped: {response.pages_scraped}")
     print(f"Data Quality: {response.data_quality_score:.2%}")
-    print(f"Verification Confidence: {response.verification_confidence:.2%}")
 
     if response.errors:
         print(f"\nErrors:")
@@ -600,10 +528,12 @@ async def main():
             print(f"  - {error}")
 
     if response.intelligence_data:
+        intel = response.intelligence_data
         print(f"\nIntelligence Data:")
-        print(f"  Mission: {response.intelligence_data.mission_statement[:100] if response.intelligence_data.mission_statement else 'N/A'}...")
-        print(f"  Programs: {len(response.intelligence_data.programs)}")
-        print(f"  Leadership: {len(response.intelligence_data.leadership)}")
+        print(f"  Mission: {intel.mission_statement[:100] if intel.mission_statement else 'N/A'}")
+        print(f"  Accepts Apps: {intel.accepts_applications}")
+        print(f"  Priorities: {intel.funding_priorities[:3]}")
+        print(f"  Board Members: {len(intel.board_members)}")
 
 
 if __name__ == '__main__':

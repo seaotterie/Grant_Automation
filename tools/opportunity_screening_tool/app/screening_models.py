@@ -58,6 +58,10 @@ class Opportunity:
     past_recipients: List[str] = field(default_factory=list)
     application_requirements: List[str] = field(default_factory=list)
 
+    # W/9 enrichment: GrantFunderIntelligence if website or 990 data was fetched
+    # Type is Any to avoid circular import; actual type is GrantFunderIntelligence
+    funder_intelligence: Any = None
+
 
 @dataclass
 class ScreeningInput:
