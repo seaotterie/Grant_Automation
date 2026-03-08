@@ -1,30 +1,30 @@
 """
 URL Discovery Service
 
-Bulk URL discovery for opportunities with $0.00 cost.
+Bulk URL discovery for opportunities using the Enhanced URL Discovery Pipeline.
 
-Pipeline:
-1. Check opportunities table cache (instant if already discovered)
-2. Fetch XML 990 filing from ProPublica
-3. Parse XML to extract <WebsiteAddressTxt>
-4. Mark as "not_found" if no URL in 990 filing
-5. Update opportunities table with results
+Pipeline Stages (cascading – stops when URL found):
+  0: User-provided URL (0.95 confidence)          - $0.00
+  1: 990 XML WebsiteAddressTxt (0.85)              - $0.00
+  2: Multi-year 990 + cross-form consolidation (0.82) - $0.00
+  3: ProPublica JSON API website field (0.80)      - $0.00
+  4: DuckDuckGo + Wikidata public APIs (0.70)      - $0.00
+  6: Haiku URL predictor + validation (0.65-0.85)  - ~$0.001/org
+  8: Org name → domain heuristic (0.50)            - $0.00
 
-Cost: $0.00 (no AI APIs, pure XML parsing)
-Performance: 2-4 seconds per organization (includes ProPublica fetch + XML parse)
+Estimated discovery rate: ~73% (up from ~35% with single-stage 990 XML)
+Cost: ~$0.38 per 1000 orgs (only orgs reaching stage 6 incur cost)
 """
 
 import logging
 import sqlite3
-import xml.etree.ElementTree as ET
 from typing import List, Dict, Optional, Callable, Any
 from datetime import datetime, timezone
 from dataclasses import dataclass
-from pathlib import Path
 
 from src.config.database_config import get_nonprofit_intelligence_db, get_catalynx_db
 from src.database.database_manager import DatabaseManager
-from src.utils.xml_fetcher import fetch_xml_for_ein
+from src.core.enhanced_url_discovery import EnhancedURLDiscoveryPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -39,33 +39,34 @@ class URLDiscoveryResult:
     cached: int = 0
     discovered: int = 0
     elapsed_seconds: float = 0.0
+    total_cost_usd: float = 0.0
     discoveries: List[Dict[str, Any]] = None
+    stage_breakdown: Dict[int, int] = None
 
     def __post_init__(self):
         if self.discoveries is None:
             self.discoveries = []
+        if self.stage_breakdown is None:
+            self.stage_breakdown = {}
 
 
 class URLDiscoveryService:
     """
     Service for discovering and caching organization website URLs.
 
-    Process:
-    1. Check opportunities table cache (instant if already discovered)
-    2. Fetch XML 990 filing from ProPublica (2-3 seconds)
-    3. Parse XML to extract <WebsiteAddressTxt>
-    4. Normalize and cache URL in opportunities table
-
-    Cost: $0.00 (no AI APIs, pure XML parsing)
+    Uses the Enhanced URL Discovery Pipeline with 6 cascading stages
+    for ~73% discovery rate at near-zero cost.
     """
 
     def __init__(self):
         self.intelligence_db_path = get_nonprofit_intelligence_db()
         self.catalynx_db_path = get_catalynx_db()
         self.database_manager = DatabaseManager(self.catalynx_db_path)
-        logger.info(f"URLDiscoveryService initialized")
-        logger.info(f"Intelligence DB: {self.intelligence_db_path}")
-        logger.info(f"Catalynx DB: {self.catalynx_db_path}")
+        self._pipeline = EnhancedURLDiscoveryPipeline(
+            validate_urls=True,
+            check_ein_on_page=True,
+        )
+        logger.info("URLDiscoveryService initialized (enhanced pipeline)")
 
     async def discover_urls_for_opportunities(
         self,
@@ -78,11 +79,13 @@ class URLDiscoveryService:
         """
         Discover URLs for opportunities belonging to a profile.
 
+        Uses the enhanced 6-stage cascading pipeline for each org.
+
         Args:
             profile_id: Profile ID to discover URLs for
-            opportunity_ids: Optional list of specific opportunity IDs (if None, discovers all)
+            opportunity_ids: Optional list of specific opportunity IDs
             force_refresh: If True, re-discover even if cached
-            exclude_low_priority: If True, skip low_priority category opportunities (default: True)
+            exclude_low_priority: If True, skip low_priority category opportunities
             progress_callback: Optional callback for progress updates
 
         Returns:
@@ -94,22 +97,24 @@ class URLDiscoveryService:
         result = URLDiscoveryResult()
 
         try:
-            # Step 1: Get opportunities for this profile
-            opportunities = self._get_opportunities_for_profile(profile_id, opportunity_ids, exclude_low_priority)
+            opportunities = self._get_opportunities_for_profile(
+                profile_id, opportunity_ids, exclude_low_priority
+            )
             result.total = len(opportunities)
 
-            logger.info(f"Starting URL discovery for profile {profile_id} (exclude_low_priority={exclude_low_priority})")
-            logger.info(f"Total opportunities: {result.total}")
+            logger.info(
+                f"Starting enhanced URL discovery for profile {profile_id} "
+                f"({result.total} opportunities, exclude_low_priority={exclude_low_priority})"
+            )
 
             if result.total == 0:
                 logger.warning(f"No opportunities found for profile {profile_id}")
                 return result
 
-            # Step 2: Process each opportunity
             for idx, opp in enumerate(opportunities):
                 opp_id = opp['id']
                 ein = opp.get('ein')
-                org_name = opp.get('organization_name')
+                org_name = opp.get('organization_name', 'Unknown')
                 cached_url = opp.get('website_url')
 
                 logger.debug(f"Processing {idx+1}/{result.total}: {org_name} (EIN: {ein})")
@@ -119,7 +124,6 @@ class URLDiscoveryService:
                     result.cached += 1
                     result.processed += 1
                     result.found += 1
-                    logger.debug(f"  ✓ URL cached: {cached_url}")
 
                     if progress_callback:
                         progress_callback({
@@ -128,59 +132,56 @@ class URLDiscoveryService:
                             'found': result.found,
                             'cached': result.cached,
                             'organization': org_name,
-                            'status': 'cached'
+                            'status': 'cached',
                         })
                     continue
 
-                # Discover URL from 990 filings
+                # Run enhanced pipeline
                 if ein:
-                    url, source = await self._discover_url_from_990(ein)
+                    pipeline_result = await self._pipeline.discover(
+                        ein=ein,
+                        organization_name=org_name,
+                    )
 
-                    if url:
+                    if pipeline_result.primary_url:
+                        url = pipeline_result.primary_url.url
+                        source = pipeline_result.primary_url.source
+                        confidence = pipeline_result.primary_url.final_confidence
+                        stage = pipeline_result.stage_resolved
+
                         result.discovered += 1
                         result.found += 1
-                        logger.info(f"  ✓ Discovered URL: {url} (source: {source})")
+                        result.total_cost_usd += pipeline_result.total_cost_usd
 
-                        # Update opportunities table
-                        self._update_opportunity_url(
-                            opp_id,
-                            url,
-                            source,
-                            'pending'  # Pending Tool 25 verification
+                        # Track stage breakdown
+                        result.stage_breakdown[stage] = result.stage_breakdown.get(stage, 0) + 1
+
+                        logger.info(
+                            f"  -> Discovered URL: {url} "
+                            f"(source={source}, stage={stage}, confidence={confidence:.2f})"
                         )
+
+                        verification = 'verified' if confidence >= 0.70 else 'pending'
+                        self._update_opportunity_url(opp_id, url, source, verification)
 
                         result.discoveries.append({
                             'opportunity_id': opp_id,
                             'organization_name': org_name,
                             'ein': ein,
                             'url': url,
-                            'source': source
+                            'source': source,
+                            'stage': stage,
+                            'confidence': round(confidence, 4),
                         })
                     else:
                         result.not_found += 1
-                        logger.debug(f"  ✗ No URL found for {org_name}")
-
-                        # Mark as not_found in database
-                        self._update_opportunity_url(
-                            opp_id,
-                            None,
-                            'not_found',
-                            'not_found'
-                        )
+                        self._update_opportunity_url(opp_id, None, 'not_found', 'not_found')
                 else:
                     result.not_found += 1
-                    logger.debug(f"  ✗ No EIN for {org_name}")
-
-                    self._update_opportunity_url(
-                        opp_id,
-                        None,
-                        'not_found',
-                        'not_found'
-                    )
+                    self._update_opportunity_url(opp_id, None, 'not_found', 'not_found')
 
                 result.processed += 1
 
-                # Progress callback
                 if progress_callback:
                     progress_callback({
                         'processed': result.processed,
@@ -190,12 +191,19 @@ class URLDiscoveryService:
                         'cached': result.cached,
                         'discovered': result.discovered,
                         'organization': org_name,
-                        'status': 'found' if url else 'not_found'
+                        'status': 'found' if result.found > (result.cached + result.discovered - 1) else 'not_found',
                     })
 
             result.elapsed_seconds = time.time() - start_time
 
-            logger.info(f"URL discovery complete: {result.found} found, {result.not_found} not found, {result.cached} cached in {result.elapsed_seconds:.1f}s")
+            logger.info(
+                f"URL discovery complete: {result.found} found, "
+                f"{result.not_found} not found, {result.cached} cached "
+                f"in {result.elapsed_seconds:.1f}s "
+                f"(cost: ${result.total_cost_usd:.4f})"
+            )
+            if result.stage_breakdown:
+                logger.info(f"Stage breakdown: {result.stage_breakdown}")
 
             return result
 
