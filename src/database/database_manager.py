@@ -148,6 +148,9 @@ class DatabaseManager:
                 # Initialize normalized schema for analytical operations
                 self._initialize_normalized_schema(conn)
 
+                # Initialize EIN intelligence cache table
+                self._initialize_ein_intelligence_table(conn)
+
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
             raise
@@ -175,6 +178,105 @@ class DatabaseManager:
 
         except Exception as e:
             logger.warning(f"Failed to initialize normalized schema: {e}")
+
+    def _initialize_ein_intelligence_table(self, conn: sqlite3.Connection):
+        """Create the ein_intelligence cache table if it does not exist."""
+        try:
+            conn.executescript("""
+                CREATE TABLE IF NOT EXISTS ein_intelligence (
+                    ein TEXT PRIMARY KEY,
+                    org_name TEXT,
+                    web_data TEXT,
+                    web_data_fetched_at TEXT,
+                    web_data_source TEXT,
+                    filing_history TEXT,
+                    filing_history_fetched_at TEXT,
+                    pdf_analyses TEXT,
+                    created_at TEXT DEFAULT (datetime('now')),
+                    updated_at TEXT DEFAULT (datetime('now'))
+                );
+            """)
+            conn.commit()
+        except Exception as e:
+            logger.warning(f"Failed to initialize ein_intelligence table: {e}")
+
+    def get_ein_intelligence(self, ein: str) -> Optional[Dict]:
+        """Return cached EIN intelligence record, or None if not found."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM ein_intelligence WHERE ein = ?", (ein,))
+                row = cursor.fetchone()
+                if not row:
+                    return None
+                record = dict(row)
+                # Deserialize JSON fields
+                for field in ("web_data", "filing_history", "pdf_analyses"):
+                    if record.get(field) and isinstance(record[field], str):
+                        try:
+                            record[field] = json.loads(record[field])
+                        except json.JSONDecodeError:
+                            pass
+                return record
+        except Exception as e:
+            logger.warning(f"Failed to get EIN intelligence for {ein}: {e}")
+            return None
+
+    def upsert_ein_intelligence(self, ein: str, org_name: Optional[str] = None, **fields) -> bool:
+        """
+        Upsert a subset of fields in ein_intelligence for the given EIN.
+
+        Supported keyword args: web_data, web_data_fetched_at, web_data_source,
+        filing_history, filing_history_fetched_at, pdf_analyses.
+        JSON-serializable values are serialized automatically.
+        """
+        allowed = {
+            "web_data", "web_data_fetched_at", "web_data_source",
+            "filing_history", "filing_history_fetched_at", "pdf_analyses",
+        }
+        updates = {k: v for k, v in fields.items() if k in allowed}
+        if not updates and org_name is None:
+            return False
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                now = datetime.now().isoformat()
+
+                # Serialize complex types
+                for k, v in updates.items():
+                    if isinstance(v, (dict, list)):
+                        updates[k] = json.dumps(v)
+
+                # Upsert: insert or update
+                cursor.execute(
+                    "SELECT ein FROM ein_intelligence WHERE ein = ?", (ein,)
+                )
+                exists = cursor.fetchone()
+
+                if exists:
+                    set_clause = ", ".join(f"{k} = ?" for k in updates)
+                    values = list(updates.values()) + [now]
+                    if org_name is not None:
+                        set_clause = f"org_name = ?, {set_clause}"
+                        values = [org_name] + values
+                    cursor.execute(
+                        f"UPDATE ein_intelligence SET {set_clause}, updated_at = ? WHERE ein = ?",
+                        values + [ein],
+                    )
+                else:
+                    all_fields = {"ein": ein, "org_name": org_name, **updates,
+                                  "created_at": now, "updated_at": now}
+                    cols = ", ".join(all_fields.keys())
+                    placeholders = ", ".join("?" for _ in all_fields)
+                    cursor.execute(
+                        f"INSERT INTO ein_intelligence ({cols}) VALUES ({placeholders})",
+                        list(all_fields.values()),
+                    )
+                conn.commit()
+                return True
+        except Exception as e:
+            logger.warning(f"Failed to upsert EIN intelligence for {ein}: {e}")
+            return False
 
     def _get_data_transformer(self):
         """Get or initialize data transformer"""

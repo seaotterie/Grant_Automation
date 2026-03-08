@@ -16773,7 +16773,7 @@ function catalynxApp() {
                             }
                         }
 
-                        alert('Web research completed successfully! Check the Website tab for new data.');
+                        alert('Web research completed successfully! Check the Organization Details tab for web intelligence data.');
                     } else {
                         const error = await response.json();
                         console.error('Web research failed:', error);
