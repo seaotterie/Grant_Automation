@@ -706,11 +706,18 @@ function screeningModule() {
         },
 
         /**
-         * Check if an opportunity has been fully processed through the AI pipeline.
-         * "Processed" means it has a Tool 1 AI screening score.
+         * Check if an opportunity has been processed for a specific pipeline step.
+         * Each step has its own independent completion indicator.
          */
-        _isProcessed(opp) {
-            return opp.tool1_score != null;
+        _isProcessedFor(opp, step) {
+            switch (step) {
+                case 'urls':    return !!(opp.filing_history_loaded);
+                case 'web':     return !!(opp.web_search_complete && opp.web_data);
+                case '990s':    return !!(opp.pdf_analyzed);
+                case 'fast':    return opp.tool1_score != null;
+                case 'thorough': return opp.tool1_score?.mode === 'thorough';
+                default:        return opp.tool1_score != null;
+            }
         },
 
         /**
@@ -734,14 +741,14 @@ function screeningModule() {
         },
 
         /**
-         * Get the next batch of unprocessed opportunities, sorted by score.
-         * Skips already-processed opportunities, takes the next N.
-         * Returns: { opportunities: [...], batchNumber: 1, totalUnprocessed: N }
+         * Get the next batch of unprocessed opportunities for a specific pipeline step.
+         * Each step has its own independent processed check so batches don't interfere.
+         * @param {string} step - 'urls' | 'web' | '990s' | 'fast' | 'thorough'
          */
-        getNextBatch() {
+        getNextBatchFor(step) {
             const batchSize = this.getEffectiveBatchSize();
             const sorted = this._getSortedByScore();
-            const unprocessed = sorted.filter(opp => !this._isProcessed(opp));
+            const unprocessed = sorted.filter(opp => !this._isProcessedFor(opp, step));
 
             const batch = unprocessed.slice(0, batchSize);
             const processedCount = sorted.length - unprocessed.length;
@@ -761,18 +768,24 @@ function screeningModule() {
             };
         },
 
+        /** Backward-compat alias — defaults to 'fast' step. */
+        getNextBatch() {
+            return this.getNextBatchFor('fast');
+        },
+
         /**
-         * Get IDs for the current AI pipeline batch.
-         * When plan filter is enabled, returns only the next batch.
-         * When disabled, returns all (existing behavior).
+         * Get IDs for a specific pipeline step's batch.
+         * When plan filter is enabled, returns only the top-N unprocessed for that step.
+         * When disabled, returns all IDs.
+         * @param {string} step - 'urls' | 'web' | '990s' | 'fast' | 'thorough'
          */
-        getAIPipelineTargetIds() {
+        getAIPipelineTargetIds(step = 'fast') {
             if (!this.planFilterEnabled) {
                 return this.discoveryResults
                     .map(opp => opp.opportunity_id)
                     .filter(Boolean);
             }
-            return this.getNextBatch().ids;
+            return this.getNextBatchFor(step).ids;
         },
 
         /**
@@ -795,12 +808,20 @@ function screeningModule() {
         // =================================================================
 
         /**
-         * Return the IDs of all opportunities that have no Tool 1 score yet.
-         * When plan filter is enabled, only returns IDs from the current batch.
+         * Count unscreened opportunities (for button display when filter is off).
+         */
+        _getUnscreenedCount() {
+            return this.discoveryResults.filter(opp => !opp.tool1_score).length;
+        },
+
+        /**
+         * Return the IDs of opportunities to screen in the next batch.
+         * Uses per-step independent batch logic so fast/thorough batches don't share a counter.
          */
         _getUnscreenedIds() {
+            const step = this.batchScreenMode === 'thorough' ? 'thorough' : 'fast';
             if (this.planFilterEnabled) {
-                return this.getNextBatch().ids;
+                return this.getNextBatchFor(step).ids;
             }
             return this.discoveryResults
                 .filter(opp => !opp.tool1_score)
@@ -846,7 +867,7 @@ function screeningModule() {
             const costPerOpp = this.batchScreenMode === 'fast' ? 0.001 : 0.01;
             const estimatedCost = (ids.length * costPerOpp).toFixed(2);
             const batchLabel = this.planFilterEnabled
-                ? ` (Batch ${this.getNextBatch().batchNumber}, top ${this.getEffectiveBatchSize()} by score)`
+                ? ` (Top ${this.getEffectiveBatchSize()} unscreened by score)`
                 : '';
 
             if (!confirm(`Screen ${ids.length} opportunities${batchLabel} in ${this.batchScreenMode} mode?\n\nEstimated cost: $${estimatedCost}\n\nProceed?`)) {
@@ -1800,14 +1821,14 @@ function screeningModule() {
                 return;
             }
 
-            const ids = this.getAIPipelineTargetIds();
+            const ids = this.getAIPipelineTargetIds('990s');
 
             if (ids.length === 0) {
                 this.showNotification?.('No opportunities to analyze', 'warning');
                 return;
             }
 
-            const batchLabel = this.planFilterEnabled ? ` (Batch ${this.getNextBatch().batchNumber})` : '';
+            const batchLabel = this.planFilterEnabled ? ` (Top ${this.getEffectiveBatchSize()} unanalyzed)` : '';
             const estimatedCost = (ids.length * 0.02).toFixed(2);
             if (!confirm(`Analyze 990 PDFs for ${ids.length} opportunities${batchLabel}?\n\nEstimated cost: ~$${estimatedCost} (Claude Haiku, cached per EIN)\nRequires filing history — run Search Website (①) first if not done.\n\nProceed?`)) {
                 return;
