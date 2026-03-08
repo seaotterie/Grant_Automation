@@ -570,12 +570,106 @@
                         </div>
                     </div>
 
+                    <!-- Plan Screening Filter — Top-N Batch Selector -->
+                    <div x-show="selectedProfile && summaryCounts.total_found > 0"
+                         x-cloak
+                         class="bg-white dark:bg-gray-800 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                        <div class="flex items-center justify-between px-4 py-2.5 border-b border-indigo-100 dark:border-indigo-800">
+                            <div class="flex items-center gap-2">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" x-model="planFilterEnabled" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:after:border-gray-600 peer-checked:bg-indigo-600"></div>
+                                </label>
+                                <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Plan Screening Filter</span>
+                            </div>
+                            <div x-show="planFilterEnabled" class="flex items-center gap-2">
+                                <span class="text-xs text-gray-500 dark:text-gray-400"
+                                      x-text="'Batch ' + getNextBatch().batchNumber + ' of ' + Math.ceil(getNextBatch().totalEligible / getEffectiveBatchSize())"></span>
+                                <span class="px-2 py-0.5 text-xs font-bold rounded-full"
+                                      :class="getNextBatch().totalUnprocessed > 0
+                                          ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                                          : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'"
+                                      x-text="getNextBatch().totalUnprocessed > 0
+                                          ? getNextBatch().opportunities.length + ' of ' + getNextBatch().totalEligible + ' selected'
+                                          : 'All processed'"></span>
+                            </div>
+                        </div>
+
+                        <div x-show="planFilterEnabled" x-collapse class="p-4">
+                            <div class="flex flex-wrap items-center gap-3">
+                                <!-- Batch Size Presets -->
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Top:</span>
+                                    <template x-for="size in planFilterBatchSizes" :key="size">
+                                        <button @click="setPlanFilterBatchSize(size)"
+                                                class="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors"
+                                                :class="planFilterBatchSize === size && !planFilterCustomSize
+                                                    ? 'bg-indigo-600 text-white border-indigo-600'
+                                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-indigo-400'"
+                                                x-text="size">
+                                        </button>
+                                    </template>
+                                    <!-- Custom input -->
+                                    <input type="number"
+                                           x-model.number="planFilterCustomSize"
+                                           placeholder="#"
+                                           min="1"
+                                           :max="summaryCounts.total_found"
+                                           class="w-14 px-2 py-1 text-xs font-medium rounded-md border transition-colors text-center bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
+                                           :class="planFilterCustomSize ? 'border-indigo-500 ring-1 ring-indigo-300' : ''">
+                                </div>
+
+                                <!-- Divider -->
+                                <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+
+                                <!-- Batch Info -->
+                                <div class="flex flex-col gap-0.5 text-xs">
+                                    <div class="text-gray-600 dark:text-gray-400">
+                                        <span class="font-semibold text-indigo-600 dark:text-indigo-400" x-text="getNextBatch().totalProcessed"></span> processed,
+                                        <span class="font-semibold text-amber-600 dark:text-amber-400" x-text="getNextBatch().totalUnprocessed"></span> remaining
+                                    </div>
+                                    <div x-show="getNextBatch().opportunities.length > 0" class="text-gray-500 dark:text-gray-500">
+                                        Score range: <span x-text="(getNextBatch().scoreRange.high * 100).toFixed(0)"></span>%
+                                        - <span x-text="(getNextBatch().scoreRange.low * 100).toFixed(0)"></span>%
+                                    </div>
+                                </div>
+
+                                <!-- Divider -->
+                                <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
+
+                                <!-- Est. Cost -->
+                                <div class="flex flex-col gap-0.5 text-xs">
+                                    <span class="text-gray-500 dark:text-gray-500">Est. batch cost</span>
+                                    <span class="font-semibold text-gray-700 dark:text-gray-300"
+                                          x-text="'$' + getPlanFilterEstimatedCost().total.toFixed(2)">
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- All-done message -->
+                            <div x-show="getNextBatch().totalUnprocessed === 0 && getNextBatch().totalProcessed > 0"
+                                 class="mt-3 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md text-xs text-green-700 dark:text-green-300">
+                                All <span x-text="getNextBatch().totalProcessed"></span> eligible opportunities have been screened. Run discovery again or adjust filters to find more.
+                            </div>
+                        </div>
+
+                        <!-- Collapsed summary when filter is off -->
+                        <div x-show="!planFilterEnabled" class="px-4 py-2 text-xs text-gray-400 dark:text-gray-500">
+                            AI pipeline will process all <span x-text="summaryCounts.total_found"></span> opportunities (no batch limit)
+                        </div>
+                    </div>
+
                     <!-- AI Enrichment Pipeline Card -->
                     <div x-show="selectedProfile && summaryCounts.total_found > 0"
                          x-cloak
                          class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                         <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 dark:border-gray-700">
-                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">AI Enrichment Pipeline</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">AI Enrichment Pipeline</span>
+                                <span x-show="planFilterEnabled"
+                                      class="px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-full"
+                                      x-text="'Top ' + getEffectiveBatchSize()"></span>
+                            </div>
                             <span class="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-full">✦ AI</span>
                         </div>
                         <div class="p-3 grid grid-cols-2 gap-3 sm:grid-cols-4">

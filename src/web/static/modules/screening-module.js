@@ -132,6 +132,13 @@ function screeningModule() {
         // Session Cost Tracking
         sessionApiCost: 0,
 
+        // Plan Screening Filter — batch size limiter
+        // Selects top N unprocessed opportunities by score for AI pipeline
+        planFilterEnabled: true,
+        planFilterBatchSize: 10,        // 10, 25, 50, 100, or custom
+        planFilterBatchSizes: [10, 25, 50, 100],
+        planFilterCustomSize: null,
+
         // Batch Screen State
         batchScreenJobId: null,
         batchScreenStatus: null,   // null | 'running' | 'complete' | 'failed'
@@ -680,13 +687,121 @@ function screeningModule() {
         },
 
         // =================================================================
+        // PLAN SCREENING FILTER — Top-N Batch Selection
+        // =================================================================
+
+        /**
+         * Get the effective batch size (custom or preset).
+         */
+        getEffectiveBatchSize() {
+            return this.planFilterCustomSize || this.planFilterBatchSize;
+        },
+
+        /**
+         * Set batch size from preset buttons.
+         */
+        setPlanFilterBatchSize(size) {
+            this.planFilterBatchSize = size;
+            this.planFilterCustomSize = null;
+        },
+
+        /**
+         * Check if an opportunity has been fully processed through the AI pipeline.
+         * "Processed" means it has a Tool 1 AI screening score.
+         */
+        _isProcessed(opp) {
+            return opp.tool1_score != null;
+        },
+
+        /**
+         * Get opportunities sorted by score descending.
+         * Excludes low_priority if showLowPriority is false.
+         */
+        _getSortedByScore() {
+            let opps = [...this.discoveryResults];
+
+            // Respect the existing low-priority filter
+            if (!this.showLowPriority) {
+                opps = opps.filter(opp => {
+                    const score = opp.overall_score || 0;
+                    return score >= 0.50;
+                });
+            }
+
+            // Sort by overall_score descending
+            opps.sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0));
+            return opps;
+        },
+
+        /**
+         * Get the next batch of unprocessed opportunities, sorted by score.
+         * Skips already-processed opportunities, takes the next N.
+         * Returns: { opportunities: [...], batchNumber: 1, totalUnprocessed: N }
+         */
+        getNextBatch() {
+            const batchSize = this.getEffectiveBatchSize();
+            const sorted = this._getSortedByScore();
+            const unprocessed = sorted.filter(opp => !this._isProcessed(opp));
+
+            const batch = unprocessed.slice(0, batchSize);
+            const processedCount = sorted.length - unprocessed.length;
+            const batchNumber = Math.floor(processedCount / batchSize) + 1;
+
+            return {
+                opportunities: batch,
+                ids: batch.map(opp => opp.opportunity_id).filter(Boolean),
+                batchNumber: batchNumber,
+                batchSize: batchSize,
+                totalUnprocessed: unprocessed.length,
+                totalProcessed: processedCount,
+                totalEligible: sorted.length,
+                scoreRange: batch.length > 0
+                    ? { high: batch[0].overall_score || 0, low: batch[batch.length - 1].overall_score || 0 }
+                    : { high: 0, low: 0 }
+            };
+        },
+
+        /**
+         * Get IDs for the current AI pipeline batch.
+         * When plan filter is enabled, returns only the next batch.
+         * When disabled, returns all (existing behavior).
+         */
+        getAIPipelineTargetIds() {
+            if (!this.planFilterEnabled) {
+                return this.discoveryResults
+                    .map(opp => opp.opportunity_id)
+                    .filter(Boolean);
+            }
+            return this.getNextBatch().ids;
+        },
+
+        /**
+         * Get estimated cost for the current batch across pipeline steps.
+         */
+        getPlanFilterEstimatedCost() {
+            const batch = this.getNextBatch();
+            const count = batch.opportunities.length;
+            const screenCost = this.batchScreenMode === 'fast' ? 0.001 : 0.01;
+            return {
+                urlSearch: 0,                           // Free
+                pdfAnalysis: count * 0.02,             // ~$0.02 per PDF
+                aiScreen: count * screenCost,           // $0.001 or $0.01 per opp
+                total: (count * 0.02) + (count * screenCost)
+            };
+        },
+
+        // =================================================================
         // BATCH SCREENING (Screen All Unscreened)
         // =================================================================
 
         /**
          * Return the IDs of all opportunities that have no Tool 1 score yet.
+         * When plan filter is enabled, only returns IDs from the current batch.
          */
         _getUnscreenedIds() {
+            if (this.planFilterEnabled) {
+                return this.getNextBatch().ids;
+            }
             return this.discoveryResults
                 .filter(opp => !opp.tool1_score)
                 .map(opp => opp.opportunity_id)
@@ -721,14 +836,20 @@ function screeningModule() {
         async screenAllUnscreened() {
             const ids = this._getUnscreenedIds();
             if (ids.length === 0) {
-                this.showNotification?.('All opportunities already have Tool 1 scores', 'info');
+                const msg = this.planFilterEnabled
+                    ? `All opportunities in batch ${this.getNextBatch().batchNumber} already have Tool 1 scores`
+                    : 'All opportunities already have Tool 1 scores';
+                this.showNotification?.(msg, 'info');
                 return;
             }
 
             const costPerOpp = this.batchScreenMode === 'fast' ? 0.001 : 0.01;
             const estimatedCost = (ids.length * costPerOpp).toFixed(2);
+            const batchLabel = this.planFilterEnabled
+                ? ` (Batch ${this.getNextBatch().batchNumber}, top ${this.getEffectiveBatchSize()} by score)`
+                : '';
 
-            if (!confirm(`Screen ${ids.length} unscreened opportunities in ${this.batchScreenMode} mode?\n\nEstimated cost: $${estimatedCost}\n\nProceed?`)) {
+            if (!confirm(`Screen ${ids.length} opportunities${batchLabel} in ${this.batchScreenMode} mode?\n\nEstimated cost: $${estimatedCost}\n\nProceed?`)) {
                 return;
             }
 
@@ -1679,17 +1800,16 @@ function screeningModule() {
                 return;
             }
 
-            const ids = this.discoveryResults
-                .map(opp => opp.opportunity_id)
-                .filter(Boolean);
+            const ids = this.getAIPipelineTargetIds();
 
             if (ids.length === 0) {
                 this.showNotification?.('No opportunities to analyze', 'warning');
                 return;
             }
 
+            const batchLabel = this.planFilterEnabled ? ` (Batch ${this.getNextBatch().batchNumber})` : '';
             const estimatedCost = (ids.length * 0.02).toFixed(2);
-            if (!confirm(`Analyze 990 PDFs for ${ids.length} opportunities?\n\nEstimated cost: ~$${estimatedCost} (Claude Haiku, cached per EIN)\nRequires filing history — run Search Website (①) first if not done.\n\nProceed?`)) {
+            if (!confirm(`Analyze 990 PDFs for ${ids.length} opportunities${batchLabel}?\n\nEstimated cost: ~$${estimatedCost} (Claude Haiku, cached per EIN)\nRequires filing history — run Search Website (①) first if not done.\n\nProceed?`)) {
                 return;
             }
 
