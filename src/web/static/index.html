@@ -597,21 +597,21 @@
                                         <span x-show="!discoveryMetadata.last_discovery_date" class="opacity-40">not run</span>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        URLs <span x-text="getNextBatchFor('urls').totalProcessed"></span>/<span x-text="getNextBatchFor('urls').totalProcessed + getNextBatchFor('urls').totalUnprocessed"></span>
+                                        URLs <span x-text="_getFoundCountFor('urls')"></span>/<span x-text="getNextBatchFor('urls').totalEligible"></span>
                                     </div>
                                     <div class="w-2 flex-shrink-0"></div><!-- spacer matching separator -->
                                     <div class="flex-1 min-w-0">
-                                        web <span x-text="getNextBatchFor('web').totalProcessed"></span>/<span x-text="getNextBatchFor('web').totalProcessed + getNextBatchFor('web').totalUnprocessed"></span>
+                                        web <span x-text="_getFoundCountFor('web')"></span>/<span x-text="getNextBatchFor('web').totalEligible"></span>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        990s <span x-text="getNextBatchFor('990s').totalProcessed"></span>/<span x-text="getNextBatchFor('990s').totalProcessed + getNextBatchFor('990s').totalUnprocessed"></span>
+                                        990s <span x-text="_getFoundCountFor('990s')"></span>/<span x-text="getNextBatchFor('990s').totalEligible"></span>
                                     </div>
                                     <div class="w-2 flex-shrink-0"></div><!-- spacer matching separator -->
                                     <div class="flex-1 min-w-0">
-                                        screen <span x-text="getNextBatchFor('fast').totalProcessed"></span>/<span x-text="getNextBatchFor('fast').totalProcessed + getNextBatchFor('fast').totalUnprocessed"></span>
+                                        fast <span x-text="_getFoundCountFor('fast')"></span>/<span x-text="getNextBatchFor('fast').totalEligible"></span>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        screen <span x-text="getNextBatchFor('thorough').totalProcessed"></span>/<span x-text="getNextBatchFor('thorough').totalProcessed + getNextBatchFor('thorough').totalUnprocessed"></span>
+                                        thorough <span x-text="_getFoundCountFor('thorough')"></span>/<span x-text="getNextBatchFor('thorough').totalEligible"></span>
                                     </div>
                                 </div>
 
