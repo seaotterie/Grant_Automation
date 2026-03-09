@@ -752,22 +752,26 @@ function screeningModule() {
         },
 
         /**
-         * Get opportunities sorted by score descending.
+         * Get opportunities sorted by category tier first, then score descending within tier.
+         * Order: qualified → review → consider → (low_priority only if showLowPriority)
+         * Ensures a demoted-but-high-scoring Review opp never jumps ahead of Qualified opps.
          * Excludes low_priority if showLowPriority is false.
          */
         _getSortedByScore() {
+            const CATEGORY_RANK = { qualified: 0, review: 1, consider: 2, low_priority: 3 };
+
             let opps = [...this.discoveryResults];
 
-            // Respect the existing low-priority filter
             if (!this.showLowPriority) {
-                opps = opps.filter(opp => {
-                    const score = opp.overall_score || 0;
-                    return score >= 0.50;
-                });
+                opps = opps.filter(opp => opp.category_level !== 'low_priority');
             }
 
-            // Sort by overall_score descending
-            opps.sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0));
+            opps.sort((a, b) => {
+                const rankA = CATEGORY_RANK[a.category_level] ?? 2;
+                const rankB = CATEGORY_RANK[b.category_level] ?? 2;
+                if (rankA !== rankB) return rankA - rankB;
+                return (b.overall_score || 0) - (a.overall_score || 0);
+            });
             return opps;
         },
 
