@@ -944,14 +944,14 @@
                                                     </div>
                                                     <!-- [F] Fast screened — top right -->
                                                     <div class="flex items-center gap-1"
-                                                         :title="opp.tool1_score?.mode==='fast' ? 'Fast screened: '+Math.round((opp.tool1_score.overall_score||0)*100)+'%' : 'Not fast screened'">
+                                                         :title="opp.tool1_score_fast ? 'Fast screened: '+Math.round((opp.tool1_score_fast.overall_score||0)*100)+'%' : 'Not fast screened'">
                                                         <span class="w-4 h-4 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
-                                                              :class="opp.tool1_score?.mode==='fast'
+                                                              :class="opp.tool1_score_fast
                                                                 ? 'bg-indigo-600 text-white'
                                                                 : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'">F</span>
-                                                        <span x-show="opp.tool1_score?.mode === 'fast'"
+                                                        <span x-show="opp.tool1_score_fast"
                                                               class="text-xs text-indigo-600 dark:text-indigo-400"
-                                                              x-text="Math.round((opp.tool1_score?.overall_score||0)*100)+'%'"></span>
+                                                              x-text="Math.round((opp.tool1_score_fast?.overall_score||0)*100)+'%'"></span>
                                                     </div>
                                                     <!-- [9] 990 PDF analyzed — bottom left -->
                                                     <div class="flex items-center gap-1"
@@ -963,14 +963,14 @@
                                                     </div>
                                                     <!-- [T] Thorough screened — bottom right -->
                                                     <div class="flex items-center gap-1"
-                                                         :title="opp.tool1_score?.mode==='thorough' ? 'Thorough screened: '+Math.round((opp.tool1_score.overall_score||0)*100)+'%' : 'Not thorough screened'">
+                                                         :title="opp.tool1_score_thorough ? 'Thorough screened: '+Math.round((opp.tool1_score_thorough.overall_score||0)*100)+'%' : 'Not thorough screened'">
                                                         <span class="w-4 h-4 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
-                                                              :class="opp.tool1_score?.mode==='thorough'
+                                                              :class="opp.tool1_score_thorough
                                                                 ? 'bg-purple-600 text-white'
                                                                 : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'">T</span>
-                                                        <span x-show="opp.tool1_score?.mode === 'thorough'"
+                                                        <span x-show="opp.tool1_score_thorough"
                                                               class="text-xs text-purple-600 dark:text-purple-400"
-                                                              x-text="Math.round((opp.tool1_score?.overall_score||0)*100)+'%'"></span>
+                                                              x-text="Math.round((opp.tool1_score_thorough?.overall_score||0)*100)+'%'"></span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -1279,10 +1279,285 @@
                                                x-text="'Screened: ' + (selectedOpportunity.tool1_score.scored_at ? new Date(selectedOpportunity.tool1_score.scored_at).toLocaleDateString() : 'N/A') + ' · ' + (selectedOpportunity.tool1_score.mode || 'fast') + ' mode'"></p>
                                         </div>
                                     </template>
-                                    <template x-if="!selectedOpportunity?.tool1_score">
-                                        <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-gray-200 dark:border-gray-700 rounded-lg p-4 text-center">
-                                            <p class="text-sm text-gray-500 dark:text-gray-400">No AI screening score yet.</p>
-                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Use "Screen All" in the toolbar to run Tool 1 AI scoring on all opportunities.</p>
+                                    <!-- Card A: Search Website Intelligence (green) -->
+                                    <template x-if="selectedOpportunity?.web_data">
+                                        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h4 class="font-semibold text-green-900 dark:text-green-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                                                    </svg>
+                                                    Search Website Intelligence
+                                                </h4>
+                                                <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                                      :class="(selectedOpportunity.web_data?.data_quality_score||0) >= 0.70 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : (selectedOpportunity.web_data?.data_quality_score||0) >= 0.40 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'"
+                                                      x-text="'Quality: ' + Math.round((selectedOpportunity.web_data?.data_quality_score||0)*100) + '%'"></span>
+                                            </div>
+                                            <!-- accepts_applications pill -->
+                                            <div class="mb-2">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                                                      :class="['yes', true].includes(selectedOpportunity.web_data?.accepts_applications) ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' : ['no', false].includes(selectedOpportunity.web_data?.accepts_applications) ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'"
+                                                      x-text="['yes', true].includes(selectedOpportunity.web_data?.accepts_applications) ? 'Accepts Applications' : ['no', false].includes(selectedOpportunity.web_data?.accepts_applications) ? 'Does Not Accept Applications' : 'Application Status Unknown'"></span>
+                                            </div>
+                                            <!-- grant_size_range -->
+                                            <template x-if="selectedOpportunity.web_data?.grant_size_range">
+                                                <p class="text-xs text-green-700 dark:text-green-400 mb-2">
+                                                    Grant Range: <span class="font-medium" x-text="selectedOpportunity.web_data.grant_size_range"></span>
+                                                </p>
+                                            </template>
+                                            <!-- funding_priorities -->
+                                            <template x-if="selectedOpportunity.web_data?.funding_priorities?.length > 0">
+                                                <div class="mb-2">
+                                                    <div class="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Funding Priorities</div>
+                                                    <ul class="space-y-0.5">
+                                                        <template x-for="p in selectedOpportunity.web_data.funding_priorities.slice(0,4)" :key="p">
+                                                            <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                                <span class="text-green-500 flex-shrink-0">•</span><span x-text="p"></span>
+                                                            </li>
+                                                        </template>
+                                                    </ul>
+                                                </div>
+                                            </template>
+                                            <!-- geographic_limitations -->
+                                            <template x-if="selectedOpportunity.web_data?.geographic_limitations">
+                                                <p class="text-xs text-gray-600 dark:text-gray-400">
+                                                    Geography: <span class="font-medium" x-text="selectedOpportunity.web_data.geographic_limitations"></span>
+                                                </p>
+                                            </template>
+                                            <!-- footer -->
+                                            <div class="flex items-center gap-3 mt-2 pt-2 border-t border-green-200 dark:border-green-800">
+                                                <template x-if="selectedOpportunity.web_data?.execution_time">
+                                                    <span class="text-xs text-green-500 dark:text-green-400" x-text="'Fetched in ' + selectedOpportunity.web_data.execution_time + 's'"></span>
+                                                </template>
+                                                <template x-if="selectedOpportunity.web_data?.ai_interpreted">
+                                                    <span class="text-xs text-green-600 dark:text-green-400 font-medium">AI interpreted</span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedOpportunity?.web_data">
+                                        <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">No website intelligence yet.</p>
+                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Run Search Website to gather funder intelligence from their website.</p>
+                                        </div>
+                                    </template>
+
+                                    <!-- Card B: 990 PDF Analysis (amber) -->
+                                    <template x-if="selectedOpportunity?.pdf_analyzed">
+                                        <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h4 class="font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                    </svg>
+                                                    990 PDF Analysis
+                                                </h4>
+                                                <!-- Loading spinner while fetching -->
+                                                <template x-if="ninetiesExtractionLoading">
+                                                    <svg class="animate-spin h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24">
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                </template>
+                                                <template x-if="!ninetiesExtractionLoading && ninetiesExtractionData">
+                                                    <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                                          :class="(ninetiesExtractionData?.extraction_confidence||0) >= 0.70 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'"
+                                                          x-text="'Confidence: ' + Math.round((ninetiesExtractionData?.extraction_confidence||0)*100) + '%'"></span>
+                                                </template>
+                                            </div>
+                                            <template x-if="!ninetiesExtractionLoading && ninetiesExtractionData && (ninetiesExtractionData.extraction_confidence || 0) === 0 && !ninetiesExtractionData.stated_priorities?.length">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 italic">990 PDF was processed but contained no extractable grant intelligence (e.g. narrative-free filing).</p>
+                                            </template>
+                                            <template x-if="!ninetiesExtractionLoading && ninetiesExtractionData && ((ninetiesExtractionData.extraction_confidence || 0) > 0 || ninetiesExtractionData.stated_priorities?.length)">
+                                                <div>
+                                                    <!-- accepts_applications pill -->
+                                                    <div class="mb-2">
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                                                              :class="['yes', true].includes(ninetiesExtractionData?.accepts_applications) ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' : ['no', false].includes(ninetiesExtractionData?.accepts_applications) ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'"
+                                                              x-text="['yes', true].includes(ninetiesExtractionData?.accepts_applications) ? 'Accepts Applications' : ['no', false].includes(ninetiesExtractionData?.accepts_applications) ? 'Does Not Accept Applications' : 'Application Status Unknown'"></span>
+                                                    </div>
+                                                    <!-- stated_priorities -->
+                                                    <template x-if="ninetiesExtractionData?.stated_priorities?.length > 0">
+                                                        <div class="mb-2">
+                                                            <div class="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">Stated Priorities</div>
+                                                            <ul class="space-y-0.5">
+                                                                <template x-for="p in ninetiesExtractionData.stated_priorities.slice(0,4)" :key="p">
+                                                                    <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                                        <span class="text-amber-500 flex-shrink-0">•</span><span x-text="p"></span>
+                                                                    </li>
+                                                                </template>
+                                                            </ul>
+                                                        </div>
+                                                    </template>
+                                                    <!-- population_focus -->
+                                                    <template x-if="ninetiesExtractionData?.population_focus">
+                                                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                                            Population: <span class="font-medium" x-text="ninetiesExtractionData.population_focus"></span>
+                                                        </p>
+                                                    </template>
+                                                    <!-- geographic_limitations -->
+                                                    <template x-if="ninetiesExtractionData?.geographic_limitations">
+                                                        <p class="text-xs text-gray-600 dark:text-gray-400">
+                                                            Geography: <span class="font-medium" x-text="ninetiesExtractionData.geographic_limitations"></span>
+                                                        </p>
+                                                    </template>
+                                                    <!-- footer -->
+                                                    <p class="text-xs text-amber-500 dark:text-amber-400 mt-2 pt-2 border-t border-amber-200 dark:border-amber-800"
+                                                       x-text="'Extracted from ' + (ninetiesExtractionData?.tax_year || 'recent') + ' 990 PDF'"></p>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedOpportunity?.pdf_analyzed">
+                                        <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-amber-200 dark:border-amber-800 rounded-lg p-4 text-center">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">No 990 PDF analysis yet.</p>
+                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Run Search 990s to extract grant intelligence from IRS filings.</p>
+                                        </div>
+                                    </template>
+
+                                    <!-- Card C: Screen Fast (indigo) -->
+                                    <template x-if="selectedOpportunity?.tool1_score_fast">
+                                        <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h4 class="font-semibold text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                                    </svg>
+                                                    Screen Fast
+                                                </h4>
+                                                <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                                      :class="selectedOpportunity.tool1_score_fast.confidence_level === 'high' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'"
+                                                      x-text="(selectedOpportunity.tool1_score_fast.confidence_level || '') + ' · ' + Math.round((selectedOpportunity.tool1_score_fast.overall_score||0)*100) + '%'"></span>
+                                            </div>
+                                            <!-- One-sentence summary -->
+                                            <p class="text-sm text-indigo-800 dark:text-indigo-200 italic mb-3"
+                                               x-text="selectedOpportunity.tool1_score_fast.one_sentence_summary"></p>
+                                            <!-- Sub-scores -->
+                                            <div class="grid grid-cols-3 gap-3 mb-3">
+                                                <div class="text-center">
+                                                    <div class="text-xs text-indigo-600 dark:text-indigo-400">Strategic Fit</div>
+                                                    <div class="text-sm font-semibold text-indigo-900 dark:text-indigo-100"
+                                                         x-text="Math.round((selectedOpportunity.tool1_score_fast.strategic_fit_score||0)*100) + '%'"></div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-xs text-indigo-600 dark:text-indigo-400">Eligibility</div>
+                                                    <div class="text-sm font-semibold text-indigo-900 dark:text-indigo-100"
+                                                         x-text="Math.round((selectedOpportunity.tool1_score_fast.eligibility_score||0)*100) + '%'"></div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-xs text-indigo-600 dark:text-indigo-400">Timing</div>
+                                                    <div class="text-sm font-semibold text-indigo-900 dark:text-indigo-100"
+                                                         x-text="Math.round((selectedOpportunity.tool1_score_fast.timing_score||0)*100) + '%'"></div>
+                                                </div>
+                                            </div>
+                                            <!-- Strengths & Concerns -->
+                                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                                <template x-if="selectedOpportunity.tool1_score_fast.key_strengths?.length > 0">
+                                                    <div>
+                                                        <div class="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Strengths</div>
+                                                        <ul class="space-y-0.5">
+                                                            <template x-for="s in selectedOpportunity.tool1_score_fast.key_strengths.slice(0,3)" :key="s">
+                                                                <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                                    <span class="text-green-500 flex-shrink-0">+</span><span x-text="s"></span>
+                                                                </li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
+                                                </template>
+                                                <template x-if="selectedOpportunity.tool1_score_fast.key_concerns?.length > 0">
+                                                    <div>
+                                                        <div class="text-xs font-medium text-red-600 dark:text-red-400 mb-1">Concerns</div>
+                                                        <ul class="space-y-0.5">
+                                                            <template x-for="c in selectedOpportunity.tool1_score_fast.key_concerns.slice(0,3)" :key="c">
+                                                                <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                                    <span class="text-red-500 flex-shrink-0">−</span><span x-text="c"></span>
+                                                                </li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <p class="text-xs text-indigo-500 dark:text-indigo-400 mt-2 pt-2 border-t border-indigo-200 dark:border-indigo-800"
+                                               x-text="'Scored: ' + (selectedOpportunity.tool1_score_fast.scored_at ? new Date(selectedOpportunity.tool1_score_fast.scored_at).toLocaleDateString() : 'N/A')"></p>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedOpportunity?.tool1_score_fast">
+                                        <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-indigo-200 dark:border-indigo-800 rounded-lg p-4 text-center">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">No fast screen yet.</p>
+                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Run Screen Fast to get a quick AI assessment.</p>
+                                        </div>
+                                    </template>
+
+                                    <!-- Card D: Screen Thorough (purple) -->
+                                    <template x-if="selectedOpportunity?.tool1_score_thorough">
+                                        <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h4 class="font-semibold text-purple-900 dark:text-purple-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                                    </svg>
+                                                    Screen Thorough
+                                                </h4>
+                                                <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                                      :class="selectedOpportunity.tool1_score_thorough.confidence_level === 'high' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'"
+                                                      x-text="(selectedOpportunity.tool1_score_thorough.confidence_level || '') + ' · ' + Math.round((selectedOpportunity.tool1_score_thorough.overall_score||0)*100) + '%'"></span>
+                                            </div>
+                                            <!-- One-sentence summary -->
+                                            <p class="text-sm text-purple-800 dark:text-purple-200 italic mb-3"
+                                               x-text="selectedOpportunity.tool1_score_thorough.one_sentence_summary"></p>
+                                            <!-- Sub-scores -->
+                                            <div class="grid grid-cols-3 gap-3 mb-3">
+                                                <div class="text-center">
+                                                    <div class="text-xs text-purple-600 dark:text-purple-400">Strategic Fit</div>
+                                                    <div class="text-sm font-semibold text-purple-900 dark:text-purple-100"
+                                                         x-text="Math.round((selectedOpportunity.tool1_score_thorough.strategic_fit_score||0)*100) + '%'"></div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-xs text-purple-600 dark:text-purple-400">Eligibility</div>
+                                                    <div class="text-sm font-semibold text-purple-900 dark:text-purple-100"
+                                                         x-text="Math.round((selectedOpportunity.tool1_score_thorough.eligibility_score||0)*100) + '%'"></div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-xs text-purple-600 dark:text-purple-400">Timing</div>
+                                                    <div class="text-sm font-semibold text-purple-900 dark:text-purple-100"
+                                                         x-text="Math.round((selectedOpportunity.tool1_score_thorough.timing_score||0)*100) + '%'"></div>
+                                                </div>
+                                            </div>
+                                            <!-- Strengths & Concerns -->
+                                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                                <template x-if="selectedOpportunity.tool1_score_thorough.key_strengths?.length > 0">
+                                                    <div>
+                                                        <div class="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Strengths</div>
+                                                        <ul class="space-y-0.5">
+                                                            <template x-for="s in selectedOpportunity.tool1_score_thorough.key_strengths.slice(0,3)" :key="s">
+                                                                <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                                    <span class="text-green-500 flex-shrink-0">+</span><span x-text="s"></span>
+                                                                </li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
+                                                </template>
+                                                <template x-if="selectedOpportunity.tool1_score_thorough.key_concerns?.length > 0">
+                                                    <div>
+                                                        <div class="text-xs font-medium text-red-600 dark:text-red-400 mb-1">Concerns</div>
+                                                        <ul class="space-y-0.5">
+                                                            <template x-for="c in selectedOpportunity.tool1_score_thorough.key_concerns.slice(0,3)" :key="c">
+                                                                <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                                    <span class="text-red-500 flex-shrink-0">−</span><span x-text="c"></span>
+                                                                </li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <p class="text-xs text-purple-500 dark:text-purple-400 mt-2 pt-2 border-t border-purple-200 dark:border-purple-800"
+                                               x-text="'Scored: ' + (selectedOpportunity.tool1_score_thorough.scored_at ? new Date(selectedOpportunity.tool1_score_thorough.scored_at).toLocaleDateString() : 'N/A')"></p>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedOpportunity?.tool1_score_thorough">
+                                        <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-purple-200 dark:border-purple-800 rounded-lg p-4 text-center">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">No thorough screen yet.</p>
+                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Run Screen Thorough for a deep AI analysis.</p>
                                         </div>
                                     </template>
                                 </div>

@@ -1102,6 +1102,59 @@ async def get_990_filings(opportunity_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/{opportunity_id}/990-extraction")
+async def get_990_extraction(opportunity_id: str):
+    """
+    Return cached PDF extraction data for this opportunity's EIN.
+    Returns the most recent pdf_analyses entry from ein_intelligence.
+    """
+    try:
+        conn = database_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT ein, organization_name FROM opportunities WHERE id = ?", (opportunity_id,))
+        row = cursor.fetchone()
+        conn.close()
+
+        if not row:
+            raise HTTPException(status_code=404, detail=f"Opportunity {opportunity_id} not found")
+
+        ein, org_name = row[0], row[1]
+        if not ein:
+            raise HTTPException(status_code=400, detail="Opportunity has no EIN")
+
+        cached = database_manager.get_ein_intelligence(ein)
+        if not cached or not isinstance(cached.get("pdf_analyses"), dict) or not cached["pdf_analyses"]:
+            return {"extraction": None, "tax_year": None, "cache_hit": False}
+
+        pdf_analyses = cached["pdf_analyses"]
+
+        # Pick the entry with the highest numeric key (most recent tax year) or last inserted
+        best_key = None
+        best_year = None
+        for key in pdf_analyses.keys():
+            try:
+                year = int(key)
+                if best_year is None or year > best_year:
+                    best_year = year
+                    best_key = key
+            except (ValueError, TypeError):
+                if best_key is None:
+                    best_key = key
+
+        extraction = pdf_analyses[best_key]
+        return {
+            "extraction": extraction,
+            "tax_year": best_year,
+            "cache_hit": True,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get 990 extraction for {opportunity_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 async def _fetch_and_cache_filing_history(ein: str, org_name: str) -> List[Dict[str, Any]]:
     """
     Fetch filing history for an EIN from ProPublica (API + scraped PDF links)
@@ -1194,8 +1247,12 @@ async def _analyze_990_pdf_for_ein(
         if cached and isinstance(cached.get("pdf_analyses"), dict):
             cached_extraction = cached["pdf_analyses"].get(cache_key)
             if cached_extraction:
-                logger.info(f"Cache hit: pdf_analyses[{cache_key}] for EIN {ein}")
-                return {"extraction": cached_extraction, "cache_hit": True}
+                # Skip cache if previous extraction had zero confidence (retry with improved prompt)
+                if (cached_extraction.get("extraction_confidence") or 0.0) > 0.0:
+                    logger.info(f"Cache hit: pdf_analyses[{cache_key}] for EIN {ein}")
+                    return {"extraction": cached_extraction, "cache_hit": True}
+                else:
+                    logger.info(f"Skipping zero-confidence cache for EIN {ein}, re-extracting")
 
     from tools.foundation_preprocessing_tool.app.pdf_narrative_extractor import PDFNarrativeExtractor
     from src.config.database_config import get_nonprofit_intelligence_db
@@ -1216,9 +1273,11 @@ async def _analyze_990_pdf_for_ein(
         "stated_priorities": result.stated_priorities,
         "geographic_limitations": result.geographic_limitations,
         "population_focus": result.population_focus,
+        "grant_size_range": result.grant_size_range,
         "program_descriptions": result.program_descriptions,
         "contact_information": result.contact_information,
         "extraction_confidence": result.extraction_confidence,
+        "pdf_pages_note": result.pdf_pages_note,
     }
 
     # Store in EIN intelligence cache
@@ -1740,7 +1799,8 @@ async def _run_batch_screen(job_id: str, body: BatchScreenRequest) -> None:
                     if upd_row:
                         raw = upd_row[0]
                         upd_ad = json.loads(raw) if isinstance(raw, str) and raw else {}
-                        upd_ad["tool1_score"] = tool1_result
+                        upd_ad["tool1_score"] = tool1_result               # keep as "latest" for backward compat
+                        upd_ad[f"tool1_score_{body.mode}"] = tool1_result  # "tool1_score_fast" or "tool1_score_thorough"
                         ucursor.execute(
                             "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
                             (json.dumps(upd_ad), datetime.now().isoformat(), opp_id_db),

@@ -46,7 +46,9 @@ class NarrativeExtractionResult:
     stated_priorities: List[str] = field(default_factory=list)
     geographic_limitations: Optional[str] = None
     population_focus: Optional[str] = None
+    grant_size_range: Optional[str] = None
     extraction_confidence: float = 0.0
+    pdf_pages_note: Optional[str] = None  # set when PDF was truncated
     source_tax_year: Optional[int] = None
     source_pdf_url: Optional[str] = None
 
@@ -71,26 +73,40 @@ class PDFNarrativeExtractor:
     structured intelligence that feeds into the foundation_narratives table.
     """
 
-    EXTRACTION_PROMPT = """Analyze this IRS Form 990-PF filing and extract the following information.
-Return your response as a JSON object with exactly these fields:
+    PDF_PAGE_LIMIT = 35  # Claude API max is 100; grant info is in early pages
+
+    EXTRACTION_PROMPT = """Analyze this IRS nonprofit tax filing (Form 990, 990-EZ, or 990-PF) and extract grant-making intelligence.
+
+Return a JSON object with exactly these fields:
 
 {
-  "mission_statement": "The foundation's stated mission or purpose (from Part I or elsewhere). null if not found.",
-  "mission_keywords": ["keyword1", "keyword2", ...],
+  "mission_statement": "The organization's stated mission or purpose. null if not found.",
+  "mission_keywords": ["keyword1", "keyword2"],
   "accepts_applications": "yes" or "no" or "invitation_only" or "unknown",
   "application_deadlines": "Deadline information if stated. null if not found.",
-  "application_process": "How to apply - letter of inquiry, full proposal, etc. null if not found.",
-  "required_documents": ["document1", "document2", ...],
-  "contact_information": "Contact person, phone, email, address for applications. null if not found.",
-  "program_descriptions": ["Description of each program area or funding focus"],
-  "stated_priorities": ["Each stated funding priority or preference"],
-  "geographic_limitations": "Any geographic restrictions on giving. null if not found.",
+  "application_process": "How to apply — letter of inquiry, online portal, full proposal, etc. null if not found.",
+  "required_documents": ["document1", "document2"],
+  "contact_information": "Contact person/address/email for grant applications. null if not found.",
+  "program_descriptions": ["Description of each program area or grant focus"],
+  "stated_priorities": ["Each stated funding priority, preference, or restriction"],
+  "geographic_limitations": "Geographic restrictions on giving. null if not found.",
   "population_focus": "Target populations served or funded. null if not found.",
-  "confidence": 0.0 to 1.0
+  "grant_size_range": "Typical grant range if mentioned (e.g. '$5,000-$50,000'). null if not found.",
+  "confidence": 0.0
 }
 
-Focus on Part XV (Supplementary Information) for application process details,
-Part I for mission/purpose, and Part XVI for program areas.
+Where to look depending on form type:
+- Form 990-PF: Part XV (Application Information), Part I (Overview), Part XV-A (Grant Application), Schedule of Distributions
+- Form 990: Part III (Program Service Accomplishments), Part IX (Grants column), Schedule I (Grants to Organizations), any narrative sections
+- Form 990-EZ: Part III (Program Service Accomplishments), Schedule O (Supplemental Information)
+- All forms: Any supplemental narrative, mission statements, program descriptions
+
+Set "confidence" based on how much useful grant-making data you found:
+- 0.8-1.0: Rich data — application process, priorities, and geographic info all found
+- 0.5-0.79: Partial data — some priorities or contact info found
+- 0.2-0.49: Sparse data — only mission or basic info found
+- 0.0-0.19: Little to no grant-making information in this filing
+
 If a field has no data in the filing, use null for strings and empty arrays for lists.
 Return ONLY the JSON object, no other text."""
 
@@ -106,6 +122,35 @@ Return ONLY the JSON object, no other text."""
 
         # API key from param or environment
         self.api_key = anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY")
+
+    def _fetch_and_truncate_pdf(self, pdf_url: str) -> tuple[bytes, int, int]:
+        """
+        Download PDF and truncate to PDF_PAGE_LIMIT pages if needed.
+
+        Returns:
+            (pdf_bytes, total_pages, pages_sent)
+        """
+        import io
+        import urllib.request
+        import pypdf
+
+        req = urllib.request.Request(pdf_url, headers={"User-Agent": "Catalynx/1.0 Grant Research"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            raw = resp.read()
+
+        reader = pypdf.PdfReader(io.BytesIO(raw))
+        total_pages = len(reader.pages)
+
+        if total_pages <= self.PDF_PAGE_LIMIT:
+            return raw, total_pages, total_pages
+
+        # Truncate: write first PDF_PAGE_LIMIT pages to a new buffer
+        writer = pypdf.PdfWriter()
+        for i in range(self.PDF_PAGE_LIMIT):
+            writer.add_page(reader.pages[i])
+        buf = io.BytesIO()
+        writer.write(buf)
+        return buf.getvalue(), total_pages, self.PDF_PAGE_LIMIT
 
     def _get_client(self):
         """Lazy-initialize Anthropic client."""
@@ -129,16 +174,22 @@ Return ONLY the JSON object, no other text."""
         self, ein: str, pdf_url: str, tax_year: Optional[int] = None
     ) -> NarrativeExtractionResult:
         """
-        Extract narrative content from a 990-PF PDF via URL.
+        Extract narrative content from a 990 PDF via URL.
+
+        Downloads the PDF, truncates to PDF_PAGE_LIMIT pages if needed (grant info
+        is in early sections; later pages are schedules/lists that inflate page count),
+        then sends as base64 to Claude.
 
         Args:
-            ein: Foundation EIN
-            pdf_url: URL to the 990-PF PDF filing
+            ein: Organization EIN
+            pdf_url: URL to the PDF filing
             tax_year: Tax year of the filing
 
         Returns:
             NarrativeExtractionResult with extracted data
         """
+        import base64
+
         result = NarrativeExtractionResult(
             ein=ein,
             source_pdf_url=pdf_url,
@@ -147,6 +198,14 @@ Return ONLY the JSON object, no other text."""
 
         try:
             client = self._get_client()
+
+            # Download and truncate if needed
+            pdf_bytes, total_pages, pages_sent = self._fetch_and_truncate_pdf(pdf_url)
+            if total_pages > pages_sent:
+                result.pdf_pages_note = f"PDF truncated: analyzed first {pages_sent} of {total_pages} pages (grant info is in early sections)"
+                logger.info(f"PDF truncated for {ein}: {total_pages} pages -> sending first {pages_sent}")
+
+            pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
 
             message = client.messages.create(
                 model=self.model,
@@ -157,8 +216,9 @@ Return ONLY the JSON object, no other text."""
                         {
                             "type": "document",
                             "source": {
-                                "type": "url",
-                                "url": pdf_url,
+                                "type": "base64",
+                                "media_type": "application/pdf",
+                                "data": pdf_b64,
                             },
                         },
                         {
@@ -191,10 +251,11 @@ Return ONLY the JSON object, no other text."""
             result.stated_priorities = data.get("stated_priorities", [])
             result.geographic_limitations = data.get("geographic_limitations")
             result.population_focus = data.get("population_focus")
+            result.grant_size_range = data.get("grant_size_range")
             result.extraction_confidence = data.get("confidence", 0.5)
 
             logger.info(f"Extracted narrative for {ein}: mission={'yes' if result.mission_statement else 'no'}, "
-                       f"accepts_apps={result.accepts_applications}")
+                       f"accepts_apps={result.accepts_applications}, conf={result.extraction_confidence}")
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse extraction response for {ein}: {e}")
@@ -275,6 +336,7 @@ Return ONLY the JSON object, no other text."""
             result.stated_priorities = data.get("stated_priorities", [])
             result.geographic_limitations = data.get("geographic_limitations")
             result.population_focus = data.get("population_focus")
+            result.grant_size_range = data.get("grant_size_range")
             result.extraction_confidence = data.get("confidence", 0.5)
 
         except Exception as e:

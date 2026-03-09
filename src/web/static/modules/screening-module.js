@@ -108,6 +108,10 @@ function screeningModule() {
             processed: 0,
         },
 
+        // 990 PDF Extraction modal state (lazy-loaded when modal opens)
+        ninetiesExtractionData: null,
+        ninetiesExtractionLoading: false,
+
         // 990 Batch Analysis State
         ninetiesSearchInProgress: false,
         ninetiesSearchProgress: {
@@ -1291,6 +1295,19 @@ function screeningModule() {
             this.filingAnalysisLoading = false;
             this.filingAnalysisResult = null;
             this.filingAnalysisPdfUrl = null;
+
+            // Lazy-load 990 extraction data if available
+            this.ninetiesExtractionData = null;
+            this.ninetiesExtractionLoading = false;
+
+            if (opportunity.pdf_analyzed) {
+                this.ninetiesExtractionLoading = true;
+                fetch(`/api/v2/opportunities/${opportunity.opportunity_id}/990-extraction`)
+                    .then(r => r.json())
+                    .then(data => { this.ninetiesExtractionData = data.extraction ? { ...data.extraction, tax_year: data.tax_year } : null; })
+                    .catch(() => {})
+                    .finally(() => { this.ninetiesExtractionLoading = false; });
+            }
         },
 
         /**

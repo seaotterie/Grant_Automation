@@ -36,6 +36,30 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v2/profiles", tags=["profiles_v2"])
 
 
+def _normalize_web_data(web_data):
+    """Merge grant_funder_intelligence sub-fields to top level of web_data for template access."""
+    if not web_data or not isinstance(web_data, dict):
+        return web_data
+    gfi = web_data.get('grant_funder_intelligence')
+    if gfi and isinstance(gfi, dict):
+        for field in ('accepts_applications', 'funding_priorities', 'grant_size_range',
+                      'geographic_limitations', 'population_focus'):
+            if field not in web_data and field in gfi:
+                web_data[field] = gfi[field]
+    return web_data
+
+
+def _resolve_tool1_score(discovery_data, mode: str):
+    """Return the mode-specific score, falling back to tool1_score if mode matches."""
+    explicit = discovery_data.get(f'tool1_score_{mode}')
+    if explicit:
+        return explicit
+    legacy = discovery_data.get('tool1_score')
+    if legacy and isinstance(legacy, dict) and legacy.get('mode') == mode:
+        return legacy
+    return None
+
+
 # Pydantic Request Models for Input Validation
 
 class DiscoveryRequest(BaseModel):
@@ -1950,10 +1974,12 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
                 "url_verification_status": opp_raw.get('url_verification_status'),
                 # Web Research data (Tool 25 - Web Intelligence)
                 "web_search_complete": discovery_data.get('web_search_complete', False),
-                "web_data": discovery_data.get('web_data'),
+                "web_data": _normalize_web_data(discovery_data.get('web_data')),
                 "pdf_analyzed": discovery_data.get('pdf_analyzed', False),
                 # Tool 1 AI screening score (batch screen result)
                 "tool1_score": discovery_data.get('tool1_score'),
+                "tool1_score_fast": _resolve_tool1_score(discovery_data, 'fast'),
+                "tool1_score_thorough": _resolve_tool1_score(discovery_data, 'thorough'),
                 # Additional financial data for table display
                 "revenue": discovery_data.get('990_data', {}).get('revenue') if discovery_data.get('990_data') else None,
                 "assets": discovery_data.get('990_data', {}).get('assets') if discovery_data.get('990_data') else None,

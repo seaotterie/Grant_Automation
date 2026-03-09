@@ -2728,6 +2728,8 @@ function catalynxApp() {
         opportunityLoading: false,
         isProcessing: false,
         modalActiveTab: 'scores', // Tab state for opportunity modal (default to Score Breakdown)
+        ninetiesExtractionData: null,
+        ninetiesExtractionLoading: false,
 
         // Stage Change Confirmation Modal System
         showStageChangeModal: false,
@@ -7572,6 +7574,22 @@ function catalynxApp() {
 
                 console.log('Enhanced opportunity modal data:', this.selectedOpportunity);
 
+                // Lazy-load 990 PDF extraction if available
+                this.ninetiesExtractionData = null;
+                this.ninetiesExtractionLoading = false;
+                if (opportunity.pdf_analyzed) {
+                    this.ninetiesExtractionLoading = true;
+                    fetch(`/api/v2/opportunities/${opportunity.opportunity_id}/990-extraction`)
+                        .then(r => r.json())
+                        .then(data => {
+                            this.ninetiesExtractionData = data.extraction
+                                ? { ...data.extraction, tax_year: data.tax_year }
+                                : null;
+                        })
+                        .catch(() => {})
+                        .finally(() => { this.ninetiesExtractionLoading = false; });
+                }
+
             } catch (error) {
                 console.error('Error preparing opportunity details:', error);
                 this.showNotification('Error', 'Failed to prepare opportunity details', 'error');
@@ -7593,6 +7611,8 @@ function catalynxApp() {
             this.isProcessing = false;
             this.modalActiveTab = 'scores'; // Reset to default tab (Score Breakdown)
             this.opportunityNotes = ''; // Clear notes field
+            this.ninetiesExtractionData = null;
+            this.ninetiesExtractionLoading = false;
             // Also clear delete confirmation state
             this.showDeleteConfirmation = false;
             this.deleteConfirmationStep = 1;
