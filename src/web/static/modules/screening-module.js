@@ -719,7 +719,7 @@ function screeningModule() {
         _isProcessedFor(opp, step) {
             switch (step) {
                 case 'urls':    return opp.url_source != null;
-                case 'web':     return !!(opp.web_search_complete && opp.web_data);
+                case 'web':     return !!(opp.web_search_complete);
                 case '990s':    return !!(opp.pdf_analyzed);
                 case 'fast':    return opp.tool1_score != null;
                 case 'thorough': return opp.tool1_score?.mode === 'thorough';
@@ -842,7 +842,7 @@ function screeningModule() {
         getAnalysisStatus(opp) {
             return {
                 scored: opp.tool1_score != null,
-                web: !!(opp.web_search_complete && opp.web_data),
+                web: !!(opp.web_search_complete),
                 filing: opp.url_source != null,
                 pdf: !!(opp.pdf_analyzed),
             };
@@ -1845,6 +1845,13 @@ function screeningModule() {
             this.ninetiesSearchProgress = { total: ids.length, processed: 0, found: 0, failed: 0 };
             this.showNotification?.(`Starting 990 PDF analysis for ${ids.length} organizations...`, 'info');
 
+            // Simulate progress while waiting (990 PDF analysis ~3-5s per item)
+            const _990ProgressTimer = setInterval(() => {
+                if (this.ninetiesSearchProgress.processed < this.ninetiesSearchProgress.total - 1) {
+                    this.ninetiesSearchProgress = { ...this.ninetiesSearchProgress, processed: this.ninetiesSearchProgress.processed + 1 };
+                }
+            }, 4000);
+
             try {
                 const response = await fetch('/api/v2/opportunities/batch-analyze-990-pdfs', {
                     method: 'POST',
@@ -1880,10 +1887,16 @@ function screeningModule() {
 
                 console.log('[990_BATCH] Results:', data);
 
+                // Reload opportunities to update pdf_analyzed counter
+                if (this.currentProfileId) {
+                    await this.loadSavedOpportunities(this.currentProfileId);
+                }
+
             } catch (error) {
                 console.error('[990_BATCH] Error:', error);
                 this.showNotification?.(`990 batch analysis failed: ${error.message}`, 'error');
             } finally {
+                clearInterval(_990ProgressTimer);
                 this.ninetiesSearchInProgress = false;
             }
         },
@@ -1915,6 +1928,13 @@ function screeningModule() {
             this.websiteSearchInProgress = true;
             this.websiteSearchProgress = { total: ids.length, processed: 0 };
             this.showNotification?.(`Starting Haiku web research for ${ids.length} organizations...`, 'info');
+
+            // Simulate progress while waiting (web scraping ~10-15s per item)
+            const _webProgressTimer = setInterval(() => {
+                if (this.websiteSearchProgress.processed < this.websiteSearchProgress.total - 1) {
+                    this.websiteSearchProgress = { ...this.websiteSearchProgress, processed: this.websiteSearchProgress.processed + 1 };
+                }
+            }, 10000);
 
             try {
                 const response = await fetch('/api/v2/opportunities/batch-web-research', {
@@ -1953,6 +1973,7 @@ function screeningModule() {
                 console.error('[WEB_RESEARCH_BATCH] Error:', error);
                 this.showNotification?.(`Web research failed: ${error.message}`, 'error');
             } finally {
+                clearInterval(_webProgressTimer);
                 this.websiteSearchInProgress = false;
             }
         },

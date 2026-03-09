@@ -1297,6 +1297,24 @@ async def batch_analyze_990_pdfs(body: BatchAnalyze990PDFsRequest):
                     tax_year=tax_year,
                     force_refresh=body.force_refresh,
                 )
+
+                # Write pdf_analyzed flag back to analysis_discovery
+                try:
+                    conn2 = database_manager.get_connection()
+                    cur2 = conn2.cursor()
+                    cur2.execute("SELECT analysis_discovery FROM opportunities WHERE id = ?", (opp_id,))
+                    ad_row = cur2.fetchone()
+                    if ad_row and ad_row[0]:
+                        ad = json.loads(ad_row[0]) if isinstance(ad_row[0], str) else ad_row[0]
+                        ad["pdf_analyzed"] = True
+                        cur2.execute(
+                            "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                            (json.dumps(ad), datetime.now().isoformat(), opp_id),
+                        )
+                        conn2.commit()
+                except Exception as db_err:
+                    logger.warning(f"Failed to write pdf_analyzed flag for {opp_id}: {db_err}")
+
                 results.append({
                     "opportunity_id": opp_id,
                     "ein": ein,

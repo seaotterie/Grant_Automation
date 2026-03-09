@@ -1951,6 +1951,7 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
                 # Web Research data (Tool 25 - Web Intelligence)
                 "web_search_complete": discovery_data.get('web_search_complete', False),
                 "web_data": discovery_data.get('web_data'),
+                "pdf_analyzed": discovery_data.get('pdf_analyzed', False),
                 # Tool 1 AI screening score (batch screen result)
                 "tool1_score": discovery_data.get('tool1_score'),
                 # Additional financial data for table display
