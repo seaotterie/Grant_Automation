@@ -5,9 +5,15 @@ import aiohttp
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qs
 from typing import Optional, Tuple, List, Dict, Any
+from datetime import timedelta
 import logging
 
+from src.core.cache_manager import get_cache_manager, CacheType
+
 logger = logging.getLogger(__name__)
+
+XML_CACHE_TTL = timedelta(days=30)  # 990 XML filings are immutable once filed
+_XML_NOT_FOUND_SENTINEL = "__NOT_FOUND__"
 
 
 class XMLFetcher:
@@ -21,31 +27,52 @@ class XMLFetcher:
     async def fetch_xml_by_ein(self, ein: str) -> Optional[bytes]:
         """
         Fetch XML data for an organization by EIN.
-        
+
+        Checks EIN-keyed cache first (30-day TTL). Cache hit avoids all HTTP calls.
+
         Args:
             ein: Organization EIN
-            
+
         Returns:
             XML content as bytes, or None if not found
         """
+        cache = get_cache_manager()
+
+        # 1. Cache check (EIN-keyed)
+        cached = await cache.get(ein, CacheType.XML_DOWNLOAD)
+        if cached is not None:
+            if cached == _XML_NOT_FOUND_SENTINEL:
+                logger.debug(f"XML cache hit (not found) for EIN {ein}")
+                return None
+            logger.debug(f"XML cache hit for EIN {ein}")
+            return cached.encode('utf-8') if isinstance(cached, str) else cached
+
+        # 2. Original HTTP logic
         try:
             async with aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=self.timeout)
             ) as session:
-                
+
                 # Step 1: Find object_id by scraping the organization page
                 object_id = await self._find_object_id(session, ein)
                 if not object_id:
                     logger.warning(f"No XML download link found for EIN {ein}")
+                    await cache.set(ein, CacheType.XML_DOWNLOAD, _XML_NOT_FOUND_SENTINEL, ttl=XML_CACHE_TTL)
                     return None
-                
+
                 # Step 2: Download XML using the object_id
                 xml_content = await self._download_xml(session, object_id)
-                return xml_content
-                
+
         except Exception as e:
             logger.error(f"Error fetching XML for EIN {ein}: {e}")
             return None
+
+        # 3. Store result
+        if xml_content:
+            await cache.set(ein, CacheType.XML_DOWNLOAD, xml_content, ttl=XML_CACHE_TTL)
+        else:
+            await cache.set(ein, CacheType.XML_DOWNLOAD, _XML_NOT_FOUND_SENTINEL, ttl=XML_CACHE_TTL)
+        return xml_content
     
     async def _find_object_id(self, session: aiohttp.ClientSession, ein: str) -> Optional[str]:
         """

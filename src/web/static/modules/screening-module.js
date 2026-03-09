@@ -101,6 +101,13 @@ function screeningModule() {
             skipped: 0  // Low priority opportunities skipped
         },
 
+        // Website Batch Research State (Theme A — Haiku web scraper)
+        websiteSearchInProgress: false,
+        websiteSearchProgress: {
+            total: 0,
+            processed: 0,
+        },
+
         // 990 Batch Analysis State
         ninetiesSearchInProgress: false,
         ninetiesSearchProgress: {
@@ -711,7 +718,7 @@ function screeningModule() {
          */
         _isProcessedFor(opp, step) {
             switch (step) {
-                case 'urls':    return !!(opp.filing_history_loaded);
+                case 'urls':    return opp.url_source != null;
                 case 'web':     return !!(opp.web_search_complete && opp.web_data);
                 case '990s':    return !!(opp.pdf_analyzed);
                 case 'fast':    return opp.tool1_score != null;
@@ -836,7 +843,7 @@ function screeningModule() {
             return {
                 scored: opp.tool1_score != null,
                 web: !!(opp.web_search_complete && opp.web_data),
-                filing: !!(opp.filing_history_loaded),
+                filing: opp.url_source != null,
                 pdf: !!(opp.pdf_analyzed),
             };
         },
@@ -1878,6 +1885,75 @@ function screeningModule() {
                 this.showNotification?.(`990 batch analysis failed: ${error.message}`, 'error');
             } finally {
                 this.ninetiesSearchInProgress = false;
+            }
+        },
+
+        /**
+         * Batch web research using Haiku agentic scraper (Tool 25).
+         * Separate from discoverAllUrls (which is free 990/BMF URL lookup).
+         * Cost: ~$0.003-0.01 per org (Claude Haiku), cached per EIN.
+         */
+        async batchSearchWebsite() {
+            if (!this.currentProfileId) {
+                this.showNotification?.('No profile selected', 'warning');
+                return;
+            }
+
+            const ids = this.getAIPipelineTargetIds('web');
+
+            if (ids.length === 0) {
+                this.showNotification?.('No opportunities to research', 'warning');
+                return;
+            }
+
+            const batchLabel = this.planFilterEnabled ? ` (Top ${this.getEffectiveBatchSize()} unresearched)` : '';
+            const estimatedCost = (ids.length * 0.008).toFixed(2);
+            if (!confirm(`Search websites for ${ids.length} organizations${batchLabel} using AI?\n\nEstimated cost: ~$${estimatedCost} (Claude Haiku, cached per EIN)\n\nProceed?`)) {
+                return;
+            }
+
+            this.websiteSearchInProgress = true;
+            this.websiteSearchProgress = { total: ids.length, processed: 0 };
+            this.showNotification?.(`Starting Haiku web research for ${ids.length} organizations...`, 'info');
+
+            try {
+                const response = await fetch('/api/v2/opportunities/batch-web-research', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        opportunity_ids: ids,
+                        profile_id: this.currentProfileId,
+                        force_refresh: false,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    throw new Error(err.detail || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                this.websiteSearchProgress = { total: data.total || ids.length, processed: data.researched + data.cached + data.errors };
+                this.sessionApiCost += data.estimated_cost_usd || 0;
+
+                this.showNotification?.(
+                    `✅ Web research complete: ${data.researched} scraped, ${data.cached} cached, ${data.errors} errors`,
+                    'success'
+                );
+
+                // Reload opportunities to show web_data fields
+                if (this.currentProfileId) {
+                    await this.loadSavedOpportunities(this.currentProfileId);
+                }
+
+                console.log('[WEB_RESEARCH_BATCH] Results:', data);
+
+            } catch (error) {
+                console.error('[WEB_RESEARCH_BATCH] Error:', error);
+                this.showNotification?.(`Web research failed: ${error.message}`, 'error');
+            } finally {
+                this.websiteSearchInProgress = false;
             }
         },
 

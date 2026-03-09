@@ -66,6 +66,13 @@ class BatchAnalyze990PDFsRequest(BaseModel):
     force_refresh: bool = False
 
 
+class BatchWebResearchRequest(BaseModel):
+    """Request body for batch web research endpoint"""
+    opportunity_ids: List[str]
+    profile_id: Optional[str] = None
+    force_refresh: bool = False
+
+
 async def _interpret_with_claude(
     scraped_urls: List[str],
     org_name: str,
@@ -1367,6 +1374,185 @@ async def analyze_990_pdf(opportunity_id: str, body: Analyze990PDFRequest):
     except Exception as e:
         logger.error(f"Failed to analyze 990 PDF for {opportunity_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Batch Web Research Endpoint (Haiku web scraper fan-out)
+# ---------------------------------------------------------------------------
+
+@router.post("/batch-web-research")
+async def batch_web_research(body: BatchWebResearchRequest):
+    """
+    Batch Haiku web intelligence for multiple opportunities.
+
+    For each EIN: checks EIN intelligence cache, then runs Tool 25 (Haiku agent).
+    Concurrency: 3 simultaneous web scrapes.
+    Cost: ~$0.003-0.01 per org (Claude Haiku), cached per EIN.
+
+    Returns { total, researched, cached, errors, estimated_cost_usd }
+    """
+    if not body.opportunity_ids:
+        raise HTTPException(status_code=400, detail="opportunity_ids must not be empty")
+
+    results = []
+    semaphore = asyncio.Semaphore(3)
+
+    async def research_one(opp_id: str):
+        async with semaphore:
+            try:
+                conn = database_manager.get_connection()
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT ein, organization_name FROM opportunities WHERE id = ?", (opp_id,)
+                )
+                row = cursor.fetchone()
+                conn.close()
+
+                if not row or not row[0]:
+                    results.append({"opportunity_id": opp_id, "status": "skipped", "reason": "no EIN"})
+                    return
+
+                ein, org_name = row[0], row[1]
+
+                # EIN intelligence cache check
+                if not body.force_refresh:
+                    cached = database_manager.get_ein_intelligence(ein)
+                    if cached and cached.get("web_data") and cached.get("web_data_fetched_at"):
+                        try:
+                            fetched_dt = datetime.fromisoformat(cached["web_data_fetched_at"])
+                            age_days = (datetime.now() - fetched_dt).days
+                            if age_days < _WEB_DATA_TTL_DAYS:
+                                logger.info(f"Cache hit: web_data for EIN {ein} (batch)")
+                                # Write back to this opportunity's analysis_discovery
+                                web_data = cached["web_data"]
+                                conn2 = database_manager.get_connection()
+                                cur2 = conn2.cursor()
+                                cur2.execute("SELECT analysis_discovery FROM opportunities WHERE id = ?", (opp_id,))
+                                ad_row = cur2.fetchone()
+                                if ad_row and ad_row[0]:
+                                    ad = json.loads(ad_row[0]) if isinstance(ad_row[0], str) else ad_row[0]
+                                    ad["web_data"] = web_data
+                                    ad["web_search_complete"] = True
+                                    cur2.execute(
+                                        "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                                        (json.dumps(ad), datetime.now().isoformat(), opp_id),
+                                    )
+                                    conn2.commit()
+                                conn2.close()
+                                results.append({"opportunity_id": opp_id, "ein": ein, "status": "cached"})
+                                return
+                        except Exception:
+                            pass
+
+                # Run Tool 25
+                from tools.web_intelligence_tool.app.web_intelligence_tool import (
+                    WebIntelligenceTool, WebIntelligenceRequest, UseCase
+                )
+                tool = WebIntelligenceTool()
+                request = WebIntelligenceRequest(
+                    ein=ein,
+                    organization_name=org_name,
+                    use_case=UseCase.PROFILE_BUILDER,
+                )
+                result = await tool.execute(request)
+
+                if result.success and result.intelligence_data:
+                    intelligence = result.intelligence_data
+                    from tools.shared_schemas.grant_funder_intelligence import GrantFunderIntelligence as GFI
+
+                    if isinstance(intelligence, GFI):
+                        contact_obj = None
+                        if intelligence.contact_information:
+                            contact_obj = {"email": None, "phone": None, "address": intelligence.contact_information}
+                        web_data = {
+                            "website": intelligence.source_url,
+                            "website_verified": intelligence.confidence_score > 0.6,
+                            "mission": intelligence.mission_statement,
+                            "leadership": [
+                                {"name": m, "title": "", "email": None, "confidence": "medium"}
+                                for m in (intelligence.board_members or [])
+                            ],
+                            "leadership_cross_validated": False,
+                            "contact": contact_obj,
+                            "social_media": {},
+                            "programs": [
+                                {"name": "", "description": d, "target_population": intelligence.population_focus}
+                                for d in (intelligence.program_descriptions or [])
+                            ],
+                            "key_facts": intelligence.funding_priorities or [],
+                            "grant_application_url": None,
+                            "recent_news": [],
+                            "data_quality_score": intelligence.confidence_score,
+                            "pages_scraped": result.pages_scraped,
+                            "execution_time": result.execution_time_seconds,
+                            "ai_interpreted": True,
+                            "accepts_applications": intelligence.accepts_applications,
+                            "application_deadlines": intelligence.application_deadlines,
+                            "application_process": intelligence.application_process,
+                            "required_documents": intelligence.required_documents,
+                            "geographic_limitations": intelligence.geographic_limitations,
+                            "grant_size_range": intelligence.grant_size_range,
+                            "grant_funder_intelligence": intelligence.to_dict(),
+                        }
+                    else:
+                        web_data = {"ai_interpreted": False, "data_quality_score": 0.0}
+
+                    # Update opportunity in DB
+                    conn2 = database_manager.get_connection()
+                    cur2 = conn2.cursor()
+                    cur2.execute("SELECT analysis_discovery FROM opportunities WHERE id = ?", (opp_id,))
+                    ad_row = cur2.fetchone()
+                    if ad_row and ad_row[0]:
+                        ad = json.loads(ad_row[0]) if isinstance(ad_row[0], str) else ad_row[0]
+                        ad["web_data"] = web_data
+                        ad["web_search_complete"] = True
+                        cur2.execute(
+                            "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                            (json.dumps(ad), datetime.now().isoformat(), opp_id),
+                        )
+                        conn2.commit()
+                    conn2.close()
+
+                    # Cache in EIN intelligence
+                    try:
+                        database_manager.upsert_ein_intelligence(
+                            ein=ein,
+                            org_name=org_name,
+                            web_data=web_data,
+                            web_data_fetched_at=datetime.now().isoformat(),
+                            web_data_source="claude_interpreted",
+                        )
+                    except Exception as ce:
+                        logger.warning(f"Failed to cache web_data for EIN {ein}: {ce}")
+
+                    results.append({
+                        "opportunity_id": opp_id,
+                        "ein": ein,
+                        "status": "ok",
+                        "data_quality_score": web_data.get("data_quality_score"),
+                    })
+                else:
+                    error_msg = "; ".join(result.errors) if result.errors else "Unknown error"
+                    results.append({"opportunity_id": opp_id, "ein": ein, "status": "error", "error": error_msg})
+
+            except Exception as e:
+                logger.warning(f"Batch web research failed for {opp_id}: {e}")
+                results.append({"opportunity_id": opp_id, "status": "error", "error": str(e)})
+
+    await asyncio.gather(*[research_one(opp_id) for opp_id in body.opportunity_ids])
+
+    researched = [r for r in results if r.get("status") == "ok"]
+    cached_list = [r for r in results if r.get("status") == "cached"]
+    cost_estimate = len(researched) * 0.008  # ~$0.003-0.01 per Haiku call
+
+    return {
+        "success": True,
+        "total": len(body.opportunity_ids),
+        "researched": len(researched),
+        "cached": len(cached_list),
+        "errors": len([r for r in results if r.get("status") == "error"]),
+        "estimated_cost_usd": round(cost_estimate, 4),
+    }
 
 
 # ---------------------------------------------------------------------------

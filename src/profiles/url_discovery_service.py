@@ -16,6 +16,7 @@ Estimated discovery rate: ~73% (up from ~35% with single-stage 990 XML)
 Cost: ~$0.38 per 1000 orgs (only orgs reaching stage 6 incur cost)
 """
 
+import asyncio
 import logging
 import sqlite3
 from typing import List, Dict, Optional, Callable, Any
@@ -97,7 +98,8 @@ class URLDiscoveryService:
         result = URLDiscoveryResult()
 
         try:
-            opportunities = self._get_opportunities_for_profile(
+            opportunities = await asyncio.to_thread(
+                self._get_opportunities_for_profile,
                 profile_id, opportunity_ids, exclude_low_priority
             )
             result.total = len(opportunities)
@@ -116,23 +118,28 @@ class URLDiscoveryService:
                 ein = opp.get('ein')
                 org_name = opp.get('organization_name', 'Unknown')
                 cached_url = opp.get('website_url')
+                url_source = opp.get('url_source')
 
                 logger.debug(f"Processing {idx+1}/{result.total}: {org_name} (EIN: {ein})")
 
-                # Check cache first (unless force_refresh)
-                if cached_url and not force_refresh:
-                    result.cached += 1
+                # Skip if already processed (found or not_found), unless force_refresh
+                if (cached_url is not None or url_source is not None) and not force_refresh:
                     result.processed += 1
-                    result.found += 1
+                    if cached_url:
+                        result.cached += 1
+                        result.found += 1
+                    else:
+                        result.not_found += 1
 
                     if progress_callback:
                         progress_callback({
                             'processed': result.processed,
                             'total': result.total,
                             'found': result.found,
+                            'not_found': result.not_found,
                             'cached': result.cached,
                             'organization': org_name,
-                            'status': 'cached',
+                            'status': 'cached' if cached_url else 'not_found',
                         })
                     continue
 
@@ -162,7 +169,7 @@ class URLDiscoveryService:
                         )
 
                         verification = 'verified' if confidence >= 0.70 else 'pending'
-                        self._update_opportunity_url(opp_id, url, source, verification)
+                        await asyncio.to_thread(self._update_opportunity_url, opp_id, url, source, verification)
 
                         result.discoveries.append({
                             'opportunity_id': opp_id,
@@ -175,10 +182,10 @@ class URLDiscoveryService:
                         })
                     else:
                         result.not_found += 1
-                        self._update_opportunity_url(opp_id, None, 'not_found', 'not_found')
+                        await asyncio.to_thread(self._update_opportunity_url, opp_id, None, 'not_found', 'not_found')
                 else:
                     result.not_found += 1
-                    self._update_opportunity_url(opp_id, None, 'not_found', 'not_found')
+                    await asyncio.to_thread(self._update_opportunity_url, opp_id, None, 'not_found', 'not_found')
 
                 result.processed += 1
 
@@ -414,6 +421,10 @@ class URLDiscoveryService:
         Returns:
             Dictionary with URL statistics
         """
+        return await asyncio.to_thread(self._get_url_statistics_sync, profile_id)
+
+    def _get_url_statistics_sync(self, profile_id: str) -> Dict[str, Any]:
+        """Synchronous implementation of URL statistics — call via asyncio.to_thread."""
         try:
             conn = sqlite3.connect(self.catalynx_db_path)
             cursor = conn.cursor()
