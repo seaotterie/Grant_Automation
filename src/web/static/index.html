@@ -450,100 +450,142 @@
                                 <!-- Button row -->
                                 <div class="flex items-stretch gap-1">
 
-                                    <!-- Button 1: Find Opportunities -->
+                                    <!-- Button 1: Find Opps -->
                                     <button @click="showDiscoveryModal = true"
                                             :disabled="discoveryLoading"
-                                            class="flex-1 flex items-center justify-center gap-1.5 py-3 px-2 text-sm font-medium bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors disabled:opacity-50 min-w-0">
-                                        <svg x-show="!discoveryLoading" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                        </svg>
-                                        <svg x-show="discoveryLoading" class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                        </svg>
-                                        <span x-show="!discoveryLoading" x-text="discoveryMetadata.should_refresh ? 'Find Opps' : 'Refresh'"></span>
-                                        <span x-show="discoveryLoading">Discovering...</span>
+                                            class="flex-1 flex flex-col items-center justify-center py-3 px-2 font-medium bg-green-500 text-white rounded hover:bg-green-600 transition-colors disabled:opacity-50 min-w-0 gap-0.5">
+                                        <div x-show="!discoveryLoading" class="flex flex-col items-center gap-0.5">
+                                            <div class="flex items-center gap-1 text-base">
+                                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                                </svg>
+                                                <span>Find</span>
+                                            </div>
+                                            <span class="text-base" x-text="discoveryMetadata.should_refresh ? 'Opps' : 'Refresh'"></span>
+                                        </div>
+                                        <div x-show="discoveryLoading" class="flex items-center gap-1 text-sm">
+                                            <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                            </svg>
+                                            <span>Discovering...</span>
+                                        </div>
                                     </button>
 
                                     <!-- Button 2: Find URLs -->
                                     <button @click="discoverAllUrls(false)"
                                             :disabled="urlDiscoveryInProgress || summaryCounts.total_found === 0"
-                                            class="flex-1 flex items-center justify-center gap-1.5 py-3 px-2 text-sm font-medium bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors disabled:opacity-50 min-w-0">
-                                        <svg x-show="!urlDiscoveryInProgress" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-                                        </svg>
-                                        <svg x-show="urlDiscoveryInProgress" class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                        </svg>
-                                        <span x-show="!urlDiscoveryInProgress">Find URLs (<span x-text="planFilterEnabled ? getNextBatchFor('urls').totalUnprocessed : urlDiscoveryEligibleCount"></span>)</span>
-                                        <span x-show="urlDiscoveryInProgress"><span x-text="urlDiscoveryProgress.processed"></span>/<span x-text="urlDiscoveryProgress.total"></span></span>
+                                            class="flex-1 flex flex-col items-center justify-center py-3 px-2 font-medium bg-green-500 text-white rounded hover:bg-green-600 transition-colors disabled:opacity-50 min-w-0 gap-0.5">
+                                        <div x-show="!urlDiscoveryInProgress" class="flex flex-col items-center gap-0.5">
+                                            <div class="flex items-center gap-1 text-base">
+                                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                                </svg>
+                                                <span>Find</span>
+                                            </div>
+                                            <span class="text-base">URLs (<span x-text="planFilterEnabled ? getNextBatchFor('urls').totalUnprocessed : urlDiscoveryEligibleCount"></span>)</span>
+                                        </div>
+                                        <div x-show="urlDiscoveryInProgress" class="flex items-center gap-1 text-sm">
+                                            <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                            </svg>
+                                            <span><span x-text="urlDiscoveryProgress.processed"></span>/<span x-text="urlDiscoveryProgress.total"></span></span>
+                                        </div>
                                     </button>
 
                                     <!-- Group separator -->
-                                    <div class="w-px bg-gray-300 dark:bg-gray-600 self-stretch flex-shrink-0"></div>
+                                    <div class="w-2 bg-gray-300 dark:bg-gray-600 self-stretch flex-shrink-0 rounded"></div>
 
                                     <!-- Button 3: Search Website -->
                                     <button @click="batchSearchWebsite()"
                                             :disabled="websiteSearchInProgress || summaryCounts.total_found === 0"
-                                            class="flex-1 flex items-center justify-center gap-1.5 py-3 px-2 text-sm font-medium bg-teal-500 text-white rounded hover:bg-teal-600 transition-colors disabled:opacity-50 min-w-0">
-                                        <svg x-show="!websiteSearchInProgress" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
-                                        </svg>
-                                        <svg x-show="websiteSearchInProgress" class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                        </svg>
-                                        <span x-show="!websiteSearchInProgress">Search Website (<span x-text="planFilterEnabled ? getNextBatchFor('web').totalUnprocessed : summaryCounts.total_found"></span>)</span>
-                                        <span x-show="websiteSearchInProgress"><span x-text="websiteSearchProgress.processed"></span>/<span x-text="websiteSearchProgress.total"></span></span>
+                                            class="flex-1 flex flex-col items-center justify-center py-3 px-2 font-medium bg-green-700 text-white rounded hover:bg-green-800 transition-colors disabled:opacity-50 min-w-0 gap-0.5">
+                                        <div x-show="!websiteSearchInProgress" class="flex flex-col items-center gap-0.5">
+                                            <div class="flex items-center gap-1 text-base">
+                                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                                                </svg>
+                                                <span>Search</span>
+                                            </div>
+                                            <span class="text-base">Website (<span x-text="planFilterEnabled ? getNextBatchFor('web').totalUnprocessed : summaryCounts.total_found"></span>)</span>
+                                        </div>
+                                        <div x-show="websiteSearchInProgress" class="flex items-center gap-1 text-sm">
+                                            <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                            </svg>
+                                            <span><span x-text="websiteSearchProgress.processed"></span>/<span x-text="websiteSearchProgress.total"></span></span>
+                                        </div>
                                     </button>
 
                                     <!-- Button 4: Search 990s -->
                                     <button @click="batchAnalyze990Pdfs()"
                                             :disabled="ninetiesSearchInProgress || summaryCounts.total_found === 0"
-                                            class="flex-1 flex items-center justify-center gap-1.5 py-3 px-2 text-sm font-medium bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors disabled:opacity-50 min-w-0">
-                                        <svg x-show="!ninetiesSearchInProgress" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                        </svg>
-                                        <svg x-show="ninetiesSearchInProgress" class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                        </svg>
-                                        <span x-show="!ninetiesSearchInProgress">Search 990s (<span x-text="planFilterEnabled ? getNextBatchFor('990s').totalUnprocessed : summaryCounts.total_found"></span>)</span>
-                                        <span x-show="ninetiesSearchInProgress"><span x-text="ninetiesSearchProgress.processed"></span>/<span x-text="ninetiesSearchProgress.total"></span></span>
+                                            class="flex-1 flex flex-col items-center justify-center py-3 px-2 font-medium bg-green-700 text-white rounded hover:bg-green-800 transition-colors disabled:opacity-50 min-w-0 gap-0.5">
+                                        <div x-show="!ninetiesSearchInProgress" class="flex flex-col items-center gap-0.5">
+                                            <div class="flex items-center gap-1 text-base">
+                                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                </svg>
+                                                <span>Search</span>
+                                            </div>
+                                            <span class="text-base">990s (<span x-text="planFilterEnabled ? getNextBatchFor('990s').totalUnprocessed : summaryCounts.total_found"></span>)</span>
+                                        </div>
+                                        <div x-show="ninetiesSearchInProgress" class="flex items-center gap-1 text-sm">
+                                            <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                            </svg>
+                                            <span><span x-text="ninetiesSearchProgress.processed"></span>/<span x-text="ninetiesSearchProgress.total"></span></span>
+                                        </div>
                                     </button>
 
                                     <!-- Group separator -->
-                                    <div class="w-px bg-gray-300 dark:bg-gray-600 self-stretch flex-shrink-0"></div>
+                                    <div class="w-2 bg-gray-300 dark:bg-gray-600 self-stretch flex-shrink-0 rounded"></div>
 
-                                    <!-- Button 5: Fast Screen -->
+                                    <!-- Button 5: Screen Fast -->
                                     <button @click="screenAllFast()"
                                             :disabled="batchScreenStatus === 'running' || discoveryResults.length === 0"
-                                            class="flex-1 flex items-center justify-center gap-1.5 py-3 px-2 text-sm font-medium bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors disabled:opacity-50 min-w-0">
-                                        <svg x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'fast')" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                        </svg>
-                                        <svg x-show="batchScreenStatus === 'running' && batchScreenMode === 'fast'" class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                        </svg>
-                                        <span x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'fast')">Fast Screen (<span x-text="planFilterEnabled ? getNextBatchFor('fast').totalUnprocessed : _getUnscreenedCount()"></span>)</span>
-                                        <span x-show="batchScreenStatus === 'running' && batchScreenMode === 'fast'"><span x-text="batchScreenProgress"></span>/<span x-text="batchScreenTotal"></span></span>
+                                            class="flex-1 flex flex-col items-center justify-center py-3 px-2 font-medium bg-green-900 text-white rounded hover:bg-green-800 transition-colors disabled:opacity-50 min-w-0 gap-0.5">
+                                        <div x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'fast')" class="flex flex-col items-center gap-0.5">
+                                            <div class="flex items-center gap-1 text-base">
+                                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                                </svg>
+                                                <span>Screen</span>
+                                            </div>
+                                            <span class="text-base">Fast (<span x-text="planFilterEnabled ? getNextBatchFor('fast').totalUnprocessed : _getUnscreenedCount()"></span>)</span>
+                                        </div>
+                                        <div x-show="batchScreenStatus === 'running' && batchScreenMode === 'fast'" class="flex items-center gap-1 text-sm">
+                                            <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                            </svg>
+                                            <span><span x-text="batchScreenProgress"></span>/<span x-text="batchScreenTotal"></span></span>
+                                        </div>
                                     </button>
 
-                                    <!-- Button 6: Thorough Screen -->
+                                    <!-- Button 6: Screen Thorough -->
                                     <button @click="screenAllThorough()"
                                             :disabled="batchScreenStatus === 'running' || discoveryResults.length === 0"
-                                            class="flex-1 flex items-center justify-center gap-1.5 py-3 px-2 text-sm font-medium bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors disabled:opacity-50 min-w-0">
-                                        <svg x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'thorough')" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                                        </svg>
-                                        <svg x-show="batchScreenStatus === 'running' && batchScreenMode === 'thorough'" class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                        </svg>
-                                        <span x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'thorough')">Thorough (<span x-text="planFilterEnabled ? getNextBatchFor('thorough').totalUnprocessed : _getUnscreenedCount()"></span>)</span>
-                                        <span x-show="batchScreenStatus === 'running' && batchScreenMode === 'thorough'"><span x-text="batchScreenProgress"></span>/<span x-text="batchScreenTotal"></span></span>
+                                            class="flex-1 flex flex-col items-center justify-center py-3 px-2 font-medium bg-green-900 text-white rounded hover:bg-green-800 transition-colors disabled:opacity-50 min-w-0 gap-0.5">
+                                        <div x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'thorough')" class="flex flex-col items-center gap-0.5">
+                                            <div class="flex items-center gap-1 text-base">
+                                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                                </svg>
+                                                <span>Screen</span>
+                                            </div>
+                                            <span class="text-base">Thorough (<span x-text="planFilterEnabled ? getNextBatchFor('thorough').totalUnprocessed : _getUnscreenedCount()"></span>)</span>
+                                        </div>
+                                        <div x-show="batchScreenStatus === 'running' && batchScreenMode === 'thorough'" class="flex items-center gap-1 text-sm">
+                                            <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                            </svg>
+                                            <span><span x-text="batchScreenProgress"></span>/<span x-text="batchScreenTotal"></span></span>
+                                        </div>
                                     </button>
 
                                 </div>
@@ -557,14 +599,14 @@
                                     <div class="flex-1 min-w-0">
                                         URLs <span x-text="getNextBatchFor('urls').totalProcessed"></span>/<span x-text="getNextBatchFor('urls').totalProcessed + getNextBatchFor('urls').totalUnprocessed"></span>
                                     </div>
-                                    <div class="w-px flex-shrink-0"></div><!-- spacer matching separator -->
+                                    <div class="w-2 flex-shrink-0"></div><!-- spacer matching separator -->
                                     <div class="flex-1 min-w-0">
                                         web <span x-text="getNextBatchFor('web').totalProcessed"></span>/<span x-text="getNextBatchFor('web').totalProcessed + getNextBatchFor('web').totalUnprocessed"></span>
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         990s <span x-text="getNextBatchFor('990s').totalProcessed"></span>/<span x-text="getNextBatchFor('990s').totalProcessed + getNextBatchFor('990s').totalUnprocessed"></span>
                                     </div>
-                                    <div class="w-px flex-shrink-0"></div><!-- spacer matching separator -->
+                                    <div class="w-2 flex-shrink-0"></div><!-- spacer matching separator -->
                                     <div class="flex-1 min-w-0">
                                         screen <span x-text="getNextBatchFor('fast').totalProcessed"></span>/<span x-text="getNextBatchFor('fast').totalProcessed + getNextBatchFor('fast').totalUnprocessed"></span>
                                     </div>
@@ -581,11 +623,6 @@
                             <!-- Filter controls (right side) -->
                             <div class="flex flex-col justify-center gap-1 flex-shrink-0">
                                 <div class="flex items-center gap-1">
-                                    <!-- Skip LP checkbox -->
-                                    <label x-show="summaryCounts.low_priority > 0" class="flex items-center gap-0.5 cursor-pointer text-xs text-gray-500 dark:text-gray-400">
-                                        <input type="checkbox" x-model="excludeLowPriority" class="w-3 h-3 text-teal-600 rounded">
-                                        <span>skip LP</span>
-                                    </label>
                                     <!-- Plan filter toggle -->
                                     <label class="relative inline-flex items-center cursor-pointer" title="Plan Screening Filter — limit AI pipeline to top N per step">
                                         <input type="checkbox" x-model="planFilterEnabled" class="sr-only peer">
@@ -612,16 +649,22 @@
                                            class="w-12 px-1.5 py-1 text-xs font-medium rounded border text-center bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 disabled:opacity-40 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300"
                                            :class="planFilterCustomSize ? 'border-indigo-500 ring-1 ring-indigo-300' : ''">
                                 </div>
-                                <!-- Session cost -->
-                                <div x-show="sessionApiCost > 0" class="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap text-right">
-                                    $<span x-text="sessionApiCost.toFixed(3)"></span>
+                                <!-- Skip LP + session cost — right-justified -->
+                                <div class="flex items-center justify-end gap-2">
+                                    <label x-show="summaryCounts.low_priority > 0" class="flex items-center gap-1 cursor-pointer text-xs text-gray-500 dark:text-gray-400">
+                                        <input type="checkbox" x-model="excludeLowPriority" class="w-3 h-3 text-teal-600 rounded">
+                                        <span>skip LP</span>
+                                    </label>
+                                    <span x-show="sessionApiCost > 0" class="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                                        $<span x-text="sessionApiCost.toFixed(3)"></span>
+                                    </span>
                                 </div>
                             </div>
 
                         </div>
 
                         <!-- Row 2: Stats buttons -->
-                        <div x-show="summaryCounts.total_found > 0" class="flex items-center gap-1.5 mt-1.5">
+                        <div x-show="summaryCounts.total_found > 0" class="flex items-center gap-2 mt-1.5">
                             <button @click="showFunnelStatisticsModal()"
                                     x-show="funnelStatistics"
                                     class="px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-xs border border-blue-200 dark:border-blue-800">

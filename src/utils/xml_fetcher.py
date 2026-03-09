@@ -12,7 +12,7 @@ from src.core.cache_manager import get_cache_manager, CacheType
 
 logger = logging.getLogger(__name__)
 
-XML_CACHE_TTL = timedelta(days=30)  # 990 XML filings are immutable once filed
+XML_CACHE_TTL = timedelta(days=180)  # 990 XML filings are immutable once filed; IRS bulk releases ~2x/year
 _XML_NOT_FOUND_SENTINEL = "__NOT_FOUND__"
 
 
