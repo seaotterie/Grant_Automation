@@ -939,7 +939,7 @@
                                                          :title="(opp.web_search_complete && opp.web_data) ? 'Web research complete' : 'No web research'">
                                                         <span class="w-4 h-4 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
                                                               :class="(opp.web_search_complete && opp.web_data)
-                                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                                                ? 'bg-green-600 text-white'
                                                                 : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'">W</span>
                                                     </div>
                                                     <!-- [F] Fast screened — top right -->
@@ -947,18 +947,18 @@
                                                          :title="opp.tool1_score?.mode==='fast' ? 'Fast screened: '+Math.round((opp.tool1_score.overall_score||0)*100)+'%' : 'Not fast screened'">
                                                         <span class="w-4 h-4 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
                                                               :class="opp.tool1_score?.mode==='fast'
-                                                                ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                                                                ? 'bg-indigo-600 text-white'
                                                                 : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'">F</span>
                                                         <span x-show="opp.tool1_score?.mode === 'fast'"
                                                               class="text-xs text-indigo-600 dark:text-indigo-400"
                                                               x-text="Math.round((opp.tool1_score?.overall_score||0)*100)+'%'"></span>
                                                     </div>
-                                                    <!-- [9] 990 filing history — bottom left -->
+                                                    <!-- [9] 990 PDF analyzed — bottom left -->
                                                     <div class="flex items-center gap-1"
-                                                         :title="opp.filing_history_loaded ? '990 filings loaded' : '990 filings not loaded'">
+                                                         :title="opp.pdf_analyzed ? '990 PDF analyzed' : '990 PDF not analyzed'">
                                                         <span class="w-4 h-4 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
-                                                              :class="opp.filing_history_loaded
-                                                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                                              :class="opp.pdf_analyzed
+                                                                ? 'bg-amber-600 text-white'
                                                                 : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'">9</span>
                                                     </div>
                                                     <!-- [T] Thorough screened — bottom right -->
@@ -966,7 +966,7 @@
                                                          :title="opp.tool1_score?.mode==='thorough' ? 'Thorough screened: '+Math.round((opp.tool1_score.overall_score||0)*100)+'%' : 'Not thorough screened'">
                                                         <span class="w-4 h-4 rounded text-xs font-bold flex items-center justify-center flex-shrink-0"
                                                               :class="opp.tool1_score?.mode==='thorough'
-                                                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                                                                ? 'bg-purple-600 text-white'
                                                                 : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'">T</span>
                                                         <span x-show="opp.tool1_score?.mode === 'thorough'"
                                                               class="text-xs text-purple-600 dark:text-purple-400"
