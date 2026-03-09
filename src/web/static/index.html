@@ -461,7 +461,7 @@
                                                 </svg>
                                                 <span>Find</span>
                                             </div>
-                                            <span class="text-base" x-text="discoveryMetadata.should_refresh ? 'Opps' : 'Refresh'"></span>
+                                            <span class="text-base" x-text="discoveryMetadata.last_discovery_date ? '(' + freshnessText + ')' : 'Opps'"></span>
                                         </div>
                                         <div x-show="discoveryLoading" class="flex items-center gap-1 text-sm">
                                             <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
@@ -483,7 +483,7 @@
                                                 </svg>
                                                 <span>Find</span>
                                             </div>
-                                            <span class="text-base">URLs (<span x-text="_getFoundCountFor('urls')"></span>)</span>
+                                            <span class="text-base">URLs (<span x-text="_getFoundCountFor('urls')"></span>/<span x-text="getNextBatchFor('urls').totalEligible"></span>)</span>
                                         </div>
                                         <div x-show="urlDiscoveryInProgress" class="flex items-center gap-1 text-sm">
                                             <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
@@ -508,7 +508,7 @@
                                                 </svg>
                                                 <span>Search</span>
                                             </div>
-                                            <span class="text-base">Website (<span x-text="_getFoundCountFor('web')"></span>)</span>
+                                            <span class="text-base">Website (<span x-text="_getFoundCountFor('web')"></span>/<span x-text="getNextBatchFor('web').totalEligible"></span>)</span>
                                         </div>
                                         <div x-show="websiteSearchInProgress" class="flex items-center gap-1 text-sm">
                                             <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
@@ -530,7 +530,7 @@
                                                 </svg>
                                                 <span>Search</span>
                                             </div>
-                                            <span class="text-base">990s (<span x-text="_getFoundCountFor('990s')"></span>)</span>
+                                            <span class="text-base">990s (<span x-text="_getFoundCountFor('990s')"></span>/<span x-text="getNextBatchFor('990s').totalEligible"></span>)</span>
                                         </div>
                                         <div x-show="ninetiesSearchInProgress" class="flex items-center gap-1 text-sm">
                                             <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
@@ -555,7 +555,7 @@
                                                 </svg>
                                                 <span>Screen</span>
                                             </div>
-                                            <span class="text-base">Fast (<span x-text="_getFoundCountFor('fast')"></span>)</span>
+                                            <span class="text-base">Fast (<span x-text="_getFoundCountFor('fast')"></span>/<span x-text="getNextBatchFor('fast').totalEligible"></span>)</span>
                                         </div>
                                         <div x-show="batchScreenStatus === 'running' && batchScreenMode === 'fast'" class="flex items-center gap-1 text-sm">
                                             <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
@@ -577,7 +577,7 @@
                                                 </svg>
                                                 <span>Screen</span>
                                             </div>
-                                            <span class="text-base">Thorough (<span x-text="_getFoundCountFor('thorough')"></span>)</span>
+                                            <span class="text-base">Thorough (<span x-text="_getFoundCountFor('thorough')"></span>/<span x-text="getNextBatchFor('thorough').totalEligible"></span>)</span>
                                         </div>
                                         <div x-show="batchScreenStatus === 'running' && batchScreenMode === 'thorough'" class="flex items-center gap-1 text-sm">
                                             <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
@@ -590,30 +590,6 @@
 
                                 </div>
 
-                                <!-- Sub-label row — mirrors button columns exactly (flex-1 + w-px spacers) -->
-                                <div class="flex gap-1 text-xs text-center text-gray-500 dark:text-gray-400">
-                                    <div class="flex-1 min-w-0">
-                                        <span x-show="discoveryMetadata.last_discovery_date" x-text="freshnessIcon + ' ' + freshnessText"></span>
-                                        <span x-show="!discoveryMetadata.last_discovery_date" class="opacity-40">not run</span>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        URLs <span x-text="_getFoundCountFor('urls')"></span>/<span x-text="getNextBatchFor('urls').totalEligible"></span>
-                                    </div>
-                                    <div class="w-2 flex-shrink-0"></div><!-- spacer matching separator -->
-                                    <div class="flex-1 min-w-0">
-                                        web <span x-text="_getFoundCountFor('web')"></span>/<span x-text="getNextBatchFor('web').totalEligible"></span>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        990s <span x-text="_getFoundCountFor('990s')"></span>/<span x-text="getNextBatchFor('990s').totalEligible"></span>
-                                    </div>
-                                    <div class="w-2 flex-shrink-0"></div><!-- spacer matching separator -->
-                                    <div class="flex-1 min-w-0">
-                                        fast <span x-text="_getFoundCountFor('fast')"></span>/<span x-text="getNextBatchFor('fast').totalEligible"></span>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        thorough <span x-text="_getFoundCountFor('thorough')"></span>/<span x-text="getNextBatchFor('thorough').totalEligible"></span>
-                                    </div>
-                                </div>
 
                             </div>
 

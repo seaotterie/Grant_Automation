@@ -307,7 +307,7 @@ function screeningModule() {
 
             if (meta.freshness_status === 'fresh') {
                 this.freshnessIcon = '🟢';
-                this.freshnessText = `Fresh (${Math.floor(hours)}h ago)`;
+                this.freshnessText = `${Math.floor(hours)}h ago`;
                 this.freshnessColor = 'green';
             } else if (meta.freshness_status === 'aging') {
                 this.freshnessIcon = '🟡';
@@ -316,11 +316,11 @@ function screeningModule() {
             } else if (meta.freshness_status === 'stale') {
                 this.freshnessIcon = '🔴';
                 const days = Math.floor(hours / 24);
-                this.freshnessText = days === 0 ? `${Math.floor(hours)}h ago` : `Stale (${days}d ago)`;
+                this.freshnessText = days === 0 ? `${Math.floor(hours)}h ago` : `${days}d ago`;
                 this.freshnessColor = 'red';
             } else {
                 this.freshnessIcon = '⚪';
-                this.freshnessText = 'Unknown freshness';
+                this.freshnessText = '?';
                 this.freshnessColor = 'gray';
             }
 
