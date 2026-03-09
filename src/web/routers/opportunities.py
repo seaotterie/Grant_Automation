@@ -1085,68 +1085,7 @@ async def get_990_filings(opportunity_id: str):
             except Exception as cache_err:
                 logger.warning(f"Cache read error for EIN {ein}: {cache_err}")
 
-        filings: List[Dict[str, Any]] = []
-
-        # 1. ProPublica API filings (structured data + pdf_url)
-        try:
-            from src.clients.propublica_client import ProPublicaClient
-            client = ProPublicaClient()
-            org_data = await client.get_organization_by_ein(ein)
-            if org_data:
-                api_filings = org_data.get("filings_with_data", [])
-                for f in api_filings[:10]:
-                    filings.append({
-                        "tax_year": f.get("tax_prd_yr") or f.get("tax_year"),
-                        "form_type": f.get("formtype") or f.get("form_type", "990"),
-                        "pdf_url": f.get("pdf_url"),
-                        "revenue": f.get("totrevenue"),
-                        "expenses": f.get("totfuncexpns"),
-                        "assets": f.get("totassetsend"),
-                        "filing_date": f.get("updated"),
-                        "source": "api",
-                    })
-        except Exception as e:
-            logger.warning(f"ProPublica API call failed for EIN {ein}: {e}")
-
-        # 2. Scraped PDF links from ProPublica org page (catches links API misses)
-        try:
-            from src.utils.xml_fetcher import XMLFetcher
-            fetcher = XMLFetcher()
-            scraped_links = await fetcher.find_filing_pdf_links(ein)
-            # Only add scraped links not already covered by API (match by year)
-            api_years = {f["tax_year"] for f in filings if f.get("tax_year")}
-            for link in scraped_links:
-                year = link.get("year")
-                if year not in api_years or link.get("form_type", "").startswith("Schedule"):
-                    filings.append({
-                        "tax_year": year,
-                        "form_type": link.get("form_type", "990"),
-                        "pdf_url": link.get("pdf_url"),
-                        "revenue": None,
-                        "expenses": None,
-                        "assets": None,
-                        "filing_date": None,
-                        "link_text": link.get("link_text"),
-                        "source": "scraped",
-                    })
-        except Exception as e:
-            logger.warning(f"PDF link scraping failed for EIN {ein}: {e}")
-
-        # Sort by tax year descending
-        filings.sort(key=lambda x: (x.get("tax_year") or 0), reverse=True)
-
-        # --- Store in EIN intelligence cache ---
-        if filings:
-            try:
-                database_manager.upsert_ein_intelligence(
-                    ein=ein,
-                    org_name=org_name,
-                    filing_history=filings,
-                    filing_history_fetched_at=datetime.now().isoformat(),
-                )
-                logger.info(f"Cached filing_history for EIN {ein} ({len(filings)} filings)")
-            except Exception as cache_err:
-                logger.warning(f"Failed to cache filing_history for EIN {ein}: {cache_err}")
+        filings = await _fetch_and_cache_filing_history(ein, org_name)
 
         return {
             "success": True,
@@ -1161,6 +1100,73 @@ async def get_990_filings(opportunity_id: str):
     except Exception as e:
         logger.error(f"Failed to get 990 filings for {opportunity_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+async def _fetch_and_cache_filing_history(ein: str, org_name: str) -> List[Dict[str, Any]]:
+    """
+    Fetch filing history for an EIN from ProPublica (API + scraped PDF links)
+    and cache the result in ein_intelligence.  Used by both get_990_filings
+    and the batch 990 endpoint so the batch doesn't require pre-populated history.
+    Returns the list of filing dicts (may be empty).
+    """
+    filings: List[Dict[str, Any]] = []
+
+    # 1. ProPublica API filings (structured data + pdf_url)
+    try:
+        from src.clients.propublica_client import ProPublicaClient
+        client = ProPublicaClient()
+        org_data = await client.get_organization_by_ein(ein)
+        if org_data:
+            for f in org_data.get("filings_with_data", [])[:10]:
+                filings.append({
+                    "tax_year": f.get("tax_prd_yr") or f.get("tax_year"),
+                    "form_type": f.get("formtype") or f.get("form_type", "990"),
+                    "pdf_url": f.get("pdf_url"),
+                    "revenue": f.get("totrevenue"),
+                    "expenses": f.get("totfuncexpns"),
+                    "assets": f.get("totassetsend"),
+                    "filing_date": f.get("updated"),
+                    "source": "api",
+                })
+    except Exception as e:
+        logger.warning(f"ProPublica API call failed for EIN {ein}: {e}")
+
+    # 2. Scraped PDF links from ProPublica org page (catches links API misses)
+    try:
+        from src.utils.xml_fetcher import XMLFetcher
+        fetcher = XMLFetcher()
+        scraped_links = await fetcher.find_filing_pdf_links(ein)
+        api_years = {f["tax_year"] for f in filings if f.get("tax_year")}
+        for link in scraped_links:
+            year = link.get("year")
+            if year not in api_years or link.get("form_type", "").startswith("Schedule"):
+                filings.append({
+                    "tax_year": year,
+                    "form_type": link.get("form_type", "990"),
+                    "pdf_url": link.get("pdf_url"),
+                    "revenue": None, "expenses": None, "assets": None,
+                    "filing_date": None,
+                    "link_text": link.get("link_text"),
+                    "source": "scraped",
+                })
+    except Exception as e:
+        logger.warning(f"PDF link scraping failed for EIN {ein}: {e}")
+
+    filings.sort(key=lambda x: (x.get("tax_year") or 0), reverse=True)
+
+    if filings:
+        try:
+            database_manager.upsert_ein_intelligence(
+                ein=ein,
+                org_name=org_name,
+                filing_history=filings,
+                filing_history_fetched_at=datetime.now().isoformat(),
+            )
+            logger.info(f"Cached filing_history for EIN {ein} ({len(filings)} filings)")
+        except Exception as cache_err:
+            logger.warning(f"Failed to cache filing_history for EIN {ein}: {cache_err}")
+
+    return filings
 
 
 # ---------------------------------------------------------------------------
@@ -1267,9 +1273,13 @@ async def batch_analyze_990_pdfs(body: BatchAnalyze990PDFsRequest):
 
                 ein, org_name = row[0], row[1]
 
-                # Get most recent filing PDF URL from cached filing history
+                # Get most recent filing PDF URL — fetch from ProPublica if not cached
                 intel = database_manager.get_ein_intelligence(ein)
                 filing_history = intel.get("filing_history") if intel else None
+
+                if not filing_history:
+                    logger.info(f"Fetching filing history for EIN {ein} ({org_name})")
+                    filing_history = await _fetch_and_cache_filing_history(ein, org_name)
 
                 pdf_url = None
                 tax_year = None
@@ -1287,7 +1297,7 @@ async def batch_analyze_990_pdfs(body: BatchAnalyze990PDFsRequest):
                         "ein": ein,
                         "organization_name": org_name,
                         "status": "skipped",
-                        "reason": "no pdf_url in filing history — run Find URLs first",
+                        "reason": "no pdf_url found in ProPublica filing history",
                     })
                     return
 
