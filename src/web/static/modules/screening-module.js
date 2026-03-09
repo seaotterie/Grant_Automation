@@ -728,6 +728,30 @@ function screeningModule() {
         },
 
         /**
+         * Count opportunities where a pipeline step produced actual results (not just "was run").
+         * Used for the button label to show e.g. "URLs (347)" meaning 347 URLs were found.
+         * Distinct from _isProcessedFor which counts anything that was attempted.
+         * @param {string} step - 'urls' | 'web' | '990s' | 'fast' | 'thorough'
+         */
+        _getFoundCountFor(step) {
+            const opps = this._getSortedByScore();
+            switch (step) {
+                case 'urls':
+                    return opps.filter(o => o.url_source != null && o.url_source !== 'not_found').length;
+                case 'web':
+                    return opps.filter(o => !!(o.web_search_complete && o.web_data)).length;
+                case '990s':
+                    return opps.filter(o => !!(o.pdf_analyzed)).length;
+                case 'fast':
+                    return opps.filter(o => o.tool1_score != null).length;
+                case 'thorough':
+                    return opps.filter(o => o.tool1_score?.mode === 'thorough').length;
+                default:
+                    return 0;
+            }
+        },
+
+        /**
          * Get opportunities sorted by score descending.
          * Excludes low_priority if showLowPriority is false.
          */
