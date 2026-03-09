@@ -2730,6 +2730,14 @@ function catalynxApp() {
         modalActiveTab: 'scores', // Tab state for opportunity modal (default to Score Breakdown)
         ninetiesExtractionData: null,
         ninetiesExtractionLoading: false,
+        // Modal navigation
+        modalOpportunityIndex: -1,
+        // Modal per-opp action loading flags
+        modalFindUrlsLoading: false,
+        modalWebSearchLoading: false,
+        modal990sLoading: false,
+        modalFastScreenLoading: false,
+        modalThoroughScreenLoading: false,
 
         // Stage Change Confirmation Modal System
         showStageChangeModal: false,
@@ -7531,11 +7539,17 @@ function catalynxApp() {
 
         // OPPORTUNITY MODAL FUNCTIONS
         async openOpportunityModal(opportunity, origin = 'overview') {
+            // Reset per-opp action loading flags when switching opportunities
+            this.modalFindUrlsLoading = false;
+            this.modalWebSearchLoading = false;
+            this.modal990sLoading = false;
+            this.modalFastScreenLoading = false;
+            this.modalThoroughScreenLoading = false;
             console.log('Opening opportunity modal for:', opportunity);
-            
+
             // Debug logging for Richmond Memorial
             if (opportunity.organization_name && opportunity.organization_name.includes('Richmond Memorial')) {
-                console.log(`🔍 MODAL OPENED for Richmond Memorial:`, {
+                console.log(`MODAL OPENED for Richmond Memorial:`, {
                     opportunity_id: opportunity.opportunity_id,
                     organization_name: opportunity.organization_name,
                     current_stage: opportunity.current_stage,
@@ -7543,7 +7557,17 @@ function catalynxApp() {
                     expected_display: opportunity.funnel_stage ? this.getStageDisplayName(opportunity.funnel_stage) : 'NO FUNNEL STAGE'
                 });
             }
-            
+
+            // Track index for prev/next navigation
+            // Try opportunitiesData first, then screening module's discoveryResults if available
+            const navList = this._getModalNavList();
+            if (navList && navList.length > 0) {
+                const idx = navList.findIndex(o => o.opportunity_id === opportunity.opportunity_id);
+                this.modalOpportunityIndex = idx >= 0 ? idx : 0;
+            } else {
+                this.modalOpportunityIndex = 0;
+            }
+
             this.selectedOpportunity = opportunity;
             this.opportunityLoading = true;
             this.showOpportunityModal = true;
@@ -7613,11 +7637,183 @@ function catalynxApp() {
             this.opportunityNotes = ''; // Clear notes field
             this.ninetiesExtractionData = null;
             this.ninetiesExtractionLoading = false;
+            this.modalOpportunityIndex = -1;
             // Also clear delete confirmation state
             this.showDeleteConfirmation = false;
             this.deleteConfirmationStep = 1;
             this.deletingOpportunity = false;
             console.log('Closing opportunity modal');
+        },
+
+        // Get the navigation list used for prev/next modal navigation.
+        // Tries the screening module's discoveryResults via a DOM lookup first,
+        // then falls back to opportunitiesData.
+        _getModalNavList() {
+            // Try to find screening module scope (it owns discoveryResults)
+            try {
+                const screeningEl = document.querySelector('[x-data*="screeningModule"]');
+                if (screeningEl && screeningEl._x_dataStack && screeningEl._x_dataStack[0]) {
+                    const sm = screeningEl._x_dataStack[0];
+                    if (sm.discoveryResults && sm.discoveryResults.length > 0) {
+                        return sm.discoveryResults;
+                    }
+                }
+            } catch (e) { /* ignore */ }
+            return this.opportunitiesData || [];
+        },
+
+        // Navigate the opportunity modal to the next or previous item.
+        navigateModal(direction) {
+            const list = this._getModalNavList();
+            if (!list || list.length === 0) return;
+            const newIndex = this.modalOpportunityIndex + direction;
+            if (newIndex < 0 || newIndex >= list.length) return;
+            this.modalOpportunityIndex = newIndex;
+            this.openOpportunityModal(list[newIndex]);
+        },
+
+        // ── Per-opp pipeline action buttons ──────────────────────────────────
+
+        async modalFindUrls() {
+            if (!this.selectedOpportunity?.opportunity_id) return;
+            const oppId = this.selectedOpportunity.opportunity_id;
+            this.modalFindUrlsLoading = true;
+            try {
+                const resp = await fetch(`/api/v2/opportunities/${oppId}/990-filings`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    // Merge filing_history into selectedOpportunity
+                    this.selectedOpportunity = { ...this.selectedOpportunity, filing_history: data.filings || [] };
+                    // Also update entry in opportunitiesData
+                    const list = this._getModalNavList();
+                    const idx = list.findIndex(o => o.opportunity_id === oppId);
+                    if (idx >= 0) list[idx] = { ...list[idx], filing_history: data.filings || [] };
+                    this.showNotification('Find URLs', `Found ${(data.filings || []).length} filings for ${this.selectedOpportunity.organization_name}`, 'success');
+                } else {
+                    const err = await resp.json().catch(() => ({}));
+                    this.showNotification('Find URLs', err.detail || 'Failed to load filing history', 'error');
+                }
+            } catch (e) {
+                console.error('modalFindUrls error:', e);
+                this.showNotification('Find URLs', 'Network error', 'error');
+            } finally {
+                this.modalFindUrlsLoading = false;
+            }
+        },
+
+        async modalSearchWebsite() {
+            if (!this.selectedOpportunity?.opportunity_id) return;
+            const oppId = this.selectedOpportunity.opportunity_id;
+            this.modalWebSearchLoading = true;
+            try {
+                const resp = await fetch(`/api/v2/opportunities/${oppId}/research`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.web_data) {
+                        this.selectedOpportunity = { ...this.selectedOpportunity, web_data: data.web_data, web_search_complete: true };
+                        const list = this._getModalNavList();
+                        const idx = list.findIndex(o => o.opportunity_id === oppId);
+                        if (idx >= 0) list[idx] = { ...list[idx], web_data: data.web_data, web_search_complete: true };
+                    }
+                    this.showNotification('Search Website', 'Web intelligence gathered successfully', 'success');
+                } else {
+                    const err = await resp.json().catch(() => ({}));
+                    this.showNotification('Search Website', err.detail || 'Web research failed', 'error');
+                }
+            } catch (e) {
+                console.error('modalSearchWebsite error:', e);
+                this.showNotification('Search Website', 'Network error', 'error');
+            } finally {
+                this.modalWebSearchLoading = false;
+            }
+        },
+
+        async modalSearch990s() {
+            if (!this.selectedOpportunity?.opportunity_id) return;
+            const oppId = this.selectedOpportunity.opportunity_id;
+            // Need a pdf_url — try from filing_history
+            const filings = this.selectedOpportunity.filing_history || [];
+            const filing = filings.find(f => f.pdf_url);
+            if (!filing) {
+                this.showNotification('Search 990s', 'Run Find URLs first to get a 990 PDF link', 'warning');
+                return;
+            }
+            this.modal990sLoading = true;
+            try {
+                const resp = await fetch(`/api/v2/opportunities/${oppId}/analyze-990-pdf`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pdf_url: filing.pdf_url, tax_year: filing.tax_year || null })
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    this.ninetiesExtractionData = data.extraction
+                        ? { ...data.extraction, tax_year: data.tax_year }
+                        : null;
+                    this.selectedOpportunity = { ...this.selectedOpportunity, pdf_analyzed: true };
+                    const list = this._getModalNavList();
+                    const idx = list.findIndex(o => o.opportunity_id === oppId);
+                    if (idx >= 0) list[idx] = { ...list[idx], pdf_analyzed: true };
+                    this.showNotification('Search 990s', 'PDF extraction complete', 'success');
+                } else {
+                    const err = await resp.json().catch(() => ({}));
+                    this.showNotification('Search 990s', err.detail || '990 PDF analysis failed', 'error');
+                }
+            } catch (e) {
+                console.error('modalSearch990s error:', e);
+                this.showNotification('Search 990s', 'Network error', 'error');
+            } finally {
+                this.modal990sLoading = false;
+            }
+        },
+
+        async modalFastScreen() {
+            await this._modalScreen('fast');
+        },
+
+        async modalThoroughScreen() {
+            await this._modalScreen('thorough');
+        },
+
+        async _modalScreen(mode) {
+            if (!this.selectedOpportunity?.opportunity_id) return;
+            const oppId = this.selectedOpportunity.opportunity_id;
+            if (mode === 'fast') this.modalFastScreenLoading = true;
+            else this.modalThoroughScreenLoading = true;
+            try {
+                const resp = await fetch(`/api/v2/opportunities/${oppId}/screen?mode=${mode}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    // Store result under the mode-specific key so Screen Fast/Thorough cards show it
+                    const scoreKey = mode === 'fast' ? 'tool1_score_fast' : 'tool1_score_thorough';
+                    const updates = {};
+                    if (data.tool1_score) updates[scoreKey] = data.tool1_score;
+                    if (data.category_level) updates.category_level = data.category_level;
+                    if (data.overall_score !== undefined) updates.overall_score = data.overall_score;
+                    this.selectedOpportunity = { ...this.selectedOpportunity, ...updates };
+                    const list = this._getModalNavList();
+                    const idx = list.findIndex(o => o.opportunity_id === oppId);
+                    if (idx >= 0) list[idx] = { ...list[idx], ...updates };
+                    const score = data.tool1_score ? Math.round((data.tool1_score.overall_score || 0) * 100) + '%' : '';
+                    this.showNotification(mode === 'fast' ? 'Screen Fast' : 'Screen Thorough', `Screening complete${score ? ': ' + score : ''}`, 'success');
+                } else {
+                    const err = await resp.json().catch(() => ({}));
+                    this.showNotification(mode === 'fast' ? 'Screen Fast' : 'Screen Thorough', err.detail || 'Screening failed', 'error');
+                }
+            } catch (e) {
+                console.error(`modal${mode}Screen error:`, e);
+                this.showNotification(mode === 'fast' ? 'Screen Fast' : 'Screen Thorough', 'Network error', 'error');
+            } finally {
+                if (mode === 'fast') this.modalFastScreenLoading = false;
+                else this.modalThoroughScreenLoading = false;
+            }
         },
 
         switchOpportunityTab(tab) {

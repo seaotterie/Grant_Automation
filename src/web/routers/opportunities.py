@@ -1276,6 +1276,7 @@ async def _analyze_990_pdf_for_ein(
         "grant_size_range": result.grant_size_range,
         "program_descriptions": result.program_descriptions,
         "contact_information": result.contact_information,
+        "officers": getattr(result, "officers", []),
         "extraction_confidence": result.extraction_confidence,
         "pdf_pages_note": result.pdf_pages_note,
     }
@@ -1878,6 +1879,180 @@ async def get_batch_screen_status(job_id: str):
     return job
 
 
+@router.post("/{opportunity_id}/screen")
+async def screen_single_opportunity(opportunity_id: str, mode: str = "fast"):
+    """
+    Screen a single opportunity with Tool 1 (fast or thorough mode).
+
+    Reuses the same helpers as _run_batch_screen:
+      - Loads opportunity + profile from DB
+      - Injects funder_intelligence from ein_intelligence cache
+      - Runs OpportunityScreeningTool
+      - Persists tool1_score in analysis_discovery
+
+    Returns:
+      { tool1_score, category_level, overall_score, organization_name }
+    """
+    try:
+        # 1. Load opportunity
+        conn = database_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM opportunities WHERE id = ?", (opportunity_id,))
+        row = cursor.fetchone()
+        col_names = [col[0] for col in cursor.description] if cursor.description else []
+        conn.close()
+
+        if not row:
+            raise HTTPException(status_code=404, detail=f"Opportunity {opportunity_id} not found")
+
+        opp_dict = dict(zip(col_names, row))
+        opp_id_db = opp_dict["id"]
+        org_name = opp_dict["organization_name"]
+        ein = opp_dict.get("ein") or ""
+        profile_id = opp_dict.get("profile_id") or ""
+        ad_raw = opp_dict.get("analysis_discovery")
+        ad = json.loads(ad_raw) if isinstance(ad_raw, str) and ad_raw else {}
+
+        # 2. Load profile
+        if not profile_id:
+            raise HTTPException(status_code=400, detail="Opportunity has no profile_id")
+
+        p_conn = database_manager.get_connection()
+        p_cursor = p_conn.cursor()
+        p_cursor.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,))
+        p_row = p_cursor.fetchone()
+        p_conn.close()
+
+        if not p_row:
+            raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+
+        profile_dict = dict(p_row)
+
+        # 3. Import Tool 1
+        try:
+            from tools.opportunity_screening_tool.app.screening_tool import OpportunityScreeningTool
+            from tools.opportunity_screening_tool.app.screening_models import (
+                ScreeningInput, ScreeningMode, Opportunity as ScreeningOpportunity, OrganizationProfile
+            )
+            tool = OpportunityScreeningTool()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Tool 1 import error: {e}")
+
+        # 4. Build OrganizationProfile
+        focus_areas = json.loads(profile_dict.get("focus_areas") or "[]") or []
+        program_areas = json.loads(profile_dict.get("program_areas") or "[]") or []
+        ntee_codes = json.loads(profile_dict.get("ntee_codes") or "[]") or []
+        service_areas = json.loads(profile_dict.get("service_areas") or "[]") or []
+        org_profile = OrganizationProfile(
+            ein=profile_dict.get("ein") or "",
+            name=profile_dict.get("name") or "Unknown",
+            mission=profile_dict.get("mission_statement") or "",
+            ntee_codes=ntee_codes,
+            geographic_focus=service_areas or [profile_dict.get("location") or ""],
+            program_areas=program_areas or focus_areas,
+            annual_revenue=profile_dict.get("annual_revenue"),
+        )
+
+        # 5. Build ScreeningOpportunity
+        data_990 = ad.get("990_data") or {}
+        ntee = ad.get("ntee_code") or ""
+        screening_opp = ScreeningOpportunity(
+            opportunity_id=opp_id_db,
+            title=org_name or "Unknown Organization",
+            funder=org_name or "Unknown",
+            funder_type="foundation" if ad.get("foundation_code") else "nonprofit",
+            description=(
+                f"Organization: {org_name}. "
+                f"NTEE: {ntee}. "
+                f"Revenue: ${data_990.get('revenue', 0):,.0f}. "
+                f"Assets: ${data_990.get('assets', 0):,.0f}. "
+                f"Location: {ad.get('location', {}).get('city', '')}, "
+                f"{ad.get('location', {}).get('state', '')}."
+            ),
+            geographic_restrictions=[],
+        )
+
+        # 6. Inject funder intelligence if available
+        if ein:
+            try:
+                from tools.shared_schemas.grant_funder_intelligence import build_from_ein_intelligence
+                intel = database_manager.get_ein_intelligence(ein)
+                if intel:
+                    funder_intel = build_from_ein_intelligence(
+                        web_data=intel.get("web_data"),
+                        pdf_analyses=intel.get("pdf_analyses"),
+                        ein=ein,
+                    )
+                    if funder_intel:
+                        screening_opp.funder_intelligence = funder_intel
+            except Exception as fi_err:
+                logger.debug(f"Funder intelligence skipped for {ein}: {fi_err}")
+
+        # 7. Run screening
+        mode_enum = ScreeningMode.FAST if mode == "fast" else ScreeningMode.THOROUGH
+        screening_input = ScreeningInput(
+            opportunities=[screening_opp],
+            organization_profile=org_profile,
+            screening_mode=mode_enum,
+            minimum_threshold=0.0,
+            max_recommendations=1,
+        )
+
+        result = await tool.execute(screening_input=screening_input)
+
+        if not (result.is_success and result.data and result.data.opportunity_scores):
+            raise HTTPException(status_code=500, detail="Screening returned no results")
+
+        score_obj = result.data.opportunity_scores[0]
+        tool1_result = {
+            "overall_score": score_obj.overall_score,
+            "strategic_fit_score": score_obj.strategic_fit_score,
+            "eligibility_score": score_obj.eligibility_score,
+            "timing_score": score_obj.timing_score,
+            "confidence_level": score_obj.confidence_level,
+            "one_sentence_summary": score_obj.one_sentence_summary,
+            "key_strengths": score_obj.key_strengths,
+            "key_concerns": score_obj.key_concerns,
+            "mode": mode,
+            "scored_at": datetime.now().isoformat(),
+        }
+
+        # 8. Persist to DB
+        upd_conn = database_manager.get_connection()
+        ucursor = upd_conn.cursor()
+        ucursor.execute("SELECT analysis_discovery FROM opportunities WHERE id = ?", (opp_id_db,))
+        upd_row = ucursor.fetchone()
+        if upd_row:
+            raw = upd_row[0]
+            upd_ad = json.loads(raw) if isinstance(raw, str) and raw else {}
+            upd_ad["tool1_score"] = tool1_result
+            upd_ad[f"tool1_score_{mode}"] = tool1_result
+            ucursor.execute(
+                "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                (json.dumps(upd_ad), datetime.now().isoformat(), opp_id_db),
+            )
+            upd_conn.commit()
+        upd_conn.close()
+
+        logger.info(f"Single screen ({mode}) for {opportunity_id}: {score_obj.overall_score:.2f}")
+
+        return {
+            "success": True,
+            "opportunity_id": opportunity_id,
+            "organization_name": org_name,
+            "mode": mode,
+            "tool1_score": tool1_result,
+            "overall_score": score_obj.overall_score,
+            "category_level": ad.get("category_level"),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Single screen failed for {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/health")
 async def health_check():
     """Health check for opportunities API."""
@@ -1887,6 +2062,7 @@ async def health_check():
         "endpoints": [
             "GET /api/v2/opportunities/{id}/details",
             "POST /api/v2/opportunities/{id}/research",
+            "POST /api/v2/opportunities/{id}/screen",
             "POST /api/v2/opportunities/{id}/promote",
             "POST /api/v2/opportunities/{id}/demote",
             "PATCH /api/v2/opportunities/{id}/notes",

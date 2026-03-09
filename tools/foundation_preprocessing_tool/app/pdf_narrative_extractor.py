@@ -47,6 +47,7 @@ class NarrativeExtractionResult:
     geographic_limitations: Optional[str] = None
     population_focus: Optional[str] = None
     grant_size_range: Optional[str] = None
+    officers: List[Dict[str, Any]] = field(default_factory=list)  # [{name, title, compensation}]
     extraction_confidence: float = 0.0
     pdf_pages_note: Optional[str] = None  # set when PDF was truncated
     source_tax_year: Optional[int] = None
@@ -92,14 +93,17 @@ Return a JSON object with exactly these fields:
   "geographic_limitations": "Geographic restrictions on giving. null if not found.",
   "population_focus": "Target populations served or funded. null if not found.",
   "grant_size_range": "Typical grant range if mentioned (e.g. '$5,000-$50,000'). null if not found.",
+  "officers": [{"name": "Full Name", "title": "Title/Role", "compensation": null}],
   "confidence": 0.0
 }
 
 Where to look depending on form type:
-- Form 990-PF: Part XV (Application Information), Part I (Overview), Part XV-A (Grant Application), Schedule of Distributions
-- Form 990: Part III (Program Service Accomplishments), Part IX (Grants column), Schedule I (Grants to Organizations), any narrative sections
-- Form 990-EZ: Part III (Program Service Accomplishments), Schedule O (Supplemental Information)
+- Form 990-PF: Part XV (Application Information), Part I (Overview), Part XV-A (Grant Application), Schedule of Distributions, Part VIII (Officers, Directors, Trustees, Foundation Managers)
+- Form 990: Part III (Program Service Accomplishments), Part IX (Grants column), Schedule I (Grants to Organizations), any narrative sections, Part VII (Compensation of Officers, Directors, Trustees)
+- Form 990-EZ: Part III (Program Service Accomplishments), Schedule O (Supplemental Information), Part IV (Officers, Directors, Trustees, and Key Employees)
 - All forms: Any supplemental narrative, mission statements, program descriptions
+
+For officers: list all officers, directors, trustees, and key employees found in Part VII (Form 990), Part VIII (Form 990-PF), or Part IV (Form 990-EZ). Include name, title, and compensation (integer dollars or null if not listed/zero).
 
 Set "confidence" based on how much useful grant-making data you found:
 - 0.8-1.0: Rich data — application process, priorities, and geographic info all found
@@ -252,10 +256,11 @@ Return ONLY the JSON object, no other text."""
             result.geographic_limitations = data.get("geographic_limitations")
             result.population_focus = data.get("population_focus")
             result.grant_size_range = data.get("grant_size_range")
+            result.officers = data.get("officers", [])
             result.extraction_confidence = data.get("confidence", 0.5)
 
             logger.info(f"Extracted narrative for {ein}: mission={'yes' if result.mission_statement else 'no'}, "
-                       f"accepts_apps={result.accepts_applications}, conf={result.extraction_confidence}")
+                       f"accepts_apps={result.accepts_applications}, officers={len(result.officers)}, conf={result.extraction_confidence}")
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse extraction response for {ein}: {e}")
