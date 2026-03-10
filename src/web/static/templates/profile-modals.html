@@ -1009,6 +1009,60 @@
                             </div>
                         </template>
 
+                        <!-- Card E: People & Leadership (rose) -->
+                        <template x-if="pipelineResult?.profile_people?.length > 0">
+                            <div class="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-semibold text-rose-900 dark:text-rose-100 flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        </svg>
+                                        People &amp; Leadership
+                                    </h4>
+                                    <span class="text-xs px-2 py-0.5 bg-rose-100 dark:bg-rose-800/40 text-rose-700 dark:text-rose-300 rounded-full font-medium"
+                                          x-text="pipelineResult.profile_people.length + ' people found'"></span>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <template x-for="person in pipelineResult.profile_people" :key="person.name">
+                                        <div class="flex items-center justify-between py-1.5 border-b border-rose-100 dark:border-rose-800/40 last:border-0">
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <!-- Source badge -->
+                                                <span class="flex-shrink-0 text-xs px-1.5 py-0.5 rounded font-medium"
+                                                      :class="person.source === 'web' ? 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300' : person.source === '990_pdf' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'"
+                                                      x-text="person.source === 'web' ? 'web' : person.source === '990_pdf' ? '990' : person.source || '?'"></span>
+                                                <div class="min-w-0">
+                                                    <span class="text-sm font-medium text-gray-900 dark:text-gray-100" x-text="person.name"></span>
+                                                    <template x-if="person.title">
+                                                        <span class="text-xs text-gray-500 dark:text-gray-400 ml-1.5" x-text="person.title"></span>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-3 flex-shrink-0 ml-2">
+                                                <template x-if="person.email">
+                                                    <a :href="'mailto:' + person.email"
+                                                       class="text-xs text-rose-600 dark:text-rose-400 hover:underline truncate max-w-32"
+                                                       x-text="person.email"
+                                                       @click.stop></a>
+                                                </template>
+                                                <template x-if="person.compensation">
+                                                    <span class="text-xs text-gray-400 dark:text-gray-500"
+                                                          x-text="'$' + Number(person.compensation).toLocaleString()"></span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <p class="text-xs text-rose-400 dark:text-rose-500 mt-3 pt-2 border-t border-rose-200 dark:border-rose-800">
+                                    Sources: web scraping · 990 filing · For Six Degrees connection matching
+                                </p>
+                            </div>
+                        </template>
+                        <template x-if="pipelineResult && !pipelineResult?.profile_people?.length">
+                            <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-rose-200 dark:border-rose-800 rounded-lg p-4 text-center">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">No people data found — run pipeline to extract board members and officers.</p>
+                            </div>
+                        </template>
+
                         <!-- Footer: filings + cost -->
                         <div class="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500 pt-1">
                             <span x-show="pipelineResult?.filing_count">

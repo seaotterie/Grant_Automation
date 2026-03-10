@@ -182,6 +182,15 @@ async def _run_intelligence_pipeline(
             result["pdf_skipped"] = True
             logger.info(f"[Pipeline {job_id}] Step 3 skipped — no PDF URL found")
 
+        # ── Sync profile people from gathered web/990 data ───────────────
+        try:
+            profile_people = _sync_profile_people(profile_id, ein)
+            result["profile_people"] = profile_people
+            result["profile_people_count"] = len(profile_people)
+        except Exception as e:
+            logger.warning(f"[Pipeline {job_id}] People sync failed: {e}")
+            result["profile_people"] = []
+
         # ── Step 4a: Fast Profile Analysis ───────────────────────────────
         _update_job(job_id, step="fast_screen", step_index=3)
         fast_analysis: Optional[Dict] = None
@@ -214,6 +223,7 @@ async def _run_intelligence_pipeline(
                 ph["pipeline_results"] = {
                     "fast_analysis": fast_analysis,
                     "thorough_analysis": thorough_analysis,
+                    "profile_people": result.get("profile_people", []),
                     "web_quality": web_quality,
                     "pdf_confidence": pdf_confidence,
                     "ran_at": datetime.now().isoformat(),
@@ -330,6 +340,103 @@ async def _run_web_research(ein: str, org_name: str, website_url: str) -> Option
         web_data_source="tool25_haiku",
     )
     return web_data
+
+
+# ---------------------------------------------------------------------------
+# Helper: People Sync (profile side)
+# ---------------------------------------------------------------------------
+
+def _sync_profile_people(profile_id: str, ein: str) -> list:
+    """
+    Build a unified structured people list from ein_intelligence (web + 990)
+    for the profile org itself.  Format: [{name, title, source, email?, compensation?}]
+    — identical to GrantFunderIntelligence.people so both sides can be compared.
+
+    Writes back to profiles.board_members if the new list is non-empty and
+    richer (longer) than whatever is currently stored.
+
+    Returns the merged people list.
+    """
+    intel = database_manager.get_ein_intelligence(ein) or {}
+    web_data = intel.get("web_data") or {}
+    pdf_analyses = intel.get("pdf_analyses") or {}
+
+    seen: set = set()
+    people: list = []
+
+    # ── Web source: leadership[] ─────────────────────────────────────────
+    for ldr in (web_data.get("leadership") or []):
+        name = (ldr.get("name") or "").strip()
+        if not name:
+            continue
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        entry: dict = {"name": name, "source": "web"}
+        title = ldr.get("title") or ldr.get("role") or ""
+        if title:
+            entry["title"] = title
+        email = ldr.get("email") or ""
+        if email:
+            entry["email"] = email
+        people.append(entry)
+
+    # ── PDF source: officers[] from first extraction ─────────────────────
+    first_extraction: dict = {}
+    if isinstance(pdf_analyses, dict):
+        for val in pdf_analyses.values():
+            if isinstance(val, dict):
+                # May be stored as {"extraction": {...}} or flat
+                first_extraction = val.get("extraction") or val
+                break
+
+    for off in (first_extraction.get("officers") or []):
+        if not isinstance(off, dict):
+            continue
+        name = (off.get("name") or "").strip()
+        if not name:
+            continue
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        entry = {"name": name, "source": "990_pdf"}
+        title = off.get("title") or off.get("position") or ""
+        if title:
+            entry["title"] = title
+        comp = off.get("compensation")
+        if comp is not None:
+            entry["compensation"] = comp
+        people.append(entry)
+
+    if not people:
+        return []
+
+    # ── Write back to profiles.board_members if richer than existing ─────
+    try:
+        conn = database_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT board_members FROM profiles WHERE id = ?", (profile_id,))
+        row = cursor.fetchone()
+        existing: list = []
+        if row and row[0]:
+            try:
+                existing = json.loads(row[0]) if isinstance(row[0], str) else (row[0] or [])
+            except Exception:
+                existing = []
+        if len(people) > len(existing):
+            cursor.execute(
+                "UPDATE profiles SET board_members = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (json.dumps(people), profile_id),
+            )
+            conn.commit()
+            logger.info(f"[SyncPeople] Updated board_members for profile {profile_id}: {len(people)} people")
+        conn.close()
+    except Exception as e:
+        logger.warning(f"[SyncPeople] Failed to write board_members for profile {profile_id}: {e}")
+
+    return people
 
 
 # ---------------------------------------------------------------------------

@@ -49,8 +49,12 @@ class GrantFunderIntelligence:
     contact_information: Optional[str] = None
     past_grantees: List[str] = field(default_factory=list)
 
-    # Leadership (from website — About Us, Board pages)
+    # Leadership — names only (kept for backward compat with prompt injection)
     board_members: List[str] = field(default_factory=list)
+
+    # Leadership — structured (name + title + source + optional email/compensation)
+    # [{name: str, title: str, source: "web"|"990_pdf", email?: str, compensation?: int}]
+    people: List[dict] = field(default_factory=list)
 
     # Quality
     confidence_score: float = 0.0
@@ -92,7 +96,13 @@ class GrantFunderIntelligence:
                 lines.append(f"  Mission: {self.mission_statement[:200]}")
             if self.program_descriptions:
                 lines.append(f"  Programs: {'; '.join(self.program_descriptions[:3])}")
-            if self.board_members:
+            if self.people:
+                formatted = ", ".join(
+                    f"{p['name']} ({p['title']})" if p.get("title") else p["name"]
+                    for p in self.people[:8]
+                )
+                lines.append(f"  Board/Officers: {formatted}")
+            elif self.board_members:
                 lines.append(f"  Board Members: {', '.join(self.board_members[:5])}")
             if self.contact_information:
                 lines.append(f"  Contact: {self.contact_information}")
@@ -118,6 +128,7 @@ class GrantFunderIntelligence:
             "contact_information": self.contact_information,
             "past_grantees": self.past_grantees,
             "board_members": self.board_members,
+            "people": self.people,
             "confidence_score": self.confidence_score,
             "source_url": self.source_url,
             "source_tax_year": self.source_tax_year,
@@ -152,7 +163,28 @@ def from_narrative_extraction(result, ein: Optional[str] = None) -> "GrantFunder
             "extraction_confidence": getattr(result, "extraction_confidence", 0.0),
             "source_pdf_url": getattr(result, "source_pdf_url", None),
             "source_tax_year": getattr(result, "source_tax_year", None),
+            "officers": getattr(result, "officers", []) or [],
         }
+
+    # Build structured people list from officers array
+    officers_raw = d.get("officers") or []
+    board_from_pdf: List[str] = []
+    people_from_pdf: List[dict] = []
+    for off in officers_raw:
+        if not isinstance(off, dict):
+            continue
+        name = (off.get("name") or "").strip()
+        if not name:
+            continue
+        board_from_pdf.append(name)
+        entry: dict = {"name": name, "source": "990_pdf"}
+        title = off.get("title") or off.get("position") or ""
+        if title:
+            entry["title"] = title
+        comp = off.get("compensation")
+        if comp is not None:
+            entry["compensation"] = comp
+        people_from_pdf.append(entry)
 
     return GrantFunderIntelligence(
         ein=d.get("ein") or ein or "",
@@ -168,6 +200,8 @@ def from_narrative_extraction(result, ein: Optional[str] = None) -> "GrantFunder
         mission_statement=d.get("mission_statement"),
         program_descriptions=d.get("program_descriptions") or [],
         contact_information=d.get("contact_information"),
+        board_members=board_from_pdf,
+        people=people_from_pdf,
         confidence_score=d.get("extraction_confidence") or d.get("confidence_score", 0.0),
         source_url=d.get("source_pdf_url"),
         source_tax_year=d.get("source_tax_year"),
@@ -190,10 +224,22 @@ def from_web_data(web_data: dict, ein: str) -> "GrantFunderIntelligence":
         parts = [v for v in [contact.get("email"), contact.get("phone"), contact.get("address")] if v]
         contact_str = " | ".join(parts) if parts else None
 
-    board = [
-        ldr.get("name", "") for ldr in (web_data.get("leadership") or [])
-        if ldr.get("name")
-    ]
+    board: List[str] = []
+    people_from_web: List[dict] = []
+    for ldr in (web_data.get("leadership") or []):
+        name = (ldr.get("name") or "").strip()
+        if not name:
+            continue
+        board.append(name)
+        entry: dict = {"name": name, "source": "web"}
+        title = ldr.get("title") or ldr.get("role") or ""
+        if title:
+            entry["title"] = title
+        email = ldr.get("email") or ""
+        if email:
+            entry["email"] = email
+        people_from_web.append(entry)
+
     programs = [
         p.get("description") or p.get("name", "")
         for p in (web_data.get("programs") or [])
@@ -208,6 +254,7 @@ def from_web_data(web_data: dict, ein: str) -> "GrantFunderIntelligence":
         mission_statement=web_data.get("mission"),
         program_descriptions=programs,
         board_members=board,
+        people=people_from_web,
         contact_information=contact_str,
         funding_priorities=key_facts[:5],
         confidence_score=web_data.get("data_quality_score") or 0.7,
@@ -273,6 +320,15 @@ def merge(
     ein = web.ein or pdf.ein
     org_name = web.organization_name or pdf.organization_name
 
+    # Merge people: web first (has email), then add 990 entries not already present
+    seen_names: set = set()
+    merged_people: list = []
+    for p in (web.people or []) + (pdf.people or []):
+        key = (p.get("name") or "").lower().strip()
+        if key and key not in seen_names:
+            seen_names.add(key)
+            merged_people.append(p)
+
     return GrantFunderIntelligence(
         ein=ein,
         organization_name=org_name,
@@ -290,6 +346,7 @@ def merge(
         contact_information=_pick(pdf.contact_information, web.contact_information),
         past_grantees=_union(pdf.past_grantees, web.past_grantees),
         board_members=_union(web.board_members, pdf.board_members),  # web first (more reliable)
+        people=merged_people,
         confidence_score=combined_confidence,
         source_url=web.source_url or pdf.source_url,
         source_tax_year=pdf.source_tax_year,

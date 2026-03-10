@@ -1840,6 +1840,27 @@ async def _run_batch_screen(job_id: str, body: BatchScreenRequest) -> None:
                             if funder_intel:
                                 screening_opp.funder_intelligence = funder_intel
                                 logger.debug(f"Injected funder intelligence for {ein} (source={funder_intel.source.value})")
+                                # Backfill analysis_discovery['web_data']['leadership'] from
+                                # funder_intel.people so the Officers tab shows data without
+                                # requiring manual Steps 2/3 per opportunity.
+                                if funder_intel.people and not ad.get("web_data", {}).get("leadership"):
+                                    ad.setdefault("web_data", {})["leadership"] = [
+                                        {
+                                            "name": p["name"],
+                                            "title": p.get("title", ""),
+                                            "email": p.get("email", ""),
+                                            "source": p.get("source", ""),
+                                        }
+                                        for p in funder_intel.people
+                                    ]
+                                    bf_conn = database_manager.get_connection()
+                                    bf_cur = bf_conn.cursor()
+                                    bf_cur.execute(
+                                        "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                                        (json.dumps(ad), datetime.now().isoformat(), opp_id_db),
+                                    )
+                                    bf_conn.commit()
+                                    bf_conn.close()
                     except Exception as fi_err:
                         logger.debug(f"Funder intelligence injection skipped for {ein}: {fi_err}")
 
