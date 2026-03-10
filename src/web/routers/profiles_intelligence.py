@@ -915,6 +915,7 @@ async def _run_connection_analysis(
                 results.append({
                     "funder_name": funder_name,
                     "funder_ein": funder_ein,
+                    "funder_people": [],
                     "connection_strength": "unknown",
                     "direct_matches": [],
                     "shared_background": [],
@@ -955,6 +956,7 @@ async def _run_connection_analysis(
             )
             analysis["funder_name"] = funder_name
             analysis["funder_ein"] = funder_ein
+            analysis["funder_people"] = funder_people  # graph node data
             analysis["screening_score"] = round(score, 3)
             analysis["analyzed_at"] = datetime.now().isoformat()
             results.append(analysis)
