@@ -361,6 +361,13 @@ def _sync_profile_people(profile_id: str, ein: str) -> list:
     web_data = intel.get("web_data") or {}
     pdf_analyses = intel.get("pdf_analyses") or {}
 
+    def _name_key(raw: str) -> str:
+        """Normalize a name for dedup: strip honorifics, collapse whitespace, lowercase."""
+        import re
+        s = raw.strip()
+        s = re.sub(r'^(Dr|Mr|Mrs|Ms|Miss|Prof|Rev|Hon|Cpt|Sgt|Lt|Col|Gen)\.?\s+', '', s, flags=re.IGNORECASE)
+        return ' '.join(s.lower().split())
+
     seen: set = set()
     people: list = []
 
@@ -369,7 +376,7 @@ def _sync_profile_people(profile_id: str, ein: str) -> list:
         name = (ldr.get("name") or "").strip()
         if not name:
             continue
-        key = name.lower()
+        key = _name_key(name)
         if key in seen:
             continue
         seen.add(key)
@@ -397,7 +404,7 @@ def _sync_profile_people(profile_id: str, ein: str) -> list:
         name = (off.get("name") or "").strip()
         if not name:
             continue
-        key = name.lower()
+        key = _name_key(name)
         if key in seen:
             continue
         seen.add(key)

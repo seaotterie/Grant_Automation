@@ -75,7 +75,33 @@
 
                 this.scrapingLoading = false;
             });
-            this.$watch('modalOpen', v => { if (!v) this.stopPipelinePolling(); });
+            this.$watch('modalOpen', v => {
+                if (!v) {
+                    this.stopPipelinePolling();
+                } else {
+                    // Restore previous pipeline results from DB when modal opens
+                    this._loadSavedPipelineResults();
+                }
+            });
+            // Also reload if the profile object is swapped while modal is open
+            this.$watch('profile', () => {
+                if (this.modalOpen && !this.pipelineRunning) {
+                    this._loadSavedPipelineResults();
+                }
+            });
+        },
+        _loadSavedPipelineResults() {
+            // Load pipeline_results saved in profile.processing_history (from DB)
+            // Only if not currently running a live pipeline
+            if (this.pipelineRunning) return;
+            const ph = this.profile?.processing_history;
+            if (!ph) return;
+            const saved = typeof ph === 'object' && !Array.isArray(ph)
+                ? ph.pipeline_results
+                : null;
+            if (saved) {
+                this.pipelineResult = saved;
+            }
         },
         openNteeSelectionModal() {
             // Initialize temp codes with current profile codes
