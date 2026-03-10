@@ -31,6 +31,13 @@
         error: null,
         selectedFiles: [],
         uploadedFiles: [],
+        pipelineJobId: null,
+        pipelineRunning: false,
+        pipelineStep: null,
+        pipelineStepIndex: 0,
+        pipelineResult: null,
+        pipelinePollInterval: null,
+        pipelineError: null,
         init() {
             // Modal uses shared object reference - no event listeners needed
             // When profiles-module updates selectedProfile, modal's profile updates automatically
@@ -68,6 +75,7 @@
 
                 this.scrapingLoading = false;
             });
+            this.$watch('modalOpen', v => { if (!v) this.stopPipelinePolling(); });
         },
         openNteeSelectionModal() {
             // Initialize temp codes with current profile codes
@@ -360,6 +368,59 @@
             } finally {
                 this.scrapingLoading = false;
             }
+        },
+        async runIntelligencePipeline() {
+            const profileId = this.profile?.profile_id || this.profile?.id;
+            if (!profileId) return;
+            this.pipelineRunning = true;
+            this.pipelineStep = 'web';
+            this.pipelineStepIndex = 0;
+            this.pipelineResult = null;
+            this.pipelineError = null;
+            this.pipelineJobId = null;
+            try {
+                const resp = await fetch(`/api/v2/profiles/${profileId}/run-pipeline`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+                const data = await resp.json();
+                this.pipelineJobId = data.job_id;
+                this._pollPipelineStatus(profileId, data.job_id);
+            } catch (err) {
+                console.error('[Pipeline] Start failed:', err);
+                this.pipelineError = err.message;
+                this.pipelineRunning = false;
+            }
+        },
+        _pollPipelineStatus(profileId, jobId) {
+            if (this.pipelinePollInterval) clearInterval(this.pipelinePollInterval);
+            this.pipelinePollInterval = setInterval(async () => {
+                try {
+                    const resp = await fetch(`/api/v2/profiles/${profileId}/pipeline-status/${jobId}`);
+                    if (!resp.ok) return;
+                    const job = await resp.json();
+                    this.pipelineStep = job.step;
+                    this.pipelineStepIndex = job.step_index;
+                    if (job.status === 'complete') {
+                        this.pipelineResult = job.result;
+                        this.pipelineRunning = false;
+                        this.stopPipelinePolling();
+                    } else if (job.status === 'error') {
+                        this.pipelineError = job.error || 'Pipeline failed';
+                        this.pipelineRunning = false;
+                        this.stopPipelinePolling();
+                    }
+                } catch (err) {
+                    console.error('[Pipeline] Poll error:', err);
+                }
+            }, 2000);
+        },
+        stopPipelinePolling() {
+            if (this.pipelinePollInterval) {
+                clearInterval(this.pipelinePollInterval);
+                this.pipelinePollInterval = null;
+            }
         }
      }"
      x-show="modalOpen"
@@ -630,264 +691,346 @@
                     </div>
                 </div>
 
-                <!-- TAB 4: ENHANCED DATA (Tool 25 - Scrapy) -->
+                <!-- TAB 4: ENHANCED DATA (Intelligence Pipeline) -->
                 <div x-show="activeTab === 'enhanced'" class="space-y-4">
-                    <!-- Loading State -->
-                    <div x-show="scrapingLoading" class="text-center py-12 border-2 border-dashed border-green-300 dark:border-green-600 rounded-lg bg-green-50 dark:bg-green-900/10">
-                        <div class="flex justify-center mb-4">
-                            <svg class="animate-spin h-12 w-12 text-green-600" fill="none" viewBox="0 0 24 24">
+
+                    <!-- Header description -->
+                    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                        <h4 class="text-sm font-semibold text-green-900 dark:text-green-100 mb-1">Intelligence Pipeline</h4>
+                        <p class="text-sm text-green-700 dark:text-green-300">Build a comprehensive baseline for your organization: website intelligence, 990 filing data, and AI screening scores to improve opportunity matching.</p>
+                    </div>
+
+                    <!-- Run Button (shown when not running) -->
+                    <div x-show="!pipelineRunning" class="flex items-center gap-3">
+                        <button @click="runIntelligencePipeline()"
+                                :disabled="!profile.ein"
+                                class="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            <span x-text="pipelineResult ? 'Re-run Pipeline' : 'Run Intelligence Pipeline'"></span>
+                        </button>
+                        <span x-show="!profile.ein" class="text-xs text-red-500 dark:text-red-400">Profile needs an EIN to run pipeline.</span>
+                    </div>
+
+                    <!-- Step Progress (shown while running) — 4 display steps, 990_history+990_pdf collapse into "Search 990" -->
+                    <div x-show="pipelineRunning" class="space-y-3">
+                        <div class="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-300">
+                            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
+                            Running Intelligence Pipeline...
                         </div>
-                        <h3 class="text-sm font-medium text-green-900 dark:text-green-100">Running Enhanced Search...</h3>
-                        <p class="mt-2 text-sm text-green-700 dark:text-green-300">
-                            Running comprehensive web intelligence search using scrapy tool. This may take 10-60 seconds.
-                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="(disp, idx) in [
+                                {label:'Search Website', steps:['web']},
+                                {label:'Search 990', steps:['990_history','990_pdf']},
+                                {label:'Screen Fast', steps:['fast_screen']},
+                                {label:'Screen Thorough', steps:['thorough_screen']}
+                            ]" :key="idx">
+                                <div :class="{
+                                        'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/40 dark:text-green-200 dark:border-green-700':
+                                            ({'web':0,'990_history':1,'990_pdf':1,'fast_screen':2,'thorough_screen':3,'done':4}[pipelineStep]||0) > idx,
+                                        'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-600 animate-pulse':
+                                            disp.steps.includes(pipelineStep),
+                                        'bg-gray-100 text-gray-400 border-gray-200 dark:bg-gray-700 dark:text-gray-500 dark:border-gray-600':
+                                            ({'web':0,'990_history':1,'990_pdf':1,'fast_screen':2,'thorough_screen':3,'done':4}[pipelineStep]||0) <= idx && !disp.steps.includes(pipelineStep)
+                                     }"
+                                     class="px-3 py-1.5 rounded-full text-xs font-medium border flex items-center gap-1.5">
+                                    <span x-show="({'web':0,'990_history':1,'990_pdf':1,'fast_screen':2,'thorough_screen':3,'done':4}[pipelineStep]||0) > idx">&#10003;</span>
+                                    <span x-show="disp.steps.includes(pipelineStep)">&#8635;</span>
+                                    <span x-show="({'web':0,'990_history':1,'990_pdf':1,'fast_screen':2,'thorough_screen':3,'done':4}[pipelineStep]||0) <= idx && !disp.steps.includes(pipelineStep)">&#9675;</span>
+                                    <span x-text="disp.label"></span>
+                                </div>
+                            </template>
+                        </div>
                     </div>
 
-                    <!-- Enhanced Data Display - With Results -->
-                    <div x-show="!scrapingLoading && profile.web_enhanced_data" class="space-y-4">
-                        <!-- Scraping Statistics Section -->
-                        <div class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
-                            <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
-                                <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                </svg>
-                                Web Intelligence Results
-                            </h4>
+                    <!-- Error State -->
+                    <div x-show="pipelineError && !pipelineRunning"
+                         class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg text-sm text-red-700 dark:text-red-300">
+                        Pipeline error: <span x-text="pipelineError"></span>
+                    </div>
 
-                            <!-- Statistics Grid -->
-                            <div class="grid grid-cols-3 gap-4 mb-4">
-                                <div class="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                                    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" x-text="profile.web_enhanced_data?.scraping_metadata?.pages_scraped || 0"></div>
-                                    <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Pages Scraped</div>
+                    <!-- Results: 4 cards matching View Details (green / amber / indigo / purple) -->
+                    <div x-show="pipelineResult && !pipelineRunning" class="space-y-3">
+
+                        <!-- Card A: Search Website Intelligence (green) -->
+                        <template x-if="pipelineResult?.web_summary">
+                            <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-semibold text-green-900 dark:text-green-100 flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                                        </svg>
+                                        Search Website Intelligence
+                                    </h4>
+                                    <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                          :class="(pipelineResult.web_summary?.data_quality_score||0) >= 0.70 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : (pipelineResult.web_summary?.data_quality_score||0) >= 0.40 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'"
+                                          x-text="'Quality: ' + Math.round((pipelineResult.web_summary?.data_quality_score||0)*100) + '%'"></span>
                                 </div>
-                                <div class="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                                    <div class="text-2xl font-bold text-green-600 dark:text-green-400" x-text="Object.keys(profile.web_enhanced_data || {}).length"></div>
-                                    <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Fields Extracted</div>
+                                <div class="mb-2">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                                          :class="['yes', true].includes(pipelineResult.web_summary?.accepts_applications) ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' : ['no', false].includes(pipelineResult.web_summary?.accepts_applications) ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'"
+                                          x-text="['yes', true].includes(pipelineResult.web_summary?.accepts_applications) ? 'Accepts Applications' : ['no', false].includes(pipelineResult.web_summary?.accepts_applications) ? 'Does Not Accept Applications' : 'Application Status Unknown'"></span>
                                 </div>
-                                <div class="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                                    <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" x-text="((profile.web_enhanced_data?.scraping_metadata?.data_quality_score || 0) * 100).toFixed(0) + '%'"></div>
-                                    <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Data Quality</div>
-                                </div>
-                            </div>
-
-                            <!-- Quality Badge & Message -->
-                            <div class="flex items-start space-x-3">
-                                <span :class="getQualityBadgeClass(profile.web_enhanced_data?.scraping_metadata?.data_quality_score)"
-                                      class="px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap"
-                                      x-text="getQualityBadgeLabel(profile.web_enhanced_data?.scraping_metadata?.data_quality_score)"></span>
-                                <p class="text-sm text-gray-700 dark:text-gray-300 flex-1"
-                                   x-text="getQualityMessage(profile.web_enhanced_data?.scraping_metadata?.data_quality_score)"></p>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <!-- Website URL -->
-                            <div x-show="profile.website_url || profile.web_enhanced_data?.website_url">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website</label>
-                                <a :href="profile.web_enhanced_data?.website_url || profile.website_url"
-                                   target="_blank"
-                                   rel="noopener noreferrer"
-                                   class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline inline-flex items-center"
-                                   x-text="profile.web_enhanced_data?.website_url || profile.website_url">
-                                </a>
-                                <svg class="inline-block w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                                </svg>
-                            </div>
-
-                            <!-- Phone -->
-                            <div x-show="profile.web_enhanced_data?.phone">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
-                                <p class="text-sm text-gray-900 dark:text-white" x-text="profile.web_enhanced_data?.phone"></p>
-                            </div>
-
-                            <!-- Location -->
-                            <div x-show="profile.web_enhanced_data?.location || profile.location">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
-                                <p class="text-sm text-gray-900 dark:text-white" x-text="profile.web_enhanced_data?.location || profile.location"></p>
-                            </div>
-
-                            <!-- Email -->
-                            <div x-show="profile.web_enhanced_data?.email">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                                <a :href="'mailto:' + profile.web_enhanced_data?.email"
-                                   class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                                   x-text="profile.web_enhanced_data?.email"></a>
-                            </div>
-
-                            <!-- Mission/Description -->
-                            <div x-show="profile.web_enhanced_data?.mission || profile.web_enhanced_data?.description" class="md:col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mission/Description</label>
-                                <p class="text-sm text-gray-900 dark:text-white leading-relaxed" x-text="profile.web_enhanced_data?.mission || profile.web_enhanced_data?.description"></p>
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons (after data is found) -->
-                        <div class="flex justify-end gap-3 mt-4">
-                            <!-- Deeper Search Button (shown when quality < 40%) -->
-                            <button x-show="(profile.web_enhanced_data?.scraping_metadata?.data_quality_score || 0) < 0.4"
-                                    @click="retryEnhancedSearch(profile.ein)"
-                                    :disabled="scrapingLoading"
-                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
-                                </svg>
-                                Run Deeper Search
-                            </button>
-
-                            <!-- Re-run Button -->
-                            <button @click="$dispatch('run-tool-25', { ein: profile.ein })"
-                                    :disabled="scrapingLoading || !profile.ein"
-                                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                </svg>
-                                Re-run Enhanced Search
-                            </button>
-                        </div>
-
-                        <!-- Pages Scraped Section (Collapsible) -->
-                        <div x-data="{pagesOpen: false}" class="mt-6">
-                            <button @click="pagesOpen = !pagesOpen"
-                                    class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                                <div class="flex items-center">
-                                    <svg class="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                    </svg>
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white">
-                                        Pages Scraped (<span x-text="(profile.web_enhanced_data?.scraping_metadata?.scraped_urls || []).length"></span>)
-                                    </span>
-                                </div>
-                                <svg :class="pagesOpen ? 'rotate-180' : ''" class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-
-                            <div x-show="pagesOpen" x-collapse class="mt-2 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
-                                <div class="max-h-60 overflow-y-auto p-3 bg-white dark:bg-gray-800">
-                                    <template x-for="(url, index) in (profile.web_enhanced_data?.scraping_metadata?.scraped_urls || [])" :key="index">
-                                        <div class="mb-2 p-2 bg-gray-50 dark:bg-gray-700 rounded flex items-start">
-                                            <span class="inline-flex items-center justify-center w-6 h-6 mr-2 text-xs font-bold text-white bg-blue-500 rounded-full flex-shrink-0" x-text="index + 1"></span>
-                                            <a :href="url" target="_blank"
-                                               class="text-xs text-blue-600 dark:text-blue-400 hover:underline break-all flex-1"
-                                               x-text="url"></a>
-                                        </div>
-                                    </template>
-                                    <div x-show="!(profile.web_enhanced_data?.scraping_metadata?.scraped_urls || []).length"
-                                         class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                                        No URLs tracked
+                                <template x-if="pipelineResult.web_summary?.grant_size_range">
+                                    <p class="text-xs text-green-700 dark:text-green-400 mb-2">
+                                        Grant Range: <span class="font-medium" x-text="pipelineResult.web_summary.grant_size_range"></span>
+                                    </p>
+                                </template>
+                                <template x-if="pipelineResult.web_summary?.funding_priorities?.length > 0">
+                                    <div class="mb-2">
+                                        <div class="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Funding Priorities</div>
+                                        <ul class="space-y-0.5">
+                                            <template x-for="p in pipelineResult.web_summary.funding_priorities.slice(0,4)" :key="p">
+                                                <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                    <span class="text-green-500 flex-shrink-0">•</span><span x-text="p"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Extracted Fields Section (Collapsible) -->
-                        <div x-data="{fieldsOpen: false}" class="mt-4">
-                            <button @click="fieldsOpen = !fieldsOpen"
-                                    class="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                                <div class="flex items-center">
-                                    <svg class="w-5 h-5 mr-2 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                                    </svg>
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white">
-                                        Extracted Fields (<span x-text="Object.keys(profile.web_enhanced_data || {}).length"></span>)
-                                    </span>
-                                </div>
-                                <svg :class="fieldsOpen ? 'rotate-180' : ''" class="w-5 h-5 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                </svg>
-                            </button>
-
-                            <div x-show="fieldsOpen" x-collapse class="mt-2 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
-                                <div class="max-h-80 overflow-y-auto bg-white dark:bg-gray-800">
-                                    <template x-for="[fieldName, fieldValue] in Object.entries(profile.web_enhanced_data || {})" :key="fieldName">
-                                        <div class="border-b border-gray-200 dark:border-gray-700 last:border-b-0 p-3 hover:bg-gray-50 dark:hover:bg-gray-700">
-                                            <div class="flex items-start justify-between mb-1">
-                                                <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide" x-text="fieldName.replace(/_/g, ' ')"></span>
-                                                <span x-show="fieldValue !== null && fieldValue !== '' && fieldValue !== undefined && !(Array.isArray(fieldValue) && fieldValue.length === 0) && !(typeof fieldValue === 'object' && Object.keys(fieldValue).length === 0)"
-                                                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                                    ✓
-                                                </span>
-                                                <span x-show="!(fieldValue !== null && fieldValue !== '' && fieldValue !== undefined && !(Array.isArray(fieldValue) && fieldValue.length === 0) && !(typeof fieldValue === 'object' && Object.keys(fieldValue).length === 0))"
-                                                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
-                                                    ✗
-                                                </span>
-                                            </div>
-                                            <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                                <template x-if="typeof fieldValue === 'string'">
-                                                    <div>
-                                                        <span class="font-mono" x-text="fieldValue ? fieldValue.substring(0, 100) + (fieldValue.length > 100 ? '...' : '') : 'No data'"></span>
-                                                        <span x-show="fieldValue && fieldValue.length > 0" class="ml-2 text-gray-500">(<span x-text="fieldValue.length"></span> chars)</span>
-                                                    </div>
-                                                </template>
-                                                <template x-if="Array.isArray(fieldValue)">
-                                                    <div>
-                                                        <span x-text="fieldValue.length + ' items'"></span>
-                                                    </div>
-                                                </template>
-                                                <template x-if="typeof fieldValue === 'object' && !Array.isArray(fieldValue) && fieldValue !== null">
-                                                    <div>
-                                                        <span x-text="Object.keys(fieldValue).length + ' properties'"></span>
-                                                    </div>
-                                                </template>
-                                                <template x-if="typeof fieldValue === 'number'">
-                                                    <div>
-                                                        <span x-text="fieldValue"></span>
-                                                    </div>
-                                                </template>
-                                                <template x-if="typeof fieldValue === 'boolean'">
-                                                    <div>
-                                                        <span x-text="fieldValue ? 'Yes' : 'No'"></span>
-                                                    </div>
-                                                </template>
-                                            </div>
-                                        </div>
+                                </template>
+                                <template x-if="pipelineResult.web_summary?.geographic_limitations">
+                                    <p class="text-xs text-gray-600 dark:text-gray-400">
+                                        Geography: <span class="font-medium" x-text="pipelineResult.web_summary.geographic_limitations"></span>
+                                    </p>
+                                </template>
+                                <div class="flex items-center gap-3 mt-2 pt-2 border-t border-green-200 dark:border-green-800">
+                                    <template x-if="pipelineResult.web_summary?.execution_time">
+                                        <span class="text-xs text-green-500 dark:text-green-400" x-text="'Fetched in ' + pipelineResult.web_summary.execution_time + 's'"></span>
+                                    </template>
+                                    <template x-if="pipelineResult.web_summary?.ai_interpreted">
+                                        <span class="text-xs text-green-600 dark:text-green-400 font-medium">AI interpreted</span>
                                     </template>
                                 </div>
                             </div>
+                        </template>
+                        <template x-if="!pipelineResult?.web_summary">
+                            <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">No website intelligence gathered.</p>
+                            </div>
+                        </template>
+
+                        <!-- Card B: 990 PDF Analysis (amber) -->
+                        <template x-if="pipelineResult?.pdf_summary">
+                            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                        </svg>
+                                        990 PDF Analysis
+                                    </h4>
+                                    <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                          :class="(pipelineResult.pdf_summary?.extraction_confidence||0) >= 0.70 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'"
+                                          x-text="'Confidence: ' + Math.round((pipelineResult.pdf_summary?.extraction_confidence||0)*100) + '%'"></span>
+                                </div>
+                                <template x-if="(pipelineResult.pdf_summary?.extraction_confidence||0) === 0 && !(pipelineResult.pdf_summary?.stated_priorities?.length)">
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 italic">990 PDF was processed but contained no extractable grant intelligence.</p>
+                                </template>
+                                <template x-if="(pipelineResult.pdf_summary?.extraction_confidence||0) > 0 || pipelineResult.pdf_summary?.stated_priorities?.length">
+                                    <div>
+                                        <div class="mb-2">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                                                  :class="['yes', true].includes(pipelineResult.pdf_summary?.accepts_applications) ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' : ['no', false].includes(pipelineResult.pdf_summary?.accepts_applications) ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'"
+                                                  x-text="['yes', true].includes(pipelineResult.pdf_summary?.accepts_applications) ? 'Accepts Applications' : ['no', false].includes(pipelineResult.pdf_summary?.accepts_applications) ? 'Does Not Accept Applications' : 'Application Status Unknown'"></span>
+                                        </div>
+                                        <template x-if="pipelineResult.pdf_summary?.stated_priorities?.length > 0">
+                                            <div class="mb-2">
+                                                <div class="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">Stated Priorities</div>
+                                                <ul class="space-y-0.5">
+                                                    <template x-for="p in pipelineResult.pdf_summary.stated_priorities.slice(0,4)" :key="p">
+                                                        <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                            <span class="text-amber-500 flex-shrink-0">•</span><span x-text="p"></span>
+                                                        </li>
+                                                    </template>
+                                                </ul>
+                                            </div>
+                                        </template>
+                                        <template x-if="pipelineResult.pdf_summary?.population_focus">
+                                            <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                                Population: <span class="font-medium" x-text="pipelineResult.pdf_summary.population_focus"></span>
+                                            </p>
+                                        </template>
+                                        <template x-if="pipelineResult.pdf_summary?.geographic_limitations">
+                                            <p class="text-xs text-gray-600 dark:text-gray-400">
+                                                Geography: <span class="font-medium" x-text="pipelineResult.pdf_summary.geographic_limitations"></span>
+                                            </p>
+                                        </template>
+                                        <p class="text-xs text-amber-500 dark:text-amber-400 mt-2 pt-2 border-t border-amber-200 dark:border-amber-800"
+                                           x-text="'Extracted from ' + (pipelineResult.pdf_summary?.tax_year || 'recent') + ' 990 PDF'"></p>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="!pipelineResult?.pdf_summary">
+                            <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-amber-200 dark:border-amber-800 rounded-lg p-4 text-center">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">No 990 PDF analysis.</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1" x-show="pipelineResult?.pdf_skipped">No PDF URL found in filing history.</p>
+                            </div>
+                        </template>
+
+                        <!-- Card C: Profile Summary (indigo) -->
+                        <template x-if="pipelineResult?.fast_analysis">
+                            <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-semibold text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                        </svg>
+                                        Profile Summary
+                                    </h4>
+                                    <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                          :class="pipelineResult.fast_analysis.confidence_level === 'high' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : pipelineResult.fast_analysis.confidence_level === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'"
+                                          x-text="(pipelineResult.fast_analysis.confidence_level || 'low') + ' confidence'"></span>
+                                </div>
+                                <p class="text-sm text-indigo-800 dark:text-indigo-200 italic mb-3"
+                                   x-text="pipelineResult.fast_analysis.one_sentence_summary"></p>
+                                <!-- Capacity / Geography / Population pills -->
+                                <div class="flex flex-wrap gap-1.5 mb-3">
+                                    <template x-if="pipelineResult.fast_analysis.capacity_tier && pipelineResult.fast_analysis.capacity_tier !== 'unknown'">
+                                        <span class="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-800/40 text-indigo-700 dark:text-indigo-300 rounded-full font-medium"
+                                              x-text="pipelineResult.fast_analysis.capacity_tier + ' org'"></span>
+                                    </template>
+                                    <template x-if="pipelineResult.fast_analysis.geographic_scope">
+                                        <span class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800/40 text-blue-700 dark:text-blue-300 rounded-full"
+                                              x-text="pipelineResult.fast_analysis.geographic_scope"></span>
+                                    </template>
+                                    <template x-for="pop in (pipelineResult.fast_analysis.target_populations || []).slice(0,3)" :key="pop">
+                                        <span class="text-xs px-2 py-0.5 bg-teal-100 dark:bg-teal-800/40 text-teal-700 dark:text-teal-300 rounded-full"
+                                              x-text="pop"></span>
+                                    </template>
+                                </div>
+                                <!-- Programs -->
+                                <template x-if="pipelineResult.fast_analysis.programs?.length > 0">
+                                    <div class="mb-3">
+                                        <div class="text-xs font-medium text-indigo-600 dark:text-indigo-400 mb-1">Programs</div>
+                                        <div class="flex flex-wrap gap-1">
+                                            <template x-for="prog in pipelineResult.fast_analysis.programs.slice(0,5)" :key="prog">
+                                                <span class="text-xs px-2 py-0.5 bg-white dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 rounded"
+                                                      x-text="prog"></span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                                <!-- Grant Search Keywords -->
+                                <template x-if="pipelineResult.fast_analysis.grant_keywords?.length > 0">
+                                    <div>
+                                        <div class="text-xs font-medium text-indigo-600 dark:text-indigo-400 mb-1">Grant Search Keywords</div>
+                                        <div class="flex flex-wrap gap-1">
+                                            <template x-for="kw in pipelineResult.fast_analysis.grant_keywords" :key="kw">
+                                                <span class="text-xs px-2 py-0.5 bg-indigo-100 dark:bg-indigo-800/50 text-indigo-800 dark:text-indigo-200 rounded font-mono"
+                                                      x-text="kw"></span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                                <p class="text-xs text-indigo-400 dark:text-indigo-500 mt-3 pt-2 border-t border-indigo-200 dark:border-indigo-800"
+                                   x-text="'Sources: ' + (pipelineResult.fast_analysis.data_sources_used || []).join(', ') + ' · ' + (pipelineResult.fast_analysis.analyzed_at ? new Date(pipelineResult.fast_analysis.analyzed_at).toLocaleDateString() : '')"></p>
+                            </div>
+                        </template>
+                        <template x-if="!pipelineResult?.fast_analysis">
+                            <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-indigo-200 dark:border-indigo-800 rounded-lg p-4 text-center">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">No profile summary yet.</p>
+                            </div>
+                        </template>
+
+                        <!-- Card D: Grant Intelligence (purple) -->
+                        <template x-if="pipelineResult?.thorough_analysis">
+                            <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-semibold text-purple-900 dark:text-purple-100 flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                        </svg>
+                                        Grant Intelligence
+                                    </h4>
+                                    <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                          :class="pipelineResult.thorough_analysis.confidence_level === 'high' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : pipelineResult.thorough_analysis.confidence_level === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'"
+                                          x-text="(pipelineResult.thorough_analysis.confidence_level || 'low') + ' confidence'"></span>
+                                </div>
+                                <p class="text-sm text-purple-800 dark:text-purple-200 italic mb-3"
+                                   x-text="pipelineResult.thorough_analysis.one_sentence_summary"></p>
+                                <!-- Applicant Strengths -->
+                                <template x-if="pipelineResult.thorough_analysis.key_strengths?.length > 0">
+                                    <div class="mb-3">
+                                        <div class="text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">Applicant Strengths</div>
+                                        <ul class="space-y-0.5">
+                                            <template x-for="s in pipelineResult.thorough_analysis.key_strengths.slice(0,5)" :key="s">
+                                                <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                    <span class="text-green-500 flex-shrink-0 font-bold">+</span><span x-text="s"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </template>
+                                <!-- Leadership -->
+                                <template x-if="pipelineResult.thorough_analysis.leadership?.length > 0">
+                                    <div class="mb-3">
+                                        <div class="text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">Leadership</div>
+                                        <div class="flex flex-wrap gap-1">
+                                            <template x-for="person in pipelineResult.thorough_analysis.leadership.slice(0,4)" :key="person.name">
+                                                <span class="text-xs px-2 py-0.5 bg-purple-100 dark:bg-purple-800/40 text-purple-700 dark:text-purple-300 rounded"
+                                                      x-text="person.name + (person.title ? ' · ' + person.title : '')"></span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                                <!-- Search Tips -->
+                                <template x-if="pipelineResult.thorough_analysis.search_tips?.length > 0">
+                                    <div class="mb-3">
+                                        <div class="text-xs font-medium text-purple-700 dark:text-purple-300 mb-1">Grant Search Tips</div>
+                                        <ul class="space-y-0.5">
+                                            <template x-for="tip in pipelineResult.thorough_analysis.search_tips.slice(0,5)" :key="tip">
+                                                <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                    <span class="text-purple-400 flex-shrink-0">→</span><span x-text="tip"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </template>
+                                <!-- Previous Grants Hint -->
+                                <template x-if="pipelineResult.thorough_analysis.previous_grants_hint">
+                                    <div class="mb-3 p-2 bg-purple-100 dark:bg-purple-900/30 rounded border-l-2 border-purple-400">
+                                        <div class="text-xs font-medium text-purple-700 dark:text-purple-300 mb-0.5">Previous Grants</div>
+                                        <p class="text-xs text-purple-800 dark:text-purple-200"
+                                           x-text="pipelineResult.thorough_analysis.previous_grants_hint"></p>
+                                    </div>
+                                </template>
+                                <p class="text-xs text-purple-400 dark:text-purple-500 mt-2 pt-2 border-t border-purple-200 dark:border-purple-800"
+                                   x-text="'Sources: ' + (pipelineResult.thorough_analysis.data_sources_used || []).join(', ') + ' · ' + (pipelineResult.thorough_analysis.analyzed_at ? new Date(pipelineResult.thorough_analysis.analyzed_at).toLocaleDateString() : '')"></p>
+                            </div>
+                        </template>
+                        <template x-if="!pipelineResult?.thorough_analysis">
+                            <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-purple-200 dark:border-purple-800 rounded-lg p-4 text-center">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">No grant intelligence yet.</p>
+                            </div>
+                        </template>
+
+                        <!-- Footer: filings + cost -->
+                        <div class="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500 pt-1">
+                            <span x-show="pipelineResult?.filing_count">
+                                <span x-text="pipelineResult?.filing_count"></span> filings found
+                            </span>
+                            <span x-show="pipelineResult?.estimated_cost_usd">
+                                Est. cost: $<span x-text="pipelineResult?.estimated_cost_usd?.toFixed(3)"></span>
+                            </span>
                         </div>
+
                     </div>
 
-                    <!-- Ready to Search State (website exists but no enhanced data yet) -->
-                    <div x-show="!scrapingLoading && !profile.web_enhanced_data && profile.website_url"
-                         class="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 text-center">
-                        <svg class="mx-auto h-12 w-12 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                        </svg>
-                        <h3 class="mt-4 text-sm font-medium text-blue-900 dark:text-blue-100">Website Found - Ready to Search</h3>
-                        <p class="mt-2 text-sm text-blue-700 dark:text-blue-300 mb-4">
-                            Click below to run Enhanced Search and gather comprehensive web intelligence from:
-                            <br/>
-                            <a :href="profile.website_url" target="_blank" class="underline hover:text-blue-800" x-text="profile.website_url"></a>
-                        </p>
-                        <button @click="$dispatch('run-tool-25', { ein: profile.ein })"
-                                :disabled="scrapingLoading || !profile.ein"
-                                class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center font-medium">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                            Run Enhanced Search
-                        </button>
-                    </div>
-
-                    <!-- No Website State (need to add website first) -->
-                    <div x-show="!scrapingLoading && !profile.web_enhanced_data && !profile.website_url"
-                         class="text-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                        </svg>
-                        <h3 class="mt-4 text-sm font-medium text-gray-900 dark:text-white">No Website Information</h3>
-                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            Add a website URL in the Basic Information tab, then come back here to run Enhanced Search.
-                        </p>
+                    <!-- No EIN state -->
+                    <div x-show="!profile.ein && !pipelineRunning && !pipelineResult"
+                         class="text-center py-8 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Add an EIN in the Basic Information tab to enable the intelligence pipeline.</p>
                         <button @click="activeTab = 'basic'"
-                                class="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm">
+                                class="mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm">
                             Go to Basic Info
                         </button>
                     </div>
+
                 </div>
 
                 <!-- TAB 5: USER SPECIFIC -->

@@ -78,6 +78,7 @@ from src.web.routers.gateway import router as gateway_router
 from src.web.routers.learning import router as learning_router
 from src.web.routers.profiles import router as profiles_router  # Phase 9: Fix duplicate fetch-ein endpoint
 from src.web.routers.profiles_v2 import router as profiles_v2_router
+from src.web.routers.profiles_intelligence import router as profiles_intelligence_router
 from src.web.routers.discovery_v2 import router as discovery_v2_router
 from src.web.routers.discovery_legacy import router as discovery_legacy_router  # Phase 9: Backward-compatible discovery endpoints
 # Optional enhanced scraping router (requires scrapy)
@@ -450,6 +451,9 @@ app.include_router(profiles_router)
 
 # Include modernized profile routes (Phase 8 - Task 19)
 app.include_router(profiles_v2_router)
+
+# Include profiles intelligence pipeline (Phase 9)
+app.include_router(profiles_intelligence_router)
 
 # Include V2 discovery routes (Phase 9 - Week 2)
 app.include_router(discovery_v2_router)

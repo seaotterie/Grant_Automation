@@ -73,6 +73,11 @@ class BatchWebResearchRequest(BaseModel):
     force_refresh: bool = False
 
 
+class WebsiteUrlUpdate(BaseModel):
+    """Request body for PATCH website-url endpoint."""
+    url: Optional[str] = None
+
+
 async def _interpret_with_claude(
     scraped_urls: List[str],
     org_name: str,
@@ -1718,11 +1723,6 @@ async def batch_web_research(body: BatchWebResearchRequest):
 # ---------------------------------------------------------------------------
 # Batch Screen Endpoint (Tool 1 fast-mode fan-out)
 # ---------------------------------------------------------------------------
-
-class WebsiteUrlUpdate(BaseModel):
-    """Request body for PATCH website-url endpoint."""
-    url: Optional[str] = None
-
 
 class BatchScreenRequest(BaseModel):
     profile_id: str
