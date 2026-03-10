@@ -69,6 +69,10 @@ class DeepIntelligenceInput:
     opportunity_deadline: Optional[str] = None
     opportunity_focus_areas: List[str] = field(default_factory=list)
 
+    # Pre-gathered screening intelligence (from SCREENING tab pipeline)
+    # Contains web_data, pdf_extraction, fast_screen, thorough_screen when available
+    screening_context: Optional[Dict[str, Any]] = None
+
 
 # Core Analysis Models (All Depths)
 

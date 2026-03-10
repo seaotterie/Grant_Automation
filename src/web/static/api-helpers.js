@@ -180,7 +180,7 @@ async function screenOpportunities(opportunities, profile, mode = 'fast', config
  * @param {string} depth - 'essentials' or 'premium' (deprecated: 'quick', 'standard', 'enhanced', 'complete')
  * @returns {Promise<object>} Analysis results
  */
-async function analyzeOpportunityDeep(opportunity, profile, depth = 'essentials') {
+async function analyzeOpportunityDeep(opportunity, profile, depth = 'essentials', existingEssentialsResult = null, screeningContext = null) {
     try {
         // Map deprecated depths to new 2-tier system
         const depthMapping = {
@@ -217,14 +217,26 @@ async function analyzeOpportunityDeep(opportunity, profile, depth = 'essentials'
             }
         }
 
+        const body = {
+            opportunity_id: opportunity.id || opportunity.opportunity_id,
+            tier: tier,
+            add_ons: []
+        };
+        // Premium upgrade path: pass existing Essentials result to skip re-running core stages
+        if (tier === 'premium' && existingEssentialsResult) {
+            body.existing_essentials_result = existingEssentialsResult;
+            console.log('[analyzeOpportunityDeep] Premium upgrade path: existing Essentials result provided');
+        }
+        // Pass SCREENING pipeline intelligence for Claude to use in deep analysis prompts
+        if (screeningContext) {
+            body.screening_context = screeningContext;
+            const keys = Object.keys(screeningContext).join(', ');
+            console.log(`[analyzeOpportunityDeep] Screening context: ${keys}`);
+        }
         const response = await fetch(`/api/intelligence/profiles/${profileId}/analysis`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                opportunity_id: opportunity.id || opportunity.opportunity_id,
-                tier: tier,
-                add_ons: []
-            })
+            body: JSON.stringify(body)
         });
 
         if (!response.ok) {

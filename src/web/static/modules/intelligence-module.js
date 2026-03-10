@@ -73,15 +73,29 @@ function intelligenceModule() {
         showExportModal: false,
         showIntelligenceModal: false,       // Intelligence View Details modal
         selectedIntelligenceOpp: null,      // Currently viewed opportunity in modal
-        intelligenceModalTab: 'summary',    // Active tab in modal
+        intelligenceModalTab: 'scores',     // Active tab in modal
+        intelligenceModalIndex: -1,         // Current position in selectedOpportunities list
 
         // Selection State (for checkboxes)
         selectedOpportunitiesForBatch: [],  // Track checkbox selections
+
+        // Filter/Sort State for INTELLIGENCE table
+        intelligenceCategoryFilter: null,   // null = all, 'qualified', 'review', 'consider', 'low_priority'
+        intelligenceSortBy: 'composite_score',  // 'composite_score' | 'organization_name' | 'revenue'
 
         // Loading States
         analyzing: false,
         generating: false,
         exporting: false,
+
+        // Per-opp action loading flags (modal action row)
+        intelFindUrlsLoading: false,
+        intelWebSearchLoading: false,
+        intel990sLoading: false,
+        intelScreenFastLoading: false,
+        intelScreenThoroughLoading: false,
+        intelEssentialsLoading: false,
+        intelPremiumLoading: false,
 
         // =================================================================
         // LIFECYCLE
@@ -163,18 +177,29 @@ function intelligenceModule() {
          */
         openIntelligenceModal(opportunityId) {
             // Find the opportunity in selected opportunities
-            const opp = this.selectedOpportunities.find(
+            const idx = this.selectedOpportunities.findIndex(
                 o => o.opportunity_id === opportunityId || o.id === opportunityId
             );
 
-            if (!opp) {
+            if (idx < 0) {
                 console.error('Opportunity not found:', opportunityId);
                 return;
             }
 
+            const opp = this.selectedOpportunities[idx];
             this.selectedIntelligenceOpp = opp;
-            this.intelligenceModalTab = 'summary';  // Reset to first tab
+            this.intelligenceModalIndex = idx;
+            this.intelligenceModalTab = 'scores';  // Reset to Score Breakdown tab
             this.showIntelligenceModal = true;
+
+            // Reset action loading flags
+            this.intelFindUrlsLoading = false;
+            this.intelWebSearchLoading = false;
+            this.intel990sLoading = false;
+            this.intelScreenFastLoading = false;
+            this.intelScreenThoroughLoading = false;
+            this.intelEssentialsLoading = false;
+            this.intelPremiumLoading = false;
 
             console.log('Opened intelligence modal for:', opp.organization_name);
             console.log('[Intelligence Modal] Full opportunity data:', opp);
@@ -207,14 +232,245 @@ function intelligenceModule() {
         closeIntelligenceModal() {
             this.showIntelligenceModal = false;
             this.selectedIntelligenceOpp = null;
+            this.intelligenceModalIndex = -1;
+        },
+
+        /**
+         * Navigate to prev/next opportunity in Intelligence modal
+         * @param {number} direction - -1 for prev, +1 for next
+         */
+        navigateIntelligenceModal(direction) {
+            const newIndex = this.intelligenceModalIndex + direction;
+            if (newIndex < 0 || newIndex >= this.selectedOpportunities.length) return;
+            this.intelligenceModalIndex = newIndex;
+            const opp = this.selectedOpportunities[newIndex];
+            this.openIntelligenceModal(opp.opportunity_id || opp.id);
         },
 
         /**
          * Switch tabs in Intelligence modal
-         * @param {string} tab - Tab name (summary, scores, analysis, details, grants, officers, website, notes)
+         * @param {string} tab - Tab name (scores, details, grants, officers, notes, summary, analysis)
          */
         switchIntelligenceTab(tab) {
             this.intelligenceModalTab = tab;
+        },
+
+        // =================================================================
+        // MODAL ACTION ROW FUNCTIONS
+        // =================================================================
+
+        /**
+         * ① Find URLs — fetch 990 filing history for the current intelligence modal opportunity
+         */
+        async intelFindUrls() {
+            const opp = this.selectedIntelligenceOpp;
+            if (!opp?.opportunity_id) return;
+            const oppId = opp.opportunity_id;
+            this.intelFindUrlsLoading = true;
+            try {
+                const resp = await fetch(`/api/v2/opportunities/${oppId}/990-filings`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const filings = data.filings || [];
+                    this.selectedIntelligenceOpp = { ...opp, filing_history: filings };
+                    const idx = this.selectedOpportunities.findIndex(o => o.opportunity_id === oppId);
+                    if (idx >= 0) this.selectedOpportunities[idx] = { ...this.selectedOpportunities[idx], filing_history: filings };
+                    this.showNotification?.('Find URLs', `Found ${filings.length} filings`, 'success');
+                } else {
+                    const err = await resp.json().catch(() => ({}));
+                    this.showNotification?.('Find URLs', err.detail || 'Failed to load filing history', 'error');
+                }
+            } catch (e) {
+                console.error('intelFindUrls error:', e);
+                this.showNotification?.('Find URLs', 'Network error', 'error');
+            } finally {
+                this.intelFindUrlsLoading = false;
+            }
+        },
+
+        /**
+         * ② Search Website — run Haiku web intelligence for the current intelligence modal opportunity
+         */
+        async intelSearchWebsite() {
+            const opp = this.selectedIntelligenceOpp;
+            if (!opp?.opportunity_id) return;
+            const oppId = opp.opportunity_id;
+            this.intelWebSearchLoading = true;
+            try {
+                const resp = await fetch(`/api/v2/opportunities/${oppId}/research`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    // No-URL short-circuit
+                    if (!data.success && data.reason === 'no_url_found') {
+                        this.showNotification?.('Search Website', `No website URL found for ${opp.organization_name}. Try entering a URL manually.`, 'warning');
+                    } else if (data.web_data) {
+                        this.selectedIntelligenceOpp = { ...opp, web_data: data.web_data, web_search_complete: true };
+                        const idx = this.selectedOpportunities.findIndex(o => o.opportunity_id === oppId);
+                        if (idx >= 0) this.selectedOpportunities[idx] = { ...this.selectedOpportunities[idx], web_data: data.web_data, web_search_complete: true };
+                    }
+                    if (data.success) this.showNotification?.('Search Website', 'Web intelligence gathered successfully', 'success');
+                } else {
+                    const err = await resp.json().catch(() => ({}));
+                    this.showNotification?.('Search Website', err.detail || 'Web research failed', 'error');
+                }
+            } catch (e) {
+                console.error('intelSearchWebsite error:', e);
+                this.showNotification?.('Search Website', 'Network error', 'error');
+            } finally {
+                this.intelWebSearchLoading = false;
+            }
+        },
+
+        /**
+         * ③ Search 990s — extract grant intelligence from the most recent 990 PDF
+         */
+        async intelSearch990s() {
+            const opp = this.selectedIntelligenceOpp;
+            if (!opp?.opportunity_id) return;
+            const oppId = opp.opportunity_id;
+            const filings = opp.filing_history || [];
+            const filing = filings.find(f => f.pdf_url);
+            if (!filing) {
+                this.showNotification?.('Search 990s', 'Run Find URLs first to get a 990 PDF link', 'warning');
+                return;
+            }
+            this.intel990sLoading = true;
+            try {
+                const resp = await fetch(`/api/v2/opportunities/${oppId}/analyze-990-pdf`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pdf_url: filing.pdf_url, tax_year: filing.tax_year || null })
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const updates = { pdf_analyzed: true };
+                    if (data.extraction) updates.pdf_extraction = data.extraction;
+                    this.selectedIntelligenceOpp = { ...opp, ...updates };
+                    const idx = this.selectedOpportunities.findIndex(o => o.opportunity_id === oppId);
+                    if (idx >= 0) this.selectedOpportunities[idx] = { ...this.selectedOpportunities[idx], ...updates };
+                    this.showNotification?.('Search 990s', 'PDF extraction complete', 'success');
+                } else {
+                    const err = await resp.json().catch(() => ({}));
+                    this.showNotification?.('Search 990s', err.detail || '990 PDF analysis failed', 'error');
+                }
+            } catch (e) {
+                console.error('intelSearch990s error:', e);
+                this.showNotification?.('Search 990s', 'Network error', 'error');
+            } finally {
+                this.intel990sLoading = false;
+            }
+        },
+
+        /**
+         * ④ Screen Fast — run fast screening on the current modal opportunity
+         */
+        async intelScreenFast() {
+            await this._intelScreen('fast');
+        },
+
+        /**
+         * ⑤ Screen Thorough — run thorough screening on the current modal opportunity
+         */
+        async intelScreenThorough() {
+            await this._intelScreen('thorough');
+        },
+
+        async _intelScreen(mode) {
+            const opp = this.selectedIntelligenceOpp;
+            if (!opp?.opportunity_id) return;
+            const oppId = opp.opportunity_id;
+            if (mode === 'fast') this.intelScreenFastLoading = true;
+            else this.intelScreenThoroughLoading = true;
+            try {
+                const resp = await fetch(`/api/v2/opportunities/${oppId}/screen?mode=${mode}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const scoreKey = mode === 'fast' ? 'tool1_score_fast' : 'tool1_score_thorough';
+                    const updates = {};
+                    if (data.tool1_score) updates[scoreKey] = data.tool1_score;
+                    if (data.category_level) updates.category_level = data.category_level;
+                    if (data.overall_score !== undefined) updates.overall_score = data.overall_score;
+                    Object.assign(this.selectedIntelligenceOpp, updates);
+                    const idx = this.selectedOpportunities.findIndex(o => o.opportunity_id === oppId);
+                    if (idx >= 0) Object.assign(this.selectedOpportunities[idx], updates);
+                    const score = data.tool1_score ? ': ' + Math.round((data.tool1_score.overall_score || 0) * 100) + '%' : '';
+                    this.showNotification(mode === 'fast' ? 'Screen Fast' : 'Screen Thorough', `Complete${score}`, 'success');
+                } else {
+                    const err = await resp.json().catch(() => ({}));
+                    this.showNotification(mode === 'fast' ? 'Screen Fast' : 'Screen Thorough', err.detail || 'Screening failed', 'error');
+                }
+            } catch (e) {
+                console.error('_intelScreen error:', e);
+                this.showNotification(mode === 'fast' ? 'Screen Fast' : 'Screen Thorough', 'Network error', 'error');
+            } finally {
+                if (mode === 'fast') this.intelScreenFastLoading = false;
+                else this.intelScreenThoroughLoading = false;
+            }
+        },
+
+        /**
+         * ⑥ Run Essentials AI — run ESSENTIALS deep intelligence for the current modal opportunity
+         */
+        async intelRunEssentials() {
+            const opp = this.selectedIntelligenceOpp;
+            if (!opp) return;
+            this.intelEssentialsLoading = true;
+            try {
+                const screeningContext = this._buildScreeningContext(opp);
+                await this.analyzeOpportunity(opp, 'essentials', null, null, screeningContext);
+            } finally {
+                this.intelEssentialsLoading = false;
+            }
+        },
+
+        /**
+         * ⑦ Run Premium AI — run PREMIUM deep intelligence for the current modal opportunity.
+         * If Essentials has already been run, passes the existing result so the backend
+         * skips the core stages and only runs the 3 Premium-specific analyses.
+         */
+        async intelRunPremium() {
+            const opp = this.selectedIntelligenceOpp;
+            if (!opp) return;
+            this.intelPremiumLoading = true;
+            try {
+                const oppId = opp.opportunity_id || opp.id;
+                const existingEssentials = this.intelligenceResults[oppId]?.analysis || null;
+                if (existingEssentials) {
+                    console.log('[intelRunPremium] Upgrade path: passing existing Essentials result to skip core stages');
+                }
+                const screeningContext = this._buildScreeningContext(opp);
+                await this.analyzeOpportunity(opp, 'premium', null, existingEssentials, screeningContext);
+            } finally {
+                this.intelPremiumLoading = false;
+            }
+        },
+
+        /**
+         * Build a screening_context dict from whatever SCREENING pipeline data is available
+         * on the opportunity object. Passed to the backend so Claude can use it in analysis.
+         */
+        _buildScreeningContext(opp) {
+            const ctx = {};
+            if (opp.web_data) ctx.web_data = opp.web_data;
+            if (opp.pdf_extraction) ctx.pdf_extraction = opp.pdf_extraction;
+            if (opp.tool1_score_fast) ctx.fast_screen = opp.tool1_score_fast;
+            if (opp.tool1_score_thorough) ctx.thorough_screen = opp.tool1_score_thorough;
+            // Include base screening score if present
+            if (opp.score !== undefined || opp.one_sentence_summary) {
+                ctx.initial_score = {};
+                if (opp.score !== undefined) ctx.initial_score.overall_score = opp.score;
+                if (opp.one_sentence_summary) ctx.initial_score.one_sentence_summary = opp.one_sentence_summary;
+                if (opp.strengths?.length) ctx.initial_score.strengths = opp.strengths;
+                if (opp.concerns?.length) ctx.initial_score.concerns = opp.concerns;
+            }
+            return Object.keys(ctx).length > 0 ? ctx : null;
         },
 
         /**
@@ -293,7 +549,7 @@ function intelligenceModule() {
          * @param {string} depth - quick, standard, enhanced, complete
          * @param {Object} profileData - Optional profile context
          */
-        async analyzeOpportunity(opportunity, depth = null, profileData = null) {
+        async analyzeOpportunity(opportunity, depth = null, profileData = null, existingEssentialsResult = null, screeningContext = null) {
             const analysisDepth = depth || this.selectedDepth;
             const oppId = opportunity.opportunity_id || opportunity.id;
 
@@ -326,7 +582,9 @@ function intelligenceModule() {
                 const result = await analyzeOpportunityDeep(
                     opportunity,
                     profile,
-                    analysisDepth
+                    analysisDepth,
+                    existingEssentialsResult,
+                    screeningContext
                 );
 
                 if (result.success) {
@@ -764,6 +1022,99 @@ function intelligenceModule() {
                     'error'
                 );
             }
+        },
+
+        // =================================================================
+        // COMPOSITE SCORE & RED FLAGS
+        // =================================================================
+
+        /**
+         * Compute a composite score from all available pipeline signals.
+         * Mirrors the same method in screening-module.js.
+         */
+        computeCompositeScore(opp) {
+            const candidates = [];
+            candidates.push({ score: parseFloat(opp.overall_score) || 0, weight: 0.05 });
+            if (opp.web_search_complete && opp.web_data) {
+                candidates.push({ score: parseFloat(opp.web_data.data_quality_score) || 0, weight: 0.10 });
+            }
+            if (opp.pdf_analyzed) {
+                candidates.push({ score: 0.70, weight: 0.10 });
+            }
+            const fast = opp.tool1_score_fast || (opp.tool1_score?.mode === 'fast' ? opp.tool1_score : null);
+            if (fast) candidates.push({ score: parseFloat(fast.overall_score) || 0, weight: 0.35 });
+            if (opp.tool1_score_thorough) {
+                candidates.push({ score: parseFloat(opp.tool1_score_thorough.overall_score) || 0, weight: 0.40 });
+            }
+            const totalWeight = candidates.reduce((s, c) => s + c.weight, 0);
+            if (totalWeight === 0) return 0;
+            return Math.round(candidates.reduce((s, c) => s + c.score * c.weight, 0) / totalWeight * 100) / 100;
+        },
+
+        /**
+         * Get RED flags for an opportunity.
+         */
+        getRedFlags(opp) {
+            const flags = [];
+            const webData = opp.web_data?.grant_funder_intelligence || opp.web_data || {};
+            const appStatus = (webData.application_status || '').toLowerCase();
+            if (/not accepting|by invitation|closed|not open/.test(appStatus)) {
+                flags.push({ code: 'app_closed', severity: 'critical',
+                    label: 'Closed', tooltip: `Application status: ${webData.application_status}` });
+            }
+            const geo = (webData.geographic_limitations || []);
+            const geoText = Array.isArray(geo) ? geo.join(' ').toLowerCase() : String(geo).toLowerCase();
+            const foreignPattern = /canada|alberta|ontario|british columbia|united kingdom|australia/i;
+            if (foreignPattern.test(geoText)) {
+                flags.push({ code: 'geo_mismatch', severity: 'critical',
+                    label: 'Foreign', tooltip: `Geographic scope: ${Array.isArray(geo) ? geo.join(', ') : geo}` });
+            }
+            const fastElig = opp.tool1_score_fast?.eligibility_score;
+            const thorElig = opp.tool1_score_thorough?.eligibility_score;
+            if ((fastElig !== undefined && fastElig < 0.25) || (thorElig !== undefined && thorElig < 0.25)) {
+                flags.push({ code: 'eligibility_fail', severity: 'critical',
+                    label: 'Ineligible', tooltip: `Eligibility score: ${Math.round((fastElig !== undefined ? fastElig : thorElig) * 100)}%` });
+            }
+            return flags;
+        },
+
+        hasRedFlag(opp) {
+            return this.getRedFlags(opp).some(f => f.severity === 'critical');
+        },
+
+        // =================================================================
+        // INTELLIGENCE TABLE FILTER / SORT
+        // =================================================================
+
+        /**
+         * Filtered and sorted INTELLIGENCE table rows.
+         */
+        get filteredIntelligenceOpps() {
+            let opps = [...this.selectedOpportunities];
+            if (this.intelligenceCategoryFilter) {
+                opps = opps.filter(o => o.category_level === this.intelligenceCategoryFilter);
+            }
+            if (this.intelligenceSortBy === 'composite_score') {
+                opps.sort((a, b) => this.computeCompositeScore(b) - this.computeCompositeScore(a));
+            } else if (this.intelligenceSortBy === 'organization_name') {
+                opps.sort((a, b) => (a.organization_name || '').localeCompare(b.organization_name || ''));
+            } else if (this.intelligenceSortBy === 'revenue') {
+                opps.sort((a, b) => (b.revenue || 0) - (a.revenue || 0));
+            }
+            return opps;
+        },
+
+        /**
+         * Category counts for INTELLIGENCE filter bar.
+         */
+        get intelligenceCategoryCounts() {
+            const counts = { all: 0, qualified: 0, review: 0, consider: 0, low_priority: 0 };
+            for (const o of this.selectedOpportunities) {
+                counts.all++;
+                const cat = o.category_level || 'low_priority';
+                if (counts[cat] !== undefined) counts[cat]++;
+            }
+            return counts;
         },
 
         // =================================================================

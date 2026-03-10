@@ -134,6 +134,13 @@ function screeningModule() {
         funnelStatistics: null,
         showFunnelStatsModal: false,
 
+        // Editable URL state (Screening modal)
+        editingScreeningUrl: false,
+        editScreeningUrlValue: '',
+
+        // Find Opportunities limit control
+        maxReturnLimit: 500,
+
         // Notes State
         opportunityNotes: '',
         notesSaving: false,
@@ -1316,6 +1323,8 @@ function screeningModule() {
         closeDetailsModal() {
             this.showDetailsModal = false;
             this.selectedOpportunity = null;
+            this.editingScreeningUrl = false;
+            this.editScreeningUrlValue = '';
 
             // Restore body scroll when modal closes
             document.body.style.overflow = '';
@@ -1365,6 +1374,15 @@ function screeningModule() {
 
                 if (response.ok) {
                     const data = await response.json();
+
+                    // No-URL short-circuit: tool returned 200 but no URL was found
+                    if (!data.success && data.reason === 'no_url_found') {
+                        this.showNotification?.(
+                            `No website URL found for ${this.selectedOpportunity.organization_name}. Try entering a URL manually.`,
+                            'warning'
+                        );
+                        return;
+                    }
 
                     if (data.success) {
                         // Update opportunity with web data (in selectedOpportunity AND opportunities array)
@@ -1429,6 +1447,42 @@ function screeningModule() {
                 );
             } finally {
                 this.webResearchLoading = false;
+            }
+        },
+
+        /**
+         * Save / update website URL for an opportunity via PATCH endpoint.
+         */
+        async saveWebsiteUrl(opportunityId, url) {
+            if (!opportunityId) return;
+            const cleanUrl = (url || '').trim();
+            try {
+                const response = await fetch(`/api/v2/opportunities/${opportunityId}/website-url`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: cleanUrl })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    // Update selectedOpportunity and discoveryResults
+                    if (this.selectedOpportunity) {
+                        this.selectedOpportunity.website_url = data.website_url;
+                        this.selectedOpportunity.url_source = 'manual';
+                    }
+                    const idx = this.discoveryResults.findIndex(o => o.opportunity_id === opportunityId);
+                    if (idx >= 0) {
+                        this.discoveryResults[idx].website_url = data.website_url;
+                        this.discoveryResults[idx].url_source = 'manual';
+                    }
+                    this.editingScreeningUrl = false;
+                    this.showNotification?.('Website URL saved', 'success');
+                } else {
+                    const err = await response.json().catch(() => ({}));
+                    this.showNotification?.(`Failed to save URL: ${err.detail || 'Unknown error'}`, 'error');
+                }
+            } catch (e) {
+                console.error('saveWebsiteUrl error:', e);
+                this.showNotification?.(`Failed to save URL: ${e.message}`, 'error');
             }
         },
 
@@ -1695,13 +1749,69 @@ function screeningModule() {
         },
 
         /**
+         * Get RED flags for an opportunity (critical issues that disqualify).
+         */
+        getRedFlags(opp) {
+            const flags = [];
+            const webData = opp.web_data?.grant_funder_intelligence || opp.web_data || {};
+            const appStatus = (webData.application_status || '').toLowerCase();
+            if (/not accepting|by invitation|closed|not open/.test(appStatus)) {
+                flags.push({ code: 'app_closed', severity: 'critical',
+                    label: 'Closed', tooltip: `Application status: ${webData.application_status}` });
+            }
+            const geo = (webData.geographic_limitations || []);
+            const geoText = Array.isArray(geo) ? geo.join(' ').toLowerCase() : String(geo).toLowerCase();
+            const foreignPattern = /canada|alberta|ontario|british columbia|united kingdom|australia/i;
+            if (foreignPattern.test(geoText)) {
+                flags.push({ code: 'geo_mismatch', severity: 'critical',
+                    label: 'Foreign', tooltip: `Geographic scope: ${Array.isArray(geo) ? geo.join(', ') : geo}` });
+            }
+            const fastElig = opp.tool1_score_fast?.eligibility_score;
+            const thorElig = opp.tool1_score_thorough?.eligibility_score;
+            if ((fastElig !== undefined && fastElig < 0.25) || (thorElig !== undefined && thorElig < 0.25)) {
+                flags.push({ code: 'eligibility_fail', severity: 'critical',
+                    label: 'Ineligible', tooltip: `Eligibility score: ${Math.round((fastElig !== undefined ? fastElig : thorElig) * 100)}%` });
+            }
+            return flags;
+        },
+
+        hasRedFlag(opp) {
+            return this.getRedFlags(opp).some(f => f.severity === 'critical');
+        },
+
+        /**
+         * Compute a composite score from all available pipeline signals.
+         * Weights: initial score 5%, web data quality 10%, 990 analyzed 10%,
+         *          fast screen 35%, thorough screen 40%.
+         * Only signals that are present contribute; total weight is renormalized.
+         */
+        computeCompositeScore(opp) {
+            const candidates = [];
+            candidates.push({ score: parseFloat(opp.overall_score) || 0, weight: 0.05 });
+            if (opp.web_search_complete && opp.web_data) {
+                candidates.push({ score: parseFloat(opp.web_data.data_quality_score) || 0, weight: 0.10 });
+            }
+            if (opp.pdf_analyzed) {
+                candidates.push({ score: 0.70, weight: 0.10 });
+            }
+            const fast = opp.tool1_score_fast || (opp.tool1_score?.mode === 'fast' ? opp.tool1_score : null);
+            if (fast) candidates.push({ score: parseFloat(fast.overall_score) || 0, weight: 0.35 });
+            if (opp.tool1_score_thorough) {
+                candidates.push({ score: parseFloat(opp.tool1_score_thorough.overall_score) || 0, weight: 0.40 });
+            }
+            const totalWeight = candidates.reduce((s, c) => s + c.weight, 0);
+            if (totalWeight === 0) return 0;
+            return Math.round(candidates.reduce((s, c) => s + c.score * c.weight, 0) / totalWeight * 100) / 100;
+        },
+
+        /**
          * Sort opportunities by field
          */
         sortOpportunitiesByField(opportunities, field) {
             const sorted = [...opportunities];
 
             if (field === 'overall_score') {
-                return sorted.sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0));
+                return sorted.sort((a, b) => this.computeCompositeScore(b) - this.computeCompositeScore(a));
             } else if (field === 'organization_name') {
                 return sorted.sort((a, b) => (a.organization_name || '').localeCompare(b.organization_name || ''));
             } else if (field === 'revenue') {

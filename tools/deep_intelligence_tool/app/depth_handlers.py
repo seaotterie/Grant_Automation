@@ -1058,12 +1058,135 @@ def _build_deep_analysis_prompt(
     if funder_context:
         user += f"\n{funder_context}\n"
 
+    # Inject SCREENING pipeline intelligence (web data, 990 extraction, screen scores)
+    screening_section = _build_screening_context_section(intel_input.screening_context)
+    if screening_section:
+        user += screening_section
+
     user += (
         f"\nProvide comprehensive {depth.upper()} depth analysis. "
-        "Be honest about weaknesses and specific about recommendations."
+        "Be honest about weaknesses and specific about recommendations. "
+        "Use the Screening Pipeline Intelligence above (if present) to calibrate your "
+        "scores and surface funder-specific insights the AI already discovered."
     )
 
     return system, user
+
+
+def _build_screening_context_section(screening_context: Dict[str, Any]) -> str:
+    """
+    Format SCREENING pipeline intelligence into a prompt section for Claude.
+    Extracts key funder data from web_data, pdf_extraction, and screen scores.
+    """
+    if not screening_context:
+        return ""
+
+    lines = ["\n--- SCREENING PIPELINE INTELLIGENCE (use to calibrate analysis) ---"]
+
+    # Web intelligence (from ② Search Website)
+    web_data = screening_context.get("web_data") or {}
+    gfi = web_data.get("grant_funder_intelligence") or {}
+    if gfi:
+        lines.append("\nWebsite Intelligence (Haiku agent, ~$0.008):")
+        if gfi.get("funder_priorities"):
+            priorities = gfi["funder_priorities"]
+            if isinstance(priorities, list):
+                priorities = "; ".join(str(p) for p in priorities[:5])
+            lines.append(f"  Funder Priorities: {priorities}")
+        if gfi.get("mission_statement"):
+            lines.append(f"  Mission: {str(gfi['mission_statement'])[:300]}")
+        if gfi.get("typical_grant_size_min") or gfi.get("typical_grant_size_max"):
+            lines.append(
+                f"  Typical Grant Size: ${gfi.get('typical_grant_size_min', '?')} – "
+                f"${gfi.get('typical_grant_size_max', '?')}"
+            )
+        if gfi.get("application_status"):
+            lines.append(f"  Application Status: {gfi['application_status']}")
+        if gfi.get("geographic_limitations"):
+            geo = gfi["geographic_limitations"]
+            if isinstance(geo, list):
+                geo = ", ".join(str(g) for g in geo[:5])
+            lines.append(f"  Geographic Focus: {geo}")
+        if gfi.get("key_program_areas"):
+            areas = gfi["key_program_areas"]
+            if isinstance(areas, list):
+                areas = ", ".join(str(a) for a in areas[:5])
+            lines.append(f"  Program Areas: {areas}")
+
+    # 990 PDF extraction (from ③ Search 990s)
+    pdf = screening_context.get("pdf_extraction") or {}
+    if pdf:
+        lines.append("\n990 PDF Extraction (Claude Haiku, ~$0.01):")
+        if pdf.get("stated_priorities"):
+            lines.append(f"  Stated Priorities: {str(pdf['stated_priorities'])[:400]}")
+        if pdf.get("geographic_limitations"):
+            lines.append(f"  Geographic Limitations: {str(pdf['geographic_limitations'])[:200]}")
+        if pdf.get("grant_size_min") or pdf.get("grant_size_max"):
+            lines.append(
+                f"  Grant Size Range: ${pdf.get('grant_size_min', '?')} – "
+                f"${pdf.get('grant_size_max', '?')}"
+            )
+        if pdf.get("program_areas"):
+            areas = pdf["program_areas"]
+            if isinstance(areas, list):
+                areas = ", ".join(str(a) for a in areas[:5])
+            lines.append(f"  Program Areas: {areas}")
+        if pdf.get("leadership_names"):
+            names = pdf["leadership_names"]
+            if isinstance(names, list):
+                names = ", ".join(str(n) for n in names[:5])
+            lines.append(f"  Leadership: {names}")
+
+    # Fast screen result (from ④ Screen Fast)
+    fast = screening_context.get("fast_screen") or {}
+    if fast:
+        score = fast.get("overall_score")
+        summary = fast.get("one_sentence_summary") or fast.get("summary", "")
+        strengths = fast.get("strengths") or fast.get("key_strengths", [])
+        concerns = fast.get("concerns") or fast.get("key_concerns", [])
+        lines.append(f"\nFast Screen Score (Claude Haiku): {f'{score:.0%}' if score else 'N/A'}")
+        if summary:
+            lines.append(f"  Summary: {str(summary)[:300]}")
+        if strengths:
+            if isinstance(strengths, list):
+                strengths = "; ".join(str(s) for s in strengths[:3])
+            lines.append(f"  Strengths: {strengths}")
+        if concerns:
+            if isinstance(concerns, list):
+                concerns = "; ".join(str(c) for c in concerns[:3])
+            lines.append(f"  Concerns: {concerns}")
+
+    # Thorough screen result (from ⑤ Screen Thorough)
+    thorough = screening_context.get("thorough_screen") or {}
+    if thorough:
+        score = thorough.get("overall_score")
+        summary = thorough.get("one_sentence_summary") or thorough.get("summary", "")
+        strengths = thorough.get("strengths") or thorough.get("key_strengths", [])
+        concerns = thorough.get("concerns") or thorough.get("key_concerns", [])
+        lines.append(f"\nThorough Screen Score (Claude Sonnet): {f'{score:.0%}' if score else 'N/A'}")
+        if summary:
+            lines.append(f"  Summary: {str(summary)[:400]}")
+        if strengths:
+            if isinstance(strengths, list):
+                strengths = "; ".join(str(s) for s in strengths[:4])
+            lines.append(f"  Strengths: {strengths}")
+        if concerns:
+            if isinstance(concerns, list):
+                concerns = "; ".join(str(c) for c in concerns[:4])
+            lines.append(f"  Concerns: {concerns}")
+
+    # Initial algorithmic score
+    init = screening_context.get("initial_score") or {}
+    if init and init.get("overall_score") is not None:
+        lines.append(f"\nInitial Screen Score: {init['overall_score']:.0%}")
+        if init.get("one_sentence_summary"):
+            lines.append(f"  Summary: {init['one_sentence_summary'][:200]}")
+
+    if len(lines) == 1:
+        return ""  # Only header, nothing useful
+
+    lines.append("--- END SCREENING INTELLIGENCE ---")
+    return "\n".join(lines)
 
 
 def _get_funder_context(intel_input: DeepIntelligenceInput) -> str:
@@ -1216,6 +1339,427 @@ def _parse_deep_analysis_response(
             )
 
     return output
+
+
+# ============================================================================
+# PREMIUM UPGRADE HANDLER (skip re-running Essentials when already complete)
+# ============================================================================
+
+
+class PremiumUpgradeHandler(DepthHandler):
+    """
+    PREMIUM Upgrade Handler — skips Essentials re-run when already completed.
+
+    When the frontend passes an existing Essentials result, this handler:
+    1. Calls Claude with a premium-only prompt (relationship mapping, policy
+       analysis, strategic consulting) — NOT re-running the 4 core stages.
+    2. Merges the 3 Premium-only sections into the existing Essentials output.
+    3. Returns a full DeepIntelligenceOutput with depth_executed = "premium".
+
+    AI cost: ~$0.05 incremental (premium-only call) vs $0.10 for full Premium.
+    User saves: avoids paying twice for core analysis already completed.
+    """
+
+    async def analyze(
+        self,
+        intel_input: DeepIntelligenceInput,
+        existing_essentials: Dict[str, Any],
+    ) -> DeepIntelligenceOutput:
+        """Execute premium-only upgrade using the existing Essentials result."""
+        self.logger.info(
+            f"[PREMIUM UPGRADE] Starting upgrade for {intel_input.opportunity_id} "
+            f"(reusing existing Essentials result, skipping core stages)"
+        )
+        start_time = time.time()
+
+        try:
+            from src.core.anthropic_service import get_anthropic_service, PipelineStage
+
+            anthropic = get_anthropic_service()
+            if not anthropic.is_available:
+                raise RuntimeError("Anthropic API not available")
+
+            system, user = _build_premium_only_prompt(intel_input, existing_essentials)
+
+            result_json = await anthropic.create_json_completion(
+                messages=[{"role": "user", "content": user}],
+                system=system,
+                stage=PipelineStage.PREMIUM_INTELLIGENCE,
+                max_tokens=4096,
+                temperature=0.1,
+            )
+
+            output = _reconstruct_from_essentials(existing_essentials, intel_input)
+            _apply_premium_only_fields(output, result_json)
+
+        except Exception as e:
+            self.logger.error(
+                f"[PREMIUM UPGRADE] Claude call failed, using fallback: {e}"
+            )
+            output = _reconstruct_from_essentials(existing_essentials, intel_input)
+            _apply_premium_only_fallback(output, intel_input)
+
+        processing_time = time.time() - start_time
+        output.depth_executed = "premium"
+        output.processing_time_seconds = processing_time
+        output.api_cost_usd = 0.05  # incremental cost only
+        output.tool_version = "2.0.0"
+
+        self.logger.info(
+            f"[PREMIUM UPGRADE] Complete for {intel_input.opportunity_id} "
+            f"in {processing_time:.2f}s (incremental AI cost: $0.05)"
+        )
+        return output
+
+
+def _build_premium_only_prompt(
+    intel_input: DeepIntelligenceInput,
+    existing_essentials: Dict[str, Any],
+) -> tuple:
+    """Build prompt that focuses ONLY on the 3 Premium-specific sections."""
+
+    system = (
+        "You are a senior grant research analyst. The client has already completed "
+        "ESSENTIALS analysis (strategic fit, financial viability, operational readiness, "
+        "risk assessment) for this grant opportunity. Those results are provided below.\n\n"
+        "DO NOT re-run or repeat the core Essentials analysis. ONLY produce the 3 "
+        "Premium-specific analyses:\n\n"
+        "Return a JSON object with EXACTLY these three keys:\n"
+        "{\n"
+        '  "relationship_mapping": {\n'
+        '    "direct_relationships": [string, ...],\n'
+        '    "indirect_relationships": [string, ...],\n'
+        '    "partnership_opportunities": [string, ...],\n'
+        '    "relationship_insights": string,\n'
+        '    "cultivation_strategy": string\n'
+        "  },\n"
+        '  "policy_analysis": {\n'
+        '    "federal_alignment_score": float (0-1),\n'
+        '    "federal_policies": [string, ...],\n'
+        '    "policy_opportunities": [string, ...],\n'
+        '    "policy_risks": [string, ...],\n'
+        '    "policy_landscape_summary": string,\n'
+        '    "advocacy_recommendations": [string, ...]\n'
+        "  },\n"
+        '  "strategic_consulting": {\n'
+        '    "executive_summary": string,\n'
+        '    "competitive_positioning": string,\n'
+        '    "differentiation_strategy": string,\n'
+        '    "multi_year_funding_strategy": string,\n'
+        '    "partnership_development_strategy": string,\n'
+        '    "capacity_building_roadmap": string,\n'
+        '    "immediate_actions": [string, ...],\n'
+        '    "medium_term_actions": [string, ...],\n'
+        '    "long_term_actions": [string, ...]\n'
+        "  }\n"
+        "}\n\n"
+        "Be specific, actionable, and build on the existing Essentials findings "
+        "provided in the context below."
+    )
+
+    # Summarise existing Essentials data for context
+    exec_summary = existing_essentials.get("executive_summary", "")
+    key_strengths = existing_essentials.get("key_strengths", [])
+    key_challenges = existing_essentials.get("key_challenges", [])
+    overall_score = existing_essentials.get("overall_score", "N/A")
+    success_prob = existing_essentials.get("success_probability", "N/A")
+
+    sf = existing_essentials.get("strategic_fit", {})
+    fv = existing_essentials.get("financial_viability", {})
+    op = existing_essentials.get("operational_readiness", {})
+    ra = existing_essentials.get("risk_assessment", {})
+    ni = existing_essentials.get("network_intelligence", {})
+
+    amount = ""
+    if intel_input.opportunity_amount_min or intel_input.opportunity_amount_max:
+        amount = f"${intel_input.opportunity_amount_min or '?'} – ${intel_input.opportunity_amount_max or '?'}"
+
+    user = (
+        f"ORGANIZATION:\n"
+        f"  Name: {intel_input.organization_name}\n"
+        f"  EIN: {intel_input.organization_ein}\n"
+        f"  Mission: {intel_input.organization_mission}\n"
+    )
+    if intel_input.organization_revenue:
+        user += f"  Annual Revenue: ${intel_input.organization_revenue:,.0f}\n"
+    if intel_input.focus_areas:
+        user += f"  Focus Areas: {', '.join(intel_input.focus_areas)}\n"
+
+    user += (
+        f"\nOPPORTUNITY:\n"
+        f"  ID: {intel_input.opportunity_id}\n"
+        f"  Title: {intel_input.opportunity_title}\n"
+        f"  Funder: {intel_input.funder_name} ({intel_input.funder_type})\n"
+        f"  Description: {intel_input.opportunity_description[:3000]}\n"
+    )
+    if amount:
+        user += f"  Award Amount: {amount}\n"
+    if intel_input.opportunity_deadline:
+        user += f"  Deadline: {intel_input.opportunity_deadline}\n"
+
+    user += (
+        f"\n--- EXISTING ESSENTIALS ANALYSIS (DO NOT REPEAT) ---\n"
+        f"Overall Score: {overall_score}\n"
+        f"Success Probability: {success_prob}\n"
+        f"Executive Summary: {exec_summary[:1500]}\n"
+        f"Key Strengths: {', '.join(key_strengths)}\n"
+        f"Key Challenges: {', '.join(key_challenges)}\n"
+        f"Strategic Fit Score: {sf.get('fit_score', 'N/A')} — "
+        f"Rationale: {sf.get('strategic_rationale', '')[:300]}\n"
+        f"Financial Viability Score: {fv.get('viability_score', 'N/A')} — "
+        f"Strategy: {fv.get('financial_strategy', '')[:200]}\n"
+        f"Operational Readiness Score: {op.get('readiness_score', 'N/A')} — "
+        f"Gaps: {', '.join(op.get('capacity_gaps', []))}\n"
+        f"Risk Level: {ra.get('overall_risk_level', 'N/A')} — "
+        f"Mitigation: {ra.get('risk_mitigation_plan', '')[:200]}\n"
+    )
+    if ni:
+        user += (
+            f"Network Strength Score: {ni.get('network_strength_score', 'N/A')}\n"
+            f"Relationship Advantages: {', '.join(ni.get('relationship_advantages', []))}\n"
+        )
+
+    # Enrich with funder intelligence from database
+    funder_context = _get_funder_context(intel_input)
+    if funder_context:
+        user += f"\n{funder_context}\n"
+
+    # Inject SCREENING pipeline intelligence for additional context
+    screening_section = _build_screening_context_section(intel_input.screening_context)
+    if screening_section:
+        user += screening_section
+
+    user += (
+        "\n--- YOUR TASK ---\n"
+        "Using the Essentials findings above as context, produce ONLY the three "
+        "Premium-specific analyses: relationship_mapping, policy_analysis, and "
+        "strategic_consulting. Do not produce any other JSON keys. "
+        "Use the Screening Pipeline Intelligence (if present) to add funder-specific depth."
+    )
+
+    return system, user
+
+
+def _reconstruct_from_essentials(
+    existing: Dict[str, Any],
+    intel_input: DeepIntelligenceInput,
+) -> DeepIntelligenceOutput:
+    """
+    Re-hydrate a DeepIntelligenceOutput from a stored Essentials dict.
+    This avoids re-calling the AI for the core 4 stages.
+    """
+    sf_d = existing.get("strategic_fit", {})
+    strategic_fit = StrategicFitAnalysis(
+        fit_score=sf_d.get("fit_score", 0.5),
+        mission_alignment_score=sf_d.get("mission_alignment_score", 0.5),
+        program_alignment_score=sf_d.get("program_alignment_score", 0.5),
+        geographic_alignment_score=sf_d.get("geographic_alignment_score", 0.5),
+        alignment_strengths=sf_d.get("alignment_strengths", []),
+        alignment_concerns=sf_d.get("alignment_concerns", []),
+        strategic_rationale=sf_d.get("strategic_rationale", ""),
+        strategic_positioning=sf_d.get("strategic_positioning", ""),
+        key_differentiators=sf_d.get("key_differentiators", []),
+    )
+
+    fv_d = existing.get("financial_viability", {})
+    financial_viability = FinancialViabilityAnalysis(
+        viability_score=fv_d.get("viability_score", 0.5),
+        budget_capacity_score=fv_d.get("budget_capacity_score", 0.5),
+        financial_health_score=fv_d.get("financial_health_score", 0.5),
+        sustainability_score=fv_d.get("sustainability_score", 0.5),
+        budget_implications=fv_d.get("budget_implications", ""),
+        resource_requirements=fv_d.get("resource_requirements", {}),
+        financial_risks=fv_d.get("financial_risks", []),
+        financial_strategy=fv_d.get("financial_strategy", ""),
+        budget_recommendations=fv_d.get("budget_recommendations", []),
+    )
+
+    op_d = existing.get("operational_readiness", {})
+    operational_readiness = OperationalReadinessAnalysis(
+        readiness_score=op_d.get("readiness_score", 0.5),
+        capacity_score=op_d.get("capacity_score", 0.5),
+        timeline_feasibility_score=op_d.get("timeline_feasibility_score", 0.5),
+        infrastructure_readiness_score=op_d.get("infrastructure_readiness_score", 0.5),
+        capacity_gaps=op_d.get("capacity_gaps", []),
+        infrastructure_requirements=op_d.get("infrastructure_requirements", []),
+        timeline_challenges=op_d.get("timeline_challenges", []),
+        capacity_building_plan=op_d.get("capacity_building_plan", ""),
+        operational_recommendations=op_d.get("operational_recommendations", []),
+        estimated_preparation_time_weeks=op_d.get("estimated_preparation_time_weeks", 8),
+    )
+
+    ra_d = existing.get("risk_assessment", {})
+    risk_level_str = ra_d.get("overall_risk_level", "medium").lower()
+    risk_level = (
+        RiskLevel(risk_level_str)
+        if risk_level_str in [e.value for e in RiskLevel]
+        else RiskLevel.MEDIUM
+    )
+    risk_factors = []
+    for rf in ra_d.get("risk_factors", []):
+        rl = rf.get("risk_level", "medium").lower()
+        risk_factors.append(
+            RiskFactor(
+                category=rf.get("category", "general"),
+                risk_level=RiskLevel(rl) if rl in [e.value for e in RiskLevel] else RiskLevel.MEDIUM,
+                description=rf.get("description", ""),
+                impact=rf.get("impact", ""),
+                mitigation_strategy=rf.get("mitigation_strategy", ""),
+                probability=rf.get("probability", 0.5),
+            )
+        )
+    risk_assessment = RiskAssessment(
+        overall_risk_level=risk_level,
+        overall_risk_score=ra_d.get("overall_risk_score", 0.5),
+        risk_factors=risk_factors,
+        critical_risks=ra_d.get("critical_risks", []),
+        manageable_risks=ra_d.get("manageable_risks", []),
+        risk_mitigation_plan=ra_d.get("risk_mitigation_plan", ""),
+    )
+
+    overall_score = existing.get("overall_score", 0.5)
+    sp_str = existing.get("success_probability", "moderate").lower()
+    success_prob = (
+        SuccessProbability(sp_str)
+        if sp_str in [e.value for e in SuccessProbability]
+        else SuccessProbability.MODERATE
+    )
+
+    output = DeepIntelligenceOutput(
+        strategic_fit=strategic_fit,
+        financial_viability=financial_viability,
+        operational_readiness=operational_readiness,
+        risk_assessment=risk_assessment,
+        proceed_recommendation=existing.get("proceed_recommendation", overall_score >= 0.50),
+        success_probability=success_prob,
+        overall_score=overall_score,
+        executive_summary=existing.get("executive_summary", ""),
+        key_strengths=existing.get("key_strengths", []),
+        key_challenges=existing.get("key_challenges", []),
+        recommended_next_steps=existing.get("recommended_next_steps", []),
+    )
+
+    # Restore optional Essentials fields if present
+    ni_d = existing.get("network_intelligence")
+    if ni_d:
+        output.network_intelligence = NetworkAnalysis(
+            board_connections=ni_d.get("board_connections", []),
+            network_connections=ni_d.get("network_connections", []),
+            network_strength_score=ni_d.get("network_strength_score", 0.5),
+            relationship_advantages=ni_d.get("relationship_advantages", []),
+            relationship_leverage_strategy=ni_d.get("relationship_leverage_strategy", ""),
+            key_contacts_to_cultivate=ni_d.get("key_contacts_to_cultivate", []),
+        )
+
+    hi_d = existing.get("historical_intelligence")
+    if hi_d:
+        output.historical_intelligence = HistoricalAnalysis(
+            historical_grants=hi_d.get("historical_grants", []),
+            total_grants_analyzed=hi_d.get("total_grants_analyzed", 0),
+            total_funding_amount=hi_d.get("total_funding_amount", 0.0),
+            average_grant_size=hi_d.get("average_grant_size", 0.0),
+            typical_grant_range=hi_d.get("typical_grant_range", ""),
+            funding_trends=hi_d.get("funding_trends", ""),
+            geographic_patterns=hi_d.get("geographic_patterns", ""),
+            similar_recipient_profiles=hi_d.get("similar_recipient_profiles", []),
+            success_factors=hi_d.get("success_factors", []),
+            competitive_intelligence=hi_d.get("competitive_intelligence", ""),
+        )
+
+    ga_d = existing.get("geographic_analysis")
+    if ga_d:
+        output.geographic_analysis = GeographicAnalysis(
+            primary_service_area=ga_d.get("primary_service_area", ""),
+            funder_geographic_focus=ga_d.get("funder_geographic_focus", ""),
+            geographic_alignment_score=ga_d.get("geographic_alignment_score", 0.5),
+            geographic_fit_assessment=ga_d.get("geographic_fit_assessment", ""),
+            regional_competition_analysis=ga_d.get("regional_competition_analysis", ""),
+            location_advantages=ga_d.get("location_advantages", []),
+            location_challenges=ga_d.get("location_challenges", []),
+        )
+
+    return output
+
+
+def _apply_premium_only_fields(output: DeepIntelligenceOutput, data: Dict[str, Any]) -> None:
+    """Overlay the 3 Premium-only fields onto a reconstructed output object."""
+    rm = data.get("relationship_mapping", {})
+    if rm:
+        output.relationship_mapping = RelationshipMap(
+            direct_relationships=rm.get("direct_relationships", []),
+            indirect_relationships=rm.get("indirect_relationships", []),
+            partnership_opportunities=rm.get("partnership_opportunities", []),
+            relationship_insights=rm.get("relationship_insights", ""),
+            cultivation_strategy=rm.get("cultivation_strategy", ""),
+        )
+
+    pa = data.get("policy_analysis", {})
+    if pa:
+        output.policy_analysis = PolicyAnalysis(
+            federal_policy_alignment=PolicyAlignment(
+                relevant_policies=pa.get("federal_policies", []),
+                alignment_score=pa.get("federal_alignment_score", 0.5),
+                policy_opportunities=pa.get("policy_opportunities", []),
+                policy_risks=pa.get("policy_risks", []),
+            ),
+            state_policy_alignment=None,
+            policy_landscape_summary=pa.get("policy_landscape_summary", ""),
+            policy_opportunities=pa.get("policy_opportunities", []),
+            advocacy_recommendations=pa.get("advocacy_recommendations", []),
+        )
+
+    sc = data.get("strategic_consulting", {})
+    if sc:
+        output.strategic_consulting = StrategicConsultingInsights(
+            executive_summary=sc.get("executive_summary", ""),
+            competitive_positioning=sc.get("competitive_positioning", ""),
+            differentiation_strategy=sc.get("differentiation_strategy", ""),
+            multi_year_funding_strategy=sc.get("multi_year_funding_strategy", ""),
+            partnership_development_strategy=sc.get("partnership_development_strategy", ""),
+            capacity_building_roadmap=sc.get("capacity_building_roadmap", ""),
+            immediate_actions=sc.get("immediate_actions", []),
+            medium_term_actions=sc.get("medium_term_actions", []),
+            long_term_actions=sc.get("long_term_actions", []),
+        )
+
+
+def _apply_premium_only_fallback(
+    output: DeepIntelligenceOutput,
+    intel_input: DeepIntelligenceInput,
+) -> None:
+    """Apply placeholder Premium-only fields when the AI call fails."""
+    output.relationship_mapping = RelationshipMap(
+        direct_relationships=["Partner Org A", "Collaborator B"],
+        indirect_relationships=["Funder board member via Partner A"],
+        partnership_opportunities=["Joint programming with Partner C"],
+        relationship_insights="Network analysis could not be completed. Manual relationship mapping recommended.",
+        cultivation_strategy="Leverage existing partner relationships for warm introductions.",
+    )
+    output.policy_analysis = PolicyAnalysis(
+        federal_policy_alignment=PolicyAlignment(
+            relevant_policies=["Relevant federal program areas"],
+            alignment_score=0.6,
+            policy_opportunities=["Align with federal priorities"],
+            policy_risks=["Policy environment uncertainty"],
+        ),
+        state_policy_alignment=None,
+        policy_landscape_summary="Policy analysis could not be completed. Manual review recommended.",
+        policy_opportunities=["Position as policy implementation partner"],
+        advocacy_recommendations=["Engage in relevant policy discussions"],
+    )
+    output.strategic_consulting = StrategicConsultingInsights(
+        executive_summary=f"Premium upgrade for {intel_input.opportunity_title}. "
+                          "Core Essentials analysis preserved. Premium-specific "
+                          "insights require manual review.",
+        competitive_positioning="Emphasise unique organisational strengths.",
+        differentiation_strategy="Highlight proven outcomes and community partnerships.",
+        multi_year_funding_strategy="Build funder relationship through consistent delivery.",
+        partnership_development_strategy="Develop complementary strategic partnerships.",
+        capacity_building_roadmap="Phase 1: Infrastructure (6 mo), Phase 2: Staff (6 mo), Phase 3: Scale (12 mo)",
+        immediate_actions=["Submit LOI", "Schedule funder meeting", "Develop detailed budget"],
+        medium_term_actions=["Build evaluation capacity", "Strengthen partnerships"],
+        long_term_actions=["Scale program model", "Seek multi-year funding"],
+    )
 
 
 # ============================================================================

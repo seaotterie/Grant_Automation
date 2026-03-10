@@ -388,6 +388,18 @@ async def research_opportunity(
 
             logger.info(f"Tool 25 result: success={result.success}, errors={result.errors if hasattr(result, 'errors') else 'N/A'}")
 
+            # Short-circuit: no URL found — return graceful 200 instead of 500
+            if not result.success and result.errors and "no_url_found" in result.errors:
+                logger.info(f"No URL found for opportunity {opportunity_id} (EIN: {ein}) — skipping web intelligence")
+                return {
+                    "success": False,
+                    "reason": "no_url_found",
+                    "web_search_complete": False,
+                    "opportunity_id": opportunity_id,
+                    "ein": ein,
+                    "organization_name": opportunity.organization_name,
+                }
+
             if result.success and result.intelligence_data:
                 intelligence = result.intelligence_data
 
@@ -1044,6 +1056,66 @@ async def update_opportunity_notes(opportunity_id: str, request: Dict[str, Any])
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.patch("/{opportunity_id}/website-url")
+async def update_website_url(opportunity_id: str, body: WebsiteUrlUpdate):
+    """
+    Update (or clear) the website_url for an opportunity.
+
+    Stores the URL in analysis_discovery.website_url with url_source='manual'.
+    Also caches it in ein_intelligence so batch URL discovery can see it.
+
+    Request body:
+    {
+        "url": "https://example.org"   # or null/empty to clear
+    }
+    """
+    try:
+        url = (body.url or "").strip()
+
+        conn = database_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT ein, organization_name, analysis_discovery FROM opportunities WHERE id = ?",
+            (opportunity_id,)
+        )
+        row = cursor.fetchone()
+
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail=f"Opportunity {opportunity_id} not found")
+
+        ein, org_name, ad_raw = row[0], row[1], row[2]
+        analysis_discovery = json.loads(ad_raw) if ad_raw else {}
+
+        # Update URL fields
+        analysis_discovery["website_url"] = url
+        analysis_discovery["url_source"] = "manual" if url else None
+
+        timestamp = datetime.now().isoformat()
+        cursor.execute(
+            "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+            (json.dumps(analysis_discovery), timestamp, opportunity_id)
+        )
+        conn.commit()
+        conn.close()
+
+        logger.info(f"Updated website_url for {opportunity_id} (EIN: {ein}): {url!r}")
+
+        return {
+            "success": True,
+            "opportunity_id": opportunity_id,
+            "website_url": url or None,
+            "url_source": "manual" if url else None,
+            "updated_at": timestamp,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update website_url for {opportunity_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{opportunity_id}/990-filings")
 async def get_990_filings(opportunity_id: str):
     """
@@ -1646,6 +1718,11 @@ async def batch_web_research(body: BatchWebResearchRequest):
 # ---------------------------------------------------------------------------
 # Batch Screen Endpoint (Tool 1 fast-mode fan-out)
 # ---------------------------------------------------------------------------
+
+class WebsiteUrlUpdate(BaseModel):
+    """Request body for PATCH website-url endpoint."""
+    url: Optional[str] = None
+
 
 class BatchScreenRequest(BaseModel):
     profile_id: str

@@ -453,44 +453,34 @@
                                     <!-- Button 1: Find Opps -->
                                     <button @click="showDiscoveryModal = true"
                                             :disabled="discoveryLoading"
-                                            class="flex-1 flex flex-col items-center justify-center py-3 px-2 font-medium bg-green-500 text-white rounded hover:bg-green-600 transition-colors disabled:opacity-50 min-w-0 gap-0.5">
-                                        <div x-show="!discoveryLoading" class="flex flex-col items-center gap-0.5">
-                                            <div class="flex items-center gap-1 text-base">
-                                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                                </svg>
-                                                <span>Find</span>
-                                            </div>
-                                            <span class="text-base" x-text="discoveryMetadata.last_discovery_date ? '(' + freshnessText + ')' : 'Opps'"></span>
+                                            class="flex-1 flex flex-col items-center justify-center py-1.5 px-2 font-medium bg-green-500 text-white rounded hover:bg-green-600 transition-colors disabled:opacity-50 min-w-0">
+                                        <div x-show="!discoveryLoading" class="flex flex-col items-center">
+                                            <span class="text-sm font-medium">Find Opps</span>
+                                            <span class="text-xs opacity-80" x-text="discoveryMetadata.last_discovery_date ? '(' + freshnessText + ')' : '(run)'"></span>
                                         </div>
                                         <div x-show="discoveryLoading" class="flex items-center gap-1 text-sm">
-                                            <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                            <svg class="animate-spin w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                                             </svg>
-                                            <span>Discovering...</span>
+                                            <span class="text-xs">Finding...</span>
                                         </div>
                                     </button>
 
                                     <!-- Button 2: Find URLs -->
                                     <button @click="discoverAllUrls(false)"
                                             :disabled="urlDiscoveryInProgress || summaryCounts.total_found === 0"
-                                            class="flex-1 flex flex-col items-center justify-center py-3 px-2 font-medium bg-green-500 text-white rounded hover:bg-green-600 transition-colors disabled:opacity-50 min-w-0 gap-0.5">
-                                        <div x-show="!urlDiscoveryInProgress" class="flex flex-col items-center gap-0.5">
-                                            <div class="flex items-center gap-1 text-base">
-                                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-                                                </svg>
-                                                <span>Find</span>
-                                            </div>
-                                            <span class="text-base">URLs (<span x-text="_getFoundCountFor('urls')"></span>/<span x-text="getNextBatchFor('urls').totalEligible"></span>)</span>
+                                            class="flex-1 flex flex-col items-center justify-center py-1.5 px-2 font-medium bg-green-500 text-white rounded hover:bg-green-600 transition-colors disabled:opacity-50 min-w-0">
+                                        <div x-show="!urlDiscoveryInProgress" class="flex flex-col items-center">
+                                            <span class="text-sm font-medium">Find URLs</span>
+                                            <span class="text-xs opacity-80">(<span x-text="_getFoundCountFor('urls')"></span>/<span x-text="getNextBatchFor('urls').totalEligible"></span>)</span>
                                         </div>
                                         <div x-show="urlDiscoveryInProgress" class="flex items-center gap-1 text-sm">
-                                            <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                            <svg class="animate-spin w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                                             </svg>
-                                            <span><span x-text="urlDiscoveryProgress.processed"></span>/<span x-text="urlDiscoveryProgress.total"></span></span>
+                                            <span class="text-xs"><span x-text="urlDiscoveryProgress.processed"></span>/<span x-text="urlDiscoveryProgress.total"></span></span>
                                         </div>
                                     </button>
 
@@ -500,44 +490,34 @@
                                     <!-- Button 3: Search Website -->
                                     <button @click="batchSearchWebsite()"
                                             :disabled="websiteSearchInProgress || summaryCounts.total_found === 0"
-                                            class="flex-1 flex flex-col items-center justify-center py-3 px-2 font-medium bg-green-700 text-white rounded hover:bg-green-800 transition-colors disabled:opacity-50 min-w-0 gap-0.5">
-                                        <div x-show="!websiteSearchInProgress" class="flex flex-col items-center gap-0.5">
-                                            <div class="flex items-center gap-1 text-base">
-                                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
-                                                </svg>
-                                                <span>Search</span>
-                                            </div>
-                                            <span class="text-base">Website (<span x-text="_getFoundCountFor('web')"></span>/<span x-text="getNextBatchFor('web').totalEligible"></span>)</span>
+                                            class="flex-1 flex flex-col items-center justify-center py-1.5 px-2 font-medium bg-green-700 text-white rounded hover:bg-green-800 transition-colors disabled:opacity-50 min-w-0">
+                                        <div x-show="!websiteSearchInProgress" class="flex flex-col items-center">
+                                            <span class="text-sm font-medium">Search Website</span>
+                                            <span class="text-xs opacity-80">(<span x-text="_getFoundCountFor('web')"></span>/<span x-text="getNextBatchFor('web').totalEligible"></span>)</span>
                                         </div>
                                         <div x-show="websiteSearchInProgress" class="flex items-center gap-1 text-sm">
-                                            <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                            <svg class="animate-spin w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                                             </svg>
-                                            <span><span x-text="websiteSearchProgress.processed"></span>/<span x-text="websiteSearchProgress.total"></span></span>
+                                            <span class="text-xs"><span x-text="websiteSearchProgress.processed"></span>/<span x-text="websiteSearchProgress.total"></span></span>
                                         </div>
                                     </button>
 
                                     <!-- Button 4: Search 990s -->
                                     <button @click="batchAnalyze990Pdfs()"
                                             :disabled="ninetiesSearchInProgress || summaryCounts.total_found === 0"
-                                            class="flex-1 flex flex-col items-center justify-center py-3 px-2 font-medium bg-green-700 text-white rounded hover:bg-green-800 transition-colors disabled:opacity-50 min-w-0 gap-0.5">
-                                        <div x-show="!ninetiesSearchInProgress" class="flex flex-col items-center gap-0.5">
-                                            <div class="flex items-center gap-1 text-base">
-                                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                                </svg>
-                                                <span>Search</span>
-                                            </div>
-                                            <span class="text-base">990s (<span x-text="_getFoundCountFor('990s')"></span>/<span x-text="getNextBatchFor('990s').totalEligible"></span>)</span>
+                                            class="flex-1 flex flex-col items-center justify-center py-1.5 px-2 font-medium bg-green-700 text-white rounded hover:bg-green-800 transition-colors disabled:opacity-50 min-w-0">
+                                        <div x-show="!ninetiesSearchInProgress" class="flex flex-col items-center">
+                                            <span class="text-sm font-medium">Search 990s</span>
+                                            <span class="text-xs opacity-80">(<span x-text="_getFoundCountFor('990s')"></span>/<span x-text="getNextBatchFor('990s').totalEligible"></span>)</span>
                                         </div>
                                         <div x-show="ninetiesSearchInProgress" class="flex items-center gap-1 text-sm">
-                                            <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                            <svg class="animate-spin w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                                             </svg>
-                                            <span><span x-text="ninetiesSearchProgress.processed"></span>/<span x-text="ninetiesSearchProgress.total"></span></span>
+                                            <span class="text-xs"><span x-text="ninetiesSearchProgress.processed"></span>/<span x-text="ninetiesSearchProgress.total"></span></span>
                                         </div>
                                     </button>
 
@@ -547,44 +527,34 @@
                                     <!-- Button 5: Screen Fast -->
                                     <button @click="screenAllFast()"
                                             :disabled="batchScreenStatus === 'running' || discoveryResults.length === 0"
-                                            class="flex-1 flex flex-col items-center justify-center py-3 px-2 font-medium bg-green-900 text-white rounded hover:bg-green-800 transition-colors disabled:opacity-50 min-w-0 gap-0.5">
-                                        <div x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'fast')" class="flex flex-col items-center gap-0.5">
-                                            <div class="flex items-center gap-1 text-base">
-                                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                                </svg>
-                                                <span>Screen</span>
-                                            </div>
-                                            <span class="text-base">Fast (<span x-text="_getFoundCountFor('fast')"></span>/<span x-text="getNextBatchFor('fast').totalEligible"></span>)</span>
+                                            class="flex-1 flex flex-col items-center justify-center py-1.5 px-2 font-medium bg-green-900 text-white rounded hover:bg-green-800 transition-colors disabled:opacity-50 min-w-0">
+                                        <div x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'fast')" class="flex flex-col items-center">
+                                            <span class="text-sm font-medium">Screen Fast</span>
+                                            <span class="text-xs opacity-80">(<span x-text="_getFoundCountFor('fast')"></span>/<span x-text="getNextBatchFor('fast').totalEligible"></span>)</span>
                                         </div>
                                         <div x-show="batchScreenStatus === 'running' && batchScreenMode === 'fast'" class="flex items-center gap-1 text-sm">
-                                            <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                            <svg class="animate-spin w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                                             </svg>
-                                            <span><span x-text="batchScreenProgress"></span>/<span x-text="batchScreenTotal"></span></span>
+                                            <span class="text-xs"><span x-text="batchScreenProgress"></span>/<span x-text="batchScreenTotal"></span></span>
                                         </div>
                                     </button>
 
                                     <!-- Button 6: Screen Thorough -->
                                     <button @click="screenAllThorough()"
                                             :disabled="batchScreenStatus === 'running' || discoveryResults.length === 0"
-                                            class="flex-1 flex flex-col items-center justify-center py-3 px-2 font-medium bg-green-900 text-white rounded hover:bg-green-800 transition-colors disabled:opacity-50 min-w-0 gap-0.5">
-                                        <div x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'thorough')" class="flex flex-col items-center gap-0.5">
-                                            <div class="flex items-center gap-1 text-base">
-                                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                                                </svg>
-                                                <span>Screen</span>
-                                            </div>
-                                            <span class="text-base">Thorough (<span x-text="_getFoundCountFor('thorough')"></span>/<span x-text="getNextBatchFor('thorough').totalEligible"></span>)</span>
+                                            class="flex-1 flex flex-col items-center justify-center py-1.5 px-2 font-medium bg-green-900 text-white rounded hover:bg-green-800 transition-colors disabled:opacity-50 min-w-0">
+                                        <div x-show="!(batchScreenStatus === 'running' && batchScreenMode === 'thorough')" class="flex flex-col items-center">
+                                            <span class="text-sm font-medium">Screen Thorough</span>
+                                            <span class="text-xs opacity-80">(<span x-text="_getFoundCountFor('thorough')"></span>/<span x-text="getNextBatchFor('thorough').totalEligible"></span>)</span>
                                         </div>
                                         <div x-show="batchScreenStatus === 'running' && batchScreenMode === 'thorough'" class="flex items-center gap-1 text-sm">
-                                            <svg class="animate-spin w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                                            <svg class="animate-spin w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                                             </svg>
-                                            <span><span x-text="batchScreenProgress"></span>/<span x-text="batchScreenTotal"></span></span>
+                                            <span class="text-xs"><span x-text="batchScreenProgress"></span>/<span x-text="batchScreenTotal"></span></span>
                                         </div>
                                     </button>
 
@@ -708,13 +678,26 @@
                                 </label>
                             </div>
 
+                            <!-- Max Results Control -->
+                            <div class="flex items-center gap-3 mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300 flex-shrink-0">Max Results:</label>
+                                <input type="number"
+                                       x-model.number="maxReturnLimit"
+                                       min="50"
+                                       max="10000"
+                                       step="50"
+                                       placeholder="200–10000"
+                                       class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
+                                <span class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">orgs</span>
+                            </div>
+
                             <!-- Action Buttons -->
                             <div class="flex gap-3">
                                 <button @click="showDiscoveryModal = false"
                                         class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">
                                     Cancel
                                 </button>
-                                <button @click="if (discoverySourcesSelected.length > 0) { showDiscoveryModal = false; executeNonprofitDiscovery(currentProfileId, {max_results: 200, auto_scrapy_count: 20}); }"
+                                <button @click="if (discoverySourcesSelected.length > 0) { showDiscoveryModal = false; executeNonprofitDiscovery(currentProfileId, {max_results: maxReturnLimit || 500, auto_scrapy_count: 20}); }"
                                         :disabled="discoverySourcesSelected.length === 0"
                                         class="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                                     Discover (<span x-text="discoverySourcesSelected.length"></span> source<span x-show="discoverySourcesSelected.length !== 1">s</span>)
@@ -868,19 +851,21 @@
                                             <!-- Score -->
                                             <td class="px-4 py-3 whitespace-nowrap">
                                                 <div class="space-y-1">
-                                                    <!-- Algorithmic score (Tool 20) -->
+                                                    <!-- Composite score bar (red when flagged) -->
                                                     <div class="flex items-center gap-2">
                                                         <div class="w-14 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                                             <div class="h-2 rounded-full transition-all"
-                                                                 :class="{
-                                                                     'bg-green-600': opp.overall_score >= 0.74,
-                                                                     'bg-yellow-600': opp.overall_score >= 0.71 && opp.overall_score < 0.74,
-                                                                     'bg-orange-600': opp.overall_score >= 0.68 && opp.overall_score < 0.71,
-                                                                     'bg-gray-600': opp.overall_score < 0.68
+                                                                 :class="hasRedFlag(opp) ? 'bg-red-500' : {
+                                                                     'bg-green-600': computeCompositeScore(opp) >= 0.74,
+                                                                     'bg-yellow-600': computeCompositeScore(opp) >= 0.71 && computeCompositeScore(opp) < 0.74,
+                                                                     'bg-orange-600': computeCompositeScore(opp) >= 0.68 && computeCompositeScore(opp) < 0.71,
+                                                                     'bg-gray-600': computeCompositeScore(opp) < 0.68
                                                                  }"
-                                                                 :style="'width: ' + (opp.overall_score * 100) + '%'"></div>
+                                                                 :style="'width: ' + (computeCompositeScore(opp) * 100) + '%'"></div>
                                                         </div>
-                                                        <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="Math.round(opp.overall_score * 100) + '%'"></span>
+                                                        <span class="text-sm font-medium"
+                                                              :class="hasRedFlag(opp) ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'"
+                                                              x-text="Math.round(computeCompositeScore(opp) * 100) + '%'"></span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -933,6 +918,16 @@
 
                                             <!-- Analysis Status Badges: W=Web F=Fast 9=990 T=Thorough -->
                                             <td class="px-4 py-3 whitespace-nowrap">
+                                                <!-- RED flag badges -->
+                                                <template x-if="hasRedFlag(opp)">
+                                                    <div class="flex flex-wrap gap-1 mb-1">
+                                                        <template x-for="flag in getRedFlags(opp)" :key="flag.code">
+                                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-red-600 text-white"
+                                                                  :title="flag.tooltip"
+                                                                  x-text="flag.label"></span>
+                                                        </template>
+                                                    </div>
+                                                </template>
                                                 <div class="grid grid-cols-2 gap-x-2 gap-y-1">
                                                     <!-- [W] Web researched — top left -->
                                                     <div class="flex items-center gap-1"
@@ -1297,6 +1292,20 @@
                             <div class="p-6 overflow-y-auto flex-1">
                                 <!-- Tab 1: Score Breakdown -->
                                 <div x-show="modalActiveTab === 'scores'" class="space-y-4">
+                                    <!-- RED Flag Alert Box (shown when flags exist) -->
+                                    <template x-if="selectedOpportunity && hasRedFlag(selectedOpportunity)">
+                                        <div class="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg p-3">
+                                            <div class="text-sm font-bold text-red-700 dark:text-red-400 mb-2">Disqualifying Flags Detected</div>
+                                            <ul class="space-y-1">
+                                                <template x-for="flag in getRedFlags(selectedOpportunity)" :key="flag.code">
+                                                    <li class="flex items-start gap-2 text-sm text-red-700 dark:text-red-300">
+                                                        <span class="font-bold flex-shrink-0" x-text="flag.label + ':'"></span>
+                                                        <span x-text="flag.tooltip"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </template>
                                     <!-- Primary score display with always-expanded dimensions -->
                                     <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                                         <div class="flex items-center justify-between mb-3">
@@ -1902,20 +1911,55 @@
                                             </template>
                                         </div>
 
-                                        <!-- Discovered URL -->
-                                        <template x-if="selectedOpportunity?.website_url && selectedOpportunity.url_source !== 'not_found'">
-                                            <div class="flex items-center gap-2 mb-3 text-sm">
-                                                <span class="text-gray-500 dark:text-gray-400">URL:</span>
-                                                <a :href="selectedOpportunity.website_url.startsWith('http') ? selectedOpportunity.website_url : 'https://' + selectedOpportunity.website_url"
-                                                   target="_blank"
-                                                   class="text-teal-600 hover:text-teal-700 dark:text-teal-400 font-medium flex items-center gap-1 break-all"
-                                                   x-text="selectedOpportunity.website_url">
-                                                </a>
-                                                <svg class="w-3 h-3 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                                                </svg>
-                                            </div>
-                                        </template>
+                                        <!-- Discovered URL — editable hyperlink -->
+                                        <div class="flex items-center gap-2 mb-3 text-sm">
+                                            <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">URL:</span>
+                                            <!-- View mode -->
+                                            <template x-if="!editingScreeningUrl">
+                                                <div class="flex items-center gap-1 min-w-0">
+                                                    <template x-if="selectedOpportunity?.website_url && selectedOpportunity.url_source !== 'not_found'">
+                                                        <a :href="selectedOpportunity.website_url.startsWith('http') ? selectedOpportunity.website_url : 'https://' + selectedOpportunity.website_url"
+                                                           target="_blank"
+                                                           class="text-teal-600 hover:text-teal-700 dark:text-teal-400 font-medium truncate max-w-xs"
+                                                           x-text="selectedOpportunity.website_url">
+                                                        </a>
+                                                    </template>
+                                                    <template x-if="!selectedOpportunity?.website_url || selectedOpportunity.url_source === 'not_found'">
+                                                        <span class="text-gray-400 dark:text-gray-500 italic text-xs">No URL found</span>
+                                                    </template>
+                                                    <button @click="editingScreeningUrl = true; editScreeningUrlValue = selectedOpportunity?.website_url || ''"
+                                                            class="ml-1 p-0.5 text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 flex-shrink-0"
+                                                            title="Edit website URL">
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </template>
+                                            <!-- Edit mode -->
+                                            <template x-if="editingScreeningUrl">
+                                                <div class="flex items-center gap-1 flex-1 min-w-0">
+                                                    <input type="url"
+                                                           x-model="editScreeningUrlValue"
+                                                           @keydown.enter="saveWebsiteUrl(selectedOpportunity.opportunity_id, editScreeningUrlValue)"
+                                                           @keydown.escape="editingScreeningUrl = false"
+                                                           placeholder="https://example.org"
+                                                           class="flex-1 px-2 py-0.5 text-sm border border-teal-400 rounded dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500 min-w-0">
+                                                    <button @click="saveWebsiteUrl(selectedOpportunity.opportunity_id, editScreeningUrlValue)"
+                                                            class="p-0.5 text-green-600 hover:text-green-700 flex-shrink-0" title="Save">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                        </svg>
+                                                    </button>
+                                                    <button @click="editingScreeningUrl = false"
+                                                            class="p-0.5 text-gray-400 hover:text-red-500 flex-shrink-0" title="Cancel">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </template>
+                                        </div>
 
                                         <!-- Web data summary when available -->
                                         <template x-if="selectedOpportunity?.web_search_complete && selectedOpportunity?.web_data">
@@ -2934,10 +2978,47 @@
 
                     <!-- Enhanced Opportunities Table -->
                     <div x-show="selectedOpportunities.length > 0" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white">
-                                Opportunities Identified for Analysis (<span x-text="selectedOpportunities.length"></span>)
-                            </h4>
+                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <!-- Filter pills -->
+                                <div class="flex flex-wrap items-center gap-1">
+                                    <button @click="intelligenceCategoryFilter = null"
+                                            :class="intelligenceCategoryFilter === null ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+                                            class="px-2 py-1 rounded text-xs font-medium transition-colors">
+                                        All: <span x-text="intelligenceCategoryCounts.all"></span>
+                                    </button>
+                                    <button @click="intelligenceCategoryFilter = 'qualified'"
+                                            :class="intelligenceCategoryFilter === 'qualified' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300 hover:bg-green-200'"
+                                            class="px-2 py-1 rounded text-xs font-medium transition-colors">
+                                        Q: <span x-text="intelligenceCategoryCounts.qualified"></span>
+                                    </button>
+                                    <button @click="intelligenceCategoryFilter = 'review'"
+                                            :class="intelligenceCategoryFilter === 'review' ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300 hover:bg-orange-200'"
+                                            class="px-2 py-1 rounded text-xs font-medium transition-colors">
+                                        R: <span x-text="intelligenceCategoryCounts.review"></span>
+                                    </button>
+                                    <button @click="intelligenceCategoryFilter = 'consider'"
+                                            :class="intelligenceCategoryFilter === 'consider' ? 'bg-red-500 text-white' : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300 hover:bg-red-200'"
+                                            class="px-2 py-1 rounded text-xs font-medium transition-colors">
+                                        C: <span x-text="intelligenceCategoryCounts.consider"></span>
+                                    </button>
+                                    <button @click="intelligenceCategoryFilter = 'low_priority'"
+                                            :class="intelligenceCategoryFilter === 'low_priority' ? 'bg-gray-500 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'"
+                                            class="px-2 py-1 rounded text-xs font-medium transition-colors">
+                                        LP: <span x-text="intelligenceCategoryCounts.low_priority"></span>
+                                    </button>
+                                </div>
+                                <!-- Sort dropdown -->
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">Sort:</span>
+                                    <select x-model="intelligenceSortBy"
+                                            class="text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                                        <option value="composite_score">Score</option>
+                                        <option value="organization_name">Name</option>
+                                        <option value="revenue">Revenue</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="overflow-x-auto">
@@ -2950,15 +3031,13 @@
                                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Organization</th>
                                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Score</th>
                                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</th>
-                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Analysis Type</th>
-                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Analysis Date</th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Analysis</th>
                                         <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Revenue</th>
-                                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Assets</th>
                                         <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                    <template x-for="(opp, index) in selectedOpportunities" :key="opp.opportunity_id || index">
+                                    <template x-for="(opp, index) in filteredIntelligenceOpps" :key="opp.opportunity_id || index">
                                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                             <!-- Checkbox -->
                                             <td class="px-4 py-3 text-center">
@@ -2974,50 +3053,69 @@
                                                 </div>
                                             </td>
 
-                                            <!-- Score -->
+                                            <!-- Score: pill + bar using computeCompositeScore, red when flagged -->
                                             <td class="px-4 py-3 text-center">
-                                                <span class="font-semibold text-blue-600" x-text="Math.round((opp.overall_score || 0) * 100) + '%'"></span>
+                                                <div class="flex flex-col items-center gap-1">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold"
+                                                          :class="hasRedFlag(opp) ? 'bg-red-500 text-white' : {
+                                                              'bg-green-600 text-white': opp.category_level === 'qualified',
+                                                              'bg-orange-500 text-white': opp.category_level === 'review',
+                                                              'bg-red-500 text-white': opp.category_level === 'consider',
+                                                              'bg-gray-500 text-white': opp.category_level === 'low_priority' || !opp.category_level
+                                                          }"
+                                                          x-text="Math.round(computeCompositeScore(opp) * 100) + '%'"></span>
+                                                    <div class="w-16 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                                        <div class="h-1.5 rounded-full transition-all"
+                                                             :class="hasRedFlag(opp) ? 'bg-red-500' : {
+                                                                 'bg-green-500': opp.category_level === 'qualified',
+                                                                 'bg-orange-500': opp.category_level === 'review',
+                                                                 'bg-red-500': opp.category_level === 'consider',
+                                                                 'bg-gray-400': opp.category_level === 'low_priority' || !opp.category_level
+                                                             }"
+                                                             :style="'width: ' + Math.round(computeCompositeScore(opp) * 100) + '%'"></div>
+                                                    </div>
+                                                    <!-- Red flag badges inline -->
+                                                    <template x-if="hasRedFlag(opp)">
+                                                        <div class="flex flex-wrap gap-0.5 justify-center mt-0.5">
+                                                            <template x-for="flag in getRedFlags(opp)" :key="flag.code">
+                                                                <span class="inline-flex items-center px-1 py-0 rounded text-xs font-bold bg-red-600 text-white leading-4"
+                                                                      :title="flag.tooltip"
+                                                                      x-text="flag.label"></span>
+                                                            </template>
+                                                        </div>
+                                                    </template>
+                                                </div>
                                             </td>
 
-                                            <!-- Category -->
+                                            <!-- Category badge: solid colors -->
                                             <td class="px-4 py-3 text-center">
                                                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold"
                                                       :class="{
-                                                          'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300': opp.category_level === 'qualified',
-                                                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300': opp.category_level === 'review',
-                                                          'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300': opp.category_level === 'consider',
-                                                          'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300': opp.category_level === 'low_priority'
+                                                          'bg-green-600 text-white': opp.category_level === 'qualified',
+                                                          'bg-orange-500 text-white': opp.category_level === 'review',
+                                                          'bg-red-500 text-white': opp.category_level === 'consider',
+                                                          'bg-gray-500 text-white': opp.category_level === 'low_priority' || !opp.category_level
                                                       }"
                                                       x-text="opp.category_level ? opp.category_level.replace('_', ' ').toUpperCase() : 'N/A'">
                                                 </span>
                                             </td>
 
-                                            <!-- Analysis Type (ESSENTIAL or PREMIUM) -->
+                                            <!-- Analysis: depth badge + date, or gray Pending -->
                                             <td class="px-4 py-3 text-center">
                                                 <template x-if="hasIntelligence(opp.opportunity_id)">
-                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold"
-                                                          :class="getIntelligence(opp.opportunity_id)?.depth === 'essentials' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/20 dark:text-teal-300' : 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300'"
-                                                          x-text="getIntelligence(opp.opportunity_id)?.depth === 'essentials' ? 'ESSENTIAL' : 'PREMIUM'">
-                                                    </span>
-                                                </template>
-                                                <template x-if="!hasIntelligence(opp.opportunity_id)">
-                                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400"
-                                                          x-text="selectedDepth === 'essentials' ? 'ESSENTIAL' : 'PREMIUM'">
-                                                    </span>
-                                                </template>
-                                            </td>
-
-                                            <!-- Analysis Date -->
-                                            <td class="px-4 py-3 text-center">
-                                                <template x-if="hasIntelligence(opp.opportunity_id)">
-                                                    <div class="text-sm text-gray-900 dark:text-white">
-                                                        <div x-text="new Date(getIntelligence(opp.opportunity_id)?.timestamp).toLocaleDateString()"></div>
+                                                    <div class="flex flex-col items-center gap-1">
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                                                              :class="getIntelligence(opp.opportunity_id)?.depth === 'essentials' ? 'bg-teal-600 text-white' : 'bg-purple-600 text-white'"
+                                                              x-text="getIntelligence(opp.opportunity_id)?.depth === 'essentials' ? 'ESSENTIALS' : 'PREMIUM'">
+                                                        </span>
                                                         <div class="text-xs text-gray-500 dark:text-gray-400"
-                                                             x-text="new Date(getIntelligence(opp.opportunity_id)?.timestamp).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})"></div>
+                                                             x-text="new Date(getIntelligence(opp.opportunity_id)?.timestamp).toLocaleDateString()"></div>
                                                     </div>
                                                 </template>
                                                 <template x-if="!hasIntelligence(opp.opportunity_id)">
-                                                    <span class="text-sm text-gray-500 dark:text-gray-400">Pending</span>
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                                                        Pending
+                                                    </span>
                                                 </template>
                                             </td>
 
@@ -3028,17 +3126,10 @@
                                                 </span>
                                             </td>
 
-                                            <!-- Assets -->
-                                            <td class="px-4 py-3 text-right">
-                                                <span class="text-sm font-medium text-gray-900 dark:text-white"
-                                                      x-text="opp.assets ? '$' + (opp.assets / 1000000).toFixed(1) + 'M' : '-'">
-                                                </span>
-                                            </td>
-
                                             <!-- Actions -->
                                             <td class="px-4 py-3 text-center">
                                                 <button @click="openIntelligenceModal(opp.opportunity_id)"
-                                                        class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors">
+                                                        class="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition-colors">
                                                     View Details
                                                 </button>
                                             </td>
@@ -3056,60 +3147,199 @@
                          class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-7xl w-full h-[90vh] flex flex-col overflow-hidden"
                              @click.stop>
-                            <!-- Modal Header -->
-                            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-3">
-                                        <h3 class="text-2xl font-bold text-gray-900 dark:text-white"
+                            <!-- Modal Header: 3-column layout with Prev/Next navigation -->
+                            <div class="flex items-center gap-2 p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                                <!-- Left col: Prev button + counter -->
+                                <div class="flex items-center gap-1 flex-shrink-0">
+                                    <button @click="navigateIntelligenceModal(-1)"
+                                            :disabled="intelligenceModalIndex <= 0"
+                                            class="px-2 py-1 text-sm rounded transition-colors"
+                                            :class="intelligenceModalIndex <= 0
+                                                ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                                            title="Previous opportunity">
+                                        ← Prev
+                                    </button>
+                                    <span class="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap"
+                                          x-text="(intelligenceModalIndex + 1) + ' / ' + selectedOpportunities.length"></span>
+                                </div>
+
+                                <!-- Center col: org name, EIN/location, category badge, analysis badge -->
+                                <div class="flex-1 min-w-0 px-2">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <h3 class="text-lg font-bold text-gray-900 dark:text-white truncate"
                                             x-text="selectedIntelligenceOpp?.organization_name"></h3>
-                                        <!-- Analysis Status Badge -->
+                                        <!-- Category badge -->
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0"
+                                              :class="{
+                                                  'bg-green-600 text-white': selectedIntelligenceOpp?.category_level === 'qualified',
+                                                  'bg-orange-500 text-white': selectedIntelligenceOpp?.category_level === 'review',
+                                                  'bg-red-500 text-white': selectedIntelligenceOpp?.category_level === 'consider',
+                                                  'bg-gray-500 text-white': selectedIntelligenceOpp?.category_level === 'low_priority' || !selectedIntelligenceOpp?.category_level
+                                              }"
+                                              x-text="selectedIntelligenceOpp?.category_level
+                                                  ? selectedIntelligenceOpp.category_level.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+                                                  : 'Unscored'"></span>
+                                        <!-- Analysis depth badge -->
                                         <template x-if="hasIntelligence(selectedIntelligenceOpp?.opportunity_id)">
-                                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold"
-                                                  :class="getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.depth === 'essentials' ? 'bg-teal-100 text-teal-800 border border-teal-200' : 'bg-purple-100 text-purple-800 border border-purple-200'">
-                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                </svg>
-                                                <span x-text="(getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.depth || '').toUpperCase() + ' Analysis'"></span>
-                                            </span>
-                                        </template>
-                                        <template x-if="!hasIntelligence(selectedIntelligenceOpp?.opportunity_id)">
-                                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold border border-gray-200">
-                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                </svg>
-                                                Pending Analysis
-                                            </span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0"
+                                                  :class="getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.depth === 'essentials' ? 'bg-teal-600 text-white' : 'bg-purple-600 text-white'"
+                                                  x-text="(getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.depth || '').toUpperCase()"></span>
                                         </template>
                                     </div>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                        EIN: <span x-text="selectedIntelligenceOpp?.ein"></span> |
-                                        <span x-text="selectedIntelligenceOpp?.location?.city + ', ' + selectedIntelligenceOpp?.location?.state"></span>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        EIN: <span x-text="selectedIntelligenceOpp?.ein"></span>
+                                        <template x-if="selectedIntelligenceOpp?.location?.city || selectedIntelligenceOpp?.location?.state">
+                                            <span> | <span x-text="(selectedIntelligenceOpp?.location?.city || '') + (selectedIntelligenceOpp?.location?.city && selectedIntelligenceOpp?.location?.state ? ', ' : '') + (selectedIntelligenceOpp?.location?.state || '')"></span></span>
+                                        </template>
                                     </p>
                                 </div>
-                                <button @click="closeIntelligenceModal()"
-                                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+
+                                <!-- Right col: Next button + Close -->
+                                <div class="flex items-center gap-1 flex-shrink-0">
+                                    <button @click="navigateIntelligenceModal(1)"
+                                            :disabled="intelligenceModalIndex >= selectedOpportunities.length - 1"
+                                            class="px-2 py-1 text-sm rounded transition-colors"
+                                            :class="intelligenceModalIndex >= selectedOpportunities.length - 1
+                                                ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                                                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'"
+                                            title="Next opportunity">
+                                        Next →
+                                    </button>
+                                    <button @click="closeIntelligenceModal()"
+                                            class="ml-1 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded transition-colors"
+                                            title="Close">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Action Row: 5 per-opp pipeline buttons -->
+                            <div class="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 flex-wrap">
+                                <span class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mr-1">Run for this org:</span>
+
+                                <!-- ① Find URLs -->
+                                <button @click="intelFindUrls()"
+                                        :disabled="intelFindUrlsLoading"
+                                        title="Find 990 filing URLs (free)"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border"
+                                        :class="intelFindUrlsLoading
+                                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500 dark:border-gray-700'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'">
+                                    <svg x-show="intelFindUrlsLoading" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                                     </svg>
+                                    <span>① Find URLs</span>
+                                </button>
+
+                                <!-- ② Search Website -->
+                                <button @click="intelSearchWebsite()"
+                                        :disabled="intelWebSearchLoading"
+                                        title="~$0.008 · Claude Haiku"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border"
+                                        :class="intelWebSearchLoading
+                                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500 dark:border-gray-700'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'">
+                                    <svg x-show="intelWebSearchLoading" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    <span>② Search Website</span>
+                                </button>
+
+                                <!-- ③ Search 990s -->
+                                <button @click="intelSearch990s()"
+                                        :disabled="intel990sLoading"
+                                        title="~$0.01 · Claude Haiku – extract from IRS PDFs"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border"
+                                        :class="intel990sLoading
+                                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500 dark:border-gray-700'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'">
+                                    <svg x-show="intel990sLoading" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    <span>③ Search 990s</span>
+                                </button>
+
+                                <!-- ④ Screen Fast -->
+                                <button @click="intelScreenFast()"
+                                        :disabled="intelScreenFastLoading"
+                                        title="~$0.004 · Claude Haiku — fast AI screening score"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border"
+                                        :class="intelScreenFastLoading
+                                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500 dark:border-gray-700'
+                                            : (selectedIntelligenceOpp?.tool1_score_fast || selectedIntelligenceOpp?.tool1_score)
+                                                ? 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
+                                                : 'bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-50 dark:bg-gray-800 dark:text-indigo-300 dark:border-indigo-700 dark:hover:bg-gray-700'">
+                                    <svg x-show="intelScreenFastLoading" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    <span>④ Screen Fast</span>
+                                </button>
+
+                                <!-- ⑤ Screen Thorough -->
+                                <button @click="intelScreenThorough()"
+                                        :disabled="intelScreenThoroughLoading"
+                                        title="~$0.02 · Claude Sonnet — thorough AI screening score"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border"
+                                        :class="intelScreenThoroughLoading
+                                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500 dark:border-gray-700'
+                                            : selectedIntelligenceOpp?.tool1_score_thorough
+                                                ? 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700'
+                                                : 'bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-50 dark:bg-gray-800 dark:text-indigo-300 dark:border-indigo-700 dark:hover:bg-gray-700'">
+                                    <svg x-show="intelScreenThoroughLoading" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    <span>⑤ Screen Thorough</span>
+                                </button>
+
+                                <!-- ⑥ Essentials AI -->
+                                <button @click="intelRunEssentials()"
+                                        :disabled="intelEssentialsLoading || hasIntelligence(selectedIntelligenceOpp?.opportunity_id)"
+                                        title="~$2.00 · Tool 2 ESSENTIALS — 4-stage AI deep analysis: strategic planning, funder research, fit assessment, application approach. Includes network intelligence and historical funding patterns. ~15–20 min."
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border"
+                                        :class="intelEssentialsLoading
+                                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500 dark:border-gray-700'
+                                            : hasIntelligence(selectedIntelligenceOpp?.opportunity_id)
+                                                ? 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 cursor-not-allowed'
+                                                : 'bg-white text-teal-700 border-teal-300 hover:bg-teal-50 dark:bg-gray-800 dark:text-teal-300 dark:border-teal-700 dark:hover:bg-gray-700'">
+                                    <svg x-show="intelEssentialsLoading" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    <span>⑥ Essentials AI</span>
+                                </button>
+
+                                <!-- ⑦ Premium AI -->
+                                <button @click="intelRunPremium()"
+                                        :disabled="intelPremiumLoading || getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.depth === 'premium'"
+                                        title="~$8.00 · Tool 2 PREMIUM — everything in Essentials plus: enhanced board network pathways, policy & regulatory analysis, strategic consulting framing, 26+ page comprehensive dossier. ~30–40 min."
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border"
+                                        :class="intelPremiumLoading
+                                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500 dark:border-gray-700'
+                                            : getIntelligence(selectedIntelligenceOpp?.opportunity_id)?.depth === 'premium'
+                                                ? 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 cursor-not-allowed'
+                                                : 'bg-white text-purple-700 border-purple-300 hover:bg-purple-50 dark:bg-gray-800 dark:text-purple-300 dark:border-purple-700 dark:hover:bg-gray-700'">
+                                    <svg x-show="intelPremiumLoading" class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    <span>⑦ Premium AI</span>
                                 </button>
                             </div>
 
-                            <!-- Tab Navigation (8 Tabs) -->
+                            <!-- Tab Navigation (8 Tabs) — Score Breakdown first -->
                             <div class="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700 px-6 flex-shrink-0 scrollbar-thin">
-                                <button @click="switchIntelligenceTab('summary')"
-                                        :class="intelligenceModalTab === 'summary' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
-                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
-                                    Summary
-                                </button>
                                 <button @click="switchIntelligenceTab('scores')"
                                         :class="intelligenceModalTab === 'scores' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
                                     Score Breakdown
-                                </button>
-                                <button @click="switchIntelligenceTab('analysis')"
-                                        :class="intelligenceModalTab === 'analysis' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
-                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
-                                    Analysis Results
                                 </button>
                                 <button @click="switchIntelligenceTab('details')"
                                         :class="intelligenceModalTab === 'details' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
@@ -3126,15 +3356,20 @@
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
                                     Officers & Directors
                                 </button>
-                                <button @click="switchIntelligenceTab('website')"
-                                        :class="intelligenceModalTab === 'website' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
-                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
-                                    Website Data
-                                </button>
                                 <button @click="switchIntelligenceTab('notes')"
                                         :class="intelligenceModalTab === 'notes' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
-                                    Notes & Actions
+                                    Notes
+                                </button>
+                                <button @click="switchIntelligenceTab('summary')"
+                                        :class="intelligenceModalTab === 'summary' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
+                                    Summary
+                                </button>
+                                <button @click="switchIntelligenceTab('analysis')"
+                                        :class="intelligenceModalTab === 'analysis' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        class="px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap">
+                                    Analysis Results
                                 </button>
                             </div>
 
@@ -3254,88 +3489,313 @@
                                     </template>
                                 </div>
 
-                                <!-- Tab 2: Score Breakdown (Reuse SCREENING pattern) -->
+                                <!-- Tab 2: Score Breakdown -->
                                 <div x-show="intelligenceModalTab === 'scores'" class="space-y-4">
-                                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-4">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-sm font-medium text-gray-700 dark:text-white">Overall Score</span>
-                                            <span class="text-2xl font-bold"
+                                    <!-- RED Flag Alert Box (Intelligence modal) -->
+                                    <template x-if="selectedIntelligenceOpp && hasRedFlag(selectedIntelligenceOpp)">
+                                        <div class="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg p-3">
+                                            <div class="text-sm font-bold text-red-700 dark:text-red-400 mb-2">Disqualifying Flags Detected</div>
+                                            <ul class="space-y-1">
+                                                <template x-for="flag in getRedFlags(selectedIntelligenceOpp)" :key="flag.code">
+                                                    <li class="flex items-start gap-2 text-sm text-red-700 dark:text-red-300">
+                                                        <span class="font-bold flex-shrink-0" x-text="flag.label + ':'"></span>
+                                                        <span x-text="flag.tooltip"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </template>
+                                    <!-- Initial Algorithmic Score -->
+                                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div>
+                                                <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Initial Algorithmic Score</div>
+                                                <span class="text-3xl font-bold"
+                                                      :class="{
+                                                          'text-green-600': selectedIntelligenceOpp?.category_level === 'qualified',
+                                                          'text-yellow-600': selectedIntelligenceOpp?.category_level === 'review',
+                                                          'text-orange-600': selectedIntelligenceOpp?.category_level === 'consider',
+                                                          'text-gray-600': !selectedIntelligenceOpp?.category_level || selectedIntelligenceOpp?.category_level === 'low_priority'
+                                                      }"
+                                                      x-text="Math.round((selectedIntelligenceOpp?.overall_score || 0) * 100) + '%'"></span>
+                                            </div>
+                                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
                                                   :class="{
-                                                      'text-green-600': selectedIntelligenceOpp?.category_level === 'qualified',
-                                                      'text-yellow-600': selectedIntelligenceOpp?.category_level === 'review',
-                                                      'text-orange-600': selectedIntelligenceOpp?.category_level === 'consider',
-                                                      'text-gray-600': selectedIntelligenceOpp?.category_level === 'low_priority'
+                                                      'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200': selectedIntelligenceOpp?.confidence === 'high',
+                                                      'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200': selectedIntelligenceOpp?.confidence === 'medium',
+                                                      'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200': selectedIntelligenceOpp?.confidence === 'low',
+                                                      'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400': !selectedIntelligenceOpp?.confidence
                                                   }"
-                                                  x-text="Math.round((selectedIntelligenceOpp?.overall_score || 0) * 100) + '%'"></span>
+                                                  x-text="selectedIntelligenceOpp?.confidence
+                                                      ? (selectedIntelligenceOpp.confidence.charAt(0).toUpperCase() + selectedIntelligenceOpp.confidence.slice(1)) + ' confidence'
+                                                      : 'No confidence data'"></span>
+                                        </div>
+                                        <div class="space-y-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                            <template x-for="[key, label, weight, color] in [
+                                                ['mission_alignment', 'Mission Alignment', '30%', 'bg-teal-500'],
+                                                ['geographic_fit', 'Geographic Fit', '25%', 'bg-blue-500'],
+                                                ['financial_match', 'Financial Match', '20%', 'bg-green-500'],
+                                                ['eligibility', 'Eligibility', '15%', 'bg-purple-500'],
+                                                ['timing', 'Timing', '10%', 'bg-indigo-500']
+                                            ]" :key="key">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs font-medium text-gray-600 dark:text-gray-400 w-36 flex-shrink-0" x-text="label"></span>
+                                                    <div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                                        <div class="h-1.5 rounded-full transition-all duration-300"
+                                                             :class="color"
+                                                             :style="'width: ' + ((selectedIntelligenceOpp?.dimensional_scores?.[key]?.raw_score || 0) * 100) + '%'"></div>
+                                                    </div>
+                                                    <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 w-8 text-right flex-shrink-0"
+                                                          x-text="Math.round((selectedIntelligenceOpp?.dimensional_scores?.[key]?.raw_score || 0) * 100) + '%'"></span>
+                                                    <span class="text-xs text-gray-400 dark:text-gray-500 w-10 flex-shrink-0" x-text="'(' + weight + ')'"></span>
+                                                </div>
+                                            </template>
                                         </div>
                                     </div>
 
-                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Dimensional Scores</h4>
+                                    <!-- Card A: Website Intelligence (green) -->
+                                    <template x-if="selectedIntelligenceOpp?.web_data">
+                                        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h4 class="font-semibold text-green-900 dark:text-green-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                                                    </svg>
+                                                    Website Intelligence
+                                                </h4>
+                                                <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                                      :class="(selectedIntelligenceOpp.web_data?.data_quality_score||0) >= 0.70 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : (selectedIntelligenceOpp.web_data?.data_quality_score||0) >= 0.40 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'"
+                                                      x-text="'Quality: ' + Math.round((selectedIntelligenceOpp.web_data?.data_quality_score||0)*100) + '%'"></span>
+                                            </div>
+                                            <div class="mb-2">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                                                      :class="['yes', true].includes(selectedIntelligenceOpp.web_data?.accepts_applications) ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' : ['no', false].includes(selectedIntelligenceOpp.web_data?.accepts_applications) ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'"
+                                                      x-text="['yes', true].includes(selectedIntelligenceOpp.web_data?.accepts_applications) ? 'Accepts Applications' : ['no', false].includes(selectedIntelligenceOpp.web_data?.accepts_applications) ? 'Does Not Accept Applications' : 'Application Status Unknown'"></span>
+                                            </div>
+                                            <template x-if="selectedIntelligenceOpp.web_data?.grant_size_range">
+                                                <p class="text-xs text-green-700 dark:text-green-400 mb-2">
+                                                    Grant Range: <span class="font-medium" x-text="selectedIntelligenceOpp.web_data.grant_size_range"></span>
+                                                </p>
+                                            </template>
+                                            <template x-if="selectedIntelligenceOpp.web_data?.funding_priorities?.length > 0">
+                                                <div class="mb-2">
+                                                    <div class="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Funding Priorities</div>
+                                                    <ul class="space-y-0.5">
+                                                        <template x-for="p in selectedIntelligenceOpp.web_data.funding_priorities.slice(0,4)" :key="p">
+                                                            <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                                <span class="text-green-500 flex-shrink-0">•</span><span x-text="p"></span>
+                                                            </li>
+                                                        </template>
+                                                    </ul>
+                                                </div>
+                                            </template>
+                                            <template x-if="selectedIntelligenceOpp.web_data?.geographic_limitations">
+                                                <p class="text-xs text-gray-600 dark:text-gray-400">
+                                                    Geography: <span class="font-medium" x-text="selectedIntelligenceOpp.web_data.geographic_limitations"></span>
+                                                </p>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="!selectedIntelligenceOpp?.web_data">
+                                        <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-green-200 dark:border-green-800 rounded-lg p-4 text-center">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">No website intelligence yet.</p>
+                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Run ② Search Website to gather funder intelligence.</p>
+                                        </div>
+                                    </template>
 
-                                    <!-- Mission Alignment -->
-                                    <div class="space-y-2">
-                                        <div class="flex items-center justify-between text-sm">
-                                            <span class="font-medium text-gray-700 dark:text-gray-300">Mission Alignment (30%)</span>
-                                            <span class="font-semibold" x-text="Math.round((selectedIntelligenceOpp?.dimensional_scores?.mission_alignment?.raw_score || 0) * 100) + '%'"></span>
+                                    <!-- Card B: 990 PDF Analysis (amber) -->
+                                    <template x-if="selectedIntelligenceOpp?.pdf_analyzed">
+                                        <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h4 class="font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                    </svg>
+                                                    990 PDF Analysis
+                                                </h4>
+                                                <template x-if="ninetiesExtractionLoading">
+                                                    <svg class="animate-spin h-4 w-4 text-amber-500" fill="none" viewBox="0 0 24 24">
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                </template>
+                                                <template x-if="!ninetiesExtractionLoading && ninetiesExtractionData">
+                                                    <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                                          :class="(ninetiesExtractionData?.extraction_confidence||0) >= 0.70 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'"
+                                                          x-text="'Confidence: ' + Math.round((ninetiesExtractionData?.extraction_confidence||0)*100) + '%'"></span>
+                                                </template>
+                                            </div>
+                                            <template x-if="!ninetiesExtractionLoading && ninetiesExtractionData && ((ninetiesExtractionData.extraction_confidence || 0) > 0 || ninetiesExtractionData.stated_priorities?.length)">
+                                                <div>
+                                                    <div class="mb-2">
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                                                              :class="['yes', true].includes(ninetiesExtractionData?.accepts_applications) ? 'bg-green-100 text-green-800' : ['no', false].includes(ninetiesExtractionData?.accepts_applications) ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-600'"
+                                                              x-text="['yes', true].includes(ninetiesExtractionData?.accepts_applications) ? 'Accepts Applications' : ['no', false].includes(ninetiesExtractionData?.accepts_applications) ? 'Does Not Accept Applications' : 'Application Status Unknown'"></span>
+                                                    </div>
+                                                    <template x-if="ninetiesExtractionData?.stated_priorities?.length > 0">
+                                                        <div class="mb-2">
+                                                            <div class="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">Stated Priorities</div>
+                                                            <ul class="space-y-0.5">
+                                                                <template x-for="p in ninetiesExtractionData.stated_priorities.slice(0,4)" :key="p">
+                                                                    <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
+                                                                        <span class="text-amber-500 flex-shrink-0">•</span><span x-text="p"></span>
+                                                                    </li>
+                                                                </template>
+                                                            </ul>
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="ninetiesExtractionData?.geographic_limitations">
+                                                        <p class="text-xs text-gray-600 dark:text-gray-400">
+                                                            Geography: <span class="font-medium" x-text="ninetiesExtractionData.geographic_limitations"></span>
+                                                        </p>
+                                                    </template>
+                                                    <p class="text-xs text-amber-500 dark:text-amber-400 mt-2 pt-2 border-t border-amber-200 dark:border-amber-800"
+                                                       x-text="'Extracted from ' + (ninetiesExtractionData?.tax_year || 'recent') + ' 990 PDF'"></p>
+                                                </div>
+                                            </template>
+                                            <template x-if="!ninetiesExtractionLoading && (!ninetiesExtractionData || ((ninetiesExtractionData.extraction_confidence || 0) === 0 && !ninetiesExtractionData.stated_priorities?.length))">
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 italic">990 PDF was processed but contained no extractable grant intelligence.</p>
+                                            </template>
                                         </div>
-                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div class="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                                                 :style="`width: ${(selectedIntelligenceOpp?.dimensional_scores?.mission_alignment?.raw_score || 0) * 100}%`"></div>
+                                    </template>
+                                    <template x-if="!selectedIntelligenceOpp?.pdf_analyzed">
+                                        <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-amber-200 dark:border-amber-800 rounded-lg p-4 text-center">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">No 990 PDF analysis yet.</p>
+                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Run ③ Search 990s to extract grant intelligence from IRS filings.</p>
                                         </div>
-                                        <p class="text-xs text-gray-600 dark:text-gray-400" x-text="selectedIntelligenceOpp?.dimensional_scores?.mission_alignment?.reasoning"></p>
-                                    </div>
+                                    </template>
 
-                                    <!-- Geographic Fit -->
-                                    <div class="space-y-2">
-                                        <div class="flex items-center justify-between text-sm">
-                                            <span class="font-medium text-gray-700 dark:text-gray-300">Geographic Fit (20%)</span>
-                                            <span class="font-semibold" x-text="Math.round((selectedIntelligenceOpp?.dimensional_scores?.geographic_fit?.raw_score || 0) * 100) + '%'"></span>
+                                    <!-- Card C: Screen Fast (indigo) -->
+                                    <template x-if="selectedIntelligenceOpp?.tool1_score_fast || selectedIntelligenceOpp?.tool1_score">
+                                        <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h4 class="font-semibold text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                                    </svg>
+                                                    Screen Fast
+                                                </h4>
+                                                <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                                      :class="(selectedIntelligenceOpp.tool1_score_fast||selectedIntelligenceOpp.tool1_score).confidence_level === 'high' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'"
+                                                      x-text="((selectedIntelligenceOpp.tool1_score_fast||selectedIntelligenceOpp.tool1_score).confidence_level || '') + ' · ' + Math.round(((selectedIntelligenceOpp.tool1_score_fast||selectedIntelligenceOpp.tool1_score).overall_score||0)*100) + '%'"></span>
+                                            </div>
+                                            <p class="text-sm text-indigo-800 dark:text-indigo-200 italic mb-3"
+                                               x-text="(selectedIntelligenceOpp.tool1_score_fast||selectedIntelligenceOpp.tool1_score).one_sentence_summary"></p>
+                                            <div class="grid grid-cols-3 gap-3 mb-3">
+                                                <div class="text-center">
+                                                    <div class="text-xs text-indigo-600 dark:text-indigo-400">Strategic Fit</div>
+                                                    <div class="text-sm font-semibold text-indigo-900 dark:text-indigo-100"
+                                                         x-text="Math.round(((selectedIntelligenceOpp.tool1_score_fast||selectedIntelligenceOpp.tool1_score).strategic_fit_score||0)*100) + '%'"></div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-xs text-indigo-600 dark:text-indigo-400">Eligibility</div>
+                                                    <div class="text-sm font-semibold text-indigo-900 dark:text-indigo-100"
+                                                         x-text="Math.round(((selectedIntelligenceOpp.tool1_score_fast||selectedIntelligenceOpp.tool1_score).eligibility_score||0)*100) + '%'"></div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-xs text-indigo-600 dark:text-indigo-400">Timing</div>
+                                                    <div class="text-sm font-semibold text-indigo-900 dark:text-indigo-100"
+                                                         x-text="Math.round(((selectedIntelligenceOpp.tool1_score_fast||selectedIntelligenceOpp.tool1_score).timing_score||0)*100) + '%'"></div>
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                                <template x-if="(selectedIntelligenceOpp.tool1_score_fast||selectedIntelligenceOpp.tool1_score).key_strengths?.length > 0">
+                                                    <div>
+                                                        <div class="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Strengths</div>
+                                                        <ul class="space-y-0.5">
+                                                            <template x-for="s in (selectedIntelligenceOpp.tool1_score_fast||selectedIntelligenceOpp.tool1_score).key_strengths.slice(0,3)" :key="s">
+                                                                <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1"><span class="text-green-500 flex-shrink-0">+</span><span x-text="s"></span></li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
+                                                </template>
+                                                <template x-if="(selectedIntelligenceOpp.tool1_score_fast||selectedIntelligenceOpp.tool1_score).key_concerns?.length > 0">
+                                                    <div>
+                                                        <div class="text-xs font-medium text-red-600 dark:text-red-400 mb-1">Concerns</div>
+                                                        <ul class="space-y-0.5">
+                                                            <template x-for="c in (selectedIntelligenceOpp.tool1_score_fast||selectedIntelligenceOpp.tool1_score).key_concerns.slice(0,3)" :key="c">
+                                                                <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1"><span class="text-red-500 flex-shrink-0">−</span><span x-text="c"></span></li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <p class="text-xs text-indigo-500 dark:text-indigo-400 mt-2 pt-2 border-t border-indigo-200 dark:border-indigo-800"
+                                               x-text="'Scored: ' + ((selectedIntelligenceOpp.tool1_score_fast||selectedIntelligenceOpp.tool1_score).scored_at ? new Date((selectedIntelligenceOpp.tool1_score_fast||selectedIntelligenceOpp.tool1_score).scored_at).toLocaleDateString() : 'N/A') + (selectedIntelligenceOpp.tool1_score_fast ? '' : ' · batch')"></p>
                                         </div>
-                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                                 :style="`width: ${(selectedIntelligenceOpp?.dimensional_scores?.geographic_fit?.raw_score || 0) * 100}%`"></div>
+                                    </template>
+                                    <template x-if="!selectedIntelligenceOpp?.tool1_score_fast && !selectedIntelligenceOpp?.tool1_score">
+                                        <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-indigo-200 dark:border-indigo-800 rounded-lg p-4 text-center">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">No fast screen yet.</p>
+                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Run ④ Screen Fast to get a quick AI assessment.</p>
                                         </div>
-                                        <p class="text-xs text-gray-600 dark:text-gray-400" x-text="selectedIntelligenceOpp?.dimensional_scores?.geographic_fit?.reasoning"></p>
-                                    </div>
+                                    </template>
 
-                                    <!-- Financial Capacity -->
-                                    <div class="space-y-2">
-                                        <div class="flex items-center justify-between text-sm">
-                                            <span class="font-medium text-gray-700 dark:text-gray-300">Financial Capacity (20%)</span>
-                                            <span class="font-semibold" x-text="Math.round((selectedIntelligenceOpp?.dimensional_scores?.financial_capacity?.raw_score || 0) * 100) + '%'"></span>
+                                    <!-- Card D: Screen Thorough (purple) -->
+                                    <template x-if="selectedIntelligenceOpp?.tool1_score_thorough">
+                                        <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-lg p-4">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h4 class="font-semibold text-purple-900 dark:text-purple-100 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                                    </svg>
+                                                    Screen Thorough
+                                                </h4>
+                                                <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                                      :class="selectedIntelligenceOpp.tool1_score_thorough.confidence_level === 'high' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'"
+                                                      x-text="(selectedIntelligenceOpp.tool1_score_thorough.confidence_level || '') + ' · ' + Math.round((selectedIntelligenceOpp.tool1_score_thorough.overall_score||0)*100) + '%'"></span>
+                                            </div>
+                                            <p class="text-sm text-purple-800 dark:text-purple-200 italic mb-3"
+                                               x-text="selectedIntelligenceOpp.tool1_score_thorough.one_sentence_summary"></p>
+                                            <div class="grid grid-cols-3 gap-3 mb-3">
+                                                <div class="text-center">
+                                                    <div class="text-xs text-purple-600 dark:text-purple-400">Strategic Fit</div>
+                                                    <div class="text-sm font-semibold text-purple-900 dark:text-purple-100"
+                                                         x-text="Math.round((selectedIntelligenceOpp.tool1_score_thorough.strategic_fit_score||0)*100) + '%'"></div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-xs text-purple-600 dark:text-purple-400">Eligibility</div>
+                                                    <div class="text-sm font-semibold text-purple-900 dark:text-purple-100"
+                                                         x-text="Math.round((selectedIntelligenceOpp.tool1_score_thorough.eligibility_score||0)*100) + '%'"></div>
+                                                </div>
+                                                <div class="text-center">
+                                                    <div class="text-xs text-purple-600 dark:text-purple-400">Timing</div>
+                                                    <div class="text-sm font-semibold text-purple-900 dark:text-purple-100"
+                                                         x-text="Math.round((selectedIntelligenceOpp.tool1_score_thorough.timing_score||0)*100) + '%'"></div>
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                                <template x-if="selectedIntelligenceOpp.tool1_score_thorough.key_strengths?.length > 0">
+                                                    <div>
+                                                        <div class="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Strengths</div>
+                                                        <ul class="space-y-0.5">
+                                                            <template x-for="s in selectedIntelligenceOpp.tool1_score_thorough.key_strengths.slice(0,3)" :key="s">
+                                                                <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1"><span class="text-green-500 flex-shrink-0">+</span><span x-text="s"></span></li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
+                                                </template>
+                                                <template x-if="selectedIntelligenceOpp.tool1_score_thorough.key_concerns?.length > 0">
+                                                    <div>
+                                                        <div class="text-xs font-medium text-red-600 dark:text-red-400 mb-1">Concerns</div>
+                                                        <ul class="space-y-0.5">
+                                                            <template x-for="c in selectedIntelligenceOpp.tool1_score_thorough.key_concerns.slice(0,3)" :key="c">
+                                                                <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1"><span class="text-red-500 flex-shrink-0">−</span><span x-text="c"></span></li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <p class="text-xs text-purple-500 dark:text-purple-400 mt-2 pt-2 border-t border-purple-200 dark:border-purple-800"
+                                               x-text="'Scored: ' + (selectedIntelligenceOpp.tool1_score_thorough.scored_at ? new Date(selectedIntelligenceOpp.tool1_score_thorough.scored_at).toLocaleDateString() : 'N/A')"></p>
                                         </div>
-                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div class="bg-green-600 h-2 rounded-full transition-all duration-300"
-                                                 :style="`width: ${(selectedIntelligenceOpp?.dimensional_scores?.financial_capacity?.raw_score || 0) * 100}%`"></div>
+                                    </template>
+                                    <template x-if="!selectedIntelligenceOpp?.tool1_score_thorough">
+                                        <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-purple-200 dark:border-purple-800 rounded-lg p-4 text-center">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">No thorough screen yet.</p>
+                                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Run ⑤ Screen Thorough for a deeper AI assessment.</p>
                                         </div>
-                                        <p class="text-xs text-gray-600 dark:text-gray-400" x-text="selectedIntelligenceOpp?.dimensional_scores?.financial_capacity?.reasoning"></p>
-                                    </div>
-
-                                    <!-- Network Potential -->
-                                    <div class="space-y-2">
-                                        <div class="flex items-center justify-between text-sm">
-                                            <span class="font-medium text-gray-700 dark:text-gray-300">Network Potential (15%)</span>
-                                            <span class="font-semibold" x-text="Math.round((selectedIntelligenceOpp?.dimensional_scores?.network_potential?.raw_score || 0) * 100) + '%'"></span>
-                                        </div>
-                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div class="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                                                 :style="`width: ${(selectedIntelligenceOpp?.dimensional_scores?.network_potential?.raw_score || 0) * 100}%`"></div>
-                                        </div>
-                                        <p class="text-xs text-gray-600 dark:text-gray-400" x-text="selectedIntelligenceOpp?.dimensional_scores?.network_potential?.reasoning"></p>
-                                    </div>
-
-                                    <!-- Strategic Value -->
-                                    <div class="space-y-2">
-                                        <div class="flex items-center justify-between text-sm">
-                                            <span class="font-medium text-gray-700 dark:text-gray-300">Strategic Value (15%)</span>
-                                            <span class="font-semibold" x-text="Math.round((selectedIntelligenceOpp?.dimensional_scores?.strategic_value?.raw_score || 0) * 100) + '%'"></span>
-                                        </div>
-                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div class="bg-teal-600 h-2 rounded-full transition-all duration-300"
-                                                 :style="`width: ${(selectedIntelligenceOpp?.dimensional_scores?.strategic_value?.raw_score || 0) * 100}%`"></div>
-                                        </div>
-                                        <p class="text-xs text-gray-600 dark:text-gray-400" x-text="selectedIntelligenceOpp?.dimensional_scores?.strategic_value?.reasoning"></p>
-                                    </div>
+                                    </template>
                                 </div>
 
                                 <!-- Tab 3: Analysis Results (NEW - 4-stage AI output) -->
@@ -3560,36 +4020,7 @@
                                     </template>
                                 </div>
 
-                                <!-- Tab 7: Website Data -->
-                                <div x-show="intelligenceModalTab === 'website'" class="space-y-4">
-                                    <template x-if="selectedIntelligenceOpp?.web_data || selectedIntelligenceOpp?.website_url">
-                                        <div class="space-y-4">
-                                            <div>
-                                                <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Website URL</p>
-                                                <a :href="selectedIntelligenceOpp.website_url || selectedIntelligenceOpp.web_data?.url"
-                                                   target="_blank"
-                                                   class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline"
-                                                   x-text="selectedIntelligenceOpp.website_url || selectedIntelligenceOpp.web_data?.url || 'N/A'"></a>
-                                            </div>
-                                            <template x-if="selectedIntelligenceOpp.web_data?.description">
-                                                <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                                                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Description</p>
-                                                    <p class="text-gray-700 dark:text-gray-300 leading-relaxed" x-text="selectedIntelligenceOpp.web_data.description"></p>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </template>
-                                    <template x-if="!selectedIntelligenceOpp?.web_data && !selectedIntelligenceOpp?.website_url">
-                                        <div class="text-center py-12 text-gray-500 dark:text-gray-400">
-                                            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
-                                            </svg>
-                                            <p>No website data available</p>
-                                        </div>
-                                    </template>
-                                </div>
-
-                                <!-- Tab 8: Notes & Actions -->
+                                <!-- Tab 7: Notes -->
                                 <div x-show="intelligenceModalTab === 'notes'" class="space-y-4">
                                     <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
                                         <h5 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">Action Items</h5>
@@ -3630,25 +4061,20 @@
                                 </div>
                             </div>
 
-                            <!-- Modal Footer with Action Buttons -->
-                            <div class="border-t border-gray-200 dark:border-gray-700 p-6 flex-shrink-0">
-                                <div class="flex items-center justify-between gap-4">
-                                    <div class="flex gap-3">
-                                        <button @click="generateReport(selectedIntelligenceOpp?.opportunity_id)"
-                                                class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm">
-                                            Generate Report
-                                        </button>
-                                        <button @click="exportData(selectedIntelligenceOpp?.opportunity_id, 'pdf')"
-                                                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">
-                                            Export PDF
-                                        </button>
-                                        <button @click="generatePackage(selectedIntelligenceOpp?.opportunity_id)"
-                                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                                            Create Package
-                                        </button>
-                                    </div>
+                            <!-- Modal Footer -->
+                            <div class="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                                <span class="text-xs text-gray-400 dark:text-gray-500"
+                                      x-show="selectedIntelligenceOpp?.notes"
+                                      x-text="'Notes saved for ' + (selectedIntelligenceOpp?.organization_name || 'this org')"></span>
+                                <span x-show="!selectedIntelligenceOpp?.notes"></span>
+                                <div class="flex items-center gap-3">
+                                    <button @click="saveNotes(selectedIntelligenceOpp?.opportunity_id)"
+                                            x-show="selectedIntelligenceOpp"
+                                            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
+                                        Save Notes
+                                    </button>
                                     <button @click="closeIntelligenceModal()"
-                                            class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">
+                                            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium text-sm">
                                         Close
                                     </button>
                                 </div>

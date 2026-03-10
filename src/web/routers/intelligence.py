@@ -46,6 +46,16 @@ class IntelligenceRequest(BaseModel):
     tier: ServiceTier = Field(..., description="Intelligence analysis tier")
     add_ons: Optional[List[AddOnModule]] = Field(default=[], description="Additional analysis modules")
     custom_priorities: Optional[Dict[str, Any]] = Field(default=None, description="Custom analysis priorities")
+    existing_essentials_result: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Existing Essentials analysis result — when provided with tier=premium, "
+                    "skips re-running core stages and only runs the 3 Premium-specific analyses."
+    )
+    screening_context: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Pre-gathered SCREENING pipeline intelligence (web_data, pdf_extraction, "
+                    "fast_screen, thorough_screen) to inject into the deep analysis prompt."
+    )
 
 class CostEstimateRequest(BaseModel):
     tier: ServiceTier = Field(..., description="Analysis tier")
@@ -310,7 +320,7 @@ async def generate_intelligence_analysis(
             DeepIntelligenceInput,
             AnalysisDepth
         )
-        from tools.deep_intelligence_tool.app.depth_handlers import get_depth_handler
+        from tools.deep_intelligence_tool.app.depth_handlers import get_depth_handler, PremiumUpgradeHandler
 
         # Map ServiceTier to AnalysisDepth
         tier_to_depth = {
@@ -336,13 +346,29 @@ async def generate_intelligence_analysis(
             organization_ein="000000000",
             organization_name="Organization",
             organization_mission="Mission statement",
-            depth=depth
+            depth=depth,
+            screening_context=request.screening_context,
         )
 
-        # Execute analysis with appropriate depth handler
+        # Execute analysis — use upgrade path if Essentials already completed
         start_time = time.time()
-        handler = get_depth_handler(depth, logger)
-        result = await handler.analyze(intel_input)
+        upgrade_path = (
+            mapped_tier == ServiceTier.PREMIUM
+            and request.existing_essentials_result
+        )
+        if upgrade_path:
+            logger.info(
+                f"[PREMIUM UPGRADE] Skipping Essentials re-run for {request.opportunity_id} "
+                f"(existing result provided)"
+            )
+            handler = PremiumUpgradeHandler(logger)
+            result = await handler.analyze(intel_input, request.existing_essentials_result)
+            # Incremental cost only (premium-only AI call)
+            estimated_cost = 6.00   # upgrade surcharge ($8 - $2 already paid)
+            ai_cost = 0.05
+        else:
+            handler = get_depth_handler(depth, logger)
+            result = await handler.analyze(intel_input)
         processing_time = time.time() - start_time
 
         # Build response

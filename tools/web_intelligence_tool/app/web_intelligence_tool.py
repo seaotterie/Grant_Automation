@@ -200,7 +200,7 @@ class WebIntelligenceTool:
             if not url:
                 return WebIntelligenceResponse(
                     success=False,
-                    errors=[f"Could not resolve URL for {request.organization_name}"]
+                    errors=["no_url_found", f"Could not resolve URL for {request.organization_name}"]
                 )
 
             intelligence = await self._fetch_with_haiku_agent(
