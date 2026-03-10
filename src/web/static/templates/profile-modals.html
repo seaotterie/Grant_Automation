@@ -753,20 +753,21 @@
                                 {label:'Search Website', steps:['web']},
                                 {label:'Search 990', steps:['990_history','990_pdf']},
                                 {label:'Screen Fast', steps:['fast_screen']},
-                                {label:'Screen Thorough', steps:['thorough_screen']}
+                                {label:'Screen Thorough', steps:['thorough_screen']},
+                                {label:'Connections', steps:['connections']}
                             ]" :key="idx">
                                 <div :class="{
                                         'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/40 dark:text-green-200 dark:border-green-700':
-                                            ({'web':0,'990_history':1,'990_pdf':1,'fast_screen':2,'thorough_screen':3,'done':4}[pipelineStep]||0) > idx,
+                                            ({'web':0,'990_history':1,'990_pdf':1,'fast_screen':2,'thorough_screen':3,'connections':4,'done':5}[pipelineStep]||0) > idx,
                                         'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-600 animate-pulse':
                                             disp.steps.includes(pipelineStep),
                                         'bg-gray-100 text-gray-400 border-gray-200 dark:bg-gray-700 dark:text-gray-500 dark:border-gray-600':
-                                            ({'web':0,'990_history':1,'990_pdf':1,'fast_screen':2,'thorough_screen':3,'done':4}[pipelineStep]||0) <= idx && !disp.steps.includes(pipelineStep)
+                                            ({'web':0,'990_history':1,'990_pdf':1,'fast_screen':2,'thorough_screen':3,'connections':4,'done':5}[pipelineStep]||0) <= idx && !disp.steps.includes(pipelineStep)
                                      }"
                                      class="px-3 py-1.5 rounded-full text-xs font-medium border flex items-center gap-1.5">
-                                    <span x-show="({'web':0,'990_history':1,'990_pdf':1,'fast_screen':2,'thorough_screen':3,'done':4}[pipelineStep]||0) > idx">&#10003;</span>
+                                    <span x-show="({'web':0,'990_history':1,'990_pdf':1,'fast_screen':2,'thorough_screen':3,'connections':4,'done':5}[pipelineStep]||0) > idx">&#10003;</span>
                                     <span x-show="disp.steps.includes(pipelineStep)">&#8635;</span>
-                                    <span x-show="({'web':0,'990_history':1,'990_pdf':1,'fast_screen':2,'thorough_screen':3,'done':4}[pipelineStep]||0) <= idx && !disp.steps.includes(pipelineStep)">&#9675;</span>
+                                    <span x-show="({'web':0,'990_history':1,'990_pdf':1,'fast_screen':2,'thorough_screen':3,'connections':4,'done':5}[pipelineStep]||0) <= idx && !disp.steps.includes(pipelineStep)">&#9675;</span>
                                     <span x-text="disp.label"></span>
                                 </div>
                             </template>
@@ -1086,6 +1087,88 @@
                         <template x-if="pipelineResult && !pipelineResult?.profile_people?.length">
                             <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-rose-200 dark:border-rose-800 rounded-lg p-4 text-center">
                                 <p class="text-sm text-gray-500 dark:text-gray-400">No people data found — run pipeline to extract board members and officers.</p>
+                            </div>
+                        </template>
+
+                        <!-- Card F: Connections — Six Degrees (amber/orange) -->
+                        <template x-if="pipelineResult?.network_connections?.length > 0">
+                            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                        </svg>
+                                        Connections
+                                    </h4>
+                                    <span class="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-800/40 text-amber-700 dark:text-amber-300 rounded-full font-medium"
+                                          x-text="pipelineResult.network_connections.length + ' funders analyzed'"></span>
+                                </div>
+                                <div class="space-y-3">
+                                    <template x-for="conn in pipelineResult.network_connections" :key="conn.funder_ein || conn.funder_name">
+                                        <div class="bg-white dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/40 rounded p-3">
+                                            <!-- Funder header row -->
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-sm font-medium text-gray-900 dark:text-gray-100" x-text="conn.funder_name"></span>
+                                                <div class="flex items-center gap-2">
+                                                    <template x-if="conn.screening_score">
+                                                        <span class="text-xs text-gray-400 dark:text-gray-500"
+                                                              x-text="'score ' + Math.round((conn.screening_score||0)*100) + '%'"></span>
+                                                    </template>
+                                                    <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                                          :class="{
+                                                              'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300': conn.connection_strength === 'strong',
+                                                              'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300': conn.connection_strength === 'moderate',
+                                                              'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400': conn.connection_strength === 'weak' || conn.connection_strength === 'none',
+                                                              'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300': conn.connection_strength === 'unknown',
+                                                          }"
+                                                          x-text="conn.connection_strength || 'unknown'"></span>
+                                                </div>
+                                            </div>
+                                            <!-- Direct matches -->
+                                            <template x-if="conn.direct_matches?.length > 0">
+                                                <div class="mb-2">
+                                                    <div class="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Direct Connections</div>
+                                                    <template x-for="m in conn.direct_matches" :key="m.seeker_person + m.funder_person">
+                                                        <div class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1 mb-0.5">
+                                                            <span class="text-green-500 flex-shrink-0 font-bold">●</span>
+                                                            <span><span class="font-medium" x-text="m.seeker_person"></span> ↔ <span class="font-medium" x-text="m.funder_person"></span><template x-if="m.basis"> — <span class="text-gray-500 dark:text-gray-400 italic" x-text="m.basis"></span></template></span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                            <!-- Shared background -->
+                                            <template x-if="conn.shared_background?.length > 0">
+                                                <div class="mb-2">
+                                                    <div class="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">Shared Background</div>
+                                                    <template x-for="bg in conn.shared_background" :key="bg.basis">
+                                                        <div class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1 mb-0.5">
+                                                            <span class="text-amber-500 flex-shrink-0">◆</span>
+                                                            <span x-text="bg.basis"></span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                            <!-- Best path -->
+                                            <template x-if="conn.best_path">
+                                                <p class="text-xs text-gray-600 dark:text-gray-400 italic mb-1.5"
+                                                   x-text="'Path: ' + conn.best_path"></p>
+                                            </template>
+                                            <!-- Cultivation tip -->
+                                            <template x-if="conn.cultivation_tip">
+                                                <p class="text-xs text-amber-800 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/30 rounded px-2 py-1"
+                                                   x-text="'→ ' + conn.cultivation_tip"></p>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                                <p class="text-xs text-amber-400 dark:text-amber-500 mt-3 pt-2 border-t border-amber-200 dark:border-amber-800">
+                                    Six Degrees analysis · top screened funders · Claude Haiku
+                                </p>
+                            </div>
+                        </template>
+                        <template x-if="pipelineResult && !pipelineResult?.network_connections?.length">
+                            <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-amber-200 dark:border-amber-800 rounded-lg p-4 text-center">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">No connection data yet — screen some opportunities first, then re-run pipeline.</p>
                             </div>
                         </template>
 

@@ -2,20 +2,21 @@
 Profiles Intelligence Pipeline Router
 
 Two endpoints:
-  POST /{profile_id}/run-pipeline            → start 5-step background pipeline, return job_id
+  POST /{profile_id}/run-pipeline            → start 6-step background pipeline, return job_id
   GET  /{profile_id}/pipeline-status/{job_id} → poll current job state
 
-Five pipeline steps:
-  1. web           - Tool 25 Haiku web research
-  2. 990_history   - ProPublica filing history
-  3. 990_pdf       - PDFNarrativeExtractor on most-recent filing
-  4. fast_screen   - Tool 1 fast mode
-  5. thorough_screen - Tool 1 thorough mode
+Six pipeline steps:
+  1. web             - Tool 25 Haiku web research
+  2. 990_history     - ProPublica filing history
+  3. 990_pdf         - PDFNarrativeExtractor on most-recent filing
+  4. fast_screen     - Haiku profile analysis
+  5. thorough_screen - Sonnet profile analysis
+  6. connections     - Claude Haiku Six Degrees connection analysis vs top funders
 
 Shared cache: ein_intelligence table (web_data, filing_history, pdf_analyses)
   → SCREENING tab picks these up automatically for the same EIN.
 
-Profile storage: processing_history["pipeline_results"] (scores summary)
+Profile storage: processing_history["pipeline_results"] (analysis + connections)
 """
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
@@ -39,7 +40,7 @@ database_manager = DatabaseManager(get_catalynx_db())
 # In-memory job store (single-user app — no persistence needed)
 _pipeline_jobs: Dict[str, Dict] = {}
 
-_STEPS = ["web", "990_history", "990_pdf", "fast_screen", "thorough_screen"]
+_STEPS = ["web", "990_history", "990_pdf", "fast_screen", "thorough_screen", "connections"]
 _WEB_DATA_TTL_DAYS = 30
 
 
@@ -211,6 +212,21 @@ async def _run_intelligence_pipeline(
             logger.warning(f"[Pipeline {job_id}] Step 4b (thorough_screen) failed: {e}")
             result["thorough_screen_error"] = str(e)
 
+        # ── Step 6: Connection Analysis (Six Degrees) ────────────────────
+        _update_job(job_id, step="connections", step_index=5)
+        network_connections: List[Dict] = []
+        try:
+            network_connections = await _run_connection_analysis(
+                profile_id=profile_id,
+                ein=ein,
+                org_name=org_name,
+                profile_people=result.get("profile_people", []),
+            )
+            result["network_connections"] = network_connections
+        except Exception as e:
+            logger.warning(f"[Pipeline {job_id}] Step 6 (connections) failed: {e}")
+            result["network_connections"] = []
+
         # ── Save to profile.processing_history ───────────────────────────
         try:
             conn = database_manager.get_connection()
@@ -224,6 +240,7 @@ async def _run_intelligence_pipeline(
                     "fast_analysis": fast_analysis,
                     "thorough_analysis": thorough_analysis,
                     "profile_people": result.get("profile_people", []),
+                    "network_connections": network_connections,
                     "web_quality": web_quality,
                     "pdf_confidence": pdf_confidence,
                     "ran_at": datetime.now().isoformat(),
@@ -239,10 +256,11 @@ async def _run_intelligence_pipeline(
 
         # Rough cost estimate
         result["estimated_cost_usd"] = round(
-            0.01   # web (Tool 25 Haiku)
+            0.01    # web (Tool 25 Haiku)
             + 0.02  # 990 PDF (PDFNarrativeExtractor Haiku)
             + 0.003 # fast profile analysis (Haiku)
             + 0.01  # thorough profile analysis (Sonnet)
+            + 0.005 # connection analysis (Haiku × top funders)
         , 3)
 
         _update_job(job_id, step="done", step_index=len(_STEPS), status="complete", result=result)
@@ -765,3 +783,199 @@ async def _run_profile_analysis(ein: str, profile_id: str, mode: str) -> Optiona
             "analyzed_at": datetime.now().isoformat(),
             "error": str(e),
         }
+
+
+# ---------------------------------------------------------------------------
+# Helper: Step 6 - Six Degrees Connection Analysis
+# ---------------------------------------------------------------------------
+
+async def _run_connection_analysis(
+    profile_id: str,
+    ein: str,
+    org_name: str,
+    profile_people: List[dict],
+) -> List[dict]:
+    """
+    Compare the profile org's people against the top-5 screened funders' people
+    using Claude Haiku.  Returns a list of per-funder connection objects:
+
+    [{
+        "funder_name": str,
+        "funder_ein": str,
+        "connection_strength": "strong|moderate|weak|none",
+        "direct_matches": [{"seeker_person": str, "funder_person": str, "basis": str}],
+        "shared_background": [{"basis": str, "seeker_people": [...], "funder_people": [...]}],
+        "best_path": str | null,
+        "cultivation_tip": str | null,
+        "analyzed_at": ISO timestamp,
+    }]
+    """
+    if not profile_people:
+        logger.info(f"[Connections] No profile people for EIN {ein} — skipping")
+        return []
+
+    # ── Fetch top-5 scored opportunities for this profile ─────────────────
+    try:
+        conn = database_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, organization_name, ein, analysis_discovery FROM opportunities "
+            "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+            "ORDER BY updated_at DESC LIMIT 40",
+            (profile_id,),
+        )
+        rows = cursor.fetchall()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"[Connections] DB query failed: {e}")
+        return []
+
+    # Parse scores and take top 5
+    scored: List[tuple] = []
+    for row in rows:
+        opp_id, opp_name, opp_ein, ad_raw = row[0], row[1], row[2], row[3]
+        if not opp_ein:
+            continue
+        ad = json.loads(ad_raw) if isinstance(ad_raw, str) and ad_raw else {}
+        score = (
+            (ad.get("tool1_score_thorough") or ad.get("tool1_score") or {})
+            .get("overall_score") or 0.0
+        )
+        scored.append((score, opp_id, opp_name, opp_ein))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top_funders = scored[:5]
+
+    if not top_funders:
+        logger.info(f"[Connections] No screened opportunities found for profile {profile_id}")
+        return []
+
+    # ── Build profile people context string ───────────────────────────────
+    def _people_lines(people: List[dict]) -> str:
+        lines = []
+        for p in people:
+            line = f"- {p['name']}"
+            if p.get("title"):
+                line += f", {p['title']}"
+            lines.append(line)
+        return "\n".join(lines) if lines else "(none)"
+
+    seeker_lines = _people_lines(profile_people)
+
+    # ── Analyse each funder ────────────────────────────────────────────────
+    service = get_anthropic_service()
+    results: List[dict] = []
+
+    system_prompt = (
+        "You are a nonprofit grant strategy analyst identifying relationship pathways "
+        "between a grant-seeking organization and a potential funder. "
+        "Look for: shared names (same person on both boards), shared military branches, "
+        "shared professions or credentials, shared geographic ties, or other professional "
+        "connections that could support a warm introduction. "
+        "Be concise and specific. Respond with valid JSON only."
+    )
+
+    for score, opp_id, funder_name, funder_ein in top_funders:
+        try:
+            # Get funder people from ein_intelligence
+            funder_intel = database_manager.get_ein_intelligence(funder_ein) or {}
+            funder_web = funder_intel.get("web_data") or {}
+            funder_pdf_analyses = funder_intel.get("pdf_analyses") or {}
+
+            # Build funder people list from both sources (same logic as _sync_profile_people)
+            funder_people: List[dict] = []
+            seen: set = set()
+            for ldr in (funder_web.get("leadership") or []):
+                name = (ldr.get("name") or "").strip()
+                if name and name.lower() not in seen:
+                    seen.add(name.lower())
+                    funder_people.append({
+                        "name": name,
+                        "title": ldr.get("title") or ldr.get("role") or "",
+                        "source": "web",
+                    })
+            first_pdf: dict = {}
+            if isinstance(funder_pdf_analyses, dict):
+                for val in funder_pdf_analyses.values():
+                    first_pdf = (val.get("extraction") or val) if isinstance(val, dict) else {}
+                    break
+            for off in (first_pdf.get("officers") or []):
+                if not isinstance(off, dict):
+                    continue
+                name = (off.get("name") or "").strip()
+                if name and name.lower() not in seen:
+                    seen.add(name.lower())
+                    funder_people.append({
+                        "name": name,
+                        "title": off.get("title") or off.get("position") or "",
+                        "source": "990_pdf",
+                    })
+
+            if not funder_people:
+                results.append({
+                    "funder_name": funder_name,
+                    "funder_ein": funder_ein,
+                    "connection_strength": "unknown",
+                    "direct_matches": [],
+                    "shared_background": [],
+                    "best_path": None,
+                    "cultivation_tip": "No funder people data available — run Search Website and Search 990s for this opportunity.",
+                    "analyzed_at": datetime.now().isoformat(),
+                })
+                continue
+
+            funder_lines = _people_lines(funder_people)
+
+            user_prompt = (
+                f"GRANT SEEKER: {org_name}\n"
+                f"People:\n{seeker_lines}\n\n"
+                f"TARGET FUNDER: {funder_name}\n"
+                f"People:\n{funder_lines}\n\n"
+                "Analyze potential relationship pathways between these two organizations. "
+                "Return a JSON object with these exact keys:\n"
+                '{\n'
+                '  "connection_strength": "strong|moderate|weak|none",\n'
+                '  "direct_matches": [\n'
+                '    {"seeker_person": "string", "funder_person": "string", "basis": "string — why they might be the same person or know each other"}\n'
+                '  ],\n'
+                '  "shared_background": [\n'
+                '    {"basis": "string — e.g. both USMC veterans", "seeker_people": ["string"], "funder_people": ["string"]}\n'
+                '  ],\n'
+                '  "best_path": "string — one sentence describing the strongest introduction pathway, or null if none",\n'
+                '  "cultivation_tip": "string — one actionable next step to pursue this connection"\n'
+                '}'
+            )
+
+            analysis = await service.create_json_completion(
+                messages=[{"role": "user", "content": user_prompt}],
+                system=system_prompt,
+                stage=PipelineStage.FAST_SCREENING,
+                max_tokens=600,
+                temperature=0.0,
+            )
+            analysis["funder_name"] = funder_name
+            analysis["funder_ein"] = funder_ein
+            analysis["screening_score"] = round(score, 3)
+            analysis["analyzed_at"] = datetime.now().isoformat()
+            results.append(analysis)
+            logger.info(
+                f"[Connections] {funder_name}: strength={analysis.get('connection_strength')} "
+                f"direct={len(analysis.get('direct_matches', []))} "
+                f"shared={len(analysis.get('shared_background', []))}"
+            )
+
+        except Exception as e:
+            logger.warning(f"[Connections] Analysis failed for {funder_name}: {e}")
+            results.append({
+                "funder_name": funder_name,
+                "funder_ein": funder_ein,
+                "connection_strength": "unknown",
+                "direct_matches": [],
+                "shared_background": [],
+                "best_path": None,
+                "cultivation_tip": None,
+                "error": str(e),
+                "analyzed_at": datetime.now().isoformat(),
+            })
+
+    return results
