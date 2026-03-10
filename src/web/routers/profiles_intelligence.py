@@ -362,10 +362,24 @@ def _sync_profile_people(profile_id: str, ein: str) -> list:
     pdf_analyses = intel.get("pdf_analyses") or {}
 
     def _name_key(raw: str) -> str:
-        """Normalize a name for dedup: strip honorifics, collapse whitespace, lowercase."""
+        """
+        Normalize a name to first+last for dedup across sources.
+        Strips: honorifics, credentials after comma, parentheticals, extra whitespace.
+        e.g. "Col. John Lesinski, USMC (ret.)" → "john lesinski"
+             "Molly Brooks, RN-BC, CHPCA"     → "molly brooks"
+             "MOLLY BROOKS"                   → "molly brooks"
+        """
         import re
         s = raw.strip()
-        s = re.sub(r'^(Dr|Mr|Mrs|Ms|Miss|Prof|Rev|Hon|Cpt|Sgt|Lt|Col|Gen)\.?\s+', '', s, flags=re.IGNORECASE)
+        # Strip leading honorifics / military ranks
+        s = re.sub(
+            r'^(Dr|Mr|Mrs|Ms|Miss|Prof|Rev|Hon|Cpt|Capt|Sgt|Lt|Col|Gen|Adm|Cmdr|Maj|Pvt|Cpl)\.?\s+',
+            '', s, flags=re.IGNORECASE,
+        )
+        # Strip everything after first comma (credentials, branch, rank suffix)
+        s = s.split(',')[0]
+        # Strip parentheticals like "(ret.)" or "(USN)"
+        s = re.sub(r'\s*\(.*?\)', '', s)
         return ' '.join(s.lower().split())
 
     seen: set = set()
