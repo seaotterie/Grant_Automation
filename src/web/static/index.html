@@ -700,7 +700,7 @@
                                         class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">
                                     Cancel
                                 </button>
-                                <button @click="if (discoverySourcesSelected.length > 0) { showDiscoveryModal = false; executeNonprofitDiscovery(currentProfileId, {max_results: maxReturnLimit || 500, auto_scrapy_count: 20}); }"
+                                <button @click="if (discoverySourcesSelected.length > 0) { showDiscoveryModal = false; executeNonprofitDiscovery(currentProfileId, {max_results: maxReturnLimit || 500, max_return_limit: maxReturnLimit || 500, auto_scrapy_count: 20}); }"
                                         :disabled="discoverySourcesSelected.length === 0"
                                         class="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                                     Discover (<span x-text="discoverySourcesSelected.length"></span> source<span x-show="discoverySourcesSelected.length !== 1">s</span>)
@@ -716,34 +716,34 @@
                             <!-- Left: title + inline category filter badges -->
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span class="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-                                    Opportunities (<span x-text="filteredDiscoveryResults.length"></span>)
+                                    Opportunities (<span x-text="filteredDiscoveryResults.length"></span><span x-show="displayHasMore"> of <span x-text="displayTotalCount"></span></span>)
                                 </span>
                                 <span class="text-gray-300 dark:text-gray-600">·</span>
-                                <button @click="categoryFilter = null"
+                                <button @click="categoryFilter = null; displayCurrentPage = 1"
                                         :class="categoryFilter === null ? 'ring-2 ring-blue-500' : ''"
                                         class="px-2 py-0.5 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full text-xs font-semibold hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
                                         title="Show all">
                                     All:<span x-text="summaryCounts.total_found"></span>
                                 </button>
-                                <button @click="categoryFilter = 'qualified'"
+                                <button @click="categoryFilter = 'qualified'; displayCurrentPage = 1"
                                         :class="categoryFilter === 'qualified' ? 'ring-2 ring-green-500' : ''"
                                         class="px-2 py-0.5 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full text-xs font-semibold hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
                                         title="Qualified">
                                     Q:<span x-text="summaryCounts.qualified"></span>
                                 </button>
-                                <button @click="categoryFilter = 'review'"
+                                <button @click="categoryFilter = 'review'; displayCurrentPage = 1"
                                         :class="categoryFilter === 'review' ? 'ring-2 ring-yellow-500' : ''"
                                         class="px-2 py-0.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full text-xs font-semibold hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors"
                                         title="Review">
                                     R:<span x-text="summaryCounts.review"></span>
                                 </button>
-                                <button @click="categoryFilter = 'consider'"
+                                <button @click="categoryFilter = 'consider'; displayCurrentPage = 1"
                                         :class="categoryFilter === 'consider' ? 'ring-2 ring-orange-500' : ''"
                                         class="px-2 py-0.5 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 rounded-full text-xs font-semibold hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
                                         title="Consider">
                                     C:<span x-text="summaryCounts.consider"></span>
                                 </button>
-                                <button @click="categoryFilter = 'low_priority'"
+                                <button @click="categoryFilter = 'low_priority'; displayCurrentPage = 1"
                                         :class="categoryFilter === 'low_priority' ? 'ring-2 ring-gray-500' : ''"
                                         class="px-2 py-0.5 bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-full text-xs font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                                         title="Low Priority">
@@ -982,6 +982,15 @@
                                             </td>
                                         </tr>
                                     </template>
+                                    <tr x-show="displayHasMore">
+                                        <td colspan="8" class="px-4 py-3 text-center">
+                                            <button @click="showMoreResults()"
+                                                    class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
+                                                Show more
+                                                (<span x-text="displayTotalCount - displayCurrentPage * displayPageSize"></span> remaining)
+                                            </button>
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>

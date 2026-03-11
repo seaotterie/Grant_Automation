@@ -141,6 +141,10 @@ function screeningModule() {
         // Find Opportunities limit control
         maxReturnLimit: 500,
 
+        // Display pagination for large result sets
+        displayPageSize: 100,
+        displayCurrentPage: 1,
+
         // Notes State
         opportunityNotes: '',
         notesSaving: false,
@@ -279,6 +283,7 @@ function screeningModule() {
                 if (data.status === 'success') {
                     // Update opportunities and summary
                     this.discoveryResults = data.opportunities || [];
+                    this.displayCurrentPage = 1;
                     this.summaryCounts = data.summary || {};
 
                     // Update freshness metadata
@@ -365,6 +370,7 @@ function screeningModule() {
             try {
                 const requestData = {
                     max_results: options.max_results || 200,
+                    max_return_limit: options.max_return_limit || options.max_results || 500,
                     auto_scrapy_count: options.auto_scrapy_count || 20,
                     min_score_threshold: options.min_score_threshold || 0.50,  // Lower threshold to show more results (was 0.62)
                     apply_score_filter: options.apply_score_filter !== undefined ? options.apply_score_filter : true,
@@ -389,6 +395,7 @@ function screeningModule() {
 
                 if (data.status === 'success') {
                     this.discoveryResults = data.opportunities || [];
+                    this.displayCurrentPage = 1;
                     this.summaryCounts = data.summary;
 
                     // Capture funnel statistics if included (Phase 2)
@@ -461,6 +468,7 @@ function screeningModule() {
 
                 if (data.success) {
                     this.discoveryResults = data.results || [];
+                    this.displayCurrentPage = 1;
                     this.discoverySession = data.session_id;
                     this.currentDiscoveryTrack = track;
 
@@ -527,6 +535,7 @@ function screeningModule() {
 
                 if (data.success) {
                     this.discoveryResults = data.organizations || [];
+                    this.displayCurrentPage = 1;
                     this.currentDiscoveryTrack = 'bmf';
 
                     console.log(`BMF Discovery: ${data.total_count} organizations found`);
@@ -576,6 +585,7 @@ function screeningModule() {
 
                 if (data.success) {
                     this.discoveryResults = data.results || [];
+                    this.displayCurrentPage = 1;
 
                     console.log(`Search complete: ${data.total_results} results`);
                     this.showNotification?.(
@@ -1745,7 +1755,27 @@ function screeningModule() {
             }
 
             // Sort by current sort criteria
-            return this.sortOpportunitiesByField(results, this.sortBy);
+            const sorted = this.sortOpportunitiesByField(results, this.sortBy);
+
+            // Paginate: show up to displayCurrentPage * displayPageSize rows
+            return sorted.slice(0, this.displayCurrentPage * this.displayPageSize);
+        },
+
+        /**
+         * Total filtered count before pagination (for count badge and "show more" label)
+         */
+        get displayTotalCount() {
+            if (!this.discoveryResults || this.discoveryResults.length === 0) return 0;
+            if (this.categoryFilter === null) return this.discoveryResults.length;
+            return this.discoveryResults.filter(opp => opp.category_level === this.categoryFilter).length;
+        },
+
+        get displayHasMore() {
+            return this.displayCurrentPage * this.displayPageSize < this.displayTotalCount;
+        },
+
+        showMoreResults() {
+            this.displayCurrentPage++;
         },
 
         /**
