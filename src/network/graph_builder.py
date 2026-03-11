@@ -170,6 +170,140 @@ class NetworkGraphBuilder:
         return inserted
 
     # ------------------------------------------------------------------
+    # Bulk harvest from cache
+    # ------------------------------------------------------------------
+
+    def ingest_all_funders_from_cache(self, profile_id: str) -> dict:
+        """
+        Batch-ingest all funder leadership data from ein_intelligence into
+        network_memberships for every funder EIN linked to this profile's
+        opportunities.  Also ingests the seeker profile's board_members.
+        Cost: $0.00 — pure DB reads.
+        Returns: {eins_processed, people_added, people_already_known, graph_total_size,
+                  seeker_people_ingested, funders_with_data, funders_without_data}
+        """
+        import json as _json
+
+        with self._conn() as conn:
+            # 1. Distinct EINs + org names for this profile
+            rows = conn.execute(
+                "SELECT DISTINCT ein, organization_name FROM opportunities "
+                "WHERE profile_id = ? AND ein IS NOT NULL AND ein != ''",
+                (profile_id,),
+            ).fetchall()
+
+            # 2. Seeker board members
+            profile_row = conn.execute(
+                "SELECT board_members, name FROM profiles WHERE id = ?",
+                (profile_id,),
+            ).fetchone()
+
+        seeker_people_ingested = 0
+        if profile_row:
+            bm_raw = profile_row["board_members"] if profile_row else None
+            org_name = profile_row["name"] if profile_row else "Seeker Organization"
+            board_members = []
+            if bm_raw:
+                try:
+                    board_members = _json.loads(bm_raw) if isinstance(bm_raw, str) else bm_raw
+                except Exception:
+                    board_members = []
+            if board_members:
+                seeker_people_ingested = self.ingest_profile_board_members(
+                    profile_id, board_members, org_name
+                )
+
+        eins_processed = 0
+        people_added = 0
+        funders_with_data: list[dict] = []
+        funders_without_data: list[dict] = []
+
+        with self._conn() as conn:
+            # Build a map: org_ein → max(updated_at) of rows already in graph
+            existing_rows = conn.execute(
+                "SELECT org_ein, MAX(updated_at) as last_ingested "
+                "FROM network_memberships WHERE org_ein IS NOT NULL GROUP BY org_ein"
+            ).fetchall()
+            already_ingested: dict[str, str] = {
+                r["org_ein"]: r["last_ingested"] for r in existing_rows
+            }
+
+            for row in rows:
+                ein = row["ein"]
+                org_name = row["organization_name"] or ein
+
+                # Load ein_intelligence (only updated_at + data columns)
+                ei_row = conn.execute(
+                    "SELECT web_data, pdf_analyses, updated_at FROM ein_intelligence WHERE ein = ?",
+                    (ein,),
+                ).fetchone()
+
+                if not ei_row:
+                    funders_without_data.append({"ein": ein, "org_name": org_name})
+                    continue
+
+                # Skip if already ingested AND ein_intelligence hasn't been updated since
+                last_ingested = already_ingested.get(ein)
+                ei_updated = ei_row["updated_at"] or ""
+                if last_ingested and ei_updated and ei_updated <= last_ingested:
+                    # Data hasn't changed — nothing new to ingest
+                    logger.debug(
+                        f"[GraphBuilder] Skipping EIN {ein} — already ingested "
+                        f"(graph={last_ingested}, intel={ei_updated})"
+                    )
+                    funders_with_data.append({"ein": ein, "org_name": org_name})
+                    eins_processed += 1
+                    continue
+
+                ei: dict = {}
+                for field in ("web_data", "pdf_analyses"):
+                    raw = ei_row[field]
+                    if raw and isinstance(raw, str):
+                        try:
+                            ei[field] = _json.loads(raw)
+                        except Exception:
+                            ei[field] = {}
+                    else:
+                        ei[field] = raw or {}
+
+                has_data = bool(
+                    (ei.get("web_data") or {}).get("leadership") or
+                    (ei.get("web_data") or {}).get("grant_funder_intelligence") or
+                    ei.get("pdf_analyses")
+                )
+
+                if has_data:
+                    added = self.ingest_funder_ein(ein, org_name, ei)
+                    people_added += added
+                    funders_with_data.append({"ein": ein, "org_name": org_name})
+                else:
+                    funders_without_data.append({"ein": ein, "org_name": org_name})
+
+                eins_processed += 1
+
+        # Graph total size
+        with self._conn() as conn:
+            total = conn.execute(
+                "SELECT COUNT(*) FROM network_memberships"
+            ).fetchone()[0]
+
+        logger.info(
+            f"[GraphBuilder] ingest_all_funders_from_cache profile={profile_id}: "
+            f"eins={eins_processed}, added={people_added}, seeker={seeker_people_ingested}, "
+            f"total={total}"
+        )
+
+        return {
+            "eins_processed": eins_processed,
+            "people_added": people_added,
+            "people_already_known": max(0, eins_processed - people_added),
+            "graph_total_size": total,
+            "seeker_people_ingested": seeker_people_ingested,
+            "funders_with_data": len(funders_with_data),
+            "funders_without_data": funders_without_data,
+        }
+
+    # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 

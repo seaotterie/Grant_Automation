@@ -2979,6 +2979,185 @@
                         </div>
                     </div>
 
+                    <!-- Network Graph Card -->
+                    <div x-show="selectedOpportunities.length > 0" class="bg-white dark:bg-gray-800 rounded-lg border border-indigo-200 dark:border-indigo-700 overflow-hidden">
+                        <div class="p-4 border-b border-indigo-100 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                <h4 class="text-sm font-semibold text-indigo-900 dark:text-indigo-200">Network Graph</h4>
+                            </div>
+                            <!-- Stats badges -->
+                            <div class="flex items-center gap-3 text-xs text-indigo-700 dark:text-indigo-300" x-show="networkGraphStats">
+                                <span x-text="(networkGraphStats?.total_people || 0) + ' people'"></span>
+                                <span>·</span>
+                                <span x-text="(networkGraphStats?.funder_eins_in_graph || 0) + ' funders'"></span>
+                                <span>·</span>
+                                <span x-text="(networkGraphStats?.seeker_people || 0) + ' seeker board'"></span>
+                            </div>
+                            <div class="text-xs text-indigo-400" x-show="!networkGraphStats">No graph data yet</div>
+                        </div>
+                        <div class="p-4">
+                            <!-- Actions Row -->
+                            <div class="flex flex-wrap items-center gap-3 mb-4">
+                                <button @click="networkBuildFromCache()"
+                                        :disabled="networkBuildLoading"
+                                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2">
+                                    <span x-show="networkBuildLoading">
+                                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                    </span>
+                                    <span x-show="!networkBuildLoading">⓪</span>
+                                    Build from Cache <span class="text-indigo-200 font-normal">$0.00</span>
+                                </button>
+                                <button @click="networkRankFunders()"
+                                        :disabled="networkRankLoading"
+                                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2">
+                                    <span x-show="networkRankLoading">
+                                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                    </span>
+                                    <span x-show="!networkRankLoading">↗</span>
+                                    Rank All Funders <span class="text-green-200 font-normal">$0.00</span>
+                                </button>
+                            </div>
+
+                            <!-- Coverage List + Preflight Flags -->
+                            <template x-if="networkGraphStats?.coverage?.length > 0">
+                                <div>
+                                    <!-- Summary line -->
+                                    <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                                        Coverage: <span x-text="networkGraphStats.coverage.filter(c => c.people_in_graph > 0).length"></span>/<span x-text="networkGraphStats.coverage.length"></span> funders have leadership data
+                                        <template x-if="networkGraphStats.coverage.filter(c => c.preflight === 'needs_url').length > 0">
+                                            <span class="ml-2 text-amber-600">
+                                                · <span x-text="networkGraphStats.coverage.filter(c => c.preflight === 'needs_url').length"></span> need URLs
+                                            </span>
+                                        </template>
+                                        <template x-if="networkGraphStats.coverage.filter(c => c.preflight === 'needs_990_search').length > 0">
+                                            <span class="ml-1 text-blue-600">
+                                                · <span x-text="networkGraphStats.coverage.filter(c => c.preflight === 'needs_990_search').length"></span> ready for 990
+                                            </span>
+                                        </template>
+                                    </div>
+
+                                    <!-- Preflight action row (shown when gaps exist) -->
+                                    <template x-if="networkGraphStats.coverage.some(c => c.preflight !== 'ok')">
+                                        <div class="flex flex-wrap gap-2 mb-3 p-2 bg-amber-50 dark:bg-amber-900/10 rounded border border-amber-200 dark:border-amber-800">
+                                            <span class="text-xs text-amber-700 dark:text-amber-300 self-center font-medium">Pre-flight:</span>
+                                            <!-- Single XML lookup button handles all missing-officer cases -->
+                                            <button @click="networkXmlOfficerLookup()"
+                                                    :disabled="networkXmlLookupLoading"
+                                                    class="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200 rounded text-xs hover:bg-indigo-200 transition-colors disabled:opacity-50 flex items-center gap-1">
+                                                <span x-show="networkXmlLookupLoading">
+                                                    <svg class="w-3 h-3 animate-spin inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                                </span>
+                                                <span x-show="!networkXmlLookupLoading">&#9650;</span>
+                                                Find Officers in 990 XML
+                                                (<span x-text="networkGraphStats.coverage.filter(c => c.preflight !== 'ok').length"></span> funders)
+                                                <span class="text-indigo-400 font-normal">$0.00</span>
+                                            </button>
+                                            <!-- Fallback: AI PDF analysis for funders where XML found no officers -->
+                                            <template x-if="networkGraphStats.coverage.some(c => ['needs_990_search','pdf_no_officers'].includes(c.preflight))">
+                                                <button @click="networkSearch990ForMissing()"
+                                                        :disabled="network990Loading"
+                                                        class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded text-xs hover:bg-gray-200 transition-colors disabled:opacity-50 flex items-center gap-1"
+                                                        title="AI PDF analysis fallback — use if XML lookup finds no officers">
+                                                    <span x-show="network990Loading">
+                                                        <svg class="w-3 h-3 animate-spin inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                                    </span>
+                                                    AI PDF fallback
+                                                    <span class="text-gray-400 font-normal">~$0.01–0.03 ea</span>
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </template>
+
+                                    <!-- Per-funder list -->
+                                    <div class="space-y-1 max-h-48 overflow-y-auto">
+                                        <template x-for="funder in networkGraphStats.coverage" :key="funder.ein">
+                                            <div class="flex items-center justify-between text-xs py-1 px-2 rounded"
+                                                 :class="funder.people_in_graph > 0 ? 'bg-green-50 dark:bg-green-900/10' : 'bg-gray-50 dark:bg-gray-700/20'">
+                                                <div class="flex items-center gap-2 flex-1 min-w-0">
+                                                    <span :class="funder.people_in_graph > 0 ? 'text-green-500' : 'text-gray-400'">●</span>
+                                                    <span class="truncate font-medium text-gray-700 dark:text-gray-300" x-text="funder.org_name"></span>
+                                                </div>
+                                                <div class="shrink-0 ml-2 text-right">
+                                                    <template x-if="funder.people_in_graph > 0">
+                                                        <span class="text-green-600 dark:text-green-400"
+                                                              x-text="funder.people_in_graph + ' people · ' + (funder.has_web_data && funder.has_pdf_data ? 'web+990' : funder.has_web_data ? 'web' : '990')">
+                                                        </span>
+                                                    </template>
+                                                    <template x-if="funder.people_in_graph === 0">
+                                                        <span class="text-gray-400"
+                                                              x-text="{
+                                                                  needs_url: 'no filings found yet',
+                                                                  needs_990_search: 'filing found, not analyzed',
+                                                                  pdf_no_officers: 'PDF had no officers — try XML',
+                                                                  unknown: 'no data'
+                                                              }[funder.preflight] || 'no officers yet'">
+                                                        </span>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Funder Warmth Table (shown after rank-funders) -->
+                    <div x-show="networkRankedFunders.length > 0 && selectedOpportunities.length > 0"
+                         class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                            <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Funder Warmth Ranking</h4>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400">
+                                    <tr>
+                                        <th class="text-left px-4 py-2">Funder</th>
+                                        <th class="text-center px-3 py-2">Degree</th>
+                                        <th class="text-center px-3 py-2">Paths</th>
+                                        <th class="text-center px-3 py-2">Warmth</th>
+                                        <th class="text-center px-3 py-2">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                    <template x-for="funder in networkRankedFunders" :key="funder.ein">
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                            <td class="px-4 py-2 font-medium text-gray-800 dark:text-gray-200 max-w-xs truncate" x-text="funder.org_name"></td>
+                                            <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400"
+                                                x-text="funder.best_degree ? funder.best_degree + '°' : '—'"></td>
+                                            <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400" x-text="funder.paths_found"></td>
+                                            <td class="px-3 py-2 text-center">
+                                                <span class="px-2 py-0.5 rounded-full text-xs font-medium"
+                                                      :class="{
+                                                          'bg-red-100 text-red-700': funder.strength === 'hot',
+                                                          'bg-yellow-100 text-yellow-700': funder.strength === 'warm',
+                                                          'bg-blue-100 text-blue-600': funder.strength === 'cold',
+                                                          'bg-gray-100 text-gray-500': funder.strength === 'unknown'
+                                                      }"
+                                                      x-text="funder.strength === 'hot' ? '🔥 Hot' : funder.strength === 'warm' ? '🌡 Warm' : funder.strength === 'cold' ? '❄ Cold' : '— Unknown'">
+                                                </span>
+                                            </td>
+                                            <td class="px-3 py-2 text-center">
+                                                <template x-if="funder.strength !== 'unknown'">
+                                                    <button @click="openIntelligenceModalByEin(funder.ein)"
+                                                            class="px-2 py-1 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 rounded text-xs hover:bg-indigo-200 transition-colors">
+                                                        ⑨ Networking
+                                                    </button>
+                                                </template>
+                                                <template x-if="funder.strength === 'unknown'">
+                                                    <span class="text-xs text-gray-400">No data</span>
+                                                </template>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <!-- Enhanced Opportunities Table -->
                     <div x-show="selectedOpportunities.length > 0" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
@@ -4101,12 +4280,19 @@
                                 <div x-show="intelligenceModalTab === 'network-paths'" class="space-y-4 p-4">
                                     <!-- Empty state -->
                                     <template x-if="!getNetworkingResult(selectedIntelligenceOpp)">
-                                        <div class="text-center py-12 text-gray-400 text-sm">
+                                        <div class="text-center py-10 text-gray-400 text-sm">
                                             <svg class="w-10 h-10 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                             </svg>
                                             <p class="font-medium text-gray-500 mb-1">No Network Paths Yet</p>
-                                            <p>Run ⑨ Networking to discover 2nd &amp; 3rd degree connections ($4.00)</p>
+                                            <p class="mb-4">Run ⑨ Networking to discover 2nd &amp; 3rd degree connections ($4.00)</p>
+                                            <div class="flex items-center justify-center gap-3">
+                                                <button @click="networkBuildFromCache()"
+                                                        :disabled="networkBuildLoading"
+                                                        class="px-3 py-1.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-lg text-xs hover:bg-indigo-200 transition-colors disabled:opacity-50">
+                                                    ⓪ Build from Cache (free) — harvest all cached leadership first
+                                                </button>
+                                            </div>
                                         </div>
                                     </template>
 

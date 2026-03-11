@@ -473,6 +473,10 @@ app.include_router(admin_router)
 from src.web.routers.foundation_network import router as foundation_network_router
 app.include_router(foundation_network_router)
 
+# Include Network Graph routes (Phase 9 - offline population + ranking)
+from src.web.routers.network import router as network_router
+app.include_router(network_router)
+
 # Include Enhanced Scraping routes
 # Include enhanced scraping router only if available
 if enhanced_scraping_available and enhanced_scraping_router:

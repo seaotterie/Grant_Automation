@@ -99,6 +99,15 @@ function intelligenceModule() {
         intelConnectionsLoading: false,
         intelNetworkingLoading: false,
 
+        // Network Graph State
+        networkGraphStats: null,
+        networkBuildLoading: false,
+        networkRankLoading: false,
+        networkRankedFunders: [],
+        networkFindUrlsLoading: false,
+        network990Loading: false,
+        networkXmlLookupLoading: false,
+
         // =================================================================
         // LIFECYCLE
         // =================================================================
@@ -182,6 +191,9 @@ function intelligenceModule() {
                 }
 
                 console.log(`Loaded ${this.selectedOpportunities.length} intelligence opportunities`);
+
+                // Load network graph stats (free, $0)
+                this.networkLoadStats(profileId).catch(() => {});
 
                 if (this.selectedOpportunities.length === 0) {
                     this.showNotification?.(
@@ -563,6 +575,19 @@ function intelligenceModule() {
                 this.showNotification?.('Networking', 'Network error', 'error');
             } finally {
                 this.intelNetworkingLoading = false;
+            }
+        },
+
+        /**
+         * Open the Intelligence modal for the first opportunity matching a given EIN.
+         */
+        openIntelligenceModalByEin(ein) {
+            if (!ein) return;
+            const opp = this.selectedOpportunities.find(o => o.ein === ein);
+            if (opp) {
+                const id = opp.opportunity_id || opp.id;
+                this.openIntelligenceModal(id);
+                this.$nextTick?.(() => { this.intelligenceModalTab = 'network-paths'; });
             }
         },
 
@@ -1275,6 +1300,179 @@ function intelligenceModule() {
         /**
          * Get analysis summary
          */
+        // =================================================================
+        // NETWORK GRAPH
+        // =================================================================
+
+        /**
+         * Load network graph stats from server ($0.00).
+         */
+        async networkLoadStats(profileId) {
+            const pid = profileId || this.currentProfileId;
+            if (!pid) return;
+            try {
+                const resp = await fetch(`/api/v2/network/graph-stats?profile_id=${encodeURIComponent(pid)}`);
+                if (resp.ok) {
+                    this.networkGraphStats = await resp.json();
+                }
+            } catch (e) {
+                console.warn('[networkLoadStats]', e);
+            }
+        },
+
+        /**
+         * Populate graph from cached ein_intelligence ($0.00).
+         */
+        async networkBuildFromCache() {
+            const pid = this.currentProfileId;
+            if (!pid) return;
+            this.networkBuildLoading = true;
+            try {
+                const resp = await fetch('/api/v2/network/populate-graph', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile_id: pid }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    this.showNotification?.('Network Graph', `${data.people_added} people added · ${data.graph_total_size} total in graph`, 'success');
+                    await this.networkLoadStats(pid);
+                } else {
+                    this.showNotification?.('Network Graph', data.detail || 'Build failed', 'error');
+                }
+            } catch (e) {
+                console.error('[networkBuildFromCache]', e);
+                this.showNotification?.('Network Graph', 'Network error', 'error');
+            } finally {
+                this.networkBuildLoading = false;
+            }
+        },
+
+        /**
+         * Fetch 990 XML from ProPublica and parse officers directly — no AI, $0.00.
+         * Handles all preflight statuses (needs_url, needs_990_search, pdf_no_officers).
+         * After completing, refreshes graph stats automatically.
+         */
+        async networkXmlOfficerLookup() {
+            const pid = this.currentProfileId;
+            if (!pid) return;
+            this.networkXmlLookupLoading = true;
+            try {
+                const resp = await fetch('/api/v2/network/xml-officer-lookup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile_id: pid, limit: 30 }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    const msg = data.eins_with_officers > 0
+                        ? `${data.officers_added} officers found in ${data.eins_with_officers} funders · ${data.eins_no_xml} had no XML`
+                        : `No officers found in XML (${data.eins_no_xml} funders had no XML or empty officer sections)`;
+                    this.showNotification?.('990 XML Lookup', msg, data.eins_with_officers > 0 ? 'success' : 'info');
+                    await this.networkLoadStats(pid);
+                } else {
+                    this.showNotification?.('990 XML Lookup', data.detail || 'Lookup failed', 'error');
+                }
+            } catch (e) {
+                console.error('[networkXmlOfficerLookup]', e);
+                this.showNotification?.('990 XML Lookup', 'Network error', 'error');
+            } finally {
+                this.networkXmlLookupLoading = false;
+            }
+        },
+
+        /**
+         * Find filing history URLs for funders that have no filing_history yet ($0.00 ProPublica).
+         * After completing, refreshes stats and triggers populate-graph.
+         */
+        async networkFindMissingUrls() {
+            const pid = this.currentProfileId;
+            if (!pid) return;
+            this.networkFindUrlsLoading = true;
+            try {
+                const resp = await fetch('/api/v2/network/discover-filings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile_id: pid, limit: 50 }),
+                });
+                const data = await resp.json();
+                this.showNotification?.('Find URLs', `${data.filing_histories_found} new filing histories found · ${data.already_cached} already cached`, 'success');
+                await this.networkLoadStats(pid);
+            } catch (e) {
+                console.error('[networkFindMissingUrls]', e);
+                this.showNotification?.('Find URLs', 'Network error', 'error');
+            } finally {
+                this.networkFindUrlsLoading = false;
+            }
+        },
+
+        /**
+         * Run 990 PDF analysis only for funders that have filing_history but no officers yet.
+         * Collects opportunity_ids from coverage items with preflight='needs_990_search',
+         * calls the existing batch-analyze-990-pdfs endpoint, then harvests into graph.
+         */
+        async networkSearch990ForMissing() {
+            const pid = this.currentProfileId;
+            if (!pid || !this.networkGraphStats?.coverage) return;
+            this.network990Loading = true;
+            try {
+                // Collect opp IDs for funders that need 990 search
+                // (has filing URL but no PDF analysis yet, OR PDF ran but had no officers)
+                const targetStatuses = ['needs_990_search', 'pdf_no_officers'];
+                const oppIds = [];
+                for (const funder of this.networkGraphStats.coverage) {
+                    if (targetStatuses.includes(funder.preflight)) {
+                        oppIds.push(...(funder.opportunity_ids || []));
+                    }
+                }
+                if (oppIds.length === 0) {
+                    this.showNotification?.('Search 990s', 'No funders need 990 search right now', 'info');
+                    return;
+                }
+                const resp = await fetch('/api/v2/opportunities/batch-analyze-990-pdfs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ opportunity_ids: oppIds }),
+                });
+                const data = await resp.json();
+                const done = (data.results || []).filter(r => r.status === 'success').length;
+                this.showNotification?.('Search 990s', `${done} PDFs analyzed · harvesting into graph...`, 'success');
+                // Harvest newly extracted officers into graph
+                await this.networkBuildFromCache();
+            } catch (e) {
+                console.error('[networkSearch990ForMissing]', e);
+                this.showNotification?.('Search 990s', 'Network error', 'error');
+            } finally {
+                this.network990Loading = false;
+            }
+        },
+
+        /**
+         * Rank all funders by BFS warmth ($0.00).
+         */
+        async networkRankFunders() {
+            const pid = this.currentProfileId;
+            if (!pid) return;
+            this.networkRankLoading = true;
+            try {
+                const resp = await fetch('/api/v2/network/rank-funders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile_id: pid, max_degree: 3 }),
+                });
+                const data = await resp.json();
+                this.networkRankedFunders = data.ranked_funders || [];
+                const hot = this.networkRankedFunders.filter(f => f.strength === 'hot').length;
+                const warm = this.networkRankedFunders.filter(f => f.strength === 'warm').length;
+                this.showNotification?.('Funder Ranking', `${hot} hot · ${warm} warm funders identified`, 'success');
+            } catch (e) {
+                console.error('[networkRankFunders]', e);
+                this.showNotification?.('Funder Ranking', 'Network error', 'error');
+            } finally {
+                this.networkRankLoading = false;
+            }
+        },
+
         getSummary() {
             const total = this.selectedOpportunities.length;
             const analyzed = Object.keys(this.intelligenceResults).length;

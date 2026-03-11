@@ -704,8 +704,11 @@ async def _run_networking_analysis(opportunity_id: str) -> dict:
 
     conn.close()
 
-    # ── Populate graph ────────────────────────────────────────────────
+    # ── Populate graph (bulk harvest all cached data, then targeted ingest) ──
     builder = NetworkGraphBuilder(db_path)
+    # Free bulk harvest: ingest all funders already in ein_intelligence
+    builder.ingest_all_funders_from_cache(profile_id)
+    # Targeted ingest for this specific opportunity (catches freshly fetched data)
     if board_members:
         builder.ingest_profile_board_members(profile_id, board_members, seeker_org_name)
     if ein_intelligence:
