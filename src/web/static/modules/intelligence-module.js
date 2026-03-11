@@ -96,6 +96,7 @@ function intelligenceModule() {
         intelScreenThoroughLoading: false,
         intelEssentialsLoading: false,
         intelPremiumLoading: false,
+        intelConnectionsLoading: false,
 
         // =================================================================
         // LIFECYCLE
@@ -144,6 +145,34 @@ function intelligenceModule() {
                 const data = await response.json();
 
                 this.selectedOpportunities = data.opportunities || [];
+
+                // Restore persisted AI results so the Summary/Analysis tabs render
+                // and Essentials/Premium don't re-bill on reload.
+                for (const opp of this.selectedOpportunities) {
+                    const oppId = opp.opportunity_id || opp.id;
+                    const hasEssentials = opp.essentials_result;
+                    const hasPremium    = opp.premium_result;
+                    const hasConnections = opp.connection_analysis;
+
+                    if (hasEssentials || hasPremium || hasConnections) {
+                        if (!this.intelligenceResults[oppId]) {
+                            this.intelligenceResults[oppId] = { opportunity: opp };
+                        }
+                        if (hasEssentials) {
+                            this.intelligenceResults[oppId].analysis  = opp.essentials_result;
+                            this.intelligenceResults[oppId].depth     = 'essentials';
+                            this.intelligenceResults[oppId].cost      = opp.essentials_result?.user_price || 2.00;
+                        }
+                        if (hasPremium) {
+                            this.intelligenceResults[oppId].analysis  = opp.premium_result;
+                            this.intelligenceResults[oppId].depth     = 'premium';
+                            this.intelligenceResults[oppId].cost      = opp.premium_result?.user_price || 8.00;
+                        }
+                        if (hasConnections) {
+                            this.intelligenceResults[oppId].connections = opp.connection_analysis;
+                        }
+                    }
+                }
 
                 console.log(`Loaded ${this.selectedOpportunities.length} intelligence opportunities`);
 
@@ -416,7 +445,8 @@ function intelligenceModule() {
         },
 
         /**
-         * ⑥ Run Essentials AI — run ESSENTIALS deep intelligence for the current modal opportunity
+         * ⑥ Run Essentials AI — run ESSENTIALS deep intelligence for the current modal opportunity.
+         * Auto-triggers Six Degrees connection analysis (⑧) on success.
          */
         async intelRunEssentials() {
             const opp = this.selectedIntelligenceOpp;
@@ -425,6 +455,11 @@ function intelligenceModule() {
             try {
                 const screeningContext = this._buildScreeningContext(opp);
                 await this.analyzeOpportunity(opp, 'essentials', null, null, screeningContext);
+                // Show summary tab so the user sees the AI recommendation + key highlights.
+                this.intelligenceModalTab = 'summary';
+                // Auto-run connections analysis (Six Degrees — part of Essentials tier).
+                // On completion it switches to the Officers tab.
+                await this.intelRunConnections();
             } finally {
                 this.intelEssentialsLoading = false;
             }
@@ -450,6 +485,69 @@ function intelligenceModule() {
             } finally {
                 this.intelPremiumLoading = false;
             }
+        },
+
+        /**
+         * ⑧ Run Connections — Six Degrees connection analysis for the current modal opportunity.
+         * Compares profile board members with the funder's leadership team.
+         */
+        async intelRunConnections() {
+            const opp = this.selectedIntelligenceOpp;
+            if (!opp) return;
+            const oppId = opp.opportunity_id || opp.id;
+            this.intelConnectionsLoading = true;
+            try {
+                const resp = await fetch(
+                    `/api/v2/opportunities/${oppId}/run-connections`,
+                    { method: 'POST' }
+                );
+                const data = await resp.json();
+                if (data.success) {
+                    // Always write through intelligenceResults (declared reactive object).
+                    // Directly assigning a new property to the opp object bypasses Alpine.js
+                    // reactivity and the Officers tab template won't update.
+                    if (!this.intelligenceResults[oppId]) {
+                        // Seed with opportunity so templates that read result.opportunity
+                        // don't throw when Connections runs before Essentials.
+                        this.intelligenceResults[oppId] = { opportunity: opp };
+                    }
+                    this.intelligenceResults[oppId].connections = data.connection_analysis;
+                    // Switch to Officers & Directors tab so the user sees the results.
+                    this.intelligenceModalTab = 'officers';
+                    this.showNotification?.('Connections', 'Six Degrees analysis complete — see Officers tab', 'success');
+                }
+                return data;
+            } catch (e) {
+                console.error('[intelRunConnections] Error:', e);
+                this.showNotification?.('Connections', 'Network error', 'error');
+            } finally {
+                this.intelConnectionsLoading = false;
+            }
+        },
+
+        /**
+         * Return the connection_analysis for an opportunity (from results cache or opp object).
+         */
+        getConnectionAnalysis(opp) {
+            if (!opp) return null;
+            const oppId = opp.opportunity_id || opp.id;
+            return this.intelligenceResults[oppId]?.connections
+                || opp?.connection_analysis
+                || null;
+        },
+
+        /**
+         * Return a Tailwind class pair for a connection_strength badge.
+         */
+        strengthClass(strength) {
+            const map = {
+                strong:   'bg-green-100 text-green-700',
+                moderate: 'bg-yellow-100 text-yellow-700',
+                weak:     'bg-gray-100 text-gray-500',
+                none:     'bg-gray-100 text-gray-500',
+                unknown:  'bg-blue-100 text-blue-600',
+            };
+            return map[strength] || 'bg-gray-100 text-gray-500';
         },
 
         /**
@@ -869,7 +967,9 @@ function intelligenceModule() {
          * @param {string} opportunityId
          */
         hasIntelligence(opportunityId) {
-            return !!this.intelligenceResults[opportunityId];
+            // Only true when Essentials AI analysis has actually run (has .analysis key).
+            // A connections-only entry {opportunity, connections} must not block Essentials.
+            return !!this.intelligenceResults[opportunityId]?.analysis;
         },
 
         /**

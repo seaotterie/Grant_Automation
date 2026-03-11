@@ -2151,6 +2151,70 @@ async def screen_single_opportunity(opportunity_id: str, mode: str = "fast"):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/{opportunity_id}/run-connections")
+async def run_opportunity_connections(opportunity_id: str):
+    """
+    Six Degrees connection analysis for a specific Intelligence-stage opportunity.
+    Reads seeker people from profiles.board_members and funder people from ein_intelligence.
+    Stores result in analysis_discovery['connection_analysis'].
+    Called automatically after Essentials AI completes.
+    """
+    from src.web.routers.profiles_intelligence import _analyze_opportunity_connections
+
+    # ── Fetch opportunity ─────────────────────────────────────────────────
+    conn = database_manager.get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, profile_id, organization_name, ein, analysis_discovery FROM opportunities WHERE id = ?",
+        (opportunity_id,),
+    )
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Opportunity {opportunity_id} not found")
+
+    opp_id, profile_id, org_name, funder_ein, ad_raw = row[0], row[1], row[2], row[3], row[4]
+
+    if not funder_ein:
+        raise HTTPException(
+            status_code=400,
+            detail="Opportunity does not have an EIN — cannot run Six Degrees analysis.",
+        )
+
+    if not profile_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Opportunity is not linked to a profile — cannot run Six Degrees analysis.",
+        )
+
+    # ── Run connection analysis ───────────────────────────────────────────
+    connection_result = await _analyze_opportunity_connections(
+        profile_id=str(profile_id),
+        funder_ein=str(funder_ein),
+        funder_name=org_name or "",
+    )
+
+    # ── Persist result in analysis_discovery ─────────────────────────────
+    try:
+        ad = json.loads(ad_raw) if isinstance(ad_raw, str) and ad_raw else {}
+        ad["connection_analysis"] = connection_result
+
+        conn = database_manager.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+            (json.dumps(ad), datetime.now(timezone.utc).isoformat(), opp_id),
+        )
+        conn.commit()
+        conn.close()
+        logger.info(f"[RunConnections] Saved connection_analysis for opportunity {opp_id}")
+    except Exception as e:
+        logger.warning(f"[RunConnections] Failed to persist connection_analysis for {opp_id}: {e}")
+
+    return {"success": True, "connection_analysis": connection_result}
+
+
 @router.get("/health")
 async def health_check():
     """Health check for opportunities API."""
@@ -2161,6 +2225,7 @@ async def health_check():
             "GET /api/v2/opportunities/{id}/details",
             "POST /api/v2/opportunities/{id}/research",
             "POST /api/v2/opportunities/{id}/screen",
+            "POST /api/v2/opportunities/{id}/run-connections",
             "POST /api/v2/opportunities/{id}/promote",
             "POST /api/v2/opportunities/{id}/demote",
             "PATCH /api/v2/opportunities/{id}/notes",

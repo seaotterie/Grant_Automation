@@ -407,6 +407,32 @@ async def generate_intelligence_analysis(
                 f"Please use '{mapped_tier.value}' instead. Your request was automatically migrated."
             )
 
+        # Persist result to analysis_discovery so reloading doesn't re-bill.
+        # Key: 'essentials_result' or 'premium_result' depending on tier.
+        try:
+            import json as _json
+            from src.config.database_config import get_catalynx_db
+            import sqlite3 as _sqlite3
+            _conn = _sqlite3.connect(get_catalynx_db())
+            _cur = _conn.cursor()
+            _cur.execute("SELECT analysis_discovery FROM opportunities WHERE id = ?",
+                         (request.opportunity_id,))
+            _row = _cur.fetchone()
+            if _row:
+                _ad = _json.loads(_row[0]) if _row[0] else {}
+                _result_key = f"{mapped_tier.value}_result"
+                _ad[_result_key] = response_data
+                _ad[f"{mapped_tier.value}_ran_at"] = datetime.now().isoformat()
+                _cur.execute(
+                    "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                    (_json.dumps(_ad), datetime.now().isoformat(), request.opportunity_id)
+                )
+                _conn.commit()
+                logger.info(f"Persisted {mapped_tier.value} result for opportunity {request.opportunity_id}")
+            _conn.close()
+        except Exception as _save_err:
+            logger.warning(f"Failed to persist intelligence result: {_save_err}")
+
         return IntelligenceResponse(
             result=response_data,
             estimated_cost=estimated_cost,

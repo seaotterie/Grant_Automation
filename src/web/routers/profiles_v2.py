@@ -1985,7 +1985,12 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
                 "assets": discovery_data.get('990_data', {}).get('assets') if discovery_data.get('990_data') else None,
                 "foundation_code": opp_raw.get('foundation_code'),
                 # User notes
-                "notes": opp_raw.get('notes', '')
+                "notes": opp_raw.get('notes', ''),
+                # Six Degrees connection analysis (persisted from Intelligence tab)
+                "connection_analysis": discovery_data.get('connection_analysis'),
+                # Persisted AI analysis results — avoid re-billing on reload
+                "essentials_result": discovery_data.get('essentials_result'),
+                "premium_result": discovery_data.get('premium_result'),
             })
 
         summary = {
