@@ -180,7 +180,7 @@ class DatabaseManager:
             logger.warning(f"Failed to initialize normalized schema: {e}")
 
     def _initialize_ein_intelligence_table(self, conn: sqlite3.Connection):
-        """Create the ein_intelligence cache table if it does not exist."""
+        """Create the ein_intelligence cache table and network graph tables if they do not exist."""
         try:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS ein_intelligence (
@@ -194,6 +194,38 @@ class DatabaseManager:
                     pdf_analyses TEXT,
                     created_at TEXT DEFAULT (datetime('now')),
                     updated_at TEXT DEFAULT (datetime('now'))
+                );
+
+                CREATE TABLE IF NOT EXISTS network_memberships (
+                    id           TEXT PRIMARY KEY,
+                    person_hash  TEXT NOT NULL,
+                    display_name TEXT NOT NULL,
+                    org_ein      TEXT,
+                    org_name     TEXT NOT NULL,
+                    org_type     TEXT NOT NULL,
+                    profile_id   TEXT,
+                    source       TEXT NOT NULL,
+                    title        TEXT,
+                    created_at   TEXT NOT NULL,
+                    updated_at   TEXT NOT NULL,
+                    UNIQUE(person_hash, org_ein)
+                );
+                CREATE INDEX IF NOT EXISTS idx_nm_person_hash ON network_memberships(person_hash);
+                CREATE INDEX IF NOT EXISTS idx_nm_org_ein     ON network_memberships(org_ein);
+                CREATE INDEX IF NOT EXISTS idx_nm_profile_id  ON network_memberships(profile_id);
+
+                CREATE TABLE IF NOT EXISTS network_paths_cache (
+                    id                   TEXT PRIMARY KEY,
+                    profile_id           TEXT NOT NULL,
+                    funder_ein           TEXT NOT NULL,
+                    funder_name          TEXT NOT NULL,
+                    paths_json           TEXT NOT NULL,
+                    narration            TEXT,
+                    cultivation_steps    TEXT,
+                    graph_snapshot_size  INTEGER,
+                    created_at           TEXT NOT NULL,
+                    updated_at           TEXT NOT NULL,
+                    UNIQUE(profile_id, funder_ein)
                 );
             """)
             conn.commit()

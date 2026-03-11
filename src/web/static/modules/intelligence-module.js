@@ -97,6 +97,7 @@ function intelligenceModule() {
         intelEssentialsLoading: false,
         intelPremiumLoading: false,
         intelConnectionsLoading: false,
+        intelNetworkingLoading: false,
 
         // =================================================================
         // LIFECYCLE
@@ -170,6 +171,12 @@ function intelligenceModule() {
                         }
                         if (hasConnections) {
                             this.intelligenceResults[oppId].connections = opp.connection_analysis;
+                        }
+                        if (opp.networking_result) {
+                            this.intelligenceResults[oppId].networking = {
+                                success: true,
+                                ...opp.networking_result,
+                            };
                         }
                     }
                 }
@@ -523,6 +530,50 @@ function intelligenceModule() {
             } finally {
                 this.intelConnectionsLoading = false;
             }
+        },
+
+        /**
+         * ⑨ Run Networking — BFS graph paths + Sonnet narration ($4.00).
+         * Discovers 1st/2nd/3rd degree connections via the persistent network graph.
+         */
+        async intelRunNetworking() {
+            const opp = this.selectedIntelligenceOpp;
+            if (!opp) return;
+            const oppId = opp.opportunity_id || opp.id;
+            this.intelNetworkingLoading = true;
+            try {
+                const resp = await fetch(
+                    `/api/v2/opportunities/${oppId}/run-networking`,
+                    { method: 'POST' }
+                );
+                const data = await resp.json();
+                if (data.success) {
+                    if (!this.intelligenceResults[oppId]) {
+                        this.intelligenceResults[oppId] = { opportunity: opp };
+                    }
+                    this.intelligenceResults[oppId].networking = data;
+                    this.intelligenceModalTab = 'network-paths';
+                    this.showNotification?.('Networking', `Found ${data.paths_found || 0} connection path(s)`, 'success');
+                } else if (data.error) {
+                    this.showNotification?.('Networking', data.error, 'warning');
+                }
+                return data;
+            } catch (e) {
+                console.error('[intelRunNetworking] Error:', e);
+                this.showNotification?.('Networking', 'Network error', 'error');
+            } finally {
+                this.intelNetworkingLoading = false;
+            }
+        },
+
+        /**
+         * Return networking result for an opportunity (from results cache or opp object).
+         */
+        getNetworkingResult(opp) {
+            if (!opp) return null;
+            const oppId = opp.opportunity_id || opp.id;
+            return this.intelligenceResults[oppId]?.networking
+                || (opp?.networking_result ? { success: true, ...opp.networking_result } : null);
         },
 
         /**

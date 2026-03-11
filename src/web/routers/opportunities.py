@@ -2188,6 +2188,34 @@ async def run_opportunity_connections(opportunity_id: str):
             detail="Opportunity is not linked to a profile — cannot run Six Degrees analysis.",
         )
 
+    # ── Populate network graph (side-effect, no AI calls) ────────────────
+    try:
+        from src.network.graph_builder import NetworkGraphBuilder
+        from src.config.database_config import get_catalynx_db
+        _gb = NetworkGraphBuilder(get_catalynx_db())
+
+        # Ingest seeker board members
+        _gc = database_manager.get_connection()
+        _gcur = _gc.cursor()
+        _gcur.execute("SELECT board_members, name FROM profiles WHERE id = ?", (profile_id,))
+        _profile_row = _gcur.fetchone()
+        _gc.close()
+
+        if _profile_row and _profile_row[0]:
+            try:
+                _board = json.loads(_profile_row[0]) if isinstance(_profile_row[0], str) else _profile_row[0]
+                _gb.ingest_profile_board_members(str(profile_id), _board, _profile_row[1] or "Seeker Organization")
+            except Exception as _e:
+                logger.debug(f"[RunConnections] Board member ingest skipped: {_e}")
+
+        # Ingest funder people from ein_intelligence
+        _ei = database_manager.get_ein_intelligence(str(funder_ein))
+        if _ei:
+            _gb.ingest_funder_ein(str(funder_ein), org_name or "", _ei)
+
+    except Exception as _graph_err:
+        logger.debug(f"[RunConnections] Graph population skipped: {_graph_err}")
+
     # ── Run connection analysis ───────────────────────────────────────────
     connection_result = await _analyze_opportunity_connections(
         profile_id=str(profile_id),
@@ -2215,6 +2243,25 @@ async def run_opportunity_connections(opportunity_id: str):
     return {"success": True, "connection_analysis": connection_result}
 
 
+@router.post("/{opportunity_id}/run-networking")
+async def run_opportunity_networking(opportunity_id: str):
+    """
+    Networking tier: BFS graph paths + Sonnet narration. $4.00.
+    Discovers 1st/2nd/3rd degree connections between seeker board and funder leadership
+    using the persistent network_memberships graph.
+    """
+    from src.web.routers.intelligence import _run_networking_analysis
+
+    try:
+        result = await _run_networking_analysis(opportunity_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"[RunNetworking] Failed for {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/health")
 async def health_check():
     """Health check for opportunities API."""
@@ -2226,6 +2273,7 @@ async def health_check():
             "POST /api/v2/opportunities/{id}/research",
             "POST /api/v2/opportunities/{id}/screen",
             "POST /api/v2/opportunities/{id}/run-connections",
+            "POST /api/v2/opportunities/{id}/run-networking",
             "POST /api/v2/opportunities/{id}/promote",
             "POST /api/v2/opportunities/{id}/demote",
             "PATCH /api/v2/opportunities/{id}/notes",

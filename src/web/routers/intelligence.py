@@ -624,6 +624,274 @@ async def get_available_tiers():
         }
     }
 
+async def _run_networking_analysis(opportunity_id: str) -> dict:
+    """
+    Networking tier ($4.00): BFS graph paths + Sonnet narration.
+    Reads seeker board from profiles.board_members and funder people from ein_intelligence.
+    Persists result to analysis_discovery['networking_result'] and network_paths_cache.
+    """
+    import json as _json
+    import sqlite3 as _sqlite3
+    import hashlib as _hashlib
+    import sys
+    from pathlib import Path
+
+    project_root = Path(__file__).parent.parent.parent
+    sys.path.insert(0, str(project_root))
+
+    from src.config.database_config import get_catalynx_db
+    from src.network.graph_builder import NetworkGraphBuilder
+    from src.network.path_finder import PathFinder
+
+    db_path = get_catalynx_db()
+    conn = _sqlite3.connect(db_path)
+    conn.row_factory = _sqlite3.Row
+    cur = conn.cursor()
+
+    # ── Load opportunity ──────────────────────────────────────────────
+    cur.execute(
+        "SELECT id, profile_id, organization_name, ein, analysis_discovery "
+        "FROM opportunities WHERE id = ?",
+        (opportunity_id,),
+    )
+    opp_row = cur.fetchone()
+    if not opp_row:
+        conn.close()
+        raise ValueError(f"Opportunity {opportunity_id} not found")
+
+    opp_id = opp_row["id"]
+    profile_id = str(opp_row["profile_id"] or "")
+    funder_name = opp_row["organization_name"] or "Unknown Funder"
+    funder_ein = opp_row["ein"] or ""
+    ad_raw = opp_row["analysis_discovery"]
+    ad = _json.loads(ad_raw) if isinstance(ad_raw, str) and ad_raw else {}
+
+    if not funder_ein:
+        conn.close()
+        return {
+            "success": False,
+            "error": "Opportunity does not have an EIN — cannot run Networking analysis.",
+            "paths": [],
+            "narration": "No EIN available for this opportunity.",
+            "cultivation_steps": [],
+            "user_price": 4.00,
+        }
+
+    # ── Load profile board members ────────────────────────────────────
+    cur.execute("SELECT board_members, name FROM profiles WHERE id = ?", (profile_id,))
+    profile_row = cur.fetchone()
+    board_members_raw = profile_row["board_members"] if profile_row else None
+    seeker_org_name = profile_row["name"] if profile_row else "Seeker Organization"
+    board_members = []
+    if board_members_raw:
+        try:
+            board_members = _json.loads(board_members_raw) if isinstance(board_members_raw, str) else board_members_raw
+        except Exception:
+            board_members = []
+
+    # ── Load funder ein_intelligence ──────────────────────────────────
+    cur.execute("SELECT * FROM ein_intelligence WHERE ein = ?", (funder_ein,))
+    ei_row = cur.fetchone()
+    ein_intelligence = {}
+    if ei_row:
+        ein_intelligence = dict(ei_row)
+        for field in ("web_data", "pdf_analyses"):
+            if ein_intelligence.get(field) and isinstance(ein_intelligence[field], str):
+                try:
+                    ein_intelligence[field] = _json.loads(ein_intelligence[field])
+                except Exception:
+                    pass
+
+    conn.close()
+
+    # ── Populate graph ────────────────────────────────────────────────
+    builder = NetworkGraphBuilder(db_path)
+    if board_members:
+        builder.ingest_profile_board_members(profile_id, board_members, seeker_org_name)
+    if ein_intelligence:
+        builder.ingest_funder_ein(funder_ein, funder_name, ein_intelligence)
+
+    # ── BFS path finding ──────────────────────────────────────────────
+    finder = PathFinder(db_path)
+    paths = finder.find_paths(profile_id, funder_ein, max_degree=3)
+
+    # Snapshot size
+    snap_conn = _sqlite3.connect(db_path)
+    snap_size = snap_conn.execute("SELECT COUNT(*) FROM network_memberships").fetchone()[0]
+    snap_conn.close()
+
+    # ── Build path dicts for response ─────────────────────────────────
+    paths_dicts = [
+        {
+            "degree": p.degree,
+            "path_nodes": p.path_nodes,
+            "connection_basis": p.connection_basis,
+            "strength": p.strength,
+        }
+        for p in paths[:10]  # cap at 10 for prompt size
+    ]
+
+    # ── Sonnet narration ──────────────────────────────────────────────
+    narration = ""
+    cultivation_steps = []
+
+    try:
+        import openai
+        from src.core.openai_service import OpenAIService
+
+        seeker_board_summary = ", ".join(
+            (b.get("name") or str(b)) if isinstance(b, dict) else str(b)
+            for b in board_members[:10]
+        )
+
+        # Build funder leadership summary
+        funder_people = []
+        web_data = ein_intelligence.get("web_data") or {}
+        if isinstance(web_data, dict):
+            funder_people += [
+                ldr.get("name", "") for ldr in (web_data.get("leadership") or [])
+                if isinstance(ldr, dict) and ldr.get("name")
+            ]
+            gfi = web_data.get("grant_funder_intelligence") or {}
+            if isinstance(gfi, dict):
+                funder_people += [
+                    ldr.get("name", "") for ldr in (gfi.get("leadership") or [])
+                    if isinstance(ldr, dict) and ldr.get("name")
+                ]
+        funder_leadership_summary = ", ".join(funder_people[:10]) or "Unknown"
+
+        if not paths_dicts:
+            narration = (
+                f"No direct or indirect connection paths were found between {seeker_org_name} "
+                f"and {funder_name} in the current network graph. Consider expanding your board's "
+                f"civic and philanthropic engagements, or run Search Website / Search 990s to "
+                f"gather more leadership data."
+            )
+            cultivation_steps = [
+                f"Research {funder_name}'s board members on LinkedIn for any indirect connections.",
+                "Ask your board to review the funder's leadership list for personal acquaintances.",
+                "Attend funder-organized events or webinars to build organic connections.",
+            ]
+        else:
+            paths_text = "\n".join(
+                f"  Path {i+1} ({p['degree']}° — {p['connection_basis']}): "
+                + " → ".join(
+                    f"{n['name']} ({n['org_name']})" for n in p["path_nodes"]
+                )
+                for i, p in enumerate(paths_dicts[:5])
+            )
+
+            prompt = f"""You are analyzing board network connections between {seeker_org_name} and {funder_name}.
+
+Seeker board: {seeker_board_summary or 'Not available'}
+Funder leadership: {funder_leadership_summary}
+
+Network paths found (BFS, up to 3 degrees):
+{paths_text}
+
+For each path:
+1. Identify who the key intermediary is and why this connection is warm vs cold
+2. Suggest a specific, actionable outreach approach
+
+Then list exactly 3 prioritized cultivation actions as a JSON array of strings.
+Format your response as:
+NARRATION: [your narrative analysis]
+CULTIVATION_STEPS_JSON: ["step 1", "step 2", "step 3"]"""
+
+            client = openai.AsyncOpenAI()
+            response = await client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=1200,
+                temperature=0.3,
+            )
+            raw = response.choices[0].message.content or ""
+
+            # Parse narration + steps
+            if "NARRATION:" in raw and "CULTIVATION_STEPS_JSON:" in raw:
+                parts = raw.split("CULTIVATION_STEPS_JSON:")
+                narration = parts[0].replace("NARRATION:", "").strip()
+                steps_raw = parts[1].strip()
+                # Extract JSON array
+                import re as _re
+                match = _re.search(r'\[.*?\]', steps_raw, _re.DOTALL)
+                if match:
+                    try:
+                        cultivation_steps = _json.loads(match.group())
+                    except Exception:
+                        cultivation_steps = [steps_raw[:200]]
+                else:
+                    cultivation_steps = []
+            else:
+                narration = raw
+                cultivation_steps = []
+
+    except Exception as e:
+        logger.warning(f"[Networking] Sonnet narration failed: {e}")
+        narration = (
+            f"Found {len(paths_dicts)} connection path(s) between {seeker_org_name} "
+            f"and {funder_name}. Review the paths above for warm introduction opportunities."
+        )
+        cultivation_steps = []
+
+    # ── Persist to analysis_discovery + network_paths_cache ──────────
+    result_payload = {
+        "success": True,
+        "paths": paths_dicts,
+        "narration": narration,
+        "cultivation_steps": cultivation_steps,
+        "paths_found": len(paths_dicts),
+        "graph_snapshot_size": snap_size,
+        "user_price": 4.00,
+        "ai_cost": 0.03,
+    }
+
+    try:
+        import hashlib as _h
+        cache_id = _h.sha256(f"{profile_id}|{funder_ein}".encode()).hexdigest()[:16]
+        now_iso = datetime.now().isoformat()
+
+        w_conn = _sqlite3.connect(db_path)
+        w_cur = w_conn.cursor()
+
+        # Update analysis_discovery
+        ad["networking_result"] = result_payload
+        ad["networking_ran_at"] = now_iso
+        w_cur.execute(
+            "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+            (_json.dumps(ad), now_iso, opp_id),
+        )
+
+        # Upsert network_paths_cache
+        w_cur.execute(
+            """
+            INSERT INTO network_paths_cache
+                (id, profile_id, funder_ein, funder_name, paths_json, narration,
+                 cultivation_steps, graph_snapshot_size, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(profile_id, funder_ein) DO UPDATE SET
+                paths_json = excluded.paths_json,
+                narration = excluded.narration,
+                cultivation_steps = excluded.cultivation_steps,
+                graph_snapshot_size = excluded.graph_snapshot_size,
+                updated_at = excluded.updated_at
+            """,
+            (
+                cache_id, profile_id, funder_ein, funder_name,
+                _json.dumps(paths_dicts), narration,
+                _json.dumps(cultivation_steps), snap_size,
+                now_iso, now_iso,
+            ),
+        )
+        w_conn.commit()
+        w_conn.close()
+        logger.info(f"[Networking] Persisted networking result for opportunity {opp_id}")
+    except Exception as e:
+        logger.warning(f"[Networking] Failed to persist: {e}")
+
+    return result_payload
+
+
 # Background task processor
 async def process_advanced_tier(
     task_id: str, 
