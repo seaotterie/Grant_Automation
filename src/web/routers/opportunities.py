@@ -2259,7 +2259,8 @@ async def run_opportunity_networking(opportunity_id: str):
         result = await _run_networking_analysis(opportunity_id)
         return result
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        logger.warning(f"[RunNetworking] Not found for {opportunity_id}: {e}")
+        raise HTTPException(status_code=404, detail="Resource not found")
     except Exception as e:
         logger.error(f"[RunNetworking] Failed for {opportunity_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")

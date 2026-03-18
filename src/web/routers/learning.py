@@ -75,7 +75,8 @@ async def record_outcome(opportunity_id: str, request: RecordOutcomeRequest):
         )
         return {"status": "ok", "outcome": asdict(outcome)}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning(f"Outcome recording validation error: {e}")
+        raise HTTPException(status_code=400, detail="Invalid outcome data")
     except Exception as e:
         logger.error(f"Failed to record outcome: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")

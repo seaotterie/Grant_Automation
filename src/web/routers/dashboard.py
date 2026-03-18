@@ -173,3 +173,14 @@ async def system_processors() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Failed to get processor information: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/health")
+async def health_check():
+    """Simple health check endpoint."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "service": "Catalynx API",
+        "version": "2.0.0"
+    }
