@@ -275,11 +275,36 @@ A request to `/static/../../../.env` could read sensitive files. Fix: Use the al
 
 `opportunities.py:1498` — `POST /{opportunity_id}/analyze-990-pdf` accepts an arbitrary URL, downloads a PDF, and parses it. No URL validation, no file size limits, no content-type checking. Could be used for internal network scanning.
 
-### 4.7 High: SQL Injection Risk in BMF Queries
+### 4.7 High: SQL Injection via String Interpolation
 
-`profiles_v2.py:93-150` — NTEE code queries use regex validation but construct queries with string patterns rather than fully parameterized queries. Edge cases could bypass validation.
+**File**: `src/analytics/soi_financial_analytics.py:125`
+The `tax_year` parameter is interpolated directly into SQL via f-string:
+```python
+year_filter = f"AND tax_year = {tax_year}" if tax_year else ""
+```
+While `ein` is parameterized, `tax_year` is injected raw. If it comes from API input, arbitrary SQL can be injected.
 
-### 4.8 Medium: Error Messages Leak Internal Details
+Additional SQL risk in `profiles_v2.py:93-150` — NTEE code queries use regex validation but construct queries with string patterns rather than fully parameterized queries.
+
+### 4.8 High: Path Traversal in Workflow Name Resolution
+
+**File**: `src/web/routers/workflows.py:95`
+```python
+workflow_file = Path("src/workflows/definitions") / f"{workflow_name}.yaml"
+```
+User-supplied `workflow_name` is used directly in path construction. The `.yaml` suffix limits exploitability but defense in depth requires validation at point of use (e.g., `^[a-zA-Z0-9_-]+$`).
+
+### 4.9 Medium: XSS Middleware Skips All `/api/` Paths
+
+**File**: `src/middleware/security.py:152`
+The `XSSProtectionMiddleware` skips all paths starting with `/api/` — the primary attack surface. API responses with user-provided data get no XSS sanitization from this middleware.
+
+### 4.10 Medium: Rate Limiter Skips Localhost + X-Forwarded-For Spoofable
+
+**File**: `src/middleware/security.py:397-399`
+Rate limiting skipped entirely for `127.0.0.1`, `localhost`, `::1`. If deployed behind a reverse proxy that sets client IP to localhost, all rate limiting is bypassed. Both `jwt_auth.py:327` and `security.py:358` trust `X-Forwarded-For` without verification.
+
+### 4.11 Medium: Error Messages Leak Internal Details
 
 Throughout `main.py`, exception handlers pass `str(e)` directly to HTTP responses:
 ```python
@@ -296,11 +321,20 @@ Global 60 req/min limit with no per-user/per-IP differentiation, no burst allowa
 - `POST /api/testing/export-results` (main.py:1615)
 - These should not exist in production code.
 
-### 4.11 Medium: Monolithic Frontend (`app.js` — 19,622 lines)
+### 4.14 Medium: No CSRF Protection
+
+CORS allows credentials (`allow_credentials=True`) but no CSRF token mechanism exists. If cookie-based auth is ever added, CSRF attacks become possible.
+
+### 4.15 Medium: In-Memory User Store
+
+**File**: `src/auth/jwt_auth.py:66`
+Users stored in an in-memory dictionary. Password changes, account lockouts lost on restart. Rate limiter also in-memory — no distributed rate limiting possible.
+
+### 4.16 Medium: Monolithic Frontend (`app.js` — 19,622 lines)
 
 Single JavaScript file at ~900KB. CDN dependencies (Tailwind, D3.js) create external failure points. `innerHTML` usage with user data (line 9946) is an XSS risk. Modular `js/modules/` directory exists but `app.js` remains monolithic.
 
-### 4.12 Low: Duplicate Router Prefixes
+### 4.17 Low: Duplicate Router Prefixes
 
 Two routers share `/api/v2/profiles` prefix:
 - `profiles_v2.py` (line 36)
@@ -540,13 +574,28 @@ The `CLAUDE.md` file is **extremely long** and contains contradictory informatio
 
 ### Metrics After Full Plan Execution
 
+### Security Findings Summary
+
+| Severity | Count | Key Themes |
+|----------|-------|------------|
+| Critical | 3 | Secrets in git, auth disabled on 164 endpoints, path traversal in static files |
+| High | 5 | SQL injection, workflow path traversal, SSRF, exception leakage (212 occurrences), CORS |
+| Medium | 8 | XSS middleware bypass, rate limiter gaps, CSP weak, no CSRF, in-memory auth, monolithic frontend |
+| Low | 4 | SQLite durability, test endpoint, password policy, no requirements.txt |
+
+### Metrics After Full Plan Execution
+
 | Metric | Current | Target |
 |--------|---------|--------|
 | `main.py` lines | 10,703 | ~300 |
-| Dead code lines | ~6,310 | 0 |
-| Total codebase lines | ~226,800 | ~196,000 |
+| `app.js` lines | 19,622 | Modular (<500 per file) |
+| Dead/legacy code | ~1.3 MB | <100 KB |
+| Total codebase lines | ~226,800 | ~180,000 |
 | Production deps file | Missing | `pyproject.toml` |
 | CI/CD pipeline | None | GitHub Actions |
 | Test coverage (tools/) | Unmeasured | 60%+ |
-| Security findings (Critical) | 2 | 0 |
+| Security findings (Critical) | 3 | 0 |
+| Security findings (High) | 5 | 0 |
 | Router files with duplicates | 3 sets | 1 each |
+| Tool placeholder TODOs | 7 | 0 |
+| Deprecated endpoints past sunset | 20+ | 0 |
