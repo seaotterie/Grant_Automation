@@ -96,8 +96,8 @@ async def ai_lite_validate(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"AI-Lite validation failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"AI-Lite validation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/lite-2/strategic-score")
@@ -169,8 +169,8 @@ async def ai_lite_strategic_score(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"AI-Lite strategic scoring failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"AI-Lite strategic scoring failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # AI-Heavy Processing Endpoints
@@ -245,8 +245,8 @@ async def ai_heavy_research_bridge(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"AI-Heavy research bridge failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"AI-Heavy research bridge failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/heavy-2/comprehensive-research")
@@ -312,8 +312,8 @@ async def ai_heavy_comprehensive_research(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"AI-Heavy comprehensive research failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"AI-Heavy comprehensive research failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # AI Orchestrated Pipeline
@@ -458,8 +458,8 @@ async def ai_orchestrated_pipeline(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"AI orchestrated pipeline failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"AI orchestrated pipeline failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # AI Service Management
@@ -476,8 +476,8 @@ async def get_ai_service_status() -> Dict[str, Any]:
         }
         
     except Exception as e:
-        logger.error(f"Failed to get AI service status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get AI service status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/usage-metrics")
@@ -514,8 +514,8 @@ async def get_ai_usage_metrics() -> Dict[str, Any]:
         }
         
     except Exception as e:
-        logger.error(f"Failed to get AI usage metrics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get AI usage metrics: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/budget-config")
@@ -541,5 +541,5 @@ async def update_ai_budget_config(
         }
         
     except Exception as e:
-        logger.error(f"Failed to update AI budget configuration: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to update AI budget configuration: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")

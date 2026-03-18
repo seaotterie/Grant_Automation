@@ -127,8 +127,8 @@ async def system_metrics() -> Dict[str, Any]:
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
-        logger.error(f"Failed to get system metrics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get system metrics: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/system/processors")
@@ -171,5 +171,5 @@ async def system_processors() -> Dict[str, Any]:
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
-        logger.error(f"Failed to get processor information: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get processor information: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")

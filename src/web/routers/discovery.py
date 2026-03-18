@@ -73,8 +73,8 @@ async def get_discovery_tracks() -> Dict[str, Any]:
         }
         
     except Exception as e:
-        logger.error(f"Failed to get discovery tracks: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get discovery tracks: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Entity Cache Operations
@@ -89,8 +89,8 @@ async def get_entity_cache_stats() -> Dict[str, Any]:
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
-        logger.error(f"Failed to get entity cache stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get entity cache stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/entities/{entity_id}/data")
@@ -109,8 +109,8 @@ async def get_entity_data(entity_id: str) -> Dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get entity data for {entity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get entity data for {entity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/entities/{entity_id}/data")
@@ -127,8 +127,8 @@ async def update_entity_data(
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
-        logger.error(f"Failed to update entity data for {entity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to update entity data for {entity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # BMF (Business Master File) Discovery
@@ -154,8 +154,8 @@ async def search_bmf(search_params: Dict[str, Any]) -> Dict[str, Any]:
         }
         
     except Exception as e:
-        logger.error(f"Failed BMF search: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed BMF search: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Discovery Execution
@@ -200,8 +200,8 @@ async def execute_discovery(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to execute discovery: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to execute discovery: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Search and Filter Operations
@@ -256,8 +256,8 @@ async def search_opportunities(
         }
         
     except Exception as e:
-        logger.error(f"Failed to search opportunities: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to search opportunities: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/filters")
@@ -293,8 +293,8 @@ async def get_discovery_filters() -> Dict[str, Any]:
         }
         
     except Exception as e:
-        logger.error(f"Failed to get discovery filters: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get discovery filters: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Processor Information
@@ -320,8 +320,8 @@ async def get_discovery_processors() -> Dict[str, Any]:
         }
         
     except Exception as e:
-        logger.error(f"Failed to get discovery processors: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get discovery processors: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/processors/summary")
@@ -335,8 +335,8 @@ async def get_processors_summary() -> Dict[str, Any]:
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
-        logger.error(f"Failed to get processor summary: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get processor summary: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Discovery Sessions and History
@@ -367,8 +367,8 @@ async def get_discovery_sessions(
         }
         
     except Exception as e:
-        logger.error(f"Failed to get discovery sessions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get discovery sessions: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/sessions/{session_id}")
@@ -396,5 +396,5 @@ async def get_discovery_session(session_id: str) -> Dict[str, Any]:
         }
         
     except Exception as e:
-        logger.error(f"Failed to get discovery session {session_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get discovery session {session_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")

@@ -28,8 +28,18 @@ from datetime import datetime, UTC
 from typing import List, Dict, Optional, Any
 import uvicorn
 
-# Add src to path for imports
-sys.path.append(str(Path(__file__).parent.parent.parent))
+# When installed via ``pip install -e .`` (pyproject.toml), setuptools makes
+# ``src.*`` and ``tools.*`` importable automatically.  The fallback below only
+# activates for *uninstalled* development runs (``python src/web/main.py``).
+try:
+    from importlib.util import find_spec as _find_spec
+    if _find_spec("src") is None:
+        _project_root = str(Path(__file__).resolve().parent.parent.parent)
+        if _project_root not in sys.path:
+            sys.path.insert(0, _project_root)
+    del _find_spec
+except Exception:
+    pass
 
 from src.core.workflow_engine import get_workflow_engine
 from src.core.data_models import WorkflowConfig
@@ -484,69 +494,6 @@ if enhanced_scraping_available and enhanced_scraping_router:
     print("Enhanced scraping router enabled")
 else:
     print("Enhanced scraping router disabled (scrapy not available)")
-
-# TEST ENDPOINT TO VERIFY SERVER IS UPDATED
-@app.get("/api/test-fix")
-async def test_fix():
-    """Simple test endpoint to verify the server is running updated code"""
-    import os
-    return {
-        "message": "SERVER IS RUNNING UPDATED CODE",
-        "timestamp": datetime.now().isoformat(),
-        "working_directory": os.getcwd(),
-        "database_exists": os.path.exists("data/catalynx.db")
-    }
-
-# NEW WORKING PROFILES ENDPOINT WITH DIFFERENT NAME
-@app.get("/api/profiles-new")
-async def get_profiles_working():
-    """WORKING profiles endpoint with guaranteed database access"""
-    import os
-    import sys
-    
-    try:
-        # Force reload of database module
-        sys.path.insert(0, os.path.join(os.getcwd(), 'src'))
-        from database.query_interface import DatabaseQueryInterface, QueryFilter
-        
-        db_path = os.path.join(os.getcwd(), "data", "catalynx.db")
-        
-        if not os.path.exists(db_path):
-            return {
-                "profiles": [],
-                "error": f"Database not found at {db_path}",
-                "working_directory": os.getcwd(),
-                "success": False
-            }
-        
-        db_interface = DatabaseQueryInterface(db_path)
-        profiles, total_count = db_interface.filter_profiles(QueryFilter())
-        
-        # Format profiles for frontend
-        for profile in profiles:
-            opportunities, _ = db_interface.filter_opportunities(
-                QueryFilter(profile_ids=[profile["id"]])
-            )
-            profile["opportunities_count"] = len(opportunities)
-            profile["profile_id"] = profile["id"]  # Frontend compatibility
-        
-        return {
-            "profiles": profiles,
-            "success": True,
-            "total_found": len(profiles),
-            "database_path": db_path,
-            "working_directory": os.getcwd()
-        }
-        
-    except Exception as e:
-        import traceback
-        return {
-            "profiles": [],
-            "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc(),
-            "working_directory": os.getcwd()
-        }
 
 # DIRECT PROFILES ENDPOINT - Bypasses complex router imports
 @app.get("/api/profiles")
@@ -1129,8 +1076,8 @@ async def start_classification(request: ClassificationRequest) -> WorkflowRespon
         )
         
     except Exception as e:
-        logger.error(f"Failed to start classification: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to start classification: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/classification/{workflow_id}/results")
 async def get_classification_results(workflow_id: str, limit: Optional[int] = 100):
@@ -1139,8 +1086,8 @@ async def get_classification_results(workflow_id: str, limit: Optional[int] = 10
         results = await workflow_service.get_classification_results(workflow_id, limit)
         return results
     except Exception as e:
-        logger.error(f"Failed to get classification results: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get classification results: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # Workflow API endpoints
 @app.post("/api/workflows/start")
@@ -1177,8 +1124,8 @@ async def start_workflow(request: WorkflowRequest) -> WorkflowResponse:
         )
         
     except Exception as e:
-        logger.error(f"Failed to start workflow: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to start workflow: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/workflows")
 async def list_workflows():
@@ -1199,8 +1146,8 @@ async def get_workflow_status(workflow_id: str):
         status = await workflow_service.get_workflow_status(workflow_id)
         return status
     except Exception as e:
-        logger.error(f"Failed to get workflow status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get workflow status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # Phase 1 Enhancement: Research API Endpoints
 
@@ -1230,8 +1177,8 @@ async def get_research_capabilities():
             "status": "Phase 1 Complete - Research capabilities fully activated"
         }
     except Exception as e:
-        logger.error(f"Failed to get research capabilities: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get research capabilities: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/research/ai-lite/analyze")
 async def ai_lite_research_analysis(
@@ -1316,8 +1263,8 @@ async def ai_lite_research_analysis(
         return response_data
         
     except Exception as e:
-        logger.error(f"AI-Lite research analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"AI-Lite research analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/research/status/{profile_id}")
 async def get_research_status(profile_id: str):
@@ -1343,8 +1290,8 @@ async def get_research_status(profile_id: str):
             ]
         }
     except Exception as e:
-        logger.error(f"Failed to get research status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get research status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # Phase 1.5 Enhancement: Specialized Deep Research and Dossier Builder Endpoints
 
@@ -1385,8 +1332,8 @@ async def get_split_research_capabilities():
             "status": "Phase 1.5 Complete - AI-Heavy split architecture active"
         }
     except Exception as e:
-        logger.error(f"Failed to get split research capabilities: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get split research capabilities: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/research/integration-status/{opportunity_id}")
 async def get_integration_status_endpoint(opportunity_id: str):
@@ -1421,8 +1368,8 @@ async def get_integration_status_endpoint(opportunity_id: str):
         }
         
     except Exception as e:
-        logger.error(f"Failed to get integration status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get integration status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # WebSocket endpoint for real-time progress
 @app.websocket("/api/live/progress/{workflow_id}")
@@ -1612,71 +1559,6 @@ async def websocket_unified_discovery(websocket: WebSocket, session_id: str):
     finally:
         logger.info(f"Discovery WebSocket cleanup for session: {session_id}")
 
-@app.post("/api/testing/export-results")
-async def export_test_results(request: Dict[str, Any]):
-    """Export test results in various formats."""
-    try:
-        results_data = request.get("results", [])
-        export_format = request.get("format", "json")
-        filename = request.get("filename", f"test_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
-        
-        if not results_data:
-            raise HTTPException(status_code=400, detail="No results data provided")
-        
-        # Create temporary file for export
-        import tempfile
-        import csv
-        from pathlib import Path
-        
-        temp_dir = Path(tempfile.gettempdir()) / "catalynx_exports"
-        temp_dir.mkdir(exist_ok=True)
-        
-        if export_format.lower() == "csv":
-            file_path = temp_dir / f"{filename}.csv"
-            
-            # Write CSV file
-            with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
-                if results_data and isinstance(results_data[0], dict):
-                    fieldnames = results_data[0].keys()
-                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                    writer.writeheader()
-                    writer.writerows(results_data)
-                else:
-                    writer = csv.writer(csvfile)
-                    for row in results_data:
-                        writer.writerow([row] if not isinstance(row, (list, tuple)) else row)
-            
-            return FileResponse(
-                path=file_path,
-                filename=f"{filename}.csv",
-                media_type="text/csv"
-            )
-            
-        elif export_format.lower() == "json":
-            file_path = temp_dir / f"{filename}.json"
-            
-            with open(file_path, 'w', encoding='utf-8') as jsonfile:
-                json.dump({
-                    "export_timestamp": datetime.now().isoformat(),
-                    "total_records": len(results_data),
-                    "results": results_data
-                }, jsonfile, indent=2)
-            
-            return FileResponse(
-                path=file_path,
-                filename=f"{filename}.json",
-                media_type="application/json"
-            )
-        
-        else:
-            raise HTTPException(status_code=400, detail="Unsupported export format. Use 'csv' or 'json'")
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to export test results: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
 # Export endpoints
 @app.get("/api/exports/classification/{workflow_id}")
 async def export_classification(workflow_id: str, format: str = "csv"):
@@ -1689,8 +1571,8 @@ async def export_classification(workflow_id: str, format: str = "csv"):
             media_type="application/octet-stream"
         )
     except Exception as e:
-        logger.error(f"Failed to export classification: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to export classification: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/exports/workflow/{workflow_id}")
 async def export_workflow(workflow_id: str, format: str = "csv"):
@@ -1703,8 +1585,8 @@ async def export_workflow(workflow_id: str, format: str = "csv"):
             media_type="application/octet-stream"
         )
     except Exception as e:
-        logger.error(f"Failed to export workflow: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to export workflow: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # Helper methods for enhanced web scraping
 
@@ -2566,7 +2448,7 @@ async def create_profile(
 
     except Exception as e:
         logger.error(f"Failed to create profile: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/profiles/{profile_id}")
 async def get_profile(
@@ -2619,8 +2501,8 @@ async def get_profile(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.put("/api/profiles/{profile_id}")
 async def update_profile(profile_id: str, update_data: Dict[str, Any]):
@@ -2670,8 +2552,8 @@ async def update_profile(profile_id: str, update_data: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to update profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.delete("/api/profiles/{profile_id}")
 async def delete_profile(
@@ -2733,8 +2615,8 @@ async def simple_delete_profile(profile_id: str):
             raise HTTPException(status_code=404, detail="Profile not found")
             
     except Exception as e:
-        logger.error(f"Failed to delete profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to delete profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/profiles/templates")
 async def create_profile_template(template_request: Dict[str, Any]):
@@ -2752,8 +2634,8 @@ async def create_profile_template(template_request: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to create template: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to create template: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/profiles/{profile_id}/analytics")
 async def get_profile_analytics(profile_id: str):
@@ -2768,8 +2650,8 @@ async def get_profile_analytics(profile_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get profile analytics {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get profile analytics {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # REMOVED: /api/profiles/{ein}/json-intelligence endpoint
 # This endpoint was causing poor quality DataValidationPipeline data to override VerificationEnhancedScraper results
@@ -2989,8 +2871,8 @@ async def get_profile_metrics(profile_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get metrics for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get metrics for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/profiles/metrics/summary")
 async def get_all_profiles_metrics_summary():
@@ -3005,8 +2887,8 @@ async def get_all_profiles_metrics_summary():
         }
         
     except Exception as e:
-        logger.error(f"Failed to get profiles metrics summary: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get profiles metrics summary: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/profiles/{profile_id}/metrics/funnel")
 async def update_funnel_metrics(profile_id: str, request: Dict[str, Any]):
@@ -3025,8 +2907,8 @@ async def update_funnel_metrics(profile_id: str, request: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update funnel metrics for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to update funnel metrics for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/profiles/{profile_id}/metrics/session")
 async def start_metrics_session(profile_id: str):
@@ -3041,8 +2923,8 @@ async def start_metrics_session(profile_id: str):
         }
         
     except Exception as e:
-        logger.error(f"Failed to start metrics session for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to start metrics session for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/profiles/{profile_id}/plan-results")
 async def get_profile_plan_results(profile_id: str):
@@ -3081,8 +2963,8 @@ async def get_profile_plan_results(profile_id: str):
         }
         
     except Exception as e:
-        logger.error(f"Failed to get plan results for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get plan results for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/profiles/{profile_id}/plan-results")
 async def save_profile_plan_results(profile_id: str, plan_data: Dict[str, Any]):
@@ -3125,8 +3007,8 @@ async def save_profile_plan_results(profile_id: str, plan_data: Dict[str, Any]):
         }
         
     except Exception as e:
-        logger.error(f"Failed to save plan results for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to save plan results for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/profiles/{profile_id}/opportunity-scores")
 async def save_opportunity_scores(profile_id: str, scores_data: Dict[str, Any]):
@@ -3178,8 +3060,8 @@ async def save_opportunity_scores(profile_id: str, scores_data: Dict[str, Any]):
         }
         
     except Exception as e:
-        logger.error(f"Failed to save opportunity score for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to save opportunity score for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/profiles/{profile_id}/opportunities/{opportunity_id}/scoring-rationale")
 async def get_scoring_rationale(profile_id: str, opportunity_id: str):
@@ -3214,8 +3096,8 @@ async def get_scoring_rationale(profile_id: str, opportunity_id: str):
         }
         
     except Exception as e:
-        logger.error(f"Failed to generate scoring rationale for {opportunity_id} in profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to generate scoring rationale for {opportunity_id} in profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 async def _generate_scoring_rationale(profile, opportunity):
     """Generate comprehensive scoring rationale with pros/cons analysis."""
@@ -3577,8 +3459,8 @@ async def get_profile_leads(profile_id: str, stage: Optional[str] = None, min_sc
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get leads for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get leads for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 def _convert_lead_to_opportunity(lead):
     """Convert a lead object to opportunity dictionary format"""
@@ -3870,8 +3752,8 @@ async def discover_with_entity_analytics(profile_id: str, discovery_params: Dict
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to start entity analytics discovery: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to start entity analytics discovery: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/profiles/{profile_id}/discover/entity-preview")
 async def get_entity_discovery_preview(profile_id: str, entity_types: str = "nonprofits,government"):
@@ -3919,8 +3801,8 @@ async def get_entity_discovery_preview(profile_id: str, entity_types: str = "non
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get entity discovery preview: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get entity discovery preview: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/discovery/entity-cache-stats")
 async def get_entity_cache_stats():
@@ -3952,8 +3834,8 @@ async def get_entity_cache_stats():
         }
         
     except Exception as e:
-        logger.error(f"Failed to get entity cache stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get entity cache stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/api/profiles/{profile_id}/discover")
@@ -4077,8 +3959,8 @@ async def discover_opportunities(profile_id: str, discovery_params: Dict[str, An
         }
         
     except Exception as e:
-        logger.error(f"Failed to discover opportunities for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to discover opportunities for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/profiles/{profile_id}/discovery/sessions")
 async def get_discovery_sessions(profile_id: str, limit: Optional[int] = 10):
@@ -4135,8 +4017,8 @@ async def get_discovery_sessions(profile_id: str, limit: Optional[int] = 10):
         }
         
     except Exception as e:
-        logger.error(f"Failed to get discovery sessions for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get discovery sessions for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/profiles/{profile_id}/analytics/real-time")
 async def get_real_time_analytics(profile_id: str):
@@ -4206,8 +4088,8 @@ async def get_real_time_analytics(profile_id: str):
         }
         
     except Exception as e:
-        logger.error(f"Failed to get real-time analytics for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get real-time analytics for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # === DISCOVERY DASHBOARD ENDPOINTS ===
 
@@ -4302,8 +4184,8 @@ async def get_recent_discovery_sessions(limit: Optional[int] = 20):
         return all_sessions
         
     except Exception as e:
-        logger.error(f"Failed to get recent discovery sessions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get recent discovery sessions: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/discovery/stats/global")
 async def get_global_discovery_stats():
@@ -4350,8 +4232,8 @@ async def get_global_discovery_stats():
         }
         
     except Exception as e:
-        logger.error(f"Failed to get global discovery stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get global discovery stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # Broadcast discovery events to WebSocket clients
 async def broadcast_discovery_event(event_type: str, data: dict):
@@ -4418,8 +4300,8 @@ async def search_opportunities(
         }
         
     except Exception as e:
-        logger.error(f"Failed to search opportunities: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to search opportunities: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/search/fields")
 async def get_searchable_fields():
@@ -4535,8 +4417,8 @@ async def export_opportunities(
         )
         
     except Exception as e:
-        logger.error(f"Failed to export opportunities: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to export opportunities: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/search/stats")
 async def get_search_stats():
@@ -4585,8 +4467,8 @@ async def get_search_stats():
         }
         
     except Exception as e:
-        logger.error(f"Failed to get search stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get search stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # === END ADVANCED SEARCH & EXPORT ENDPOINTS ===
 
@@ -4809,7 +4691,8 @@ async def discover_opportunities_unified(profile_id: str, discovery_params: Dict
         logger.error(f"Unified discovery failed for profile {profile_id}: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Unified discovery failed: {str(e)}")
+        logger.error(f"Unified discovery failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/profiles/{profile_id}/run-bmf-filter")
 async def run_bmf_filter_for_profile(profile_id: str):
@@ -4927,13 +4810,14 @@ async def run_bmf_filter_for_profile(profile_id: str):
             raise HTTPException(status_code=408, detail="BMF filter processing timed out")
         except Exception as bmf_error:
             logger.error(f"BMF processor failed: {bmf_error}")
-            raise HTTPException(status_code=500, detail=f"BMF filter execution failed: {str(bmf_error)}")
+            raise HTTPException(status_code=500, detail="Internal server error")
             
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"BMF filter endpoint failed: {e}")
-        raise HTTPException(status_code=500, detail=f"BMF filter failed: {str(e)}")
+        logger.error(f"BMF filter failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/profiles/{profile_id}/discover/bmf")
 async def discover_bmf_opportunities(profile_id: str, bmf_data: Dict[str, Any]):
@@ -5227,13 +5111,13 @@ async def discover_bmf_opportunities(profile_id: str, bmf_data: Dict[str, Any]):
         # Handle specific BMF processor errors with more informative messages
         logger.error(f"BMF discovery validation error for profile {profile_id}: {ve}")
         if "timeout" in str(ve).lower():
-            raise HTTPException(status_code=408, detail=f"BMF discovery timed out: {str(ve)}")
+            raise HTTPException(status_code=408, detail="BMF discovery timed out")
         elif "permission denied" in str(ve).lower():
-            raise HTTPException(status_code=403, detail=f"BMF file access denied: {str(ve)}")
+            raise HTTPException(status_code=403, detail="BMF file access denied")
         elif "invalid argument" in str(ve).lower():
-            raise HTTPException(status_code=422, detail=f"BMF file format error: {str(ve)}")
+            raise HTTPException(status_code=422, detail="BMF file format error")
         else:
-            raise HTTPException(status_code=422, detail=f"BMF discovery validation failed: {str(ve)}")
+            raise HTTPException(status_code=422, detail="BMF discovery validation failed")
     except asyncio.TimeoutError:
         logger.error(f"BMF discovery timed out for profile {profile_id}")
         raise HTTPException(status_code=408, detail="BMF discovery operation timed out")
@@ -5290,8 +5174,8 @@ async def execute_full_pipeline(profile_id: str, pipeline_params: Dict[str, Any]
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        logger.error(f"Failed to execute pipeline for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to execute pipeline for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/pipeline/status")
 async def get_pipeline_status():
@@ -5308,8 +5192,8 @@ async def get_pipeline_status():
         }
         
     except Exception as e:
-        logger.error(f"Failed to get pipeline status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get pipeline status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # Commercial Track API endpoints
 @app.post("/api/commercial/discover")
@@ -5359,8 +5243,8 @@ async def discover_commercial_opportunities(request: Dict[str, Any]):
         }
         
     except Exception as e:
-        logger.error(f"Commercial discovery failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Commercial discovery failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/commercial/industries")
 async def get_available_industries():
@@ -5411,8 +5295,8 @@ async def discover_state_opportunities(request: Dict[str, Any]):
         }
         
     except Exception as e:
-        logger.error(f"State discovery failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"State discovery failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # Analytics API endpoints
 @app.get("/api/analytics/overview")
@@ -5451,8 +5335,8 @@ async def get_analytics_overview():
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
-        logger.error(f"Failed to get analytics overview: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get analytics overview: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/analytics/trends")
 async def get_trend_analysis():
@@ -5480,8 +5364,8 @@ async def get_trend_analysis():
             }
         }
     except Exception as e:
-        logger.error(f"Failed to get trend analysis: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get trend analysis: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # Processor Management API endpoints
 @app.get("/api/processors")
@@ -5496,8 +5380,8 @@ async def list_processors():
             "by_type": summary["by_type"]
         }
     except Exception as e:
-        logger.error(f"Failed to get processors: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get processors: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/processors/{processor_name}/status")
 async def get_processor_status(processor_name: str):
@@ -5511,8 +5395,8 @@ async def get_processor_status(processor_name: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get processor status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get processor status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/processors/{processor_name}/execute")
 async def execute_processor(processor_name: str, request: Dict[str, Any]):
@@ -5555,8 +5439,8 @@ async def execute_processor(processor_name: str, request: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to execute processor {processor_name}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to execute processor {processor_name}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/processors/architecture/overview")
 async def get_processor_architecture_overview():
@@ -5572,8 +5456,8 @@ async def get_processor_architecture_overview():
         }
         
     except Exception as e:
-        logger.error(f"Failed to get architecture overview: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get architecture overview: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/processors/migration/status")
 async def get_migration_status():
@@ -5604,8 +5488,8 @@ async def get_migration_status():
         }
         
     except Exception as e:
-        logger.error(f"Failed to get migration status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get migration status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # DISCOMBOBULATOR Track Endpoints
 @app.post("/api/discovery/nonprofit")
@@ -6036,8 +5920,8 @@ async def discover_federal_opportunities(request: Dict[str, Any]):
         }
         
     except Exception as e:
-        logger.error(f"Federal discovery failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Federal discovery failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/discovery/state")
 async def discover_state_opportunities(request: Dict[str, Any]):
@@ -6084,8 +5968,8 @@ async def discover_state_opportunities(request: Dict[str, Any]):
         }
         
     except Exception as e:
-        logger.error(f"State discovery failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"State discovery failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/discovery/commercial")
 async def discover_commercial_enhanced(request: Dict[str, Any]):
@@ -6155,8 +6039,8 @@ async def discover_commercial_enhanced(request: Dict[str, Any]):
         }
         
     except Exception as e:
-        logger.error(f"Commercial discovery failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Commercial discovery failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/discovery/bmf/{profile_id}")
 async def discover_bmf_filtered(profile_id: str, request: Dict[str, Any] = None):
@@ -6307,8 +6191,8 @@ async def discover_bmf_filtered(profile_id: str, request: Dict[str, Any] = None)
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"BMF discovery failed for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"BMF discovery failed for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # AMPLINATOR Track Endpoints
 @app.post("/api/analysis/export")
@@ -6344,8 +6228,8 @@ async def run_export_functions(request: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Export functions failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Export functions failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/analysis/reports")
 async def run_report_generation(request: Dict[str, Any]):
@@ -6380,8 +6264,8 @@ async def run_report_generation(request: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Report generation failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Report generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/intelligence/classify")
 async def run_intelligent_classification(request: Dict[str, Any]):
@@ -6431,8 +6315,8 @@ async def run_intelligent_classification(request: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Intelligent classification failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Intelligent classification failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # Multi-Track Pipeline Endpoint
 @app.post("/api/pipeline/full-summary")
@@ -6466,8 +6350,8 @@ async def run_full_pipeline_summary(request: Dict[str, Any]):
         }
         
     except Exception as e:
-        logger.error(f"Full pipeline summary failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Full pipeline summary failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # Health check endpoint
 @app.get("/api/health")
@@ -6479,199 +6363,6 @@ async def health_check():
         "service": "Catalynx API",
         "version": "2.0.0"
     }
-
-# Testing Interface API endpoints
-@app.get("/api/testing/processors/status")
-async def get_all_processor_status():
-    """Get detailed status for all processors with health indicators."""
-    try:
-        engine = get_workflow_engine()
-        processors = engine.registry.list_processors()
-        
-        processor_statuses = []
-        for processor_name in processors:
-            try:
-                # Get processor info
-                processor_instance = engine.registry.get_processor(processor_name)
-                info = engine.registry.get_processor_info(processor_name) or {}
-                
-                # Determine health status
-                health_status = "healthy" if processor_instance else "error"
-                health_details = "Processor ready" if processor_instance else "Processor not available"
-                
-                processor_status = {
-                    "name": processor_name,
-                    "health_status": health_status,
-                    "health_details": health_details,
-                    "type": info.get("type", "unknown"),
-                    "description": info.get("description", "No description available"),
-                    "last_check": datetime.now().isoformat(),
-                    "available": processor_instance is not None
-                }
-                
-                processor_statuses.append(processor_status)
-                
-            except Exception as e:
-                processor_statuses.append({
-                    "name": processor_name,
-                    "health_status": "error",
-                    "health_details": f"Status check failed: {str(e)[:100]}",
-                    "type": "unknown",
-                    "description": "Error retrieving processor information",
-                    "last_check": datetime.now().isoformat(),
-                    "available": False
-                })
-        
-        # Calculate overall system health
-        healthy_count = sum(1 for p in processor_statuses if p["health_status"] == "healthy")
-        total_count = len(processor_statuses)
-        overall_health = "healthy" if healthy_count == total_count else "degraded" if healthy_count > total_count * 0.5 else "critical"
-        
-        return {
-            "overall_health": overall_health,
-            "healthy_processors": healthy_count,
-            "total_processors": total_count,
-            "processors": processor_statuses,
-            "timestamp": datetime.now().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to get processor status: {e}")
-        return {
-            "overall_health": "error",
-            "healthy_processors": 0,
-            "total_processors": 0,
-            "processors": [],
-            "error": str(e),
-            "timestamp": datetime.now().isoformat()
-        }
-
-@app.post("/api/testing/processors/{processor_name}/test")
-async def test_processor(processor_name: str, request: Dict[str, Any]):
-    """Test execute a processor with sample data."""
-    try:
-        engine = get_workflow_engine()
-        processor = engine.registry.get_processor(processor_name)
-        
-        if not processor:
-            raise HTTPException(status_code=404, detail="Processor not found")
-        
-        # Use sample data or provided test data
-        test_data = request.get("test_data", [])
-        test_params = request.get("parameters", {})
-        
-        # Add test mode parameter
-        test_params["test_mode"] = True
-        test_params["max_results"] = min(test_params.get("max_results", 5), 10)  # Limit test results
-        
-        start_time = datetime.now()
-        
-        # Execute processor
-        try:
-            from src.core.data_models import WorkflowConfig, ProcessorConfig
-            workflow_config = WorkflowConfig(
-                workflow_id=f"test_{processor_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                max_results=test_params.get("max_results", 10)
-            )
-            processor_config = ProcessorConfig(
-                workflow_id=workflow_config.workflow_id,
-                processor_name=processor_name,
-                workflow_config=workflow_config,
-                input_data={"test_data": test_data},
-                processor_specific_config=test_params
-            )
-            
-            processor_result = await processor.execute(processor_config)
-            result = processor_result.data.get("results", processor_result.data)
-            
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Processor execution failed: {str(e)}")
-        
-        execution_time = (datetime.now() - start_time).total_seconds()
-        
-        return {
-            "status": "success",
-            "processor": processor_name,
-            "execution_time_seconds": execution_time,
-            "test_data_count": len(test_data) if isinstance(test_data, list) else 1,
-            "result_count": len(result) if isinstance(result, list) else 1,
-            "result": result,
-            "parameters_used": test_params,
-            "timestamp": datetime.now().isoformat()
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to test processor {processor_name}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/testing/processors/{processor_name}/logs")
-async def get_processor_logs(processor_name: str, lines: int = 100):
-    """Get recent log entries for a specific processor."""
-    try:
-        # For now, return mock logs - in production this would read actual log files
-        mock_logs = [
-            {
-                "timestamp": datetime.now().isoformat(),
-                "level": "INFO",
-                "message": f"Processor {processor_name} initialized successfully",
-                "source": processor_name
-            },
-            {
-                "timestamp": datetime.now().isoformat(),
-                "level": "DEBUG",
-                "message": f"Processing request for {processor_name}",
-                "source": processor_name
-            }
-        ]
-        
-        return {
-            "processor": processor_name,
-            "log_entries": mock_logs[-lines:],
-            "total_entries": len(mock_logs),
-            "timestamp": datetime.now().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to get logs for processor {processor_name}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/testing/system/logs")
-async def get_system_logs(lines: int = 200):
-    """Get recent system log entries."""
-    try:
-        # Mock system logs - in production would read actual log files
-        mock_system_logs = [
-            {
-                "timestamp": datetime.now().isoformat(),
-                "level": "INFO",
-                "message": "Catalynx system started successfully",
-                "source": "system"
-            },
-            {
-                "timestamp": datetime.now().isoformat(),
-                "level": "INFO",
-                "message": f"Registered {len(get_processor_summary()['processors_info'])} processors",
-                "source": "registry"
-            },
-            {
-                "timestamp": datetime.now().isoformat(),
-                "level": "DEBUG",
-                "message": "WebSocket connections established",
-                "source": "websocket"
-            }
-        ]
-        
-        return {
-            "log_entries": mock_system_logs[-lines:],
-            "total_entries": len(mock_system_logs),
-            "timestamp": datetime.now().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Failed to get system logs: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 # Welcome Stage API endpoints
 @app.get("/api/welcome/status")
@@ -6756,8 +6447,8 @@ async def create_sample_profile():
         }
         
     except Exception as e:
-        logger.error(f"Failed to create sample profile: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to create sample profile: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/welcome/quick-start")
 async def quick_start_demo():
@@ -6828,8 +6519,8 @@ async def quick_start_demo():
         }
         
     except Exception as e:
-        logger.error(f"Quick start demo failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Quick start demo failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # Funnel Stage API endpoints
 @app.get("/api/funnel/stages")
@@ -6968,7 +6659,8 @@ async def get_opportunities(profile_id: Optional[str] = None, scope: Optional[st
         
     except Exception as e:
         logger.error(f"Error getting opportunities: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Internal server error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/funnel/{profile_id}/opportunities")
 async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None):
@@ -7049,8 +6741,8 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
         }
         
     except Exception as e:
-        logger.error(f"Failed to get profile opportunities: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get profile opportunities: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.put("/api/funnel/{profile_id}/opportunities/{opportunity_id}/stage")
 async def update_opportunity_stage(
@@ -7092,8 +6784,8 @@ async def update_opportunity_stage(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update opportunity stage: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to update opportunity stage: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/funnel/{profile_id}/opportunities/{opportunity_id}/promote")
 async def promote_opportunity(profile_id: str, opportunity_id: str, notes_data: dict = None):
@@ -7118,8 +6810,8 @@ async def promote_opportunity(profile_id: str, opportunity_id: str, notes_data: 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to promote opportunity: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to promote opportunity: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/funnel/{profile_id}/opportunities/{opportunity_id}/demote")
 async def demote_opportunity(profile_id: str, opportunity_id: str, notes_data: dict = None):
@@ -7144,8 +6836,8 @@ async def demote_opportunity(profile_id: str, opportunity_id: str, notes_data: d
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to demote opportunity: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to demote opportunity: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/funnel/{profile_id}/metrics")
 async def get_funnel_metrics(profile_id: str):
@@ -7162,8 +6854,8 @@ async def get_funnel_metrics(profile_id: str):
         return metrics
         
     except Exception as e:
-        logger.error(f"Failed to get funnel metrics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get funnel metrics: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/funnel/{profile_id}/recommendations")
 async def get_stage_recommendations(profile_id: str):
@@ -7183,39 +6875,8 @@ async def get_stage_recommendations(profile_id: str):
         }
         
     except Exception as e:
-        logger.error(f"Failed to get stage recommendations: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Debug endpoint to check funnel manager state
-@app.get("/api/debug/funnel-status")
-async def debug_funnel_status():
-    """Debug endpoint to check funnel manager state."""
-    try:
-        from src.discovery.funnel_manager import FunnelManager
-        
-        # Check app.state instance
-        if not hasattr(app.state, 'funnel_manager'):
-            app.state.funnel_manager = FunnelManager()
-        funnel_manager = app.state.funnel_manager
-        
-        all_profiles = list(funnel_manager.opportunities.keys())
-        profile_counts = {
-            profile_id: len(opportunities) 
-            for profile_id, opportunities in funnel_manager.opportunities.items()
-        }
-        
-        return {
-            "app_state_instance": {
-                "total_profiles": len(all_profiles),
-                "profiles_with_opportunities": all_profiles,
-                "opportunity_counts": profile_counts,
-                "instance_id": id(funnel_manager)
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"Debug funnel status failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get stage recommendations: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/funnel/{profile_id}/bulk-transition")
 async def bulk_stage_transition(profile_id: str, transition_data: dict):
@@ -7254,8 +6915,8 @@ async def bulk_stage_transition(profile_id: str, transition_data: dict):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to perform bulk stage transition: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to perform bulk stage transition: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # PLAN Tab API Endpoints - 990 XML Analysis and Strategic Intelligence
 @app.post("/api/analysis/scoring")
@@ -7305,8 +6966,8 @@ async def run_financial_scoring(request: Dict[str, Any]):
         return results
         
     except Exception as e:
-        logger.error(f"Financial scoring failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Financial scoring failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/analysis/network")
 async def run_network_analysis(request: Dict[str, Any]):
@@ -7519,8 +7180,8 @@ async def run_network_analysis(request: Dict[str, Any]):
             }
         
     except Exception as e:
-        logger.error(f"Network analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Network analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/intelligence/classify")
 async def run_intelligence_classification(request: Dict[str, Any]):
@@ -7588,8 +7249,8 @@ async def run_intelligence_classification(request: Dict[str, Any]):
         return results
         
     except Exception as e:
-        logger.error(f"Intelligence classification failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Intelligence classification failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/analysis/enhanced-scoring")
 async def run_enhanced_scoring(request: Dict[str, Any]):
@@ -7642,8 +7303,8 @@ async def run_enhanced_scoring(request: Dict[str, Any]):
         return results
         
     except Exception as e:
-        logger.error(f"Enhanced scoring failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Enhanced scoring failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/analysis/strategic-plan")
 async def generate_strategic_plan(request: Dict[str, Any]):
@@ -7709,8 +7370,8 @@ async def generate_strategic_plan(request: Dict[str, Any]):
         return results
         
     except Exception as e:
-        logger.error(f"Strategic planning failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Strategic planning failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/plan/{profile_id}/prospects")
 async def get_plan_prospects(profile_id: str, stage: Optional[str] = None):
@@ -7763,8 +7424,8 @@ async def get_plan_prospects(profile_id: str, stage: Optional[str] = None):
         }
         
     except Exception as e:
-        logger.error(f"Failed to get PLAN prospects for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get PLAN prospects for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/analyze/network-data/{profile_id}")
 async def get_network_visualization_data(profile_id: str):
@@ -8026,7 +7687,8 @@ async def get_network_visualization_data(profile_id: str):
         
     except Exception as e:
         logger.error(f"Network data retrieval failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate network visualizations: {str(e)}")
+        logger.error(f"Failed to generate network visualizations: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # ENHANCED AI ANALYSIS ENDPOINTS - Comprehensive AI Lite & AI Heavy Processing
 
@@ -8068,7 +7730,8 @@ async def execute_ai_lite_analysis(request: Dict[str, Any]):
         
     except Exception as e:
         logger.error(f"AI Lite analysis failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"AI Lite analysis failed: {str(e)}")
+        logger.error(f"AI Lite analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/ai/deep-research")
 async def execute_ai_heavy_research(request: Dict[str, Any]):
@@ -8127,7 +7790,8 @@ async def execute_ai_heavy_research(request: Dict[str, Any]):
         
     except Exception as e:
         logger.error(f"AI Heavy research failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"AI Heavy research failed: {str(e)}")
+        logger.error(f"AI Heavy research failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def handle_batch_promotion(request: Dict[str, Any], ai_service):
@@ -8268,7 +7932,8 @@ async def get_ai_analysis_status(request_id: str):
         raise
     except Exception as e:
         logger.error(f"Failed to get AI analysis status: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Internal server error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/ai/session-summary")
 async def get_ai_session_summary():
@@ -8284,7 +7949,8 @@ async def get_ai_session_summary():
         
     except Exception as e:
         logger.error(f"Failed to get AI session summary: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Internal server error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/ai/cost-estimates")
 async def get_ai_cost_estimates(candidate_count: int = 1, research_count: int = 1):
@@ -8308,7 +7974,8 @@ async def get_ai_cost_estimates(candidate_count: int = 1, research_count: int = 
         
     except Exception as e:
         logger.error(f"Failed to get AI cost estimates: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Internal server error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/ai/batch-analysis")
 async def execute_batch_ai_analysis(request: Dict[str, Any]):
@@ -8397,7 +8064,8 @@ async def execute_batch_ai_analysis(request: Dict[str, Any]):
         
     except Exception as e:
         logger.error(f"Batch AI analysis pipeline failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
+        logger.error(f"Batch analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # SPECIALIZED AI PROCESSOR ENDPOINTS - 5-Call Architecture Integration
 
@@ -8445,7 +8113,8 @@ async def execute_ai_lite_validator(request: Dict[str, Any]):
         
     except Exception as e:
         logger.error(f"AI-Lite-1 Validator failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
+        logger.error(f"Validation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/ai/lite-2/strategic-score")
 async def execute_ai_lite_strategic_scorer(request: Dict[str, Any]):
@@ -8491,7 +8160,8 @@ async def execute_ai_lite_strategic_scorer(request: Dict[str, Any]):
         
     except Exception as e:
         logger.error(f"AI-Lite-2 Strategic Scorer failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Strategic scoring failed: {str(e)}")
+        logger.error(f"Strategic scoring failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/ai/heavy-light/analyze")
 async def execute_ai_heavy_light_analyzer(request: Dict[str, Any]):
@@ -8539,7 +8209,8 @@ async def execute_ai_heavy_light_analyzer(request: Dict[str, Any]):
         
     except Exception as e:
         logger.error(f"AI-Heavy Light analysis failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Light analysis failed: {str(e)}")
+        logger.error(f"Light analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/ai/heavy-1/research-bridge")
 async def execute_ai_heavy_research_bridge(request: Dict[str, Any]):
@@ -8582,7 +8253,8 @@ async def execute_ai_heavy_research_bridge(request: Dict[str, Any]):
         
     except Exception as e:
         logger.error(f"AI-Heavy-1 Research Bridge failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Research bridge failed: {str(e)}")
+        logger.error(f"Research bridge failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/ai/orchestrated-pipeline")
 async def execute_orchestrated_analysis_pipeline(request: Dict[str, Any]):
@@ -8630,44 +8302,11 @@ async def execute_orchestrated_analysis_pipeline(request: Dict[str, Any]):
         
     except Exception as e:
         logger.error(f"Orchestrated pipeline failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {str(e)}")
-
-# Simple test endpoint for debugging
-@app.get("/api/test")
-async def api_test():
-    """Simple test endpoint to verify API connectivity."""
-    return {
-        "message": "API is working correctly",
-        "timestamp": datetime.now().isoformat(),
-        "endpoints_available": [
-            "/api/health",
-            "/api/system/status", 
-            "/api/dashboard/overview",
-            "/api/workflows",
-            "/api/welcome/status",
-            "/api/welcome/sample-profile",
-            "/api/welcome/quick-start",
-            "/api/funnel/stages",
-            "/api/funnel/{profile_id}/opportunities",
-            "/api/funnel/{profile_id}/metrics",
-            "/api/analysis/scoring",
-            "/api/analysis/network", 
-            "/api/intelligence/classify",
-            "/api/plan/{profile_id}/prospects",
-            "/api/analyze/network-data/{profile_id}",
-            "/api/profiles/{profile_id}/opportunities/{opportunity_id}/score",
-            "/api/profiles/{profile_id}/opportunities/{opportunity_id}/promote",
-            "/api/profiles/{profile_id}/opportunities/{opportunity_id}/evaluate",
-            "/api/profiles/{profile_id}/opportunities/{opportunity_id}/details",
-            "/api/profiles/{profile_id}/opportunities/bulk-promote",
-            "/api/profiles/{profile_id}/promotion-candidates",
-            "/api/profiles/{profile_id}/promotion-history",
-            "/api/test"
-        ]
-    }
+        logger.error(f"Pipeline execution failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # =====================================
-# SCORING & PROMOTION API ENDPOINTS  
+# SCORING & PROMOTION API ENDPOINTS
 # =====================================
 
 @app.post("/api/profiles/{profile_id}/opportunities/{opportunity_id}/score", response_model=ScoreResponse)
@@ -8841,7 +8480,8 @@ async def get_opportunity_details(profile_id: str, opportunity_id: str):
         
     except Exception as e:
         logger.error(f"Error getting opportunity details: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get opportunity details: {str(e)}")
+        logger.error(f"Failed to get opportunity details: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.delete("/api/profiles/{profile_id}/opportunities/{opportunity_id}")
 async def delete_opportunity(profile_id: str, opportunity_id: str):
@@ -8887,7 +8527,7 @@ async def delete_opportunity(profile_id: str, opportunity_id: str):
         logger.error(f"Error deleting opportunity {opportunity_id} from profile {profile_id}: {e}")
         return JSONResponse(
             status_code=500,
-            content={"error": f"Failed to delete opportunity: {str(e)}", "opportunity_id": opportunity_id}
+            content={"error": "Internal server error", "opportunity_id": opportunity_id}
         )
 
 @app.post("/api/profiles/{profile_id}/opportunities/bulk-promote", response_model=BulkPromotionResponse)
@@ -8932,7 +8572,8 @@ async def get_promotion_history(profile_id: str, opportunity_id: Optional[str] =
         
     except Exception as e:
         logger.error(f"Error getting promotion history: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get promotion history: {str(e)}")
+        logger.error(f"Failed to get promotion history: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ===============================================================================
@@ -8978,7 +8619,8 @@ async def process_automated_promotion(
         
     except Exception as e:
         logger.error(f"Error in automated promotion processing: {e}")
-        raise HTTPException(status_code=500, detail=f"Automated promotion failed: {str(e)}")
+        logger.error(f"Automated promotion failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/api/profiles/{profile_id}/automated-promotion/candidates")
@@ -9004,7 +8646,8 @@ async def get_automated_promotion_candidates(
         
     except Exception as e:
         logger.error(f"Error getting promotion candidates: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get candidates: {str(e)}")
+        logger.error(f"Failed to get candidates: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/api/profiles/{profile_id}/automated-promotion/bulk-promote")
@@ -9036,7 +8679,8 @@ async def bulk_promote_opportunities(
         
     except Exception as e:
         logger.error(f"Error in bulk promotion: {e}")
-        raise HTTPException(status_code=500, detail=f"Bulk promotion failed: {str(e)}")
+        logger.error(f"Bulk promotion failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/api/automated-promotion/stats")
@@ -9055,7 +8699,8 @@ async def get_automated_promotion_stats() -> Dict[str, Any]:
         
     except Exception as e:
         logger.error(f"Error getting automated promotion stats: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
+        logger.error(f"Failed to get stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.put("/api/automated-promotion/config")
@@ -9077,7 +8722,8 @@ async def update_automated_promotion_config(request: Dict[str, Any]) -> Dict[str
         
     except Exception as e:
         logger.error(f"Error updating automated promotion config: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to update config: {str(e)}")
+        logger.error(f"Failed to update config: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ===============================================================================
@@ -9134,7 +8780,8 @@ async def fetch_enhanced_data_for_opportunity(
         
     except Exception as e:
         logger.error(f"Error fetching enhanced data: {e}")
-        raise HTTPException(status_code=500, detail=f"Enhanced data fetch failed: {str(e)}")
+        logger.error(f"Enhanced data fetch failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/api/profiles/{profile_id}/opportunities/enhanced-data/batch")
@@ -9183,7 +8830,8 @@ async def fetch_enhanced_data_batch(
         
     except Exception as e:
         logger.error(f"Error in batch enhanced data fetch: {e}")
-        raise HTTPException(status_code=500, detail=f"Batch enhanced data fetch failed: {str(e)}")
+        logger.error(f"Batch enhanced data fetch failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/api/enhanced-data/stats")
@@ -9202,7 +8850,8 @@ async def get_enhanced_data_stats() -> Dict[str, Any]:
         
     except Exception as e:
         logger.error(f"Error getting enhanced data stats: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get stats: {str(e)}")
+        logger.error(f"Failed to get stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.put("/api/enhanced-data/config")
@@ -9224,7 +8873,8 @@ async def update_enhanced_data_config(request: Dict[str, Any]) -> Dict[str, Any]
         
     except Exception as e:
         logger.error(f"Error updating enhanced data config: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to update config: {str(e)}")
+        logger.error(f"Failed to update config: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.delete("/api/enhanced-data/cache")
@@ -9244,7 +8894,8 @@ async def clear_enhanced_data_cache() -> Dict[str, Any]:
         
     except Exception as e:
         logger.error(f"Error clearing enhanced data cache: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
+        logger.error(f"Failed to clear cache: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # =============================================================================
@@ -9348,7 +8999,8 @@ async def analyze_opportunity_integrated(profile_id: str, request_data: Dict[str
         raise
     except Exception as e:
         logger.error(f"Error in integrated analysis: {e}")
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        logger.error(f"Analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/api/profiles/{profile_id}/research/batch-analyze")
@@ -9457,7 +9109,8 @@ async def batch_analyze_opportunities(profile_id: str, request_data: Dict[str, A
         raise
     except Exception as e:
         logger.error(f"Error in batch analysis: {e}")
-        raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
+        logger.error(f"Batch analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/api/profiles/{profile_id}/analyze/ai-lite")
@@ -9499,7 +9152,7 @@ async def ai_lite_profile_analysis(profile_id: str, request_data: Dict[str, Any]
             
         except Exception as parse_error:
             logger.error(f"Failed to parse request data: {parse_error}")
-            raise HTTPException(status_code=400, detail=f"Request parsing failed: {str(parse_error)}")
+            raise HTTPException(status_code=400, detail="Invalid request format")
         
         # Handle both direct candidates and candidate IDs
         if not candidates and candidate_ids:
@@ -9768,7 +9421,8 @@ async def ai_lite_profile_analysis(profile_id: str, request_data: Dict[str, Any]
         raise
     except Exception as e:
         logger.error(f"Error in AI-Lite profile analysis: {e}")
-        raise HTTPException(status_code=500, detail=f"AI-Lite analysis failed: {str(e)}")
+        logger.error(f"AI-Lite analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/api/profiles/{profile_id}/research/decision-package/{opportunity_id}")
@@ -9808,7 +9462,8 @@ async def generate_decision_package(profile_id: str, opportunity_id: str) -> Dic
         raise
     except Exception as e:
         logger.error(f"Error generating decision package: {e}")
-        raise HTTPException(status_code=500, detail=f"Decision package generation failed: {str(e)}")
+        logger.error(f"Decision package generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/api/research/website-intelligence")
@@ -9871,7 +9526,8 @@ async def analyze_website_intelligence(request_data: Dict[str, Any]) -> Dict[str
         raise
     except Exception as e:
         logger.error(f"Error in website intelligence analysis: {e}")
-        raise HTTPException(status_code=500, detail=f"Website analysis failed: {str(e)}")
+        logger.error(f"Website analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/api/research/performance-summary")
@@ -9891,7 +9547,8 @@ async def get_research_performance_summary() -> Dict[str, Any]:
         
     except Exception as e:
         logger.error(f"Error getting performance summary: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get performance summary: {str(e)}")
+        logger.error(f"Failed to get performance summary: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/api/research/export-results")
@@ -9925,7 +9582,8 @@ async def export_research_results(request_data: Dict[str, Any]) -> Dict[str, Any
         raise
     except Exception as e:
         logger.error(f"Error exporting research results: {e}")
-        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+        logger.error(f"Export failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Phase 4: AI Heavy Dossier Builder API Endpoints
@@ -9979,7 +9637,8 @@ async def generate_comprehensive_dossier(
         
     except Exception as e:
         logger.error(f"Error generating dossier for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate dossier: {str(e)}")
+        logger.error(f"Failed to generate dossier: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/dossier/{dossier_id}/generate-document")
 async def generate_decision_document(
@@ -10028,7 +9687,8 @@ async def generate_decision_document(
         
     except Exception as e:
         logger.error(f"Error generating document for dossier {dossier_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate document: {str(e)}")
+        logger.error(f"Failed to generate document: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/dossier/templates")
 async def get_available_templates():
@@ -10057,7 +9717,8 @@ async def get_available_templates():
         
     except Exception as e:
         logger.error(f"Error retrieving templates: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve templates: {str(e)}")
+        logger.error(f"Failed to retrieve templates: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/api/dossier/performance-summary")
 async def get_dossier_performance_summary():
@@ -10077,7 +9738,8 @@ async def get_dossier_performance_summary():
         
     except Exception as e:
         logger.error(f"Error retrieving performance summary: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve performance summary: {str(e)}")
+        logger.error(f"Failed to retrieve performance summary: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/api/profiles/{profile_id}/dossier/batch-generate")
 async def batch_generate_dossiers(
@@ -10148,7 +9810,8 @@ async def batch_generate_dossiers(
         
     except Exception as e:
         logger.error(f"Error in batch dossier generation for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate batch dossiers: {str(e)}")
+        logger.error(f"Failed to generate batch dossiers: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Phase 6 Decision Synthesis API Endpoints
@@ -10266,7 +9929,8 @@ async def synthesize_decision(
         raise
     except Exception as e:
         logger.error(f"Error in decision synthesis for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Decision synthesis failed: {str(e)}")
+        logger.error(f"Decision synthesis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/api/profiles/{profile_id}/approach/decision-history")
@@ -10301,7 +9965,8 @@ async def get_decision_history(
         
     except Exception as e:
         logger.error(f"Error retrieving decision history for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve decision history: {str(e)}")
+        logger.error(f"Failed to retrieve decision history: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/api/profiles/{profile_id}/approach/export-decision")
@@ -10368,7 +10033,8 @@ async def export_decision_document(
         raise
     except Exception as e:
         logger.error(f"Error exporting decision document for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Export generation failed: {str(e)}")
+        logger.error(f"Export generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Phase 6 Visualization Framework API Endpoints
@@ -10436,7 +10102,8 @@ async def generate_chart(request_data: Dict[str, Any] = Body(...)):
         raise
     except Exception as e:
         logger.error(f"Error generating chart: {e}")
-        raise HTTPException(status_code=500, detail=f"Chart generation failed: {str(e)}")
+        logger.error(f"Chart generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/api/visualizations/decision-dashboard")
@@ -10559,7 +10226,8 @@ async def create_decision_dashboard(request_data: Dict[str, Any] = Body(...)):
         raise
     except Exception as e:
         logger.error(f"Error creating decision dashboard: {e}")
-        raise HTTPException(status_code=500, detail=f"Dashboard creation failed: {str(e)}")
+        logger.error(f"Dashboard creation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/api/visualizations/{chart_id}/export/{format}")
@@ -10599,7 +10267,8 @@ async def export_chart(chart_id: str, format: str):
         raise
     except Exception as e:
         logger.error(f"Error exporting chart {chart_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Chart export failed: {str(e)}")
+        logger.error(f"Chart export failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/api/visualizations/chart-types")
@@ -10686,19 +10355,22 @@ async def get_available_chart_types():
         
     except Exception as e:
         logger.error(f"Error retrieving chart types: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve chart types: {str(e)}")
+        logger.error(f"Failed to retrieve chart types: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
-if __name__ == "__main__":
-    # Run the application
-    import uvicorn
-    logger.info(f"Starting Catalynx Web Interface on http://127.0.0.1:8000")
+def main(host: str = "127.0.0.1", port: int = 8000) -> None:
+    """Entry point for the ``catalynx`` console script (pyproject.toml)."""
+    logger.info("Starting Catalynx Web Interface on http://%s:%s", host, port)
     print("Press Ctrl+C to stop the server")
     print("=" * 50)
-    
     uvicorn.run(
         app,
-        host="127.0.0.1",
-        port=8000,
+        host=host,
+        port=port,
         reload=False,
-        log_level="info"
+        log_level="info",
     )
+
+
+if __name__ == "__main__":
+    main()

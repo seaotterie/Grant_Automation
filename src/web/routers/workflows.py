@@ -129,9 +129,10 @@ def _get_workflow_definition(workflow_name: str):
     try:
         return WorkflowParser.parse_file(workflow_file)
     except Exception as e:
+        logger.error(f"Failed to parse workflow '{workflow_name}': {e}")
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to parse workflow: {str(e)}"
+            detail=f"Failed to parse workflow '{workflow_name}'"
         )
 
 
@@ -235,7 +236,7 @@ async def execute_workflow(
 
         except Exception as e:
             logger.error(f"Workflow execution failed: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/status/{execution_id}", response_model=WorkflowStatusResponse)

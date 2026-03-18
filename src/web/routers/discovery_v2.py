@@ -159,7 +159,7 @@ async def execute_discovery(
         raise
     except Exception as e:
         logger.error(f"Discovery execution failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/bmf")
@@ -220,8 +220,8 @@ async def bmf_discovery(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"BMF discovery failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"BMF discovery failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/search")
@@ -285,8 +285,8 @@ async def unified_search(search_query: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unified search failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Unified search failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/sessions")
@@ -319,8 +319,8 @@ async def list_sessions(
         }
 
     except Exception as e:
-        logger.error(f"Failed to list sessions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to list sessions: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/sessions/{session_id}")
@@ -334,8 +334,8 @@ async def get_session(session_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get session {session_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get session {session_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/analyze")
@@ -406,8 +406,8 @@ async def analyze_results(request: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to analyze results: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to analyze results: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ============================================================================

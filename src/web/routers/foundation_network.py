@@ -98,9 +98,10 @@ async def analyze_multi_foundation_bundling(request: dict):
         )
 
         if not result.success:
+            logger.error(f"Bundling analysis failed: {result.error}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Bundling analysis failed: {result.error}"
+                detail="Internal server error"
             )
 
         # Convert to dict for JSON response
@@ -173,7 +174,7 @@ async def analyze_multi_foundation_bundling(request: dict):
         raise
     except Exception as e:
         logger.error(f"Bundling analysis error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/bundling/top-co-funded")
@@ -201,8 +202,8 @@ async def get_top_co_funded_organizations(
         }
 
     except Exception as e:
-        logger.error(f"Error querying top co-funded orgs: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error querying top co-funded orgs: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ============================================================================
@@ -267,9 +268,10 @@ async def analyze_cofunding_patterns(request: dict):
         bundling_result_obj = await tool.execute(bundling_input=bundling_input_obj)
 
         if not bundling_result_obj.success:
+            logger.error(f"Bundling failed: {bundling_result_obj.error}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Bundling failed: {bundling_result_obj.error}"
+                detail="Internal server error"
             )
 
         # Run co-funding analysis
@@ -333,7 +335,7 @@ async def analyze_cofunding_patterns(request: dict):
         raise
     except Exception as e:
         logger.error(f"Co-funding analysis error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/cofunding/peer-groups")
@@ -356,8 +358,8 @@ async def get_peer_funder_groups(
         }
 
     except Exception as e:
-        logger.error(f"Error querying peer groups: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error querying peer groups: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ============================================================================
@@ -377,8 +379,8 @@ async def get_grant_database_statistics():
         }
 
     except Exception as e:
-        logger.error(f"Error getting grant statistics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error getting grant statistics: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/grants/search")
@@ -405,8 +407,8 @@ async def search_grantees(
         }
 
     except Exception as e:
-        logger.error(f"Error searching grantees: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error searching grantees: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/grants/import")
@@ -476,8 +478,8 @@ async def import_grants_from_schedule_i(request: dict):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error importing grants: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error importing grants: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ============================================================================
@@ -530,9 +532,10 @@ async def build_network_graph(request: dict):
         bundling_output = await tool.execute(bundling_input=bundling_input)
 
         if not bundling_output.success:
+            logger.error(f"Bundling failed: {bundling_output.error}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Bundling failed: {bundling_output.error}"
+                detail="Internal server error"
             )
 
         # Build graph
@@ -555,7 +558,7 @@ async def build_network_graph(request: dict):
         raise
     except Exception as e:
         logger.error(f"Error building network graph: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/query/co-funders")
@@ -620,7 +623,7 @@ async def query_co_funders(request: dict):
         raise
     except Exception as e:
         logger.error(f"Error querying co-funders: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/query/paths")
@@ -689,7 +692,7 @@ async def find_connection_paths(request: dict):
         raise
     except Exception as e:
         logger.error(f"Error finding connection paths: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/stats")
@@ -723,8 +726,8 @@ async def get_network_statistics(
         }
 
     except Exception as e:
-        logger.error(f"Error getting network statistics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error getting network statistics: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/export/graphml")
@@ -777,8 +780,8 @@ async def export_graphml(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error exporting GraphML: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error exporting GraphML: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/export/json")
@@ -826,8 +829,8 @@ async def export_json(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error exporting JSON: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error exporting JSON: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/influence/analyze")
@@ -886,7 +889,7 @@ async def analyze_influence(request: dict):
         raise
     except Exception as e:
         logger.error(f"Error analyzing influence: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ============================================================================

@@ -247,8 +247,8 @@ async def get_opportunity_details(opportunity_id: str, profile_id: Optional[str]
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get opportunity details for {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get opportunity details for {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{opportunity_id}/research")
@@ -577,20 +577,22 @@ async def research_opportunity(
                 # Tool 25 failed - return error
                 error_msg = "; ".join(result.errors) if result.errors else "Unknown error"
                 logger.error(f"Tool 25 web research failed for {opportunity_id}: {error_msg}")
-                raise HTTPException(status_code=500, detail=f"Web intelligence tool failed: {error_msg}")
+                raise HTTPException(status_code=500, detail="Web intelligence tool failed")
 
         except ImportError as e:
             logger.error(f"Failed to import Tool 25: {e}")
-            raise HTTPException(status_code=500, detail=f"Tool 25 import error: {str(e)}")
+            logger.error(f"Tool 25 import error: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Internal server error")
         except Exception as e:
             logger.error(f"Tool 25 execution error for {opportunity_id}: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"Web research failed: {str(e)}")
+            logger.error(f"Web research failed: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Internal server error")
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to research opportunity {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to research opportunity {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{opportunity_id}/research_placeholder")
@@ -642,8 +644,8 @@ async def research_opportunity_placeholder(opportunity_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Web research failed for {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Web research failed for {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{opportunity_id}/promote-with-notes")
@@ -809,8 +811,8 @@ async def promote_to_intelligence(opportunity_id: str, request: Dict[str, Any], 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to promote opportunity {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to promote opportunity {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{opportunity_id}/promote")
@@ -901,8 +903,8 @@ async def promote_category_level(opportunity_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to promote opportunity {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to promote opportunity {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{opportunity_id}/demote")
@@ -998,8 +1000,8 @@ async def demote_category_level(opportunity_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to demote opportunity {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to demote opportunity {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.patch("/{opportunity_id}/notes")
@@ -1057,8 +1059,8 @@ async def update_opportunity_notes(opportunity_id: str, request: Dict[str, Any])
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update notes for opportunity {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to update notes for opportunity {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.patch("/{opportunity_id}/website-url")
@@ -1117,8 +1119,8 @@ async def update_website_url(opportunity_id: str, body: WebsiteUrlUpdate):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update website_url for {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to update website_url for {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{opportunity_id}/990-filings")
@@ -1175,8 +1177,8 @@ async def get_990_filings(opportunity_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get 990 filings for {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get 990 filings for {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{opportunity_id}/990-extraction")
@@ -1228,8 +1230,8 @@ async def get_990_extraction(opportunity_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get 990 extraction for {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get 990 extraction for {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def _fetch_and_cache_filing_history(ein: str, org_name: str) -> List[Dict[str, Any]]:
@@ -1538,7 +1540,7 @@ async def analyze_990_pdf(opportunity_id: str, body: Analyze990PDFRequest):
         raise
     except Exception as e:
         logger.error(f"Failed to analyze 990 PDF for {opportunity_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ---------------------------------------------------------------------------
@@ -2034,7 +2036,8 @@ async def screen_single_opportunity(opportunity_id: str, mode: str = "fast"):
             )
             tool = OpportunityScreeningTool()
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Tool 1 import error: {e}")
+            logger.error(f"Tool 1 import error: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Internal server error")
 
         # 4. Build OrganizationProfile
         focus_areas = json.loads(profile_dict.get("focus_areas") or "[]") or []
@@ -2148,7 +2151,7 @@ async def screen_single_opportunity(opportunity_id: str, mode: str = "fast"):
         raise
     except Exception as e:
         logger.error(f"Single screen failed for {opportunity_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{opportunity_id}/run-connections")
@@ -2259,7 +2262,7 @@ async def run_opportunity_networking(opportunity_id: str):
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"[RunNetworking] Failed for {opportunity_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/health")

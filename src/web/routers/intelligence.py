@@ -443,7 +443,8 @@ async def generate_intelligence_analysis(
 
     except Exception as e:
         logger.error(f"Intelligence analysis failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        logger.error(f"Analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/analysis/{task_id}", response_model=TaskStatusResponse)
 async def get_analysis_status(task_id: str):
@@ -485,7 +486,8 @@ async def calculate_cost_estimate(request: CostEstimateRequest):
         
     except Exception as e:
         logger.error(f"Cost estimation failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Cost estimation failed: {str(e)}")
+        logger.error(f"Cost estimation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.get("/tiers")
 async def get_available_tiers():

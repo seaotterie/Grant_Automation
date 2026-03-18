@@ -92,8 +92,8 @@ async def list_tools(
         )
 
     except Exception as e:
-        logger.error(f"Error listing tools: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error listing tools: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{tool_name}", response_model=ToolMetadata)
@@ -128,8 +128,8 @@ async def get_tool_metadata(tool_name: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting tool metadata for {tool_name}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error getting tool metadata for {tool_name}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{tool_name}/execute", response_model=ToolExecutionResponse)
@@ -218,7 +218,7 @@ async def execute_tool(
         raise
     except Exception as e:
         logger.error(f"Error executing tool {tool_name}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/categories/list")
@@ -238,8 +238,8 @@ async def list_categories():
         }
 
     except Exception as e:
-        logger.error(f"Error listing categories: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error listing categories: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/health")
