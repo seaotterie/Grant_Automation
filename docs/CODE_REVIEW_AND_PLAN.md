@@ -173,6 +173,45 @@ This creates ambiguity about which endpoint is canonical and risks route conflic
 
 Chart type definitions, static metadata, and configuration dictionaries are hardcoded inline throughout `main.py` instead of being externalized to configuration files or constants modules.
 
+### 3.6 Core Service Layer Issues (Per-File Analysis)
+
+**`src/database/database_manager.py` (1,474 lines)**:
+- 15+ catch-all `except Exception as e` handlers that return `False` with no diagnostic info
+- Database connection pattern (`sqlite3.connect()` + `row_factory` + `cursor`) duplicated 6+ times
+- Lazy `import sqlite3` inside methods instead of module-level import
+- Schema initialization spread across 4+ methods making it hard to track what gets created
+- Unused member variables (`_connection`, `_data_transformer`)
+- Mixes `os.path` and `pathlib.Path` inconsistently
+- Does not use existing `path_helper.py` for path management
+
+**`src/profiles/unified_service.py` (1,022 lines)**:
+- 3 separate `import sqlite3` at different locations in the file
+- Debug code left in production (lines 324-334: lists all profiles on delete failure)
+- Hardcoded DB paths in 2 formats: `os.path.join(root, "data", "catalynx.db")` vs `"data/catalynx.db"`
+- Database-to-dict conversion logic duplicated between `get_profile()` and `list_profiles()`
+- Potential circular import: `UnifiedProfileService` ↔ `DatabaseManager`
+
+**`src/core/openai_service.py` (531 lines)**:
+- ~55 lines of unreachable `_simulate_completion()` code (exception raised before it could be called)
+- Test-specific logic ("STOP THE TEST") in production code (line 116)
+- 5 fallback text extraction strategies in a brittle chain with no tracking of which succeeds
+- Silent model fallback to `gpt-5-nano` on unknown models (line 456) — masks configuration errors
+- Unused `import openai` (only `AsyncOpenAI` is actually used)
+
+**`src/core/tool_registry.py` (436 lines)**:
+- Uses `print()` instead of `logger.warning()` for tool loading failures (line 104)
+- Fragile heuristic-based tool class detection: scans `dir(module)` for names ending in "Tool"
+- Category extraction based on directory naming conventions — breaks silently on renames
+
+**`src/workflows/tool_loader.py` (276 lines)**:
+- Re-raises exceptions as generic `Exception`, losing original type information
+- Redundant `from src.core.tool_framework import ToolResult` inside method (already imported at top)
+- Module path resolution is fragile — assumes last part of dotted path is the module name
+
+**`src/profiles/service.py` (60 lines)**:
+- Deprecated compatibility shim using `type()` to create a fake class with lambdas
+- Will break `isinstance()` checks — should be proper class inheritance or removed entirely
+
 ---
 
 ## 4. Security Audit
