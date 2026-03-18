@@ -259,39 +259,57 @@ API endpoints accepting user input (profile creation, opportunity analysis) shou
 
 ## 5. Testing & Quality Assurance
 
-### 5.1 Test Organization
+### 5.1 Test Overview
 
-128 test files exist, but organization is unclear. The `pytest.ini` configures:
-- Coverage target: 80% (`--cov-fail-under=80`)
-- Test paths: `tests/`
-- Markers defined: asyncio, integration, performance, security, phase6, slow, external, unit
+| Metric | Value | Assessment |
+|--------|-------|------------|
+| Active test files | 89 | Good |
+| Archived test files | 40 | Legacy, properly tracked |
+| Test functions | 295+ | Comprehensive |
+| Total assertions | 1,678 | Good density |
+| Async tests | 102 | Well-covered |
+| Mock/patch usages | 483 | Thorough mocking |
+| Fixtures defined | 97 | Excellent reusability |
+| Parametrized tests | **0** | Critical gap |
+| `pytest.raises()` calls | **2** | Error paths under-tested |
 
-### 5.2 No Production Requirements File
+**Test Distribution**: Unit (40%), Integration (33%), E2E (4%), Other (23%) — proper pyramid structure.
 
-Without `requirements.txt`, it's impossible to verify that test dependencies match production dependencies or that all production deps are accounted for.
+### 5.2 Test Strengths
 
-### 5.3 Test Configuration Issues
+- **Central `conftest.py`** (450 lines): 97 fixtures including data factories, mock factories, assertion utilities (`assert_valid_score()`, `assert_valid_profile()`), and edge case generators
+- **Async support**: 102 async tests with proper `AsyncMock` usage
+- **Graceful degradation**: 19 `pytest.skip()` calls when services unavailable (appropriate pattern)
+- **Quality of individual tests**: `test_screening_tool.py` is well-organized with 5 test classes covering success/failure paths, edge cases, and cost estimation
 
-- `pytest.ini` references `tests/performance/baselines.json` — need to verify this exists
-- Test database URL is hardcoded: `sqlite:///./test_catalynx.db`
-- Coverage configured for `src/` but not `tools/` — the 24 tools in `tools/` directory have no coverage tracking
+### 5.3 Test Gaps
 
-### 5.4 Tool-Level Tests
+**No parametrized tests**: Zero `@pytest.mark.parametrize` usage across the entire test suite. This means boundary conditions, multiple input combinations, and data-driven test variations are all tested through single-value fixtures rather than systematic parametrization.
 
-Only 4 out of 24 tools have `conftest.py` files:
-- `network_intelligence_tool/tests/`
-- `opportunity_screening_tool/tests/`
-- `financial_intelligence_tool/tests/`
-- `risk_intelligence_tool/tests/`
+**Minimal error/exception testing**: Only 2 `pytest.raises()` calls in 89 test files. Missing exception coverage for:
+- Network failures and timeouts
+- Database connection loss
+- Invalid JSON/XML responses
+- AI service rate limiting
 
-The remaining 20 tools may lack proper test infrastructure.
+**Manual test patterns**: `test_profile_suite.py` (747 lines) uses custom `print_result()` instead of standard pytest assertions — harder to integrate with CI/CD.
 
-### 5.5 Missing Test Types
+### 5.4 No CI/CD Pipeline
 
-Based on the project complexity, these test types should exist but weren't found:
-- Contract tests between tools and the web layer
+No `.github/workflows/` directory exists. Tests must be run manually. This is a critical gap — no automated regression detection on push or PR.
+
+### 5.5 Coverage Gaps
+
+- `pytest.ini` coverage targets `src/` only — the 24 tools in `tools/` have no coverage tracking
+- Only 6 of 24 tools have `conftest.py` files; tool test structure varies significantly
+- No production `requirements.txt` means test deps can't be verified against production deps
+- Test database URL hardcoded: `sqlite:///./test_catalynx.db`
+
+### 5.6 Missing Test Types
+
+- Contract tests between tools and the web API layer
 - End-to-end workflow tests (screening → gateway → deep intelligence)
-- Load/performance tests for the API
+- Load/performance tests for the API (locust configured but not automated)
 - Database migration tests
 
 ---
