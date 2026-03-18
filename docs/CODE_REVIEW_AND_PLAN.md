@@ -375,29 +375,60 @@ No `.github/workflows/` directory exists. Tests must be run manually. This is a 
 |----------|-------------|----------|
 | Dead modules (4 unused) | 6,310 lines / 10 files | High — free cleanup |
 | `main.py` god file | 10,703 lines / 1 file | Critical — blocks all web work |
-| Legacy processors | 5,644 lines / 10 files | Medium — migration incomplete |
+| `app.js` god file | 19,622 lines / 1 file | High — frontend equivalent |
+| Legacy `src/analysis/` | ~368 KB / 10 files | Medium — replaced by tools |
+| Legacy `src/scoring/` | ~328 KB / 15 files | Medium — replaced by Tool 20 |
+| Legacy `src/processors/` | ~56 KB / 18 files | Medium — migration planned |
 | Deprecated files still imported | ~989 lines / 2 files | Medium |
 | Router duplication | ~3 sets of v1/v2/legacy | High — API confusion |
+| Unreachable code in `main.py` | Lines 9569, 10198 | Low — quick fix |
+| Unused imports (Vulture, 90%+ confidence) | 18 items | Low — auto-fixable |
+| Unused variables (100% confidence) | 11 items | Low — auto-fixable |
 | Heavy `__init__.py` files | ~543 lines / 4 files | Low |
-| TODO/FIXME markers | 39 across codebase | Low — triage needed |
-| **Total recoverable** | **~24,000+ lines** | |
+| Legacy JS in `_deprecated/` | 22 KB / 2 files | Low — safe to remove |
+| Legacy test archive | 388 KB / 30+ files | Low |
+| **Total recoverable** | **~1.3 MB of legacy code** | |
 
-### 6.2 Missing Infrastructure
+### 6.2 Critical: Tool Placeholder Implementations
+
+Several "operational" tools contain **placeholder logic** with TODOs instead of actual AI integration:
+
+| File | Line | TODO |
+|------|------|------|
+| `deep_intelligence_tool/app/depth_handlers.py` | 62 | "Replace with actual BAML AI calls" |
+| `deep_intelligence_tool/app/depth_handlers.py` | 263 | "Replace with actual data analysis" |
+| `deep_intelligence_tool/app/depth_handlers.py` | 316 | "Replace with actual network analysis" |
+| `deep_intelligence_tool/app/depth_handlers.py` | 517 | "Replace with actual network analysis using Tool 12" |
+| `deep_intelligence_tool/app/depth_handlers.py` | 603 | "Replace with actual Historical Funding Analyzer Tool (Tool 22)" |
+| `financial_intelligence_tool/app/financial_tool.py` | 105 | "Placeholder - TODO: implement actual BAML call" |
+| `risk_intelligence_tool/app/risk_tool.py` | 597 | "TODO: Implement actual BAML call" |
+
+These tools are listed as "100% operational" in CLAUDE.md but contain stub implementations for core AI functionality. This is the most significant discrepancy between documented status and actual code state.
+
+### 6.3 Deprecated Endpoints Past Sunset Date
+
+20+ endpoints in `src/web/middleware/deprecation.py` have a sunset date of **2025-11-15** — over 4 months ago. These deprecated routes are still active and being served with deprecation headers. Examples:
+- `/api/ai/lite-analysis` → should redirect to Tool 1
+- `/api/ai/deep-research` → should redirect to Tool 2
+- `/api/profiles/{id}/analyze/ai-lite` → should redirect to Tool 1
+
+### 6.4 Missing Infrastructure
 
 | Item | Impact | Priority |
 |------|--------|----------|
 | `requirements.txt` (production) | Cannot deploy reproducibly | Critical |
 | `pyproject.toml` / proper packaging | Fragile imports, no installability | High |
+| CI/CD pipeline | No automated quality gates | High |
 | API versioning strategy | Breaking changes risk | Medium |
 | Database migration tooling | Schema changes are manual | Medium |
-| CI/CD pipeline | No automated quality gates | High |
 | Logging standardization | Inconsistent log formats | Low |
 
-### 6.3 CLAUDE.md Drift
+### 6.5 CLAUDE.md Drift
 
 The `CLAUDE.md` file is **extremely long** and contains contradictory information:
 - States both "2-Tier Intelligence System" and "4-TIER INTELLIGENCE SYSTEM"
 - Phase statuses conflict (Phase 1 "IN PROGRESS" at the bottom vs Phase 8 "COMPLETE" at top)
+- Tools described as "100% operational" but contain placeholder implementations
 - Contains detailed implementation notes that belong in separate docs
 - Mixes user-facing documentation with developer notes
 
