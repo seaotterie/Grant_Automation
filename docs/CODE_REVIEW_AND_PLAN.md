@@ -169,7 +169,27 @@ This creates ambiguity about which endpoint is canonical and risks route conflic
 
 39 unresolved TODO/FIXME/HACK markers across the codebase (17 in src/, 22 in tools/). These should be triaged — either converted to tracked issues or resolved.
 
-### 3.5 Inline Configuration Data
+### 3.5 Tool-Level Consistency Issues
+
+**Duplicate `RiskLevel` enum with incompatible values**:
+- `deep_intelligence_tool/app/intelligence_models.py`: 4 values (LOW, MEDIUM, HIGH, CRITICAL)
+- `risk_intelligence_tool/app/risk_models.py`: 5 values (MINIMAL, LOW, MEDIUM, HIGH, CRITICAL)
+- These tools produce incompatible risk assessments. Needs consolidation into `tools/shared_schemas/`.
+
+**Inconsistent path setup across tools**:
+- 10 tools use `setup_tool_paths(__file__)` (correct pattern)
+- 4 tools manually compute `project_root = Path(__file__).parent.parent.parent.parent` and `sys.path.insert()`
+- Should standardize on `setup_tool_paths()` everywhere.
+
+**Inconsistent enum inheritance**: Some enums use `str, Enum` (JSON-serializable), others use plain `Enum`. Should standardize to `str, Enum` for API compatibility.
+
+**12factors.toml detail variation**: AI tools have 120-185 lines of detailed compliance docs; utility tools (EIN Validator, Data Export) have only 24-28 lines. Should use a common template.
+
+**Missing tool tests**: `web_intelligence_tool` and `report_generator_tool` have no test files. `ein_validator_tool` has only 3 test cases.
+
+**Underutilized shared_schemas/**: `tools/shared_schemas/` exists with `grant_funder_intelligence.py` but common types like `RiskLevel`, `HealthRating`, financial metrics, and assessment base classes aren't shared.
+
+### 3.6 Inline Configuration Data
 
 Chart type definitions, static metadata, and configuration dictionaries are hardcoded inline throughout `main.py` instead of being externalized to configuration files or constants modules.
 
