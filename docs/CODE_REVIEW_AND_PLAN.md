@@ -236,44 +236,77 @@ Chart type definitions, static metadata, and configuration dictionaries are hard
 
 ## 4. Security Audit
 
-### 4.1 Critical: Secrets in Version Control
+### 4.1 Critical: Authentication Disabled on All 164 Endpoints
+
+JWT auth system exists (`src/auth/jwt_auth.py`) and is imported, but **commented out on every endpoint**. Comments throughout `main.py` say "Removed authentication: single-user desktop application." This means:
+- Any network client can create/delete profiles, run expensive AI analyses, export all data
+- Profile deletion (`DELETE /api/profiles/{profile_id}`) triggers permanent cascade deletion with no confirmation
+- WebSocket endpoints (`/api/live/*`) accept any connection with no auth or subscription validation
+- Batch endpoints can trigger mass operations (e.g., `/batch-web-research` with no size limit)
+
+This is acceptable only for strictly local desktop use. Any networked deployment is completely unprotected.
+
+### 4.2 Critical: Secrets in Version Control
 
 **File**: `.env.example`
 **Issue**: Generated JWT secrets and passwords committed to git
 **Fix**: Replace with obvious placeholders like `your-jwt-secret-here`, `change-me-admin-password`
 
-### 4.2 High: CSP Allows `unsafe-inline` and `unsafe-eval`
+### 4.3 High: Path Traversal in Static File Serving
+
+`main.py:952` serves static files via a custom handler instead of FastAPI's built-in `StaticFiles` middleware:
+```python
+@app.get("/static/{file_path:path}")
+async def serve_static(file_path: str):
+    # NO path validation!
+```
+A request to `/static/../../../.env` could read sensitive files. Fix: Use the already-imported `StaticFiles` middleware.
+
+### 4.4 High: CORS Overly Permissive
+
+`main.py:395-401` — `allow_methods=["*"]` and `allow_headers=["*"]` allow unrestricted cross-origin requests. CORS origins are hardcoded rather than read from environment variables.
+
+### 4.5 High: CSP Allows `unsafe-inline` and `unsafe-eval`
 
 **File**: `src/middleware/security.py:31-32`
-```
-script-src 'self' 'unsafe-inline' 'unsafe-eval' ...
-style-src 'self' 'unsafe-inline' ...
-```
-`unsafe-eval` effectively negates XSS protections from CSP. This should be replaced with nonce-based CSP for scripts.
+`unsafe-eval` effectively negates XSS protections from CSP. Required for Alpine.js/Tailwind CDN but should be replaced with nonce-based approach.
 
-### 4.3 High: Error Messages May Leak Internal Details
+### 4.6 High: SSRF in PDF Analysis Endpoint
+
+`opportunities.py:1498` — `POST /{opportunity_id}/analyze-990-pdf` accepts an arbitrary URL, downloads a PDF, and parses it. No URL validation, no file size limits, no content-type checking. Could be used for internal network scanning.
+
+### 4.7 High: SQL Injection Risk in BMF Queries
+
+`profiles_v2.py:93-150` — NTEE code queries use regex validation but construct queries with string patterns rather than fully parameterized queries. Edge cases could bypass validation.
+
+### 4.8 Medium: Error Messages Leak Internal Details
 
 Throughout `main.py`, exception handlers pass `str(e)` directly to HTTP responses:
 ```python
 raise HTTPException(status_code=500, detail=f"Chart export failed: {str(e)}")
 ```
-This can leak file paths, database details, or stack traces to API consumers.
 
-### 4.4 Medium: CORS Configuration
+### 4.9 Medium: Rate Limiting Too Simplistic
 
-The `.env.example` shows `ALLOWED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000` — need to verify production CORS settings don't use wildcards.
+Global 60 req/min limit with no per-user/per-IP differentiation, no burst allowance, no exemption for async background tasks. May cause false positives during batch screening (200 opportunities) while providing no protection against distributed attacks.
 
-### 4.5 Medium: Rate Limiting Implementation
+### 4.10 Medium: Test/Debug Endpoints in Production
 
-`RateLimitingMiddleware` is imported but need to verify it's properly configured with appropriate limits for different endpoint types (especially AI processing endpoints which have cost implications).
+- `GET /api/test-fix` (main.py:489)
+- `POST /api/testing/export-results` (main.py:1615)
+- These should not exist in production code.
 
-### 4.6 Medium: No Input Size Limits Visible
+### 4.11 Medium: Monolithic Frontend (`app.js` — 19,622 lines)
 
-API endpoints accepting user input (profile creation, opportunity analysis) should have explicit payload size limits to prevent abuse.
+Single JavaScript file at ~900KB. CDN dependencies (Tailwind, D3.js) create external failure points. `innerHTML` usage with user data (line 9946) is an XSS risk. Modular `js/modules/` directory exists but `app.js` remains monolithic.
 
-### 4.7 Low: X-XSS-Protection Header
+### 4.12 Low: Duplicate Router Prefixes
 
-`X-XSS-Protection: 1; mode=block` is deprecated in modern browsers. CSP is the correct replacement (which is configured, modulo the `unsafe-*` issues above).
+Two routers share `/api/v2/profiles` prefix:
+- `profiles_v2.py` (line 36)
+- `profiles_intelligence.py` (line 39)
+
+Endpoint definitions could be overwritten depending on router inclusion order.
 
 ---
 
@@ -424,11 +457,16 @@ The `CLAUDE.md` file is **extremely long** and contains contradictory informatio
 
 | # | Task | Effort | Impact |
 |---|------|--------|--------|
-| D1 | Replace `unsafe-eval`/`unsafe-inline` with nonce-based CSP | 4 hrs | XSS protection |
-| D2 | Add API payload size limits | 2 hrs | DoS protection |
-| D3 | Verify rate limiting on cost-bearing AI endpoints | 2 hrs | Cost protection |
-| D4 | Add structured logging (remove f-string logging patterns) | 4 hrs | Log injection prevention |
-| D5 | Security review of file operations in tools | 3 hrs | Path traversal prevention |
+| D1 | Re-enable JWT auth on all endpoints (use `Depends(get_current_user_dependency)`) | 4 hrs | All endpoints unprotected |
+| D2 | Fix static file serving — use `StaticFiles` middleware, remove custom handler | 1 hr | Path traversal fix |
+| D3 | Add auth to WebSocket connections + subscription validation | 3 hrs | Info disclosure fix |
+| D4 | Fix CORS — specify exact methods/headers, externalize to env vars | 1 hr | CORS hardening |
+| D5 | Replace `unsafe-eval`/`unsafe-inline` with nonce-based CSP | 4 hrs | XSS protection |
+| D6 | Add URL validation + size limits to PDF analysis endpoint | 2 hrs | SSRF prevention |
+| D7 | Add batch size limits to all `/batch-*` endpoints | 2 hrs | DoS protection |
+| D8 | Implement per-user/per-IP rate limiting with burst allowance | 3 hrs | Rate limit improvement |
+| D9 | Remove test/debug endpoints from production code | 30 min | Attack surface reduction |
+| D10 | Add structured logging (remove f-string logging patterns) | 4 hrs | Log injection prevention |
 
 ### Phase E: Testing & CI/CD (Weeks 5-6)
 
