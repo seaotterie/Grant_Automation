@@ -122,50 +122,51 @@ class SOIFinancialAnalytics:
                 cursor = conn.cursor()
                 
                 # Get latest or specific year financial data
-                year_filter = f"AND tax_year = {tax_year}" if tax_year else ""
-                
+                year_filter = "AND tax_year = ?" if tax_year else ""
+                params = (ein, tax_year) if tax_year else (ein,)
+
                 # Try Form 990 first (large nonprofits)
                 cursor.execute(f"""
-                    SELECT 
+                    SELECT
                         ein, tax_year, totrevenue, totfuncexpns, totassetsend,
                         totcntrbgfts, prgmservrevnue, grntstogovt, grnsttoindiv
-                    FROM form_990 
+                    FROM form_990
                     WHERE ein = ? {year_filter}
-                    ORDER BY tax_year DESC 
+                    ORDER BY tax_year DESC
                     LIMIT 1
-                """, (ein,))
-                
+                """, params)
+
                 row = cursor.fetchone()
                 if row:
                     return self._create_990_metrics(row)
-                
+
                 # Try Form 990-PF (foundations)
                 cursor.execute(f"""
-                    SELECT 
+                    SELECT
                         ein, tax_year, totrcptperbks as revenue, totexpnspbks as expenses,
                         totassetsend, grscontrgifts as contributions, contrpdpbks as grants_paid,
                         netinvstinc as investment_income, fairmrktvalamt as fmv,
                         distribamt as required_dist, grntapprvfut as future_grants
-                    FROM form_990pf 
+                    FROM form_990pf
                     WHERE ein = ? {year_filter}
-                    ORDER BY tax_year DESC 
+                    ORDER BY tax_year DESC
                     LIMIT 1
-                """, (ein,))
-                
+                """, params)
+
                 row = cursor.fetchone()
                 if row:
                     return self._create_990pf_metrics(row)
-                
+
                 # Try Form 990-EZ (small nonprofits)
                 cursor.execute(f"""
-                    SELECT 
+                    SELECT
                         ein, tax_year, totrevnue as revenue, totexpns as expenses,
                         totassetsend, totcntrbs as contributions, prgmservrev as program_revenue
-                    FROM form_990ez 
+                    FROM form_990ez
                     WHERE ein = ? {year_filter}
-                    ORDER BY tax_year DESC 
+                    ORDER BY tax_year DESC
                     LIMIT 1
-                """, (ein,))
+                """, params)
                 
                 row = cursor.fetchone()
                 if row:

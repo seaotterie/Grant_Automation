@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pathlib import Path
+import re
 import uuid
 import logging
 
@@ -90,8 +91,33 @@ class DeepIntelligenceBatchRequest(BaseModel):
 
 # Helper Functions
 
+def _validate_workflow_name(workflow_name: str) -> None:
+    """Validate workflow name to prevent path traversal attacks.
+
+    Raises HTTPException 400 if the name contains invalid characters
+    or would resolve outside the allowed definitions directory.
+    """
+    # Strict allowlist: only alphanumeric, hyphens, and underscores
+    if not re.match(r'^[a-zA-Z0-9_-]+$', workflow_name):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid workflow name. Only alphanumeric characters, hyphens, and underscores are allowed."
+        )
+
+    # Belt-and-suspenders: verify the resolved path stays within the definitions directory
+    definitions_dir = Path("src/workflows/definitions").resolve()
+    resolved_path = (definitions_dir / f"{workflow_name}.yaml").resolve()
+
+    if not str(resolved_path).startswith(str(definitions_dir) + "/"):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid workflow name. Path traversal is not allowed."
+        )
+
+
 def _get_workflow_definition(workflow_name: str):
     """Load workflow definition from YAML file"""
+    _validate_workflow_name(workflow_name)
     workflow_file = Path("src/workflows/definitions") / f"{workflow_name}.yaml"
 
     if not workflow_file.exists():
