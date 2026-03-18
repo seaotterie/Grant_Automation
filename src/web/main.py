@@ -80,8 +80,6 @@ from src.middleware.security import (
 )
 from src.auth.jwt_auth import get_current_user_dependency, User
 from src.web.auth_routes import router as auth_router
-# AI Processing router deprecated - uses old processors
-# from src.web.routers.ai_processing import router as ai_processing_router
 from src.web.routers.intelligence import router as intelligence_router
 from src.web.routers.workflows import router as workflows_router
 from src.web.routers.gateway import router as gateway_router
@@ -436,9 +434,6 @@ app.middleware("http")(add_deprecation_headers)
 
 # Include authentication routes
 app.include_router(auth_router)
-
-# Include AI processing routes - DEPRECATED (moved to intelligence and workflows routers)
-# app.include_router(ai_processing_router)
 
 # Include Intelligence (Tiered Analysis) routes
 app.include_router(intelligence_router)
