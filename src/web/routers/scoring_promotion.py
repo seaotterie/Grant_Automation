@@ -415,6 +415,9 @@ async def automated_bulk_promote_opportunities(
         if not opportunity_ids:
             raise HTTPException(status_code=400, detail="No opportunity IDs provided")
 
+        if len(opportunity_ids) > 100:
+            raise HTTPException(status_code=400, detail="Batch size cannot exceed 100 opportunities")
+
         logger.info(f"Bulk promoting {len(opportunity_ids)} opportunities")
 
         result = await service.bulk_promote_candidates(profile_id, opportunity_ids, user_id)
@@ -548,6 +551,9 @@ async def fetch_enhanced_data_batch(
 
         if not opportunities:
             raise HTTPException(status_code=400, detail="Opportunities list required")
+
+        if len(opportunities) > 50:
+            raise HTTPException(status_code=400, detail="Batch size cannot exceed 50 opportunities")
 
         logger.info(f"Fetching enhanced data for batch of {len(opportunities)} opportunities")
 

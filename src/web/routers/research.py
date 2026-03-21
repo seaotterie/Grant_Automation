@@ -57,7 +57,7 @@ async def get_research_capabilities():
         }
     except Exception as e:
         logger.error(f"Failed to get research capabilities: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/research/ai-lite/analyze")
@@ -144,7 +144,7 @@ async def ai_lite_research_analysis(
 
     except Exception as e:
         logger.error(f"AI-Lite research analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/research/status/{profile_id}")
@@ -172,7 +172,7 @@ async def get_research_status(profile_id: str):
         }
     except Exception as e:
         logger.error(f"Failed to get research status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/research/split-capabilities")
@@ -213,7 +213,7 @@ async def get_split_research_capabilities():
         }
     except Exception as e:
         logger.error(f"Failed to get split research capabilities: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/research/integration-status/{opportunity_id}")
@@ -250,7 +250,7 @@ async def get_integration_status_endpoint(opportunity_id: str):
 
     except Exception as e:
         logger.error(f"Failed to get integration status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # =============================================================================
@@ -295,7 +295,7 @@ async def execute_ai_lite_analysis(request: Dict[str, Any]):
 
     except Exception as e:
         logger.error(f"AI Lite analysis failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"AI Lite analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/ai/deep-research")
@@ -355,7 +355,7 @@ async def execute_ai_heavy_research(request: Dict[str, Any]):
 
     except Exception as e:
         logger.error(f"AI Heavy research failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"AI Heavy research failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def handle_batch_promotion(request: Dict[str, Any], ai_service):
@@ -497,7 +497,7 @@ async def get_ai_analysis_status(request_id: str):
         raise
     except Exception as e:
         logger.error(f"Failed to get AI analysis status: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/ai/session-summary")
@@ -514,7 +514,7 @@ async def get_ai_session_summary():
 
     except Exception as e:
         logger.error(f"Failed to get AI session summary: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/ai/cost-estimates")
@@ -539,7 +539,7 @@ async def get_ai_cost_estimates(candidate_count: int = 1, research_count: int = 
 
     except Exception as e:
         logger.error(f"Failed to get AI cost estimates: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/ai/batch-analysis")
@@ -558,6 +558,9 @@ async def execute_batch_ai_analysis(request: Dict[str, Any]):
         # Validate request data
         if not request.get("candidates"):
             raise HTTPException(status_code=400, detail="No candidates provided for batch analysis")
+
+        if len(request.get("candidates", [])) > 200:
+            raise HTTPException(status_code=400, detail="Batch size cannot exceed 200 candidates")
 
         if not request.get("selected_profile"):
             raise HTTPException(status_code=400, detail="Profile context required for batch analysis")
@@ -629,7 +632,7 @@ async def execute_batch_ai_analysis(request: Dict[str, Any]):
 
     except Exception as e:
         logger.error(f"Batch AI analysis pipeline failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # =============================================================================
@@ -680,7 +683,7 @@ async def execute_ai_lite_validator(request: Dict[str, Any]):
 
     except Exception as e:
         logger.error(f"AI-Lite-1 Validator failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/ai/lite-2/strategic-score")
@@ -727,7 +730,7 @@ async def execute_ai_lite_strategic_scorer(request: Dict[str, Any]):
 
     except Exception as e:
         logger.error(f"AI-Lite-2 Strategic Scorer failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Strategic scoring failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/ai/heavy-light/analyze")
@@ -776,7 +779,7 @@ async def execute_ai_heavy_light_analyzer(request: Dict[str, Any]):
 
     except Exception as e:
         logger.error(f"AI-Heavy Light analysis failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Light analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/ai/heavy-1/research-bridge")
@@ -820,7 +823,7 @@ async def execute_ai_heavy_research_bridge(request: Dict[str, Any]):
 
     except Exception as e:
         logger.error(f"AI-Heavy-1 Research Bridge failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Research bridge failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/ai/orchestrated-pipeline")
@@ -869,7 +872,7 @@ async def execute_orchestrated_analysis_pipeline(request: Dict[str, Any]):
 
     except Exception as e:
         logger.error(f"Orchestrated pipeline failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Pipeline execution failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # =============================================================================
@@ -975,7 +978,7 @@ async def analyze_opportunity_integrated(profile_id: str, request_data: Dict[str
         raise
     except Exception as e:
         logger.error(f"Error in integrated analysis: {e}")
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/profiles/{profile_id}/research/batch-analyze")
@@ -1017,6 +1020,9 @@ async def batch_analyze_opportunities(profile_id: str, request_data: Dict[str, A
                 'opportunities_processed': 0,
                 'results': []
             }
+
+        if len(opportunities) > 50:
+            raise HTTPException(status_code=400, detail="Batch size cannot exceed 50 opportunities")
 
         # Convert report type
         report_type_map = {
@@ -1086,7 +1092,7 @@ async def batch_analyze_opportunities(profile_id: str, request_data: Dict[str, A
         raise
     except Exception as e:
         logger.error(f"Error in batch analysis: {e}")
-        raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/profiles/{profile_id}/analyze/ai-lite")
@@ -1399,7 +1405,7 @@ async def ai_lite_profile_analysis(profile_id: str, request_data: Dict[str, Any]
         raise
     except Exception as e:
         logger.error(f"Error in AI-Lite profile analysis: {e}")
-        raise HTTPException(status_code=500, detail=f"AI-Lite analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/profiles/{profile_id}/research/decision-package/{opportunity_id}")
@@ -1441,7 +1447,7 @@ async def generate_decision_package(profile_id: str, opportunity_id: str) -> Dic
         raise
     except Exception as e:
         logger.error(f"Error generating decision package: {e}")
-        raise HTTPException(status_code=500, detail=f"Decision package generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/research/website-intelligence")
@@ -1504,7 +1510,7 @@ async def analyze_website_intelligence(request_data: Dict[str, Any]) -> Dict[str
         raise
     except Exception as e:
         logger.error(f"Error in website intelligence analysis: {e}")
-        raise HTTPException(status_code=500, detail=f"Website analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/research/performance-summary")
@@ -1524,7 +1530,7 @@ async def get_research_performance_summary() -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Error getting performance summary: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get performance summary: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/research/export-results")
@@ -1558,7 +1564,7 @@ async def export_research_results(request_data: Dict[str, Any]) -> Dict[str, Any
         raise
     except Exception as e:
         logger.error(f"Error exporting research results: {e}")
-        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # =============================================================================

@@ -328,6 +328,9 @@ async def execute_batch_ai_analysis(request: Dict[str, Any]):
         if not request.get("candidates"):
             raise HTTPException(status_code=400, detail="No candidates provided for batch analysis")
 
+        if len(request.get("candidates", [])) > 200:
+            raise HTTPException(status_code=400, detail="Batch size cannot exceed 200 candidates")
+
         if not request.get("selected_profile"):
             raise HTTPException(status_code=400, detail="Profile context required for batch analysis")
 

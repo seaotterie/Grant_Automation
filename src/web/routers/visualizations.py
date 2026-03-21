@@ -80,7 +80,7 @@ async def generate_chart(request_data: Dict[str, Any] = Body(...)):
         raise
     except Exception as e:
         logger.error(f"Error generating chart: {e}")
-        raise HTTPException(status_code=500, detail=f"Chart generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/decision-dashboard")
@@ -203,7 +203,7 @@ async def create_decision_dashboard(request_data: Dict[str, Any] = Body(...)):
         raise
     except Exception as e:
         logger.error(f"Error creating decision dashboard: {e}")
-        raise HTTPException(status_code=500, detail=f"Dashboard creation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{chart_id}/export/{format}")
@@ -243,7 +243,7 @@ async def export_chart(chart_id: str, format: str):
         raise
     except Exception as e:
         logger.error(f"Error exporting chart {chart_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Chart export failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/chart-types")
@@ -330,4 +330,4 @@ async def get_available_chart_types():
 
     except Exception as e:
         logger.error(f"Error retrieving chart types: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve chart types: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")

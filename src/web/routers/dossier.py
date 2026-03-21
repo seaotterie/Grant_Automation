@@ -129,7 +129,7 @@ async def generate_decision_document(
 
     except Exception as e:
         logger.error(f"Error generating document for dossier {dossier_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate document: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/dossier/templates")
@@ -159,7 +159,7 @@ async def get_available_templates():
 
     except Exception as e:
         logger.error(f"Error retrieving templates: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve templates: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/dossier/performance-summary")
@@ -180,7 +180,7 @@ async def get_dossier_performance_summary():
 
     except Exception as e:
         logger.error(f"Error retrieving performance summary: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve performance summary: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/profiles/{profile_id}/dossier/batch-generate")
@@ -191,6 +191,9 @@ async def batch_generate_dossiers(
 ):
     """Generate multiple dossiers in batch for different opportunity sets"""
     try:
+        if len(opportunity_batches) > 20:
+            raise HTTPException(status_code=400, detail="Batch size cannot exceed 20 dossiers")
+
         from src.analysis.ai_heavy_dossier_builder import AIHeavyDossierBuilder
 
         # Initialize builder with global settings
@@ -252,7 +255,7 @@ async def batch_generate_dossiers(
 
     except Exception as e:
         logger.error(f"Error in batch dossier generation for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate batch dossiers: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # =============================================================================
@@ -372,7 +375,7 @@ async def synthesize_decision(
         raise
     except Exception as e:
         logger.error(f"Error in decision synthesis for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Decision synthesis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/profiles/{profile_id}/approach/decision-history")
@@ -407,7 +410,7 @@ async def get_decision_history(
 
     except Exception as e:
         logger.error(f"Error retrieving decision history for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve decision history: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/profiles/{profile_id}/approach/export-decision")
@@ -474,4 +477,4 @@ async def export_decision_document(
         raise
     except Exception as e:
         logger.error(f"Error exporting decision document for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Export generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")

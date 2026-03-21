@@ -236,8 +236,7 @@ async def get_profile(
 ) -> Dict[str, Any]:
     """Get a specific organization profile from database."""
     try:
-        print(f"*** PROFILES ROUTER: GET profile {profile_id} ***")
-        logger.critical(f"*** PROFILES ROUTER: GET profile {profile_id} ***")
+        logger.info(f"GET profile {profile_id}")
 
         # Get profile from database
         profile_dict = db_manager.get_profile_by_id(profile_id)
@@ -645,19 +644,14 @@ async def create_profile_template(template_data: Dict[str, Any]) -> Dict[str, An
 async def fetch_ein_data(request_data: Dict[str, Any]) -> Dict[str, Any]:
     """Fetch organization data by EIN from BMF database."""
     try:
-        print(f"\n=== FETCH-EIN DEBUG START ===")
-        print(f"Request data: {request_data}")
-
         ein = request_data.get("ein")
         if not ein:
-            print(f"ERROR: No EIN provided in request")
             raise HTTPException(status_code=400, detail="EIN is required")
 
         # Strip hyphens from EIN for BMF database query (BMF uses format without hyphens)
         ein_normalized = ein.replace("-", "").strip()
 
-        print(f"Fetching data for EIN: {ein} (normalized: {ein_normalized})")
-        logger.info(f"Fetching data for EIN: {ein} (normalized: {ein_normalized})")
+        logger.info(f"Fetching data for EIN: {ein}")
 
         # Query BMF database directly
         import sqlite3
@@ -665,10 +659,6 @@ async def fetch_ein_data(request_data: Dict[str, Any]) -> Dict[str, Any]:
 
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         db_path = os.path.join(project_root, "data", "nonprofit_intelligence.db")
-
-        print(f"Project root: {project_root}")
-        print(f"Database path: {db_path}")
-        print(f"Database exists: {os.path.exists(db_path)}")
 
         if not os.path.exists(db_path):
             logger.error(f"BMF database not found at {db_path}")

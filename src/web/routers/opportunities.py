@@ -1392,6 +1392,9 @@ async def batch_analyze_990_pdfs(body: BatchAnalyze990PDFsRequest):
     if not body.opportunity_ids:
         raise HTTPException(status_code=400, detail="opportunity_ids must not be empty")
 
+    if len(body.opportunity_ids) > 50:
+        raise HTTPException(status_code=400, detail="Batch size cannot exceed 50 opportunities")
+
     results = []
     semaphore = asyncio.Semaphore(3)  # Max 3 concurrent PDF analyses
 
@@ -1560,6 +1563,9 @@ async def batch_web_research(body: BatchWebResearchRequest):
     """
     if not body.opportunity_ids:
         raise HTTPException(status_code=400, detail="opportunity_ids must not be empty")
+
+    if len(body.opportunity_ids) > 50:
+        raise HTTPException(status_code=400, detail="Batch size cannot exceed 50 opportunities")
 
     results = []
     semaphore = asyncio.Semaphore(3)
@@ -1941,6 +1947,9 @@ async def start_batch_screen(body: BatchScreenRequest, background_tasks: Backgro
     """
     if not body.opportunity_ids:
         raise HTTPException(status_code=400, detail="opportunity_ids must not be empty")
+
+    if len(body.opportunity_ids) > 500:
+        raise HTTPException(status_code=400, detail="Batch size cannot exceed 500 opportunities")
 
     cost_per_opp = 0.001 if body.mode == "fast" else 0.01
     estimated_cost = len(body.opportunity_ids) * cost_per_opp

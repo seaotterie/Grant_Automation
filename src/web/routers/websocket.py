@@ -5,7 +5,7 @@ Handles WebSocket connections for real-time progress updates
 Extracted from monolithic main.py for better modularity
 """
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
 import asyncio
 import json
 import logging
@@ -206,6 +206,183 @@ async def get_websocket_stats() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Failed to get WebSocket stats: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.websocket("/api/live/progress/{workflow_id}")
+async def websocket_progress(websocket: WebSocket, workflow_id: str):
+    """WebSocket endpoint for real-time progress updates."""
+    await websocket.accept()
+
+    try:
+        await progress_service.connect(workflow_id, websocket)
+
+        while True:
+            try:
+                data = await websocket.receive_text()
+                if data == "ping":
+                    await websocket.send_text("pong")
+            except WebSocketDisconnect:
+                break
+
+    except Exception as e:
+        logger.error(f"WebSocket error for {workflow_id}: {e}")
+    finally:
+        await progress_service.disconnect(workflow_id, websocket)
+
+
+@router.websocket("/api/live/system-monitor")
+async def websocket_system_monitor(websocket: WebSocket):
+    """WebSocket endpoint for real-time system monitoring."""
+    await websocket.accept()
+    logger.info("System monitoring WebSocket connected")
+
+    async def _get_processor_status() -> Dict[str, Any]:
+        """Return current processor summary using the tool registry."""
+        try:
+            from src.processors.registry import get_processor_summary
+            return get_processor_summary()
+        except Exception as e:
+            logger.warning(f"Could not retrieve processor summary: {e}")
+            return {}
+
+    try:
+        initial_status = await _get_processor_status()
+        await websocket.send_text(json.dumps({
+            "type": "processor_status",
+            "data": initial_status
+        }))
+
+        while True:
+            try:
+                try:
+                    data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+
+                    if data == "ping":
+                        await websocket.send_text("pong")
+                    elif data == "get_processor_status":
+                        status = await _get_processor_status()
+                        await websocket.send_text(json.dumps({
+                            "type": "processor_status",
+                            "data": status
+                        }))
+                    elif data == "get_system_logs":
+                        # get_system_logs was undefined; return empty list
+                        await websocket.send_text(json.dumps({
+                            "type": "system_logs",
+                            "data": []
+                        }))
+
+                except asyncio.TimeoutError:
+                    status = await _get_processor_status()
+                    await websocket.send_text(json.dumps({
+                        "type": "processor_status",
+                        "data": status
+                    }))
+
+            except WebSocketDisconnect:
+                break
+
+    except Exception as e:
+        logger.error(f"System monitor WebSocket error: {e}")
+    finally:
+        logger.info("System monitoring WebSocket disconnected")
+
+
+@router.websocket("/api/live/discovery/{session_id}")
+async def websocket_unified_discovery(websocket: WebSocket, session_id: str):
+    """
+    WebSocket endpoint for real-time unified discovery progress monitoring.
+    Provides live updates during unified multi-track discovery execution.
+    """
+    await websocket.accept()
+    logger.info(f"Unified discovery WebSocket connected for session: {session_id}")
+
+    try:
+        from src.discovery.unified_multitrack_bridge import get_unified_bridge
+
+        bridge = get_unified_bridge()
+
+        await websocket.send_text(json.dumps({
+            "type": "connection",
+            "status": "connected",
+            "session_id": session_id,
+            "timestamp": datetime.now().isoformat(),
+            "bridge_architecture": "unified_multitrack_bridge",
+            "phase": "4B"
+        }))
+
+        session = bridge.get_session(session_id)
+        if session:
+            await websocket.send_text(json.dumps({
+                "type": "session_status",
+                "session_id": session_id,
+                "status": session.status.value,
+                "progress_updates": len(session.progress_updates),
+                "total_opportunities": session.total_opportunities,
+                "execution_time": session.execution_time_seconds,
+                "strategies_executed": list(session.results_by_strategy.keys()),
+                "timestamp": datetime.now().isoformat()
+            }))
+
+            for update in session.progress_updates[-10:]:
+                await websocket.send_text(json.dumps({
+                    "type": "progress_update",
+                    "session_id": session_id,
+                    "update": update,
+                    "timestamp": datetime.now().isoformat()
+                }))
+
+        while True:
+            try:
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                message = json.loads(data)
+
+                if message.get("type") == "ping":
+                    await websocket.send_text(json.dumps({
+                        "type": "pong",
+                        "timestamp": datetime.now().isoformat()
+                    }))
+
+                elif message.get("type") == "get_session_summary":
+                    summary = bridge.get_session_summary(session_id)
+                    await websocket.send_text(json.dumps({
+                        "type": "session_summary",
+                        "session_id": session_id,
+                        "summary": summary,
+                        "timestamp": datetime.now().isoformat()
+                    }))
+
+                elif message.get("type") == "get_bridge_status":
+                    bridge_status = bridge.get_bridge_status()
+                    await websocket.send_text(json.dumps({
+                        "type": "bridge_status",
+                        "status": bridge_status,
+                        "timestamp": datetime.now().isoformat()
+                    }))
+
+            except asyncio.TimeoutError:
+                await websocket.send_text(json.dumps({
+                    "type": "heartbeat",
+                    "timestamp": datetime.now().isoformat()
+                }))
+
+            except WebSocketDisconnect:
+                logger.info(f"Discovery WebSocket disconnected for session: {session_id}")
+                break
+
+    except Exception as e:
+        logger.error(f"Discovery WebSocket error for session {session_id}: {e}")
+        try:
+            await websocket.send_text(json.dumps({
+                "type": "error",
+                "message": "Internal server error",
+                "session_id": session_id,
+                "timestamp": datetime.now().isoformat()
+            }))
+        except Exception:
+            pass
+    finally:
+        logger.info(f"Discovery WebSocket cleanup for session: {session_id}")
 
 
 # Utility function to broadcast progress updates from other parts of the application
