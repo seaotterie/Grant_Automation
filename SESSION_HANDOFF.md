@@ -73,13 +73,13 @@ Also in main.py cleanup:
 - ✅ E2: `pyproject.toml` updated — `tools/` added to `testpaths`, `--cov=tools`, `coverage.source`; threshold adjusted to 40% (baseline with new tool coverage)
 - ✅ E3: `.github/workflows/ci.yml` created — lint (ruff), test (py3.11+3.12 matrix), security (bandit), typecheck (mypy)
 - ✅ E4: `tests/integration/test_scorer_report_workflow.py` — end-to-end scorer → report pipeline test
-- ✅ E5: 39 TODO/FIXME triaged in `docs/TODO_TRIAGE.md` — 30 future-work markers (keep), 9 endpoint stubs (implement in Phase 9)
+- ✅ E5: 39 TODO/FIXME triaged in `docs/TODO_TRIAGE.md` — 30 future-work markers (keep), 9 endpoint stubs (implement in a future sprint)
 
 #### Phase F: Documentation — COMPLETE ✅
 - ✅ F1: CLAUDE.md rewritten — 650 lines → 155 lines; corrected AI model references (Claude not OpenAI); accurate tool list, architecture, launch commands
 - ✅ F2: CONTRIBUTING.md created — prerequisites, setup, test commands, code style, branch naming, tool creation guide, common pitfalls, env var table
 - ✅ F3: OpenAPI annotations — `openapi_tags` list added to FastAPI app (12 tag groups with descriptions); `summary=` added to 25 key endpoints across `intelligence.py`, `tools.py`, `opportunities.py`, `profiles_v2.py`
-- ✅ F4: `docs/PROCESSOR_MIGRATION_STATUS.md` created — replaced processors mapped to tools, 8 active processors documented (Phase 9), AI service migration status, how-to guide
+- ✅ F4: `docs/PROCESSOR_MIGRATION_STATUS.md` created — replaced processors mapped to tools, 8 active processors documented (no tool equivalent yet), AI service migration status, how-to guide
 
 ---
 

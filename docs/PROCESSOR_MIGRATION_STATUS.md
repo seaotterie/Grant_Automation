@@ -38,7 +38,7 @@
 
 ---
 
-## ⚠️ Still Active — no tool equivalent yet (Phase 9)
+## ⚠️ Still Active — no tool equivalent yet
 
 These processors remain in `src/processors/` and are still imported by the service layer.
 **Do not delete** until replacement tools are built.
@@ -47,19 +47,19 @@ These processors remain in `src/processors/` and are still imported by the servi
 
 | Processor | Purpose | Planned replacement |
 |-----------|---------|-------------------|
-| `grants_gov_fetch.py` | Grants.gov API pull | Phase 9: Government opportunity tool |
-| `usaspending_fetch.py` | USASpending.gov awards | Phase 9: USASpending tool |
-| `va_state_grants_fetch.py` | Virginia state grants | Phase 9: State grants tool |
+| `grants_gov_fetch.py` | Grants.gov API pull | Future sprint: Government opportunity tool |
+| `usaspending_fetch.py` | USASpending.gov awards | Future sprint: USASpending tool |
+| `va_state_grants_fetch.py` | Virginia state grants | Future sprint: State grants tool |
 | `propublica_fetch.py` | ProPublica 990 API | Partial: Tool 7 covers enrichment; fetch path still used |
-| `foundation_directory_fetch.py` | Foundation Directory API | Phase 9: Foundation directory tool |
+| `foundation_directory_fetch.py` | Foundation Directory API | Future sprint: Foundation directory tool |
 | `pdf_downloader.py` | PDF download helper | Shared utility; keep as-is |
 
 ### Analysis (`src/processors/analysis/`)
 
 | Processor | Purpose | Planned replacement |
 |-----------|---------|-------------------|
-| `intelligent_classifier.py` | Opportunity classification | Phase 9: Classification tool |
-| `corporate_csr_analyzer.py` | Corporate CSR analysis | Phase 9: Corporate opportunity tool |
+| `intelligent_classifier.py` | Opportunity classification | Future sprint: Classification tool |
+| `corporate_csr_analyzer.py` | Corporate CSR analysis | Future sprint: Corporate opportunity tool |
 
 ---
 
@@ -82,7 +82,7 @@ The following were removed in Phase C of the code review (no live callers):
 | `openai` SDK | `anthropic` SDK | ✅ New code uses Anthropic |
 | GPT-5 models | Haiku (fast) / Sonnet (heavy) / Opus (future) | ✅ Configured |
 
-**Action for Phase 9**: Remove all callers of `openai_service.py`, then delete the file.
+**Future action**: Remove all callers of `openai_service.py`, then delete the file.
 Current callers: check with `grep -rn "openai_service\|get_openai_service" src/ --include="*.py"`.
 
 ---
