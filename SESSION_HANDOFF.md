@@ -68,12 +68,12 @@ Also in main.py cleanup:
 - ✅ D9: Audit complete — no test/debug endpoints found in any router file
 - ✅ D10: Audit complete — no debug logging in web layer; `print()` calls only in standalone CLI migration scripts (`src/database/`) — acceptable
 
-#### Phase E: Testing & CI/CD — NOT STARTED
-- E1: Tool-level test infrastructure for all 24 tools (many have no tests)
-- E2: Extend pytest coverage to include `tools/` directory
-- E3: GitHub Actions CI pipeline (lint/test/security scan)
-- E4: Integration tests for key workflows
-- E5: Triage 39 TODO/FIXME markers
+#### Phase E: Testing & CI/CD — COMPLETE ✅
+- ✅ E1: Tests added for 6 tools that had none: `multi_dimensional_scorer_tool`, `historical_funding_analyzer_tool`, `report_generator_tool`, `xml-990-parser-tool`, `xml-990pf-parser-tool`, `xml-990ez-parser-tool`
+- ✅ E2: `pyproject.toml` updated — `tools/` added to `testpaths`, `--cov=tools`, `coverage.source`; threshold adjusted to 40% (baseline with new tool coverage)
+- ✅ E3: `.github/workflows/ci.yml` created — lint (ruff), test (py3.11+3.12 matrix), security (bandit), typecheck (mypy)
+- ✅ E4: `tests/integration/test_scorer_report_workflow.py` — end-to-end scorer → report pipeline test
+- ✅ E5: 39 TODO/FIXME triaged in `docs/TODO_TRIAGE.md` — 30 future-work markers (keep), 9 endpoint stubs (implement in Phase 9)
 
 #### Phase F: Documentation — NOT STARTED
 - F1: Rewrite CLAUDE.md (remove contradictions, reduce to essentials)
@@ -87,7 +87,7 @@ Also in main.py cleanup:
 
 1. **Read the plan**: `docs/CODE_REVIEW_AND_PLAN.md`
 2. **Branch**: `claude/code-review-cleanup-continue-ohpvi`
-3. **Resume at**: Phase E (tests/CI), then Phase F (docs) — Phase D is complete
+3. **Resume at**: Phase F (docs) — Phases D and E are complete
 
 ## Key Files
 

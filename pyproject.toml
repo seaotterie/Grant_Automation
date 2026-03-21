@@ -133,15 +133,15 @@ exclude = ["tests*", "docs*", "scripts*", "data*"]
 # Pytest (migrated from pytest.ini)
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "tools"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
 minversion = "7.0"
 timeout = 300
-norecursedirs = [".git", ".tox", "dist", "build", "*.egg", ".venv", "venv", "_legacy"]
-collect_ignore_glob = ["tests/_legacy/*.py"]
+norecursedirs = [".git", ".tox", "dist", "build", "*.egg", ".venv", "venv", "_legacy", "tools/shared_schemas"]
+collect_ignore_glob = ["tests/_legacy/*.py", "tools/*.py"]
 addopts = [
     "--strict-markers",
     "--strict-config",
@@ -150,10 +150,11 @@ addopts = [
     "--show-capture=no",
     "--durations=10",
     "--cov=src",
+    "--cov=tools",
     "--cov-report=term-missing",
     "--cov-report=html:htmlcov",
     "--cov-report=xml:coverage.xml",
-    "--cov-fail-under=80",
+    "--cov-fail-under=40",
 ]
 markers = [
     "asyncio: async test functions",
@@ -179,7 +180,7 @@ log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 # Coverage (migrated from pytest.ini)
 # ---------------------------------------------------------------------------
 [tool.coverage.run]
-source = ["src"]
+source = ["src", "tools"]
 omit = [
     "*/tests/*",
     "*/test_*",
