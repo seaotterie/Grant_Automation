@@ -346,74 +346,120 @@ class InputValidationMiddleware(BaseHTTPMiddleware):
         return response
 
 class RateLimitingMiddleware(BaseHTTPMiddleware):
-    """Basic rate limiting middleware"""
-    
+    """Per-IP rate limiting middleware with tiered limits for expensive endpoints.
+
+    Tiers (requests per minute):
+      - AI / heavy analysis endpoints : 10 rpm  (expensive, slow)
+      - Default                        : 100 rpm
+
+    Memory safety: idle IP entries are evicted after EVICTION_SECONDS to prevent
+    the request_counts dict from growing without bound.
+    """
+
+    # Stricter limit applies to paths that trigger expensive AI / batch work
+    _AI_PATH_SUFFIXES = (
+        "/analyze-990-pdf",
+        "/batch-analyze-990-pdfs",
+        "/batch-web-research",
+        "/batch-analyze",
+        "/deep-intelligence",
+        "/screen-opportunities",
+        "/enhanced-intelligence",
+        "/verified-intelligence",
+    )
+
+    AI_REQUESTS_PER_MINUTE = 10
+    DEFAULT_REQUESTS_PER_MINUTE = 100
+    # Evict entries unseen for longer than this (2× the sliding window)
+    EVICTION_SECONDS = 120
+    # Run the eviction sweep at most this often
+    EVICTION_INTERVAL = 60
+
     def __init__(self, app, requests_per_minute: int = 100):
         super().__init__(app)
-        self.requests_per_minute = requests_per_minute
+        self.requests_per_minute = requests_per_minute  # kept for compatibility
         self.request_counts: Dict[str, List[float]] = {}
-    
+        self._last_seen: Dict[str, float] = {}
+        self._last_eviction: float = time.time()
+
     def _get_client_id(self, request: Request) -> str:
-        """Get client identifier for rate limiting"""
+        """Return the real client IP (leftmost entry of X-Forwarded-For)."""
         forwarded_for = request.headers.get("X-Forwarded-For")
         if forwarded_for:
             return forwarded_for.split(",")[0].strip()
-
-        # Handle test client
         if request.client:
             host = request.client.host
-            # TestClient uses "testclient" as host
-            if host in ["testclient", "testserver"]:
+            if host in ("testclient", "testserver"):
                 return "testclient"
             return host
         return "unknown"
-    
-    def _is_rate_limited(self, client_id: str) -> bool:
-        """Check if client is rate limited"""
+
+    def _limit_for_path(self, path: str) -> int:
+        """Return the applicable rpm limit for this request path."""
+        if any(path.endswith(s) for s in self._AI_PATH_SUFFIXES):
+            return self.AI_REQUESTS_PER_MINUTE
+        return self.DEFAULT_REQUESTS_PER_MINUTE
+
+    def _evict_idle_entries(self, now: float) -> None:
+        """Remove entries for IPs that haven't been seen recently."""
+        if now - self._last_eviction < self.EVICTION_INTERVAL:
+            return
+        cutoff = now - self.EVICTION_SECONDS
+        idle = [ip for ip, ts in self._last_seen.items() if ts < cutoff]
+        for ip in idle:
+            self.request_counts.pop(ip, None)
+            self._last_seen.pop(ip, None)
+        if idle:
+            logger.debug(f"RateLimiter: evicted {len(idle)} idle IP entries")
+        self._last_eviction = now
+
+    def _is_rate_limited(self, client_id: str, limit: int) -> bool:
+        """Check and record the request; return True if over limit."""
         now = time.time()
         minute_ago = now - 60
-        
-        # Initialize or clean old requests
+
+        self._evict_idle_entries(now)
+        self._last_seen[client_id] = now
+
         if client_id not in self.request_counts:
             self.request_counts[client_id] = []
-        
-        # Remove old requests outside the window
+
+        # Slide the window
         self.request_counts[client_id] = [
-            timestamp for timestamp in self.request_counts[client_id]
-            if timestamp > minute_ago
+            ts for ts in self.request_counts[client_id] if ts > minute_ago
         ]
-        
-        # Check if over limit
-        if len(self.request_counts[client_id]) >= self.requests_per_minute:
+
+        if len(self.request_counts[client_id]) >= limit:
             return True
-        
-        # Record this request
+
         self.request_counts[client_id].append(now)
         return False
-    
+
     async def dispatch(self, request: Request, call_next):
         client_id = self._get_client_id(request)
 
-        # Skip rate limiting for localhost and test clients
-        if client_id in ["127.0.0.1", "localhost", "::1", "testclient", "testserver"]:
+        # Localhost and test clients are exempt
+        if client_id in ("127.0.0.1", "localhost", "::1", "testclient", "testserver"):
             return await call_next(request)
 
-        if self._is_rate_limited(client_id):
-            logger.warning(f"Rate limit exceeded for client: {client_id}")
+        path = request.url.path
+        limit = self._limit_for_path(path)
+
+        if self._is_rate_limited(client_id, limit):
+            logger.warning(f"Rate limit exceeded for {client_id} on {path} (limit={limit}/min)")
             raise HTTPException(
                 status_code=429,
                 detail="Rate limit exceeded. Please try again later.",
-                headers={"Retry-After": "60"}
+                headers={"Retry-After": "60"},
             )
-        
+
         response = await call_next(request)
-        
-        # Add rate limit headers
-        remaining = max(0, self.requests_per_minute - len(self.request_counts.get(client_id, [])))
-        response.headers["X-RateLimit-Limit"] = str(self.requests_per_minute)
+
+        remaining = max(0, limit - len(self.request_counts.get(client_id, [])))
+        response.headers["X-RateLimit-Limit"] = str(limit)
         response.headers["X-RateLimit-Remaining"] = str(remaining)
         response.headers["X-RateLimit-Reset"] = str(int(time.time()) + 60)
-        
+
         return response
 
 # Security utilities

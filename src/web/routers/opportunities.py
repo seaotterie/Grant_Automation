@@ -6,13 +6,16 @@ Endpoints for viewing opportunity details, running web research, and promoting t
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from typing import Dict, Any, Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 import asyncio
 import aiohttp
+import ipaddress
 import logging
 import sqlite3
 import json
+import re
 import uuid
+from urllib.parse import urlparse
 from datetime import datetime, timezone
 
 from src.database.database_manager import DatabaseManager
@@ -48,6 +51,86 @@ Only include data you actually see in the text. Use confidence="low" for anythin
 Return ONLY the JSON object, no markdown or other text."""
 
 
+# ---------------------------------------------------------------------------
+# SSRF protection helpers
+# ---------------------------------------------------------------------------
+
+# Domains that legitimately host IRS 990 PDF filings
+_ALLOWED_PDF_DOMAINS = {
+    "s3.amazonaws.com",       # AWS S3 (IRS bulk data)
+    "s3.us-east-1.amazonaws.com",
+    "apps.irs.gov",
+    "www.irs.gov",
+    "irs.gov",
+    "projects.propublica.org",
+    "www.propublica.org",
+    "propublica.org",
+    "990s.foundationcenter.org",
+    "candid.org",
+    "www.candid.org",
+    "efts.irs.gov",
+}
+
+_PRIVATE_RANGES = [
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),   # link-local
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fc00::/7"),
+]
+
+
+def _validate_pdf_url(url: str) -> str:
+    """Raise ValueError if *url* is not a safe, allowed 990 PDF URL."""
+    if not url or not isinstance(url, str):
+        raise ValueError("pdf_url is required")
+
+    url = url.strip()
+    if len(url) > 2048:
+        raise ValueError("pdf_url exceeds maximum length")
+
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        raise ValueError("pdf_url is not a valid URL")
+
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError("pdf_url must use http or https")
+
+    hostname = parsed.hostname or ""
+    if not hostname:
+        raise ValueError("pdf_url has no hostname")
+
+    # Block bare IP addresses (SSRF via IP literal)
+    try:
+        ip = ipaddress.ip_address(hostname)
+        for net in _PRIVATE_RANGES:
+            if ip in net:
+                raise ValueError("pdf_url hostname resolves to a private/reserved address")
+        # Public IPs are technically OK but not expected — reject them anyway
+        raise ValueError("pdf_url must use a named host from an allowed domain")
+    except ValueError as exc:
+        # Re-raise our own errors; ignore "does not appear to be an IPv4 or IPv6 address"
+        if "pdf_url" in str(exc):
+            raise
+
+    # Allowlist check — hostname must match or be a subdomain of an allowed domain
+    def _matches(host: str) -> bool:
+        for allowed in _ALLOWED_PDF_DOMAINS:
+            if host == allowed or host.endswith("." + allowed):
+                return True
+        return False
+
+    if not _matches(hostname):
+        raise ValueError(
+            f"pdf_url hostname '{hostname}' is not in the allowed domain list"
+        )
+
+    return url
+
+
 # Request models
 class WebResearchRequest(BaseModel):
     """Request body for web research endpoint"""
@@ -58,6 +141,11 @@ class Analyze990PDFRequest(BaseModel):
     """Request body for 990 PDF analysis endpoint"""
     pdf_url: str
     tax_year: Optional[int] = None
+
+    @field_validator("pdf_url")
+    @classmethod
+    def validate_pdf_url(cls, v: str) -> str:
+        return _validate_pdf_url(v)
 
 
 class BatchAnalyze990PDFsRequest(BaseModel):

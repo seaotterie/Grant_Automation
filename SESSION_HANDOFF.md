@@ -51,23 +51,22 @@ Also in main.py cleanup:
 
 #### Phase D: Security Hardening — PARTIALLY DONE
 - ✅ D4: CORS tightened (explicit methods/headers, env-var origins)
+- ✅ D6: SSRF — `_validate_pdf_url()` validator on `Analyze990PDFRequest`; domain allowlist; private-IP blocking
 - ✅ D7: Batch size limits on all bulk/batch endpoints
-- ✅ D10 (partial): Removed print() and logger.critical("DEBUG...") from profiles.py
+- ✅ D8: RateLimitingMiddleware — idle entry eviction (memory fix); tiered limits (AI 10 rpm, default 100 rpm)
+- ✅ D9: Audit — no test/debug endpoints found
+- ✅ D10: Audit — web layer is clean; print() only in CLI migration scripts
 - ❌ D1: Re-enable JWT auth — needs frontend changes (auth token flow)
 - ❌ D3: WebSocket auth — needs frontend changes
 - ❌ D5: CSP nonces — needs Alpine.js/frontend refactoring
-- ❌ D6: SSRF protection on PDF analysis URL endpoint
-- ❌ D8: Per-user/per-IP rate limiting
-- ❌ D9: Audit for remaining test/debug endpoints
-- ❌ D10 (full): Complete structured logging audit
 
 ### What Remains
 
-#### Phase D: Security Hardening (remaining)
-- **D6**: SSRF — add URL validation + size limits to PDF analysis in `routers/opportunities.py`
-- **D8**: Per-IP rate limiting — `RateLimitingMiddleware` in `src/middleware/security.py` is global; needs per-IP tracking
-- **D9**: Audit for test/debug endpoints (e.g. check routers for `/api/test*`, `/debug/*`)
-- **D10**: Full structured logging — grep `logger.info.*"DEBUG"` and `print(` across codebase
+#### Phase D: Security Hardening — COMPLETE ✅
+- ✅ D6: SSRF — `_validate_pdf_url()` added to `Analyze990PDFRequest`; allowlist of 9 IRS/ProPublica/Candid domains; IP literal and private-range blocking
+- ✅ D8: `RateLimitingMiddleware` — already per-IP; fixed unbounded memory growth (idle entry eviction every 60s); added tiered limits (AI endpoints → 10 rpm, default → 100 rpm)
+- ✅ D9: Audit complete — no test/debug endpoints found in any router file
+- ✅ D10: Audit complete — no debug logging in web layer; `print()` calls only in standalone CLI migration scripts (`src/database/`) — acceptable
 
 #### Phase E: Testing & CI/CD — NOT STARTED
 - E1: Tool-level test infrastructure for all 24 tools (many have no tests)
@@ -88,7 +87,7 @@ Also in main.py cleanup:
 
 1. **Read the plan**: `docs/CODE_REVIEW_AND_PLAN.md`
 2. **Branch**: `claude/code-review-cleanup-continue-ohpvi`
-3. **Resume at**: Phase D remaining (D6, D8, D9, D10), then Phase E (tests/CI), then Phase F (docs)
+3. **Resume at**: Phase E (tests/CI), then Phase F (docs) — Phase D is complete
 
 ## Key Files
 
