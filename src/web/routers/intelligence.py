@@ -753,8 +753,7 @@ async def _run_networking_analysis(opportunity_id: str) -> dict:
     cultivation_steps = []
 
     try:
-        import openai
-        from src.core.openai_service import OpenAIService
+        from src.core.anthropic_service import get_anthropic_service, ClaudeModel
 
         seeker_board_summary = ", ".join(
             (b.get("name") or str(b)) if isinstance(b, dict) else str(b)
@@ -815,14 +814,14 @@ Format your response as:
 NARRATION: [your narrative analysis]
 CULTIVATION_STEPS_JSON: ["step 1", "step 2", "step 3"]"""
 
-            client = openai.AsyncOpenAI()
-            response = await client.chat.completions.create(
-                model="gpt-4.1-mini",
+            anthropic_service = get_anthropic_service()
+            _response = await anthropic_service.create_completion(
+                model=ClaudeModel.HAIKU.value,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=1200,
                 temperature=0.3,
             )
-            raw = response.choices[0].message.content or ""
+            raw = _response.content or ""
 
             # Parse narration + steps
             if "NARRATION:" in raw and "CULTIVATION_STEPS_JSON:" in raw:
