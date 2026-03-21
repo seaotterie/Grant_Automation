@@ -216,7 +216,7 @@ async def _interpret_with_claude(
         return None
 
 
-@router.get("/{opportunity_id}/details")
+@router.get("/{opportunity_id}/details", summary="Get full opportunity details including all analysis data")
 async def get_opportunity_details(opportunity_id: str, profile_id: Optional[str] = None):
     """
     Get full opportunity details for SCREENING stage modal.
@@ -339,7 +339,7 @@ async def get_opportunity_details(opportunity_id: str, profile_id: Optional[str]
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/{opportunity_id}/research")
+@router.post("/{opportunity_id}/research", summary="Run Scrapy web intelligence on an opportunity's funder")
 async def research_opportunity(
     opportunity_id: str,
     request_body: WebResearchRequest = WebResearchRequest(),
@@ -736,7 +736,7 @@ async def research_opportunity_placeholder(opportunity_id: str):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/{opportunity_id}/promote-with-notes")
+@router.post("/{opportunity_id}/promote-with-notes", summary="Promote opportunity to Intelligence stage with reviewer notes")
 async def promote_to_intelligence(opportunity_id: str, request: Dict[str, Any], profile_id: Optional[str] = None):
     """
     Promote opportunity from SCREENING to INTELLIGENCE stage.
@@ -1151,7 +1151,7 @@ async def update_opportunity_notes(opportunity_id: str, request: Dict[str, Any])
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.patch("/{opportunity_id}/website-url")
+@router.patch("/{opportunity_id}/website-url", summary="Set or clear the website URL for an opportunity")
 async def update_website_url(opportunity_id: str, body: WebsiteUrlUpdate):
     """
     Update (or clear) the website_url for an opportunity.
@@ -1211,7 +1211,7 @@ async def update_website_url(opportunity_id: str, body: WebsiteUrlUpdate):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/{opportunity_id}/990-filings")
+@router.get("/{opportunity_id}/990-filings", summary="List available 990 filings (ProPublica + scraped) for the funder")
 async def get_990_filings(opportunity_id: str):
     """
     Return 990 filing history with PDF links for an opportunity.
@@ -1466,7 +1466,7 @@ async def _analyze_990_pdf_for_ein(
     return {"extraction": extraction, "cache_hit": False}
 
 
-@router.post("/batch-analyze-990-pdfs")
+@router.post("/batch-analyze-990-pdfs", summary="Batch-extract narrative data from 990 PDFs for multiple opportunities (max 50)")
 async def batch_analyze_990_pdfs(body: BatchAnalyze990PDFsRequest):
     """
     Batch analyze 990 PDFs for multiple opportunities.
@@ -1588,7 +1588,7 @@ async def batch_analyze_990_pdfs(body: BatchAnalyze990PDFsRequest):
     }
 
 
-@router.post("/{opportunity_id}/analyze-990-pdf")
+@router.post("/{opportunity_id}/analyze-990-pdf", summary="Extract mission/grant data from a single 990 PDF URL")
 async def analyze_990_pdf(opportunity_id: str, body: Analyze990PDFRequest):
     """
     Send a 990 PDF URL to Claude for grant-intelligence extraction.
@@ -1638,7 +1638,7 @@ async def analyze_990_pdf(opportunity_id: str, body: Analyze990PDFRequest):
 # Batch Web Research Endpoint (Haiku web scraper fan-out)
 # ---------------------------------------------------------------------------
 
-@router.post("/batch-web-research")
+@router.post("/batch-web-research", summary="Run Scrapy web intelligence on multiple opportunities in batch (max 50)")
 async def batch_web_research(body: BatchWebResearchRequest):
     """
     Batch Haiku web intelligence for multiple opportunities.
@@ -2025,7 +2025,7 @@ async def _run_batch_screen(job_id: str, body: BatchScreenRequest) -> None:
     job["estimated_cost"] = len(body.opportunity_ids) * cost_per_opp
 
 
-@router.post("/batch-screen")
+@router.post("/batch-screen", summary="Screen up to 500 opportunities using Claude Haiku (async background job)")
 async def start_batch_screen(body: BatchScreenRequest, background_tasks: BackgroundTasks):
     """
     Start a background batch screening job using Tool 1 (fast or thorough).

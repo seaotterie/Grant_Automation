@@ -282,7 +282,11 @@ task_manager = TaskManager()
 # Router
 router = APIRouter(prefix="/api/intelligence", tags=["Intelligence Analysis"])
 
-@router.post("/profiles/{profile_id}/analysis", response_model=IntelligenceResponse)
+@router.post(
+    "/profiles/{profile_id}/analysis",
+    response_model=IntelligenceResponse,
+    summary="Run deep intelligence analysis on a grant opportunity",
+)
 async def generate_intelligence_analysis(
     profile_id: str,
     request: IntelligenceRequest,
@@ -446,7 +450,11 @@ async def generate_intelligence_analysis(
         logger.error(f"Analysis failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.get("/analysis/{task_id}", response_model=TaskStatusResponse)
+@router.get(
+    "/analysis/{task_id}",
+    response_model=TaskStatusResponse,
+    summary="Poll the status of a background analysis task",
+)
 async def get_analysis_status(task_id: str):
     """
     Get status of background analysis task
@@ -466,7 +474,11 @@ async def get_analysis_status(task_id: str):
         processing_cost=task["cost"]
     )
 
-@router.post("/cost-estimate", response_model=CostEstimateResponse)
+@router.post(
+    "/cost-estimate",
+    response_model=CostEstimateResponse,
+    summary="Estimate analysis cost for a given tier and add-ons",
+)
 async def calculate_cost_estimate(request: CostEstimateRequest):
     """
     Calculate cost estimate for tier selection
@@ -489,7 +501,7 @@ async def calculate_cost_estimate(request: CostEstimateRequest):
         logger.error(f"Cost estimation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.get("/tiers")
+@router.get("/tiers", summary="List available intelligence tiers with pricing")
 async def get_available_tiers():
     """
     Get available intelligence tiers and their features (2-Tier TRUE COST System)

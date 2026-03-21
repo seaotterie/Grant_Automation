@@ -75,11 +75,11 @@ Also in main.py cleanup:
 - ✅ E4: `tests/integration/test_scorer_report_workflow.py` — end-to-end scorer → report pipeline test
 - ✅ E5: 39 TODO/FIXME triaged in `docs/TODO_TRIAGE.md` — 30 future-work markers (keep), 9 endpoint stubs (implement in Phase 9)
 
-#### Phase F: Documentation — NOT STARTED
-- F1: Rewrite CLAUDE.md (remove contradictions, reduce to essentials)
-- F2: Create CONTRIBUTING.md with setup instructions
-- F3: OpenAPI/Swagger annotation pass on key endpoints
-- F4: Document tool ↔ processor migration status clearly
+#### Phase F: Documentation — COMPLETE ✅
+- ✅ F1: CLAUDE.md rewritten — 650 lines → 155 lines; corrected AI model references (Claude not OpenAI); accurate tool list, architecture, launch commands
+- ✅ F2: CONTRIBUTING.md created — prerequisites, setup, test commands, code style, branch naming, tool creation guide, common pitfalls, env var table
+- ✅ F3: OpenAPI annotations — `openapi_tags` list added to FastAPI app (12 tag groups with descriptions); `summary=` added to 25 key endpoints across `intelligence.py`, `tools.py`, `opportunities.py`, `profiles_v2.py`
+- ✅ F4: `docs/PROCESSOR_MIGRATION_STATUS.md` created — replaced processors mapped to tools, 8 active processors documented (Phase 9), AI service migration status, how-to guide
 
 ---
 
@@ -87,7 +87,7 @@ Also in main.py cleanup:
 
 1. **Read the plan**: `docs/CODE_REVIEW_AND_PLAN.md`
 2. **Branch**: `claude/code-review-cleanup-continue-ohpvi`
-3. **Resume at**: Phase F (docs) — Phases D and E are complete
+3. **Resume at**: All 6 phases (A–F) of the code review plan are complete ✅
 
 ## Key Files
 

@@ -516,7 +516,7 @@ def _calculate_multi_dimensional_scores(
     return scored_orgs
 
 
-@router.post("/build")
+@router.post("/build", summary="Build a nonprofit profile from an EIN (BMF + 990 enrichment)")
 async def build_profile_with_orchestration(request: Dict[str, Any]):
     """
     Build a comprehensive profile using the orchestration workflow.
@@ -698,7 +698,7 @@ async def build_profile_with_orchestration(request: Dict[str, Any]):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/enhance")
+@router.post("/enhance", summary="Enhance an existing profile with additional data sources")
 async def enhance_profile(request: Dict[str, Any]):
     """
     Enhance an existing profile with web intelligence and AI analysis.
@@ -727,7 +727,7 @@ async def enhance_profile(request: Dict[str, Any]):
     return await build_profile_with_orchestration(build_request)
 
 
-@router.post("/orchestrate")
+@router.post("/orchestrate", summary="Run full profile enhancement orchestration pipeline")
 async def orchestrate_profile_workflow(request: Dict[str, Any]):
     """
     Execute orchestrated profile building workflow.
@@ -1186,7 +1186,7 @@ async def discover_networking_opportunities(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, summary="Create a new nonprofit profile")
 async def create_profile(request: Dict[str, Any]):
     """
     Create a new profile manually (without EIN-based building).
@@ -1248,7 +1248,7 @@ async def create_profile(request: Dict[str, Any]):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("")
+@router.get("", summary="List all profiles")
 async def list_profiles(
     page: int = 1,
     limit: int = 50,
@@ -1322,7 +1322,7 @@ async def health_check():
     }
 
 
-@router.get("/{profile_id}")
+@router.get("/{profile_id}", summary="Get a profile by ID")
 async def get_profile_details(profile_id: str):
     """Get detailed profile information."""
     try:
@@ -1348,7 +1348,7 @@ async def get_profile_details(profile_id: str):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.put("/{profile_id}")
+@router.put("/{profile_id}", summary="Update a profile")
 async def update_profile(profile_id: str, updates: Dict[str, Any]):
     """
     Update profile fields.
@@ -1402,7 +1402,7 @@ async def update_profile(profile_id: str, updates: Dict[str, Any]):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.delete("/{profile_id}")
+@router.delete("/{profile_id}", summary="Delete a profile")
 async def delete_profile(profile_id: str):
     """Delete a profile."""
     try:
@@ -1515,7 +1515,7 @@ async def export_profile_data(profile_id: str, export_config: Dict[str, Any]):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/{profile_id}/discover")
+@router.post("/{profile_id}/discover", summary="Discover grant opportunities for a profile via BMF + scoring")
 async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRequest):
     """
     SCREENING Stage: Discover nonprofit opportunities using BMF + 990 + Scoring + Scrapy.
@@ -1900,7 +1900,7 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/{profile_id}/opportunities")
+@router.get("/{profile_id}/opportunities", summary="List all opportunities associated with a profile")
 async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None):
     """
     Get all saved opportunities for a profile from the database.

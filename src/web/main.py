@@ -93,13 +93,88 @@ async def lifespan(app: FastAPI):
 
 
 # Create FastAPI application
+_OPENAPI_TAGS = [
+    {
+        "name": "Intelligence Analysis",
+        "description": "Tiered AI analysis (Essentials $2 / Premium $8) using Claude Sonnet. "
+                       "Runs the full deep-intelligence pipeline: financial, network, risk, and historical.",
+    },
+    {
+        "name": "profiles_v2",
+        "description": "Profile management — create, read, update, delete nonprofit profiles "
+                       "and trigger enhancement workflows (EIN lookup, BMF, 990 enrichment).",
+    },
+    {
+        "name": "profiles-intelligence",
+        "description": "Discovery and scoring within a profile context: BMF discovery, "
+                       "opportunity scoring, funding analysis, and networking pathways.",
+    },
+    {
+        "name": "opportunities",
+        "description": "Opportunity lifecycle: web research, 990 PDF analysis, batch analysis, "
+                       "promotion to Intelligence stage, and website URL management.",
+    },
+    {
+        "name": "tools",
+        "description": "Unified 12-factor tool execution API. List, inspect, and execute any "
+                       "of the 24 operational tools directly via REST.",
+    },
+    {
+        "name": "workflows",
+        "description": "Multi-tool workflow orchestration (YAML-defined). Execute, monitor, "
+                       "and retrieve results for screening and deep-intelligence workflows.",
+    },
+    {
+        "name": "discovery_v2",
+        "description": "Advanced nonprofit discovery using the BMF/SOI intelligence database "
+                       "(2M+ organisations). Supports entity analytics and scoring.",
+    },
+    {
+        "name": "Foundation Network Intelligence",
+        "description": "Foundation relationship mapping, co-funding analysis, and board "
+                       "network graph operations.",
+    },
+    {
+        "name": "Scoring & Promotion",
+        "description": "Opportunity scoring, bulk promotion between funnel stages, and "
+                       "AI-powered compatibility analysis.",
+    },
+    {
+        "name": "Dossier & Decisions",
+        "description": "Generate comprehensive intelligence dossiers and structured "
+                       "decision-support reports.",
+    },
+    {
+        "name": "Research & AI",
+        "description": "AI-powered research endpoints: batch screening, analysis, "
+                       "and strategic intelligence generation.",
+    },
+    {
+        "name": "Funnel Management",
+        "description": "Manage the grant opportunity funnel: stages, transitions, "
+                       "bulk operations, and pipeline metrics.",
+    },
+    {
+        "name": "websocket",
+        "description": "Real-time progress updates, system monitoring, and live discovery "
+                       "streams over WebSocket.",
+    },
+]
+
 app = FastAPI(
     title="Catalynx - Grant Research Automation",
-    description="Modern web interface for intelligent grant research and classification",
+    description=(
+        "AI-powered grant research platform for nonprofits. "
+        "Uses **Claude Haiku** for fast screening and **Claude Sonnet** for deep intelligence analysis. "
+        "All AI tools are 12-factor compliant with structured outputs and full cost transparency.\n\n"
+        "**Interactive docs**: `/api/docs` (Swagger) · `/api/redoc` (ReDoc)\n\n"
+        "**Authentication**: Not required in development. Production uses Bearer tokens."
+    ),
     version="2.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
-    lifespan=lifespan
+    openapi_tags=_OPENAPI_TAGS,
+    lifespan=lifespan,
 )
 
 # Configure CORS — explicit origins, methods, and headers
