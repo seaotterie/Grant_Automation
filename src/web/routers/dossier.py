@@ -79,7 +79,7 @@ async def generate_comprehensive_dossier(
 
     except Exception as e:
         logger.error(f"Error generating dossier for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate dossier: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate dossier")
 
 
 @router.post("/dossier/{dossier_id}/generate-document")
