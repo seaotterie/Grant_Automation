@@ -1431,7 +1431,7 @@
                                     </template>
 
                                     <!-- Card B: 990 PDF Analysis (amber) -->
-                                    <template x-if="selectedOpportunity?.pdf_analyzed">
+                                    <template x-if="ninetiesExtractionLoading || ninetiesExtractionData">
                                         <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
                                             <div class="flex items-center justify-between mb-3">
                                                 <h4 class="font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-2">
@@ -1496,7 +1496,7 @@
                                             </template>
                                         </div>
                                     </template>
-                                    <template x-if="!selectedOpportunity?.pdf_analyzed">
+                                    <template x-if="!ninetiesExtractionLoading && !ninetiesExtractionData">
                                         <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-amber-200 dark:border-amber-800 rounded-lg p-4 text-center">
                                             <p class="text-sm text-gray-500 dark:text-gray-400">No 990 PDF analysis yet.</p>
                                             <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Run Search 990s to extract grant intelligence from IRS filings.</p>
@@ -3822,7 +3822,7 @@
                                     </template>
 
                                     <!-- Card B: 990 PDF Analysis (amber) -->
-                                    <template x-if="selectedIntelligenceOpp?.pdf_analyzed">
+                                    <template x-if="ninetiesExtractionLoading || ninetiesExtractionData">
                                         <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
                                             <div class="flex items-center justify-between mb-3">
                                                 <h4 class="font-semibold text-amber-900 dark:text-amber-100 flex items-center gap-2">
@@ -3876,7 +3876,7 @@
                                             </template>
                                         </div>
                                     </template>
-                                    <template x-if="!selectedIntelligenceOpp?.pdf_analyzed">
+                                    <template x-if="!ninetiesExtractionLoading && !ninetiesExtractionData">
                                         <div class="bg-gray-50 dark:bg-gray-800 border border-dashed border-amber-200 dark:border-amber-800 rounded-lg p-4 text-center">
                                             <p class="text-sm text-gray-500 dark:text-gray-400">No 990 PDF analysis yet.</p>
                                             <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Run ③ Search 990s to extract grant intelligence from IRS filings.</p>
@@ -11571,7 +11571,7 @@
     <script src="/static/modules/network-graph.js" onerror="console.error('Failed to load network-graph.js')"></script>
 
     <!-- app.js contains catalynxApp() - must load before Alpine -->
-    <script src="/static/app.js?v=20260322_COMPOUND_FIX" onerror="console.error('Failed to load app.js')"></script>
+    <script src="/static/app.js?v=20260322_990_PERSIST" onerror="console.error('Failed to load app.js')"></script>
 
     <!-- Verify modules are defined BEFORE loading Alpine -->
     <script>

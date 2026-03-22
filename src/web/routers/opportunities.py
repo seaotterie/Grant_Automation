@@ -1617,6 +1617,24 @@ async def analyze_990_pdf(opportunity_id: str, body: Analyze990PDFRequest):
             tax_year=body.tax_year,
         )
 
+        # Persist pdf_analyzed flag to analysis_discovery so icon/section survive reload
+        try:
+            conn2 = database_manager.get_connection()
+            cur2 = conn2.cursor()
+            cur2.execute("SELECT analysis_discovery FROM opportunities WHERE id = ?", (opportunity_id,))
+            ad_row = cur2.fetchone()
+            if ad_row and ad_row[0]:
+                ad = json.loads(ad_row[0]) if isinstance(ad_row[0], str) else ad_row[0]
+                ad["pdf_analyzed"] = True
+                cur2.execute(
+                    "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                    (json.dumps(ad), datetime.now().isoformat(), opportunity_id),
+                )
+                conn2.commit()
+            conn2.close()
+        except Exception as db_err:
+            logger.warning(f"Failed to write pdf_analyzed flag for {opportunity_id}: {db_err}")
+
         return {
             "success": True,
             "opportunity_id": opportunity_id,
