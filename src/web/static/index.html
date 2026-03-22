@@ -1093,9 +1093,8 @@
                     </div>
 
                     <!-- Opportunity Details Modal (4 Tabs) -->
-                    <div x-show="showOpportunityModal"
-                         x-cloak
-                         @click.self="closeOpportunityModal()"
+                    <template x-if="showOpportunityModal">
+                    <div @click.self="closeOpportunityModal()"
                          class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden"
                              @click.stop>
@@ -2647,6 +2646,7 @@
                             </div>
                         </div>
                     </div>
+                    </template>
 
                     <!-- Funnel Statistics Modal (Phase 2) -->
                     <div x-show="showFunnelStatsModal"
