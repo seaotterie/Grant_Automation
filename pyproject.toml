@@ -1,0 +1,230 @@
+[build-system]
+requires = ["setuptools>=75.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "catalynx"
+version = "0.9.0"
+description = "Grant Research Intelligence Platform - AI-powered nonprofit grant discovery and analysis"
+readme = "README.md"
+license = "Proprietary"
+requires-python = ">=3.11"
+authors = [
+    { name = "Catalynx Team" },
+]
+keywords = ["grants", "nonprofits", "intelligence", "ai", "fundraising"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: FastAPI",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business",
+]
+
+dependencies = [
+    # Web Framework & Server
+    "fastapi>=0.135.1",
+    "uvicorn>=0.42.0",
+    "starlette>=0.52.1",
+    "python-multipart>=0.0.22",
+
+    # Data Validation & Settings
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
+    "annotated-types>=0.7.0",
+    "typing-extensions>=4.15.0",
+
+    # AI / LLM Integration
+    "openai>=2.29.0",
+    "tqdm>=4.67.3",
+
+    # HTTP Clients & Async I/O
+    "httpx>=0.28.1",
+    "aiohttp>=3.13.3",
+    "aiofiles>=25.1.0",
+    "aiosqlite>=0.22.1",
+    "anyio>=4.12.1",
+
+    # Web Scraping (Scrapy + BeautifulSoup)
+    "scrapy>=2.14.2",
+    "beautifulsoup4>=4.14.3",
+    "lxml>=6.0.2",
+    "parsel>=1.11.0",
+    "w3lib>=2.4.0",
+    "tldextract>=5.3.1",
+
+    # Data Processing & Analysis
+    "pandas>=3.0.1",
+    "numpy>=2.4.3",
+    "networkx>=3.6.1",
+    "openpyxl>=3.1.5",
+
+    # Templating & Markup
+    "Jinja2>=3.1.6",
+    "MarkupSafe>=3.0.3",
+    "Markdown>=3.10.2",
+
+    # Serialization & Configuration
+    "PyYAML>=6.0.1",
+    "toml>=0.10.2",
+    "xmltodict>=0.13.0",
+    "msgpack>=1.1.2",
+
+    # Authentication & Security
+    "PyJWT>=2.7.0",
+    "passlib>=1.7.4",
+    "cryptography>=46.0.5",
+    "pyOpenSSL>=26.0.0",
+    "defusedxml>=0.7.1",
+
+    # HTTP & Networking Fundamentals
+    "requests>=2.32.5",
+    "urllib3>=2.6.3",
+    "certifi>=2026.1.4",
+
+    # CLI & System Utilities
+    "click>=8.3.1",
+    "psutil>=7.2.2",
+    "schedule>=1.2.2",
+    "python-dateutil>=2.9.0",
+    "python-dotenv>=1.2.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.9.0",
+    "mypy>=1.14.0",
+    "pre-commit>=4.0.0",
+    "ipython>=8.30.0",
+    "ipdb>=0.13.13",
+]
+test = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "pytest-timeout>=2.3.0",
+    "pytest-xdist>=3.5.0",
+    "httpx>=0.28.1",
+    "coverage>=7.6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/catalynx/catalynx"
+Documentation = "https://github.com/catalynx/catalynx/wiki"
+
+[project.scripts]
+catalynx = "src.web.main:main"
+
+# ---------------------------------------------------------------------------
+# Setuptools packaging
+# ---------------------------------------------------------------------------
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "tools*"]
+exclude = ["tests*", "docs*", "scripts*", "data*"]
+
+[tool.setuptools.package-data]
+"src.web" = ["static/**/*", "templates/**/*"]
+"tools" = ["*/12factors.toml", "*/README.md", "*/config/*"]
+
+# ---------------------------------------------------------------------------
+# Pytest (migrated from pytest.ini)
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests", "tools"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+minversion = "7.0"
+timeout = 300
+norecursedirs = [".git", ".tox", "dist", "build", "*.egg", ".venv", "venv", "_legacy", "tools/shared_schemas"]
+collect_ignore_glob = ["tests/_legacy/*.py", "tools/*.py"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "--tb=short",
+    "--show-capture=no",
+    "--durations=10",
+    "--cov=src",
+    "--cov=tools",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml:coverage.xml",
+    "--cov-fail-under=40",
+]
+markers = [
+    "asyncio: async test functions",
+    "integration: integration tests",
+    "performance: performance tests",
+    "security: security tests",
+    "phase6: Phase 6 system tests",
+    "slow: slow running tests (>5 seconds)",
+    "external: tests requiring external services",
+    "unit: unit tests (default)",
+]
+filterwarnings = [
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+# ---------------------------------------------------------------------------
+# Coverage (migrated from pytest.ini)
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+source = ["src", "tools"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__init__.py",
+    "*/conftest.py",
+    "*/migrations/*",
+    "*/scripts/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "class .*\\(Protocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+title = "Catalynx Test Coverage Report"
+
+# ---------------------------------------------------------------------------
+# Ruff (linter + formatter)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src", "tools"]
+
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true

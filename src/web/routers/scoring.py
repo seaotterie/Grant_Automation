@@ -103,8 +103,8 @@ async def score_government_opportunity(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed government opportunity scoring: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed government opportunity scoring: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Financial Scoring
@@ -155,8 +155,8 @@ async def score_financial_fit(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed financial scoring: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed financial scoring: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # AI-Lite Scoring
@@ -222,8 +222,8 @@ async def score_ai_lite(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed AI-Lite scoring: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed AI-Lite scoring: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Network Analysis Scoring
@@ -279,8 +279,8 @@ async def score_network_analysis(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed network scoring: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed network scoring: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Success Pattern Scoring
@@ -351,8 +351,8 @@ async def score_success_patterns(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed success pattern scoring: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed success pattern scoring: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Comprehensive Multi-Score Analysis
@@ -441,8 +441,8 @@ async def comprehensive_scoring(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed comprehensive scoring: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed comprehensive scoring: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Scoring Configuration and Weights
@@ -494,8 +494,8 @@ async def get_scoring_configuration() -> Dict[str, Any]:
         }
         
     except Exception as e:
-        logger.error(f"Failed to get scoring configuration: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get scoring configuration: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/configuration")
@@ -523,5 +523,5 @@ async def update_scoring_configuration(
         }
         
     except Exception as e:
-        logger.error(f"Failed to update scoring configuration: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to update scoring configuration: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")

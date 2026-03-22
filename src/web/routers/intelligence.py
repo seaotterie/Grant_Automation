@@ -282,7 +282,11 @@ task_manager = TaskManager()
 # Router
 router = APIRouter(prefix="/api/intelligence", tags=["Intelligence Analysis"])
 
-@router.post("/profiles/{profile_id}/analysis", response_model=IntelligenceResponse)
+@router.post(
+    "/profiles/{profile_id}/analysis",
+    response_model=IntelligenceResponse,
+    summary="Run deep intelligence analysis on a grant opportunity",
+)
 async def generate_intelligence_analysis(
     profile_id: str,
     request: IntelligenceRequest,
@@ -443,9 +447,14 @@ async def generate_intelligence_analysis(
 
     except Exception as e:
         logger.error(f"Intelligence analysis failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+        logger.error(f"Analysis failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.get("/analysis/{task_id}", response_model=TaskStatusResponse)
+@router.get(
+    "/analysis/{task_id}",
+    response_model=TaskStatusResponse,
+    summary="Poll the status of a background analysis task",
+)
 async def get_analysis_status(task_id: str):
     """
     Get status of background analysis task
@@ -465,7 +474,11 @@ async def get_analysis_status(task_id: str):
         processing_cost=task["cost"]
     )
 
-@router.post("/cost-estimate", response_model=CostEstimateResponse)
+@router.post(
+    "/cost-estimate",
+    response_model=CostEstimateResponse,
+    summary="Estimate analysis cost for a given tier and add-ons",
+)
 async def calculate_cost_estimate(request: CostEstimateRequest):
     """
     Calculate cost estimate for tier selection
@@ -485,9 +498,10 @@ async def calculate_cost_estimate(request: CostEstimateRequest):
         
     except Exception as e:
         logger.error(f"Cost estimation failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Cost estimation failed: {str(e)}")
+        logger.error(f"Cost estimation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
-@router.get("/tiers")
+@router.get("/tiers", summary="List available intelligence tiers with pricing")
 async def get_available_tiers():
     """
     Get available intelligence tiers and their features (2-Tier TRUE COST System)
@@ -739,8 +753,7 @@ async def _run_networking_analysis(opportunity_id: str) -> dict:
     cultivation_steps = []
 
     try:
-        import openai
-        from src.core.openai_service import OpenAIService
+        from src.core.anthropic_service import get_anthropic_service, ClaudeModel
 
         seeker_board_summary = ", ".join(
             (b.get("name") or str(b)) if isinstance(b, dict) else str(b)
@@ -801,14 +814,14 @@ Format your response as:
 NARRATION: [your narrative analysis]
 CULTIVATION_STEPS_JSON: ["step 1", "step 2", "step 3"]"""
 
-            client = openai.AsyncOpenAI()
-            response = await client.chat.completions.create(
-                model="gpt-4.1-mini",
+            anthropic_service = get_anthropic_service()
+            _response = await anthropic_service.create_completion(
+                model=ClaudeModel.HAIKU.value,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=1200,
                 temperature=0.3,
             )
-            raw = response.choices[0].message.content or ""
+            raw = _response.content or ""
 
             # Parse narration + steps
             if "NARRATION:" in raw and "CULTIVATION_STEPS_JSON:" in raw:

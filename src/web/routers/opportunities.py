@@ -6,13 +6,16 @@ Endpoints for viewing opportunity details, running web research, and promoting t
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from typing import Dict, Any, Optional, List
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 import asyncio
 import aiohttp
+import ipaddress
 import logging
 import sqlite3
 import json
+import re
 import uuid
+from urllib.parse import urlparse
 from datetime import datetime, timezone
 
 from src.database.database_manager import DatabaseManager
@@ -48,6 +51,86 @@ Only include data you actually see in the text. Use confidence="low" for anythin
 Return ONLY the JSON object, no markdown or other text."""
 
 
+# ---------------------------------------------------------------------------
+# SSRF protection helpers
+# ---------------------------------------------------------------------------
+
+# Domains that legitimately host IRS 990 PDF filings
+_ALLOWED_PDF_DOMAINS = {
+    "s3.amazonaws.com",       # AWS S3 (IRS bulk data)
+    "s3.us-east-1.amazonaws.com",
+    "apps.irs.gov",
+    "www.irs.gov",
+    "irs.gov",
+    "projects.propublica.org",
+    "www.propublica.org",
+    "propublica.org",
+    "990s.foundationcenter.org",
+    "candid.org",
+    "www.candid.org",
+    "efts.irs.gov",
+}
+
+_PRIVATE_RANGES = [
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),   # link-local
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fc00::/7"),
+]
+
+
+def _validate_pdf_url(url: str) -> str:
+    """Raise ValueError if *url* is not a safe, allowed 990 PDF URL."""
+    if not url or not isinstance(url, str):
+        raise ValueError("pdf_url is required")
+
+    url = url.strip()
+    if len(url) > 2048:
+        raise ValueError("pdf_url exceeds maximum length")
+
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        raise ValueError("pdf_url is not a valid URL")
+
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError("pdf_url must use http or https")
+
+    hostname = parsed.hostname or ""
+    if not hostname:
+        raise ValueError("pdf_url has no hostname")
+
+    # Block bare IP addresses (SSRF via IP literal)
+    try:
+        ip = ipaddress.ip_address(hostname)
+        for net in _PRIVATE_RANGES:
+            if ip in net:
+                raise ValueError("pdf_url hostname resolves to a private/reserved address")
+        # Public IPs are technically OK but not expected — reject them anyway
+        raise ValueError("pdf_url must use a named host from an allowed domain")
+    except ValueError as exc:
+        # Re-raise our own errors; ignore "does not appear to be an IPv4 or IPv6 address"
+        if "pdf_url" in str(exc):
+            raise
+
+    # Allowlist check — hostname must match or be a subdomain of an allowed domain
+    def _matches(host: str) -> bool:
+        for allowed in _ALLOWED_PDF_DOMAINS:
+            if host == allowed or host.endswith("." + allowed):
+                return True
+        return False
+
+    if not _matches(hostname):
+        raise ValueError(
+            f"pdf_url hostname '{hostname}' is not in the allowed domain list"
+        )
+
+    return url
+
+
 # Request models
 class WebResearchRequest(BaseModel):
     """Request body for web research endpoint"""
@@ -58,6 +141,11 @@ class Analyze990PDFRequest(BaseModel):
     """Request body for 990 PDF analysis endpoint"""
     pdf_url: str
     tax_year: Optional[int] = None
+
+    @field_validator("pdf_url")
+    @classmethod
+    def validate_pdf_url(cls, v: str) -> str:
+        return _validate_pdf_url(v)
 
 
 class BatchAnalyze990PDFsRequest(BaseModel):
@@ -128,7 +216,7 @@ async def _interpret_with_claude(
         return None
 
 
-@router.get("/{opportunity_id}/details")
+@router.get("/{opportunity_id}/details", summary="Get full opportunity details including all analysis data")
 async def get_opportunity_details(opportunity_id: str, profile_id: Optional[str] = None):
     """
     Get full opportunity details for SCREENING stage modal.
@@ -247,11 +335,11 @@ async def get_opportunity_details(opportunity_id: str, profile_id: Optional[str]
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get opportunity details for {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get opportunity details for {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/{opportunity_id}/research")
+@router.post("/{opportunity_id}/research", summary="Run Scrapy web intelligence on an opportunity's funder")
 async def research_opportunity(
     opportunity_id: str,
     request_body: WebResearchRequest = WebResearchRequest(),
@@ -577,20 +665,22 @@ async def research_opportunity(
                 # Tool 25 failed - return error
                 error_msg = "; ".join(result.errors) if result.errors else "Unknown error"
                 logger.error(f"Tool 25 web research failed for {opportunity_id}: {error_msg}")
-                raise HTTPException(status_code=500, detail=f"Web intelligence tool failed: {error_msg}")
+                raise HTTPException(status_code=500, detail="Web intelligence tool failed")
 
         except ImportError as e:
             logger.error(f"Failed to import Tool 25: {e}")
-            raise HTTPException(status_code=500, detail=f"Tool 25 import error: {str(e)}")
+            logger.error(f"Tool 25 import error: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Internal server error")
         except Exception as e:
             logger.error(f"Tool 25 execution error for {opportunity_id}: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"Web research failed: {str(e)}")
+            logger.error(f"Web research failed: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Internal server error")
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to research opportunity {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to research opportunity {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{opportunity_id}/research_placeholder")
@@ -642,11 +732,11 @@ async def research_opportunity_placeholder(opportunity_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Web research failed for {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Web research failed for {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/{opportunity_id}/promote-with-notes")
+@router.post("/{opportunity_id}/promote-with-notes", summary="Promote opportunity to Intelligence stage with reviewer notes")
 async def promote_to_intelligence(opportunity_id: str, request: Dict[str, Any], profile_id: Optional[str] = None):
     """
     Promote opportunity from SCREENING to INTELLIGENCE stage.
@@ -809,8 +899,8 @@ async def promote_to_intelligence(opportunity_id: str, request: Dict[str, Any], 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to promote opportunity {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to promote opportunity {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{opportunity_id}/promote")
@@ -901,8 +991,8 @@ async def promote_category_level(opportunity_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to promote opportunity {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to promote opportunity {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{opportunity_id}/demote")
@@ -998,8 +1088,8 @@ async def demote_category_level(opportunity_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to demote opportunity {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to demote opportunity {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.patch("/{opportunity_id}/notes")
@@ -1057,11 +1147,11 @@ async def update_opportunity_notes(opportunity_id: str, request: Dict[str, Any])
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update notes for opportunity {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to update notes for opportunity {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.patch("/{opportunity_id}/website-url")
+@router.patch("/{opportunity_id}/website-url", summary="Set or clear the website URL for an opportunity")
 async def update_website_url(opportunity_id: str, body: WebsiteUrlUpdate):
     """
     Update (or clear) the website_url for an opportunity.
@@ -1117,11 +1207,11 @@ async def update_website_url(opportunity_id: str, body: WebsiteUrlUpdate):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update website_url for {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to update website_url for {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/{opportunity_id}/990-filings")
+@router.get("/{opportunity_id}/990-filings", summary="List available 990 filings (ProPublica + scraped) for the funder")
 async def get_990_filings(opportunity_id: str):
     """
     Return 990 filing history with PDF links for an opportunity.
@@ -1175,8 +1265,8 @@ async def get_990_filings(opportunity_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get 990 filings for {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get 990 filings for {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{opportunity_id}/990-extraction")
@@ -1228,8 +1318,8 @@ async def get_990_extraction(opportunity_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get 990 extraction for {opportunity_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get 990 extraction for {opportunity_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def _fetch_and_cache_filing_history(ein: str, org_name: str) -> List[Dict[str, Any]]:
@@ -1376,7 +1466,7 @@ async def _analyze_990_pdf_for_ein(
     return {"extraction": extraction, "cache_hit": False}
 
 
-@router.post("/batch-analyze-990-pdfs")
+@router.post("/batch-analyze-990-pdfs", summary="Batch-extract narrative data from 990 PDFs for multiple opportunities (max 50)")
 async def batch_analyze_990_pdfs(body: BatchAnalyze990PDFsRequest):
     """
     Batch analyze 990 PDFs for multiple opportunities.
@@ -1389,6 +1479,9 @@ async def batch_analyze_990_pdfs(body: BatchAnalyze990PDFsRequest):
     """
     if not body.opportunity_ids:
         raise HTTPException(status_code=400, detail="opportunity_ids must not be empty")
+
+    if len(body.opportunity_ids) > 50:
+        raise HTTPException(status_code=400, detail="Batch size cannot exceed 50 opportunities")
 
     results = []
     semaphore = asyncio.Semaphore(3)  # Max 3 concurrent PDF analyses
@@ -1495,7 +1588,7 @@ async def batch_analyze_990_pdfs(body: BatchAnalyze990PDFsRequest):
     }
 
 
-@router.post("/{opportunity_id}/analyze-990-pdf")
+@router.post("/{opportunity_id}/analyze-990-pdf", summary="Extract mission/grant data from a single 990 PDF URL")
 async def analyze_990_pdf(opportunity_id: str, body: Analyze990PDFRequest):
     """
     Send a 990 PDF URL to Claude for grant-intelligence extraction.
@@ -1538,14 +1631,14 @@ async def analyze_990_pdf(opportunity_id: str, body: Analyze990PDFRequest):
         raise
     except Exception as e:
         logger.error(f"Failed to analyze 990 PDF for {opportunity_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ---------------------------------------------------------------------------
 # Batch Web Research Endpoint (Haiku web scraper fan-out)
 # ---------------------------------------------------------------------------
 
-@router.post("/batch-web-research")
+@router.post("/batch-web-research", summary="Run Scrapy web intelligence on multiple opportunities in batch (max 50)")
 async def batch_web_research(body: BatchWebResearchRequest):
     """
     Batch Haiku web intelligence for multiple opportunities.
@@ -1558,6 +1651,9 @@ async def batch_web_research(body: BatchWebResearchRequest):
     """
     if not body.opportunity_ids:
         raise HTTPException(status_code=400, detail="opportunity_ids must not be empty")
+
+    if len(body.opportunity_ids) > 50:
+        raise HTTPException(status_code=400, detail="Batch size cannot exceed 50 opportunities")
 
     results = []
     semaphore = asyncio.Semaphore(3)
@@ -1929,7 +2025,7 @@ async def _run_batch_screen(job_id: str, body: BatchScreenRequest) -> None:
     job["estimated_cost"] = len(body.opportunity_ids) * cost_per_opp
 
 
-@router.post("/batch-screen")
+@router.post("/batch-screen", summary="Screen up to 500 opportunities using Claude Haiku (async background job)")
 async def start_batch_screen(body: BatchScreenRequest, background_tasks: BackgroundTasks):
     """
     Start a background batch screening job using Tool 1 (fast or thorough).
@@ -1939,6 +2035,9 @@ async def start_batch_screen(body: BatchScreenRequest, background_tasks: Backgro
     """
     if not body.opportunity_ids:
         raise HTTPException(status_code=400, detail="opportunity_ids must not be empty")
+
+    if len(body.opportunity_ids) > 500:
+        raise HTTPException(status_code=400, detail="Batch size cannot exceed 500 opportunities")
 
     cost_per_opp = 0.001 if body.mode == "fast" else 0.01
     estimated_cost = len(body.opportunity_ids) * cost_per_opp
@@ -2034,7 +2133,8 @@ async def screen_single_opportunity(opportunity_id: str, mode: str = "fast"):
             )
             tool = OpportunityScreeningTool()
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Tool 1 import error: {e}")
+            logger.error(f"Tool 1 import error: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Internal server error")
 
         # 4. Build OrganizationProfile
         focus_areas = json.loads(profile_dict.get("focus_areas") or "[]") or []
@@ -2148,7 +2248,7 @@ async def screen_single_opportunity(opportunity_id: str, mode: str = "fast"):
         raise
     except Exception as e:
         logger.error(f"Single screen failed for {opportunity_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{opportunity_id}/run-connections")
@@ -2256,10 +2356,11 @@ async def run_opportunity_networking(opportunity_id: str):
         result = await _run_networking_analysis(opportunity_id)
         return result
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        logger.warning(f"[RunNetworking] Not found for {opportunity_id}: {e}")
+        raise HTTPException(status_code=404, detail="Resource not found")
     except Exception as e:
         logger.error(f"[RunNetworking] Failed for {opportunity_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/health")

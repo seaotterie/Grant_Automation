@@ -120,7 +120,8 @@ class ScoringService:
             
         except Exception as e:
             logger.error(f"Error scoring opportunity {opportunity_id}: {e}")
-            raise HTTPException(status_code=500, detail=f"Scoring failed: {str(e)}")
+            logger.error(f"Scoring failed: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Internal server error")
     
     async def evaluate_promotion(
         self, profile_id: str, opportunity_id: str, request: PromotionRequest
@@ -155,7 +156,8 @@ class ScoringService:
             
         except Exception as e:
             logger.error(f"Error evaluating promotion for {opportunity_id}: {e}")
-            raise HTTPException(status_code=500, detail=f"Promotion evaluation failed: {str(e)}")
+            logger.error(f"Promotion evaluation failed: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Internal server error")
     
     async def promote_opportunity(
         self, profile_id: str, opportunity_id: str, request: PromotionRequest
@@ -201,7 +203,8 @@ class ScoringService:
             
         except Exception as e:
             logger.error(f"Error promoting opportunity {opportunity_id}: {e}")
-            raise HTTPException(status_code=500, detail=f"Promotion failed: {str(e)}")
+            logger.error(f"Promotion failed: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Internal server error")
     
     async def bulk_promote(
         self, profile_id: str, request: BulkPromotionRequest
@@ -275,7 +278,8 @@ class ScoringService:
             
         except Exception as e:
             logger.error(f"Error in bulk promotion: {e}")
-            raise HTTPException(status_code=500, detail=f"Bulk promotion failed: {str(e)}")
+            logger.error(f"Bulk promotion failed: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Internal server error")
     
     async def get_promotion_candidates(
         self, profile_id: str, stage: str = "prospects", limit: int = 50
@@ -309,7 +313,8 @@ class ScoringService:
             
         except Exception as e:
             logger.error(f"Error getting promotion candidates: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to get candidates: {str(e)}")
+            logger.error(f"Failed to get candidates: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Internal server error")
     
     def _format_score_response(self, scoring_result: ScoringResult) -> ScoreResponse:
         """Format ScoringResult into ScoreResponse"""

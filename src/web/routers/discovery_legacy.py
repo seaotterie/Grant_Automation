@@ -118,7 +118,7 @@ async def bmf_search(request: Dict[str, Any]):
         raise
     except Exception as e:
         logger.error(f"BMF search failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/bmf/stats")
@@ -173,7 +173,7 @@ async def bmf_stats():
 
     except Exception as e:
         logger.error(f"Failed to get BMF stats: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/bmf/enhanced-search")
@@ -300,4 +300,4 @@ async def bmf_enhanced_search(request: Dict[str, Any] = None):
         raise
     except Exception as e:
         logger.error(f"Enhanced BMF search failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

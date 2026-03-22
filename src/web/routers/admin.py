@@ -62,8 +62,8 @@ async def get_system_overview(
         }
         
     except Exception as e:
-        logger.error(f"Failed to get system overview: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get system overview: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/cache/clear")
@@ -85,8 +85,8 @@ async def clear_system_cache(
         }
         
     except Exception as e:
-        logger.error(f"Failed to clear cache: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to clear cache: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/logs/recent")
@@ -115,8 +115,8 @@ async def get_recent_logs(
         }
         
     except Exception as e:
-        logger.error(f"Failed to get recent logs: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get recent logs: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/maintenance/mode")
@@ -140,8 +140,8 @@ async def toggle_maintenance_mode(
         }
         
     except Exception as e:
-        logger.error(f"Failed to toggle maintenance mode: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to toggle maintenance mode: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Additional router for remaining miscellaneous routes
@@ -177,8 +177,8 @@ async def get_help_information() -> Dict[str, Any]:
         }
         
     except Exception as e:
-        logger.error(f"Failed to get help information: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get help information: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @misc_router.get("/search")
@@ -221,8 +221,8 @@ async def global_search(
         }
         
     except Exception as e:
-        logger.error(f"Global search failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Global search failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @misc_router.post("/feedback")
@@ -251,8 +251,8 @@ async def submit_feedback(feedback_data: Dict[str, Any]) -> Dict[str, Any]:
         }
         
     except Exception as e:
-        logger.error(f"Failed to submit feedback: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to submit feedback: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/deprecated-usage")
@@ -287,8 +287,8 @@ async def get_deprecated_endpoint_usage() -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Failed to get deprecation stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get deprecation stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/deprecated-usage/reset")
@@ -311,8 +311,8 @@ async def reset_deprecated_stats(
         }
 
     except Exception as e:
-        logger.error(f"Failed to reset deprecation stats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to reset deprecation stats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # Include both routers

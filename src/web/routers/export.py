@@ -60,8 +60,8 @@ async def export_opportunities(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Export opportunities failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Export opportunities failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/comprehensive-report")
@@ -97,8 +97,8 @@ async def generate_comprehensive_report(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Comprehensive report generation failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Comprehensive report generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/formats")
@@ -118,5 +118,5 @@ async def get_export_formats() -> Dict[str, Any]:
         }
         
     except Exception as e:
-        logger.error(f"Failed to get export formats: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get export formats: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")

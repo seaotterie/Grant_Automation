@@ -63,7 +63,7 @@ class ToolListResponse(BaseModel):
 tool_registry = ToolRegistry()
 
 
-@router.get("", response_model=ToolListResponse)
+@router.get("", response_model=ToolListResponse, summary="List all 12-factor tools")
 async def list_tools(
     category: Optional[str] = None,
     status: Optional[str] = None
@@ -92,11 +92,11 @@ async def list_tools(
         )
 
     except Exception as e:
-        logger.error(f"Error listing tools: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error listing tools: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/{tool_name}", response_model=ToolMetadata)
+@router.get("/{tool_name}", response_model=ToolMetadata, summary="Get metadata and schema for a specific tool")
 async def get_tool_metadata(tool_name: str):
     """
     Get metadata for a specific tool
@@ -128,11 +128,11 @@ async def get_tool_metadata(tool_name: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting tool metadata for {tool_name}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error getting tool metadata for {tool_name}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/{tool_name}/execute", response_model=ToolExecutionResponse)
+@router.post("/{tool_name}/execute", response_model=ToolExecutionResponse, summary="Execute a tool and return structured output")
 async def execute_tool(
     tool_name: str,
     request: ToolExecutionRequest = Body(...)
@@ -218,10 +218,10 @@ async def execute_tool(
         raise
     except Exception as e:
         logger.error(f"Error executing tool {tool_name}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/categories/list")
+@router.get("/categories/list", summary="List all tool categories")
 async def list_categories():
     """
     List all tool categories
@@ -238,8 +238,8 @@ async def list_categories():
         }
 
     except Exception as e:
-        logger.error(f"Error listing categories: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error listing categories: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/health")

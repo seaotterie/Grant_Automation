@@ -73,7 +73,7 @@ async def populate_graph(req: PopulateGraphRequest):
         }
     except Exception as e:
         logger.error(f"[network/populate-graph] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ── Endpoint B: Graph coverage stats ──────────────────────────────────────────
@@ -211,7 +211,7 @@ async def graph_stats(profile_id: str = Query(...)):
 
     except Exception as e:
         logger.error(f"[network/graph-stats] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ── Endpoint C: Discover filing histories (free HTTP, no AI) ──────────────────
@@ -304,7 +304,7 @@ async def discover_filings(req: DiscoverFilingsRequest):
 
     except Exception as e:
         logger.error(f"[network/discover-filings] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ── Endpoint D: Cross-funder warmth ranking ───────────────────────────────────
@@ -379,7 +379,7 @@ async def rank_funders(req: RankFundersRequest):
 
     except Exception as e:
         logger.error(f"[network/rank-funders] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # ── Endpoint E: XML officer lookup (free, no AI) ──────────────────────────────
@@ -548,4 +548,4 @@ async def xml_officer_lookup(req: XmlOfficerLookupRequest):
 
     except Exception as e:
         logger.error(f"[network/xml-officer-lookup] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

@@ -516,7 +516,7 @@ def _calculate_multi_dimensional_scores(
     return scored_orgs
 
 
-@router.post("/build")
+@router.post("/build", summary="Build a nonprofit profile from an EIN (BMF + 990 enrichment)")
 async def build_profile_with_orchestration(request: Dict[str, Any]):
     """
     Build a comprehensive profile using the orchestration workflow.
@@ -618,9 +618,10 @@ async def build_profile_with_orchestration(request: Dict[str, Any]):
             logger.info(f"[BUILD_PROFILE] Step: {step.step_name}, success={step.success}, has_data={bool(step.data)}")
 
         if not workflow_result.success:
+            logger.error(f"Profile building failed: {', '.join(workflow_result.errors)}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Profile building failed: {', '.join(workflow_result.errors)}"
+                detail="Profile building failed"
             )
 
         # Extract profile data from workflow result
@@ -694,10 +695,10 @@ async def build_profile_with_orchestration(request: Dict[str, Any]):
         raise
     except Exception as e:
         logger.error(f"Failed to build profile for EIN {ein}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/enhance")
+@router.post("/enhance", summary="Enhance an existing profile with additional data sources")
 async def enhance_profile(request: Dict[str, Any]):
     """
     Enhance an existing profile with web intelligence and AI analysis.
@@ -726,7 +727,7 @@ async def enhance_profile(request: Dict[str, Any]):
     return await build_profile_with_orchestration(build_request)
 
 
-@router.post("/orchestrate")
+@router.post("/orchestrate", summary="Run full profile enhancement orchestration pipeline")
 async def orchestrate_profile_workflow(request: Dict[str, Any]):
     """
     Execute orchestrated profile building workflow.
@@ -845,8 +846,8 @@ async def get_profile_quality(profile_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get quality for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get quality for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{profile_id}/quality-score")
@@ -868,8 +869,8 @@ async def get_profile_quality_score(profile_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get quality-score for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get quality-score for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{profile_id}/opportunities/score")
@@ -942,8 +943,8 @@ async def score_opportunity(profile_id: str, request: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to score opportunity for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to score opportunity for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{profile_id}/opportunities/funding")
@@ -1062,8 +1063,8 @@ async def discover_funding_opportunities(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to discover funding opportunities: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to discover funding opportunities: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{profile_id}/opportunities/networking")
@@ -1181,11 +1182,11 @@ async def discover_networking_opportunities(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to discover networking opportunities: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to discover networking opportunities: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, summary="Create a new nonprofit profile")
 async def create_profile(request: Dict[str, Any]):
     """
     Create a new profile manually (without EIN-based building).
@@ -1244,10 +1245,10 @@ async def create_profile(request: Dict[str, Any]):
         raise
     except Exception as e:
         logger.error(f"Failed to create profile: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("")
+@router.get("", summary="List all profiles")
 async def list_profiles(
     page: int = 1,
     limit: int = 50,
@@ -1294,7 +1295,7 @@ async def list_profiles(
 
     except Exception as e:
         logger.error(f"[ENDPOINT] Failed to list profiles: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/health")
@@ -1321,7 +1322,7 @@ async def health_check():
     }
 
 
-@router.get("/{profile_id}")
+@router.get("/{profile_id}", summary="Get a profile by ID")
 async def get_profile_details(profile_id: str):
     """Get detailed profile information."""
     try:
@@ -1343,11 +1344,11 @@ async def get_profile_details(profile_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.put("/{profile_id}")
+@router.put("/{profile_id}", summary="Update a profile")
 async def update_profile(profile_id: str, updates: Dict[str, Any]):
     """
     Update profile fields.
@@ -1397,11 +1398,11 @@ async def update_profile(profile_id: str, updates: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to update profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.delete("/{profile_id}")
+@router.delete("/{profile_id}", summary="Delete a profile")
 async def delete_profile(profile_id: str):
     """Delete a profile."""
     try:
@@ -1421,8 +1422,8 @@ async def delete_profile(profile_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to delete profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to delete profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{profile_id}/analytics")
@@ -1449,8 +1450,8 @@ async def get_profile_analytics(profile_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get analytics for profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to get analytics for profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/{profile_id}/export")
@@ -1510,11 +1511,11 @@ async def export_profile_data(profile_id: str, export_config: Dict[str, Any]):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to export profile {profile_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to export profile {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/{profile_id}/discover")
+@router.post("/{profile_id}/discover", summary="Discover grant opportunities for a profile via BMF + scoring")
 async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRequest):
     """
     SCREENING Stage: Discover nonprofit opportunities using BMF + 990 + Scoring + Scrapy.
@@ -1896,10 +1897,10 @@ async def discover_nonprofit_opportunities(profile_id: str, request: DiscoveryRe
         raise
     except Exception as e:
         logger.error(f"Discovery failed for profile {profile_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/{profile_id}/opportunities")
+@router.get("/{profile_id}/opportunities", summary="List all opportunities associated with a profile")
 async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None):
     """
     Get all saved opportunities for a profile from the database.
@@ -2048,7 +2049,7 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
 
     except Exception as e:
         logger.error(f"Failed to retrieve opportunities for profile {profile_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # =====================================================================================
@@ -2134,7 +2135,7 @@ async def discover_urls_for_profile(
 
     except Exception as e:
         logger.error(f"URL discovery failed for profile {profile_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/{profile_id}/url-statistics")
@@ -2176,4 +2177,4 @@ async def get_url_statistics(profile_id: str):
 
     except Exception as e:
         logger.error(f"Failed to get URL statistics for profile {profile_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
