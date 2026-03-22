@@ -7598,21 +7598,18 @@ function catalynxApp() {
 
                 console.log('Enhanced opportunity modal data:', this.selectedOpportunity);
 
-                // Lazy-load 990 PDF extraction if available
+                // Always try to load cached 990 extraction (fast no-op if nothing cached)
                 this.ninetiesExtractionData = null;
-                this.ninetiesExtractionLoading = false;
-                if (opportunity.pdf_analyzed) {
-                    this.ninetiesExtractionLoading = true;
-                    fetch(`/api/v2/opportunities/${opportunity.opportunity_id}/990-extraction`)
-                        .then(r => r.json())
-                        .then(data => {
-                            this.ninetiesExtractionData = data.extraction
-                                ? { ...data.extraction, tax_year: data.tax_year }
-                                : null;
-                        })
-                        .catch(() => {})
-                        .finally(() => { this.ninetiesExtractionLoading = false; });
-                }
+                this.ninetiesExtractionLoading = true;
+                fetch(`/api/v2/opportunities/${opportunity.opportunity_id}/990-extraction`)
+                    .then(r => r.json())
+                    .then(data => {
+                        this.ninetiesExtractionData = data.extraction
+                            ? { ...data.extraction, tax_year: data.tax_year }
+                            : null;
+                    })
+                    .catch(() => {})
+                    .finally(() => { this.ninetiesExtractionLoading = false; });
 
             } catch (error) {
                 console.error('Error preparing opportunity details:', error);
@@ -7630,19 +7627,21 @@ function catalynxApp() {
 
         closeOpportunityModal() {
             this.showOpportunityModal = false;
-            this.selectedOpportunity = null;
-            this.opportunityLoading = false;
-            this.isProcessing = false;
-            this.modalActiveTab = 'scores'; // Reset to default tab (Score Breakdown)
-            this.opportunityNotes = ''; // Clear notes field
-            this.ninetiesExtractionData = null;
-            this.ninetiesExtractionLoading = false;
-            this.modalOpportunityIndex = -1;
-            // Also clear delete confirmation state
-            this.showDeleteConfirmation = false;
-            this.deleteConfirmationStep = 1;
-            this.deletingOpportunity = false;
-            console.log('Closing opportunity modal');
+            // Defer nulling reactive data until after x-if removes the modal from the DOM,
+            // preventing Alpine from evaluating bound expressions with null values during teardown.
+            this.$nextTick(() => {
+                this.selectedOpportunity = null;
+                this.opportunityLoading = false;
+                this.isProcessing = false;
+                this.modalActiveTab = 'scores'; // Reset to default tab (Score Breakdown)
+                this.opportunityNotes = ''; // Clear notes field
+                this.ninetiesExtractionData = null;
+                this.ninetiesExtractionLoading = false;
+                this.modalOpportunityIndex = -1;
+                this.showDeleteConfirmation = false;
+                this.deleteConfirmationStep = 1;
+                this.deletingOpportunity = false;
+            });
         },
 
         // Get the navigation list used for prev/next modal navigation.
