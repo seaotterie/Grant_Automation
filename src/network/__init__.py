@@ -8,6 +8,7 @@ from .path_finder import PathFinder, NetworkPath
 from .people_etl import PeopleETL
 from .person_deduplication import PersonDeduplicationService
 from .connection_strength import ConnectionStrengthScorer
+from .batch_preprocessor import NetworkBatchPreprocessor
 
 __all__ = [
     "NameNormalizer",
@@ -17,4 +18,5 @@ __all__ = [
     "PeopleETL",
     "PersonDeduplicationService",
     "ConnectionStrengthScorer",
+    "NetworkBatchPreprocessor",
 ]

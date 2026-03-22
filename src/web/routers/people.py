@@ -375,7 +375,128 @@ async def auto_merge(req: AutoMergeRequest):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-# ── 10. Find connection pathways ──────────────────────────────────────────────
+# ── 10. Batch preprocessing ───────────────────────────────────────────────────
+
+class BatchPreprocessRequest(BaseModel):
+    profile_id: str
+    max_eins: int = Field(default=200, ge=1, le=1000)
+    include_web_scraping: bool = Field(
+        default=False,
+        description="Enable Stage 5 AI web scraping (costs ~$0.007/org)"
+    )
+    web_scraping_limit: int = Field(
+        default=10, ge=1, le=50,
+        description="Max orgs for web scraping (controls cost)"
+    )
+    concurrency: int = Field(default=3, ge=1, le=5)
+
+
+class BatchStageRequest(BaseModel):
+    profile_id: str
+    stage: str = Field(
+        description="Stage to run: discover_filings, xml_officers, ingest_etl, dedup_score, web_enrichment"
+    )
+    max_eins: int = Field(default=200, ge=1, le=1000)
+    concurrency: int = Field(default=3, ge=1, le=5)
+    web_scraping_limit: int = Field(default=10, ge=1, le=50)
+
+
+@router.post("/batch/preprocess")
+async def batch_preprocess(req: BatchPreprocessRequest):
+    """
+    Run the full network batch preprocessing pipeline for a profile.
+
+    Stages (in order):
+      1. Discover filing histories via ProPublica API ($0.00)
+      2. Fetch 990 XML + parse officers ($0.00)
+      3. Ingest into people + organization_roles ($0.00)
+      4. Deduplicate and score connections ($0.00)
+      5. (Optional) AI web scraping for gaps (~$0.007/org)
+
+    All free stages run automatically. Stage 5 only runs if
+    include_web_scraping=true.
+    """
+    try:
+        from src.network.batch_preprocessor import NetworkBatchPreprocessor
+        from dataclasses import asdict
+
+        db_path = _get_db_path()
+        preprocessor = NetworkBatchPreprocessor(db_path)
+        result = await preprocessor.run_pipeline(
+            profile_id=req.profile_id,
+            max_eins=req.max_eins,
+            include_web_scraping=req.include_web_scraping,
+            web_scraping_limit=req.web_scraping_limit,
+            concurrency=req.concurrency,
+        )
+        return asdict(result)
+
+    except Exception as e:
+        logger.error(f"[people/batch/preprocess] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/batch/stage")
+async def batch_run_stage(req: BatchStageRequest):
+    """
+    Run a single stage of the preprocessing pipeline.
+    Useful for targeted re-processing or debugging.
+
+    Valid stages: discover_filings, xml_officers, ingest_etl,
+    dedup_score, web_enrichment
+    """
+    valid_stages = {
+        "discover_filings", "xml_officers", "ingest_etl",
+        "dedup_score", "web_enrichment",
+    }
+    if req.stage not in valid_stages:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid stage '{req.stage}'. Valid: {sorted(valid_stages)}"
+        )
+
+    try:
+        from src.network.batch_preprocessor import NetworkBatchPreprocessor
+        from dataclasses import asdict
+
+        db_path = _get_db_path()
+        preprocessor = NetworkBatchPreprocessor(db_path)
+        result = await preprocessor.run_stage(
+            profile_id=req.profile_id,
+            stage=req.stage,
+            max_eins=req.max_eins,
+            concurrency=req.concurrency,
+            web_scraping_limit=req.web_scraping_limit,
+        )
+        return asdict(result)
+
+    except Exception as e:
+        logger.error(f"[people/batch/stage] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/batch/coverage")
+async def batch_coverage_report(
+    profile_id: str = Query(...),
+    max_eins: int = Query(default=200, ge=1, le=1000),
+):
+    """
+    Get a coverage report showing what data exists for each funder.
+    Helps decide which stages to run. Cost: $0.00.
+    """
+    try:
+        from src.network.batch_preprocessor import NetworkBatchPreprocessor
+
+        db_path = _get_db_path()
+        preprocessor = NetworkBatchPreprocessor(db_path)
+        return preprocessor.get_coverage_report(profile_id, max_eins)
+
+    except Exception as e:
+        logger.error(f"[people/batch/coverage] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ── 11. Find connection pathways ──────────────────────────────────────────────
 
 @router.post("/pathways")
 async def find_pathways(req: PathwayRequest):
