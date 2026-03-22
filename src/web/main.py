@@ -298,6 +298,9 @@ app.include_router(profiles_extras_router)
 from src.web.routers.websocket import router as websocket_router
 app.include_router(websocket_router)
 
+from src.web.routers.dashboard import router as dashboard_router
+app.include_router(dashboard_router)
+
 # Add global exception handlers
 app.add_exception_handler(HTTPException, http_exception_handler)
 try:
