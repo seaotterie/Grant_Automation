@@ -1706,16 +1706,26 @@ async def batch_web_research(body: BatchWebResearchRequest):
                                 web_data = cached["web_data"]
                                 conn2 = database_manager.get_connection()
                                 cur2 = conn2.cursor()
-                                cur2.execute("SELECT analysis_discovery FROM opportunities WHERE id = ?", (opp_id,))
+                                cur2.execute(
+                                    "SELECT analysis_discovery, website_url FROM opportunities WHERE id = ?", (opp_id,)
+                                )
                                 ad_row = cur2.fetchone()
                                 if ad_row and ad_row[0]:
                                     ad = json.loads(ad_row[0]) if isinstance(ad_row[0], str) else ad_row[0]
                                     ad["web_data"] = web_data
                                     ad["web_search_complete"] = True
-                                    cur2.execute(
-                                        "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
-                                        (json.dumps(ad), datetime.now().isoformat(), opp_id),
-                                    )
+                                    found_url = web_data.get("website") if isinstance(web_data, dict) else None
+                                    existing_url = ad_row[1]
+                                    if found_url and not existing_url:
+                                        cur2.execute(
+                                            "UPDATE opportunities SET analysis_discovery = ?, website_url = ?, url_source = ?, url_discovered_at = ?, updated_at = ? WHERE id = ?",
+                                            (json.dumps(ad), found_url, "web_research", datetime.now().isoformat(), datetime.now().isoformat(), opp_id),
+                                        )
+                                    else:
+                                        cur2.execute(
+                                            "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                                            (json.dumps(ad), datetime.now().isoformat(), opp_id),
+                                        )
                                     conn2.commit()
                                 conn2.close()
                                 results.append({"opportunity_id": opp_id, "ein": ein, "status": "cached"})
@@ -1779,16 +1789,27 @@ async def batch_web_research(body: BatchWebResearchRequest):
                     # Update opportunity in DB
                     conn2 = database_manager.get_connection()
                     cur2 = conn2.cursor()
-                    cur2.execute("SELECT analysis_discovery FROM opportunities WHERE id = ?", (opp_id,))
+                    cur2.execute(
+                        "SELECT analysis_discovery, website_url FROM opportunities WHERE id = ?", (opp_id,)
+                    )
                     ad_row = cur2.fetchone()
                     if ad_row and ad_row[0]:
                         ad = json.loads(ad_row[0]) if isinstance(ad_row[0], str) else ad_row[0]
                         ad["web_data"] = web_data
                         ad["web_search_complete"] = True
-                        cur2.execute(
-                            "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
-                            (json.dumps(ad), datetime.now().isoformat(), opp_id),
-                        )
+                        # Back-fill website_url column if currently empty and web research found a URL
+                        found_url = web_data.get("website") if isinstance(web_data, dict) else None
+                        existing_url = ad_row[1]
+                        if found_url and not existing_url:
+                            cur2.execute(
+                                "UPDATE opportunities SET analysis_discovery = ?, website_url = ?, url_source = ?, url_discovered_at = ?, updated_at = ? WHERE id = ?",
+                                (json.dumps(ad), found_url, "web_research", datetime.now().isoformat(), datetime.now().isoformat(), opp_id),
+                            )
+                        else:
+                            cur2.execute(
+                                "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                                (json.dumps(ad), datetime.now().isoformat(), opp_id),
+                            )
                         conn2.commit()
                     conn2.close()
 
