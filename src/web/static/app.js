@@ -7735,11 +7735,22 @@ function catalynxApp() {
         async modalSearch990s() {
             if (!this.selectedOpportunity?.opportunity_id) return;
             const oppId = this.selectedOpportunity.opportunity_id;
-            // Need a pdf_url — try from filing_history
-            const filings = this.selectedOpportunity.filing_history || [];
+            // Need a pdf_url — try filing_history on the opportunity first,
+            // then fall back to fetching from the 990-filings endpoint (filing history
+            // is stored in ein_intelligence and may not be embedded in the opportunity object).
+            let filings = this.selectedOpportunity.filing_history || [];
+            if (!filings.find(f => f.pdf_url)) {
+                try {
+                    const fResp = await fetch(`/api/v2/opportunities/${oppId}/990-filings`);
+                    if (fResp.ok) {
+                        const fData = await fResp.json();
+                        filings = fData.filings || [];
+                    }
+                } catch (_) { /* ignore — will fall through to the no-filing warning */ }
+            }
             const filing = filings.find(f => f.pdf_url);
             if (!filing) {
-                this.showNotification('Search 990s', 'Run Find URLs first to get a 990 PDF link', 'warning');
+                this.showNotification('Search 990s', 'No 990 PDF found — run Find URLs first', 'warning');
                 return;
             }
             this.modal990sLoading = true;
