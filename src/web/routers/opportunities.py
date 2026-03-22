@@ -412,16 +412,26 @@ async def research_opportunity(
                     # Write back to this opportunity's analysis_discovery so the modal shows it
                     conn = database_manager.get_connection()
                     cursor = conn.cursor()
-                    cursor.execute("SELECT analysis_discovery FROM opportunities WHERE id = ?", (opportunity_id,))
+                    cursor.execute(
+                        "SELECT analysis_discovery, website_url FROM opportunities WHERE id = ?", (opportunity_id,)
+                    )
                     row = cursor.fetchone()
                     if row and row[0]:
                         ad = json.loads(row[0]) if isinstance(row[0], str) else row[0]
                         ad["web_data"] = web_data
                         ad["web_search_complete"] = True
-                        cursor.execute(
-                            "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
-                            (json.dumps(ad), datetime.now().isoformat(), opportunity_id),
-                        )
+                        found_url = web_data.get("website") if isinstance(web_data, dict) else None
+                        existing_url = row[1]
+                        if found_url and not existing_url:
+                            cursor.execute(
+                                "UPDATE opportunities SET analysis_discovery = ?, website_url = ?, url_source = ?, url_discovered_at = ?, updated_at = ? WHERE id = ?",
+                                (json.dumps(ad), found_url, "web_research", datetime.now().isoformat(), datetime.now().isoformat(), opportunity_id),
+                            )
+                        else:
+                            cursor.execute(
+                                "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                                (json.dumps(ad), datetime.now().isoformat(), opportunity_id),
+                            )
                         conn.commit()
                     conn.close()
                     return {
@@ -616,8 +626,9 @@ async def research_opportunity(
                 conn = database_manager.get_connection()
                 cursor = conn.cursor()
 
-                # Get current opportunity data
-                cursor.execute("SELECT analysis_discovery FROM opportunities WHERE id = ?", (opportunity_id,))
+                cursor.execute(
+                    "SELECT analysis_discovery, website_url FROM opportunities WHERE id = ?", (opportunity_id,)
+                )
                 row = cursor.fetchone()
 
                 if row and row[0]:
@@ -625,12 +636,18 @@ async def research_opportunity(
                     analysis_discovery = json.loads(row[0]) if isinstance(row[0], str) else row[0]
                     analysis_discovery['web_data'] = web_data
                     analysis_discovery['web_search_complete'] = True
-
-                    # Update database
-                    cursor.execute(
-                        "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
-                        (json.dumps(analysis_discovery), datetime.now().isoformat(), opportunity_id)
-                    )
+                    found_url = web_data.get("website") if isinstance(web_data, dict) else None
+                    existing_url = row[1]
+                    if found_url and not existing_url:
+                        cursor.execute(
+                            "UPDATE opportunities SET analysis_discovery = ?, website_url = ?, url_source = ?, url_discovered_at = ?, updated_at = ? WHERE id = ?",
+                            (json.dumps(analysis_discovery), found_url, "web_research", datetime.now().isoformat(), datetime.now().isoformat(), opportunity_id),
+                        )
+                    else:
+                        cursor.execute(
+                            "UPDATE opportunities SET analysis_discovery = ?, updated_at = ? WHERE id = ?",
+                            (json.dumps(analysis_discovery), datetime.now().isoformat(), opportunity_id)
+                        )
                     conn.commit()
 
                 conn.close()
