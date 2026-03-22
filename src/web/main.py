@@ -18,18 +18,11 @@ import os
 import uvicorn
 from pathlib import Path
 
-# When installed via ``pip install -e .`` (pyproject.toml), setuptools makes
-# ``src.*`` and ``tools.*`` importable automatically.  The fallback below only
-# activates for *uninstalled* development runs (``python src/web/main.py``).
-try:
-    from importlib.util import find_spec as _find_spec
-    if _find_spec("src") is None:
-        _project_root = str(Path(__file__).resolve().parent.parent.parent)
-        if _project_root not in sys.path:
-            sys.path.insert(0, _project_root)
-    del _find_spec
-except Exception:
-    pass
+# Ensure project root is on sys.path for ``python src/web/main.py`` runs.
+# Idempotent: guard prevents duplicate entries; harmless for uvicorn/module-mode.
+_project_root = str(Path(__file__).resolve().parent.parent.parent)
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
 
 # Security and Authentication imports
 from src.middleware.security import (
