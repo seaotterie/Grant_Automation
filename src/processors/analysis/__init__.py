@@ -15,8 +15,4 @@ NOTE: Most analysis processors have been migrated to 12-factor tools:
 See: src/processors/_deprecated/README.md for full migration map
 """
 
-from .pdf_ocr import PDFOCRProcessor
-
-__all__ = [
-    "PDFOCRProcessor"
-]
+__all__ = []

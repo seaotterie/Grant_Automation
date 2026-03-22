@@ -86,7 +86,7 @@ class ConnectionManager:
 connection_manager = ConnectionManager()
 
 # Progress service integration
-progress_service = ProgressService(broadcast_func=connection_manager.send_progress_update)
+progress_service = ProgressService()
 
 
 @router.websocket("/ws")
