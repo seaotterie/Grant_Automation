@@ -1129,7 +1129,7 @@
                                                   'bg-gray-500 text-white': selectedOpportunity?.category_level === 'low_priority' || !selectedOpportunity?.category_level
                                               }"
                                               x-text="selectedOpportunity?.category_level
-                                                  ? selectedOpportunity.category_level.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+                                                  ? selectedOpportunity?.category_level.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
                                                   : 'Unscored'"></span>
                                         <!-- Intelligence stage indicator -->
                                         <template x-if="selectedOpportunity?.current_stage === 'intelligence'">
@@ -1340,7 +1340,7 @@
                                                       'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400': !selectedOpportunity?.confidence
                                                   }"
                                                   x-text="selectedOpportunity?.confidence
-                                                      ? (selectedOpportunity.confidence.charAt(0).toUpperCase() + selectedOpportunity.confidence.slice(1)) + ' confidence'
+                                                      ? (selectedOpportunity?.confidence.charAt(0).toUpperCase() + selectedOpportunity?.confidence.slice(1)) + ' confidence'
                                                       : 'No confidence data'"></span>
                                         </div>
                                         <!-- Dimensional sub-scores (always expanded) -->
@@ -1453,10 +1453,10 @@
                                                           x-text="'Confidence: ' + Math.round((ninetiesExtractionData?.extraction_confidence||0)*100) + '%'"></span>
                                                 </template>
                                             </div>
-                                            <template x-if="!ninetiesExtractionLoading && ninetiesExtractionData && (ninetiesExtractionData.extraction_confidence || 0) === 0 && !ninetiesExtractionData.stated_priorities?.length">
+                                            <template x-if="!ninetiesExtractionLoading && ninetiesExtractionData && (ninetiesExtractionData?.extraction_confidence || 0) === 0 && !ninetiesExtractionData?.stated_priorities?.length">
                                                 <p class="text-xs text-gray-500 dark:text-gray-400 italic">990 PDF was processed but contained no extractable grant intelligence (e.g. narrative-free filing).</p>
                                             </template>
-                                            <template x-if="!ninetiesExtractionLoading && ninetiesExtractionData && ((ninetiesExtractionData.extraction_confidence || 0) > 0 || ninetiesExtractionData.stated_priorities?.length)">
+                                            <template x-if="!ninetiesExtractionLoading && ninetiesExtractionData && ((ninetiesExtractionData?.extraction_confidence || 0) > 0 || ninetiesExtractionData?.stated_priorities?.length)">
                                                 <div>
                                                     <!-- accepts_applications pill -->
                                                     <div class="mb-2">
@@ -1469,7 +1469,7 @@
                                                         <div class="mb-2">
                                                             <div class="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">Stated Priorities</div>
                                                             <ul class="space-y-0.5">
-                                                                <template x-for="p in ninetiesExtractionData.stated_priorities.slice(0,4)" :key="p">
+                                                                <template x-for="p in ninetiesExtractionData?.stated_priorities.slice(0,4)" :key="p">
                                                                     <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
                                                                         <span class="text-amber-500 flex-shrink-0">•</span><span x-text="p"></span>
                                                                     </li>
@@ -1480,13 +1480,13 @@
                                                     <!-- population_focus -->
                                                     <template x-if="ninetiesExtractionData?.population_focus">
                                                         <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                                            Population: <span class="font-medium" x-text="ninetiesExtractionData.population_focus"></span>
+                                                            Population: <span class="font-medium" x-text="ninetiesExtractionData?.population_focus"></span>
                                                         </p>
                                                     </template>
                                                     <!-- geographic_limitations -->
                                                     <template x-if="ninetiesExtractionData?.geographic_limitations">
                                                         <p class="text-xs text-gray-600 dark:text-gray-400">
-                                                            Geography: <span class="font-medium" x-text="ninetiesExtractionData.geographic_limitations"></span>
+                                                            Geography: <span class="font-medium" x-text="ninetiesExtractionData?.geographic_limitations"></span>
                                                         </p>
                                                     </template>
                                                     <!-- footer -->
@@ -1514,37 +1514,37 @@
                                                     Screen Fast
                                                 </h4>
                                                 <span class="text-xs px-2 py-0.5 rounded-full font-medium"
-                                                      :class="(selectedOpportunity.tool1_score_fast||selectedOpportunity.tool1_score).confidence_level === 'high' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'"
-                                                      x-text="((selectedOpportunity.tool1_score_fast||selectedOpportunity.tool1_score).confidence_level || '') + ' · ' + Math.round(((selectedOpportunity.tool1_score_fast||selectedOpportunity.tool1_score).overall_score||0)*100) + '%'"></span>
+                                                      :class="(selectedOpportunity?.tool1_score_fast||selectedOpportunity?.tool1_score)?.confidence_level === 'high' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'"
+                                                      x-text="((selectedOpportunity?.tool1_score_fast||selectedOpportunity?.tool1_score)?.confidence_level || '') + ' · ' + Math.round(((selectedOpportunity?.tool1_score_fast||selectedOpportunity?.tool1_score)?.overall_score||0)*100) + '%'"></span>
                                             </div>
                                             <!-- One-sentence summary -->
                                             <p class="text-sm text-indigo-800 dark:text-indigo-200 italic mb-3"
-                                               x-text="(selectedOpportunity.tool1_score_fast||selectedOpportunity.tool1_score).one_sentence_summary"></p>
+                                               x-text="(selectedOpportunity?.tool1_score_fast||selectedOpportunity?.tool1_score)?.one_sentence_summary"></p>
                                             <!-- Sub-scores -->
                                             <div class="grid grid-cols-3 gap-3 mb-3">
                                                 <div class="text-center">
                                                     <div class="text-xs text-indigo-600 dark:text-indigo-400">Strategic Fit</div>
                                                     <div class="text-sm font-semibold text-indigo-900 dark:text-indigo-100"
-                                                         x-text="Math.round(((selectedOpportunity.tool1_score_fast||selectedOpportunity.tool1_score).strategic_fit_score||0)*100) + '%'"></div>
+                                                         x-text="Math.round(((selectedOpportunity?.tool1_score_fast||selectedOpportunity?.tool1_score)?.strategic_fit_score||0)*100) + '%'"></div>
                                                 </div>
                                                 <div class="text-center">
                                                     <div class="text-xs text-indigo-600 dark:text-indigo-400">Eligibility</div>
                                                     <div class="text-sm font-semibold text-indigo-900 dark:text-indigo-100"
-                                                         x-text="Math.round(((selectedOpportunity.tool1_score_fast||selectedOpportunity.tool1_score).eligibility_score||0)*100) + '%'"></div>
+                                                         x-text="Math.round(((selectedOpportunity?.tool1_score_fast||selectedOpportunity?.tool1_score)?.eligibility_score||0)*100) + '%'"></div>
                                                 </div>
                                                 <div class="text-center">
                                                     <div class="text-xs text-indigo-600 dark:text-indigo-400">Timing</div>
                                                     <div class="text-sm font-semibold text-indigo-900 dark:text-indigo-100"
-                                                         x-text="Math.round(((selectedOpportunity.tool1_score_fast||selectedOpportunity.tool1_score).timing_score||0)*100) + '%'"></div>
+                                                         x-text="Math.round(((selectedOpportunity?.tool1_score_fast||selectedOpportunity?.tool1_score)?.timing_score||0)*100) + '%'"></div>
                                                 </div>
                                             </div>
                                             <!-- Strengths & Concerns -->
                                             <div class="grid grid-cols-2 gap-3 text-sm">
-                                                <template x-if="(selectedOpportunity.tool1_score_fast||selectedOpportunity.tool1_score).key_strengths?.length > 0">
+                                                <template x-if="(selectedOpportunity?.tool1_score_fast||selectedOpportunity?.tool1_score)?.key_strengths?.length > 0">
                                                     <div>
                                                         <div class="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Strengths</div>
                                                         <ul class="space-y-0.5">
-                                                            <template x-for="s in (selectedOpportunity.tool1_score_fast||selectedOpportunity.tool1_score).key_strengths.slice(0,3)" :key="s">
+                                                            <template x-for="s in (selectedOpportunity?.tool1_score_fast||selectedOpportunity?.tool1_score)?.key_strengths.slice(0,3)" :key="s">
                                                                 <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
                                                                     <span class="text-green-500 flex-shrink-0">+</span><span x-text="s"></span>
                                                                 </li>
@@ -1552,11 +1552,11 @@
                                                         </ul>
                                                     </div>
                                                 </template>
-                                                <template x-if="(selectedOpportunity.tool1_score_fast||selectedOpportunity.tool1_score).key_concerns?.length > 0">
+                                                <template x-if="(selectedOpportunity?.tool1_score_fast||selectedOpportunity?.tool1_score)?.key_concerns?.length > 0">
                                                     <div>
                                                         <div class="text-xs font-medium text-red-600 dark:text-red-400 mb-1">Concerns</div>
                                                         <ul class="space-y-0.5">
-                                                            <template x-for="c in (selectedOpportunity.tool1_score_fast||selectedOpportunity.tool1_score).key_concerns.slice(0,3)" :key="c">
+                                                            <template x-for="c in (selectedOpportunity?.tool1_score_fast||selectedOpportunity?.tool1_score)?.key_concerns.slice(0,3)" :key="c">
                                                                 <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
                                                                     <span class="text-red-500 flex-shrink-0">−</span><span x-text="c"></span>
                                                                 </li>
@@ -1566,7 +1566,7 @@
                                                 </template>
                                             </div>
                                             <p class="text-xs text-indigo-500 dark:text-indigo-400 mt-2 pt-2 border-t border-indigo-200 dark:border-indigo-800"
-                                               x-text="'Scored: ' + ((selectedOpportunity.tool1_score_fast||selectedOpportunity.tool1_score).scored_at ? new Date((selectedOpportunity.tool1_score_fast||selectedOpportunity.tool1_score).scored_at).toLocaleDateString() : 'N/A') + (selectedOpportunity.tool1_score_fast ? '' : ' · batch')"></p>
+                                               x-text="'Scored: ' + ((selectedOpportunity?.tool1_score_fast||selectedOpportunity?.tool1_score)?.scored_at ? new Date((selectedOpportunity?.tool1_score_fast||selectedOpportunity?.tool1_score)?.scored_at).toLocaleDateString() : 'N/A') + (selectedOpportunity?.tool1_score_fast ? '' : ' · batch')"></p>
                                         </div>
                                     </template>
                                     <template x-if="!selectedOpportunity?.tool1_score_fast && !selectedOpportunity?.tool1_score">
@@ -1587,37 +1587,37 @@
                                                     Screen Thorough
                                                 </h4>
                                                 <span class="text-xs px-2 py-0.5 rounded-full font-medium"
-                                                      :class="selectedOpportunity.tool1_score_thorough.confidence_level === 'high' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'"
-                                                      x-text="(selectedOpportunity.tool1_score_thorough.confidence_level || '') + ' · ' + Math.round((selectedOpportunity.tool1_score_thorough.overall_score||0)*100) + '%'"></span>
+                                                      :class="selectedOpportunity?.tool1_score_thorough.confidence_level === 'high' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'"
+                                                      x-text="(selectedOpportunity?.tool1_score_thorough.confidence_level || '') + ' · ' + Math.round((selectedOpportunity?.tool1_score_thorough.overall_score||0)*100) + '%'"></span>
                                             </div>
                                             <!-- One-sentence summary -->
                                             <p class="text-sm text-purple-800 dark:text-purple-200 italic mb-3"
-                                               x-text="selectedOpportunity.tool1_score_thorough.one_sentence_summary"></p>
+                                               x-text="selectedOpportunity?.tool1_score_thorough.one_sentence_summary"></p>
                                             <!-- Sub-scores -->
                                             <div class="grid grid-cols-3 gap-3 mb-3">
                                                 <div class="text-center">
                                                     <div class="text-xs text-purple-600 dark:text-purple-400">Strategic Fit</div>
                                                     <div class="text-sm font-semibold text-purple-900 dark:text-purple-100"
-                                                         x-text="Math.round((selectedOpportunity.tool1_score_thorough.strategic_fit_score||0)*100) + '%'"></div>
+                                                         x-text="Math.round((selectedOpportunity?.tool1_score_thorough.strategic_fit_score||0)*100) + '%'"></div>
                                                 </div>
                                                 <div class="text-center">
                                                     <div class="text-xs text-purple-600 dark:text-purple-400">Eligibility</div>
                                                     <div class="text-sm font-semibold text-purple-900 dark:text-purple-100"
-                                                         x-text="Math.round((selectedOpportunity.tool1_score_thorough.eligibility_score||0)*100) + '%'"></div>
+                                                         x-text="Math.round((selectedOpportunity?.tool1_score_thorough.eligibility_score||0)*100) + '%'"></div>
                                                 </div>
                                                 <div class="text-center">
                                                     <div class="text-xs text-purple-600 dark:text-purple-400">Timing</div>
                                                     <div class="text-sm font-semibold text-purple-900 dark:text-purple-100"
-                                                         x-text="Math.round((selectedOpportunity.tool1_score_thorough.timing_score||0)*100) + '%'"></div>
+                                                         x-text="Math.round((selectedOpportunity?.tool1_score_thorough.timing_score||0)*100) + '%'"></div>
                                                 </div>
                                             </div>
                                             <!-- Strengths & Concerns -->
                                             <div class="grid grid-cols-2 gap-3 text-sm">
-                                                <template x-if="selectedOpportunity.tool1_score_thorough.key_strengths?.length > 0">
+                                                <template x-if="selectedOpportunity?.tool1_score_thorough.key_strengths?.length > 0">
                                                     <div>
                                                         <div class="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Strengths</div>
                                                         <ul class="space-y-0.5">
-                                                            <template x-for="s in selectedOpportunity.tool1_score_thorough.key_strengths.slice(0,3)" :key="s">
+                                                            <template x-for="s in selectedOpportunity?.tool1_score_thorough.key_strengths.slice(0,3)" :key="s">
                                                                 <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
                                                                     <span class="text-green-500 flex-shrink-0">+</span><span x-text="s"></span>
                                                                 </li>
@@ -1625,11 +1625,11 @@
                                                         </ul>
                                                     </div>
                                                 </template>
-                                                <template x-if="selectedOpportunity.tool1_score_thorough.key_concerns?.length > 0">
+                                                <template x-if="selectedOpportunity?.tool1_score_thorough.key_concerns?.length > 0">
                                                     <div>
                                                         <div class="text-xs font-medium text-red-600 dark:text-red-400 mb-1">Concerns</div>
                                                         <ul class="space-y-0.5">
-                                                            <template x-for="c in selectedOpportunity.tool1_score_thorough.key_concerns.slice(0,3)" :key="c">
+                                                            <template x-for="c in selectedOpportunity?.tool1_score_thorough.key_concerns.slice(0,3)" :key="c">
                                                                 <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
                                                                     <span class="text-red-500 flex-shrink-0">−</span><span x-text="c"></span>
                                                                 </li>
@@ -1639,7 +1639,7 @@
                                                 </template>
                                             </div>
                                             <p class="text-xs text-purple-500 dark:text-purple-400 mt-2 pt-2 border-t border-purple-200 dark:border-purple-800"
-                                               x-text="'Scored: ' + (selectedOpportunity.tool1_score_thorough.scored_at ? new Date(selectedOpportunity.tool1_score_thorough.scored_at).toLocaleDateString() : 'N/A')"></p>
+                                               x-text="'Scored: ' + (selectedOpportunity?.tool1_score_thorough.scored_at ? new Date(selectedOpportunity?.tool1_score_thorough.scored_at).toLocaleDateString() : 'N/A')"></p>
                                         </div>
                                     </template>
                                     <template x-if="!selectedOpportunity?.tool1_score_thorough">
@@ -1684,7 +1684,7 @@
 
                                             <!-- View 990 on ProPublica Button -->
                                             <div class="mt-4 flex flex-wrap gap-2">
-                                                <a :href="'https://projects.propublica.org/nonprofits/organizations/' + selectedOpportunity.ein"
+                                                <a :href="'https://projects.propublica.org/nonprofits/organizations/' + selectedOpportunity?.ein"
                                                    target="_blank"
                                                    rel="noopener noreferrer"
                                                    class="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-medium rounded-lg transition-colors shadow-sm">
@@ -1928,14 +1928,14 @@
                                             <!-- View mode -->
                                             <template x-if="!editingScreeningUrl">
                                                 <div class="flex items-center gap-1 min-w-0">
-                                                    <template x-if="selectedOpportunity?.website_url && selectedOpportunity.url_source !== 'not_found'">
-                                                        <a :href="selectedOpportunity.website_url.startsWith('http') ? selectedOpportunity.website_url : 'https://' + selectedOpportunity.website_url"
+                                                    <template x-if="selectedOpportunity?.website_url && selectedOpportunity?.url_source !== 'not_found'">
+                                                        <a :href="selectedOpportunity?.website_url.startsWith('http') ? selectedOpportunity?.website_url : 'https://' + selectedOpportunity?.website_url"
                                                            target="_blank"
                                                            class="text-teal-600 hover:text-teal-700 dark:text-teal-400 font-medium truncate max-w-xs"
-                                                           x-text="selectedOpportunity.website_url">
+                                                           x-text="selectedOpportunity?.website_url">
                                                         </a>
                                                     </template>
-                                                    <template x-if="!selectedOpportunity?.website_url || selectedOpportunity.url_source === 'not_found'">
+                                                    <template x-if="!selectedOpportunity?.website_url || selectedOpportunity?.url_source === 'not_found'">
                                                         <span class="text-gray-400 dark:text-gray-500 italic text-xs">No URL found</span>
                                                     </template>
                                                     <button @click="editingScreeningUrl = true; editScreeningUrlValue = selectedOpportunity?.website_url || ''"
@@ -1952,11 +1952,11 @@
                                                 <div class="flex items-center gap-1 flex-1 min-w-0">
                                                     <input type="url"
                                                            x-model="editScreeningUrlValue"
-                                                           @keydown.enter="saveWebsiteUrl(selectedOpportunity.opportunity_id, editScreeningUrlValue)"
+                                                           @keydown.enter="saveWebsiteUrl(selectedOpportunity?.opportunity_id, editScreeningUrlValue)"
                                                            @keydown.escape="editingScreeningUrl = false"
                                                            placeholder="https://example.org"
                                                            class="flex-1 px-2 py-0.5 text-sm border border-teal-400 rounded dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500 min-w-0">
-                                                    <button @click="saveWebsiteUrl(selectedOpportunity.opportunity_id, editScreeningUrlValue)"
+                                                    <button @click="saveWebsiteUrl(selectedOpportunity?.opportunity_id, editScreeningUrlValue)"
                                                             class="p-0.5 text-green-600 hover:text-green-700 flex-shrink-0" title="Save">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -2053,31 +2053,31 @@
                                                 <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                                                     <div class="text-sm text-gray-500 dark:text-gray-400">Total Grants Paid</div>
                                                     <div class="text-xl font-bold text-gray-900 dark:text-white"
-                                                         x-text="'$' + (selectedOpportunity.grant_history.grants_paid || 0).toLocaleString()"></div>
+                                                         x-text="'$' + (selectedOpportunity?.grant_history?.grants_paid || 0).toLocaleString()"></div>
                                                 </div>
                                                 <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                                                     <div class="text-sm text-gray-500 dark:text-gray-400">Grants to Organizations</div>
                                                     <div class="text-xl font-bold text-gray-900 dark:text-white"
-                                                         x-text="'$' + (selectedOpportunity.grant_history.grants_to_orgs || 0).toLocaleString()"></div>
+                                                         x-text="'$' + (selectedOpportunity?.grant_history?.grants_to_orgs || 0).toLocaleString()"></div>
                                                 </div>
                                                 <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                                                     <div class="text-sm text-gray-500 dark:text-gray-400">Grants to Individuals</div>
                                                     <div class="text-xl font-bold text-gray-900 dark:text-white"
-                                                         x-text="'$' + (selectedOpportunity.grant_history.grants_to_individuals || 0).toLocaleString()"></div>
+                                                         x-text="'$' + (selectedOpportunity?.grant_history?.grants_to_individuals || 0).toLocaleString()"></div>
                                                 </div>
                                                 <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                                                     <div class="text-sm text-gray-500 dark:text-gray-400">Tax Year</div>
                                                     <div class="text-xl font-bold text-gray-900 dark:text-white"
-                                                         x-text="selectedOpportunity.grant_history.tax_year"></div>
+                                                         x-text="selectedOpportunity?.grant_history?.tax_year"></div>
                                                 </div>
                                             </div>
 
                                             <!-- Top Recipients -->
-                                            <template x-if="selectedOpportunity.grant_history.recipients && selectedOpportunity.grant_history.recipients.length > 0">
+                                            <template x-if="selectedOpportunity?.grant_history?.recipients && selectedOpportunity?.grant_history?.recipients.length > 0">
                                                 <div class="mt-6">
                                                     <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Top Grant Recipients</h4>
                                                     <div class="space-y-2">
-                                                        <template x-for="recipient in selectedOpportunity.grant_history.recipients.slice(0, 10)" :key="recipient.name">
+                                                        <template x-for="recipient in selectedOpportunity?.grant_history?.recipients.slice(0, 10)" :key="recipient.name">
                                                             <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 flex justify-between items-center">
                                                                 <div>
                                                                     <div class="font-medium text-gray-900 dark:text-white" x-text="recipient.name"></div>
@@ -2094,39 +2094,39 @@
                                             </template>
 
                                             <!-- Grant Statistics -->
-                                            <template x-if="selectedOpportunity.grant_history.grant_statistics">
+                                            <template x-if="selectedOpportunity?.grant_history?.grant_statistics">
                                                 <div class="mt-6">
                                                     <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Grant Size Statistics</h4>
                                                     <div class="grid grid-cols-3 gap-4">
                                                         <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                                                             <div class="text-sm text-gray-500 dark:text-gray-400">Average Grant</div>
                                                             <div class="font-medium text-gray-900 dark:text-white"
-                                                                 x-text="'$' + (selectedOpportunity.grant_history.grant_statistics.avg_grant || 0).toLocaleString()"></div>
+                                                                 x-text="'$' + (selectedOpportunity?.grant_history?.grant_statistics?.avg_grant || 0).toLocaleString()"></div>
                                                         </div>
                                                         <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                                                             <div class="text-sm text-gray-500 dark:text-gray-400">Minimum Grant</div>
                                                             <div class="font-medium text-gray-900 dark:text-white"
-                                                                 x-text="'$' + (selectedOpportunity.grant_history.grant_statistics.min_grant || 0).toLocaleString()"></div>
+                                                                 x-text="'$' + (selectedOpportunity?.grant_history?.grant_statistics?.min_grant || 0).toLocaleString()"></div>
                                                         </div>
                                                         <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                                                             <div class="text-sm text-gray-500 dark:text-gray-400">Maximum Grant</div>
                                                             <div class="font-medium text-gray-900 dark:text-white"
-                                                                 x-text="'$' + (selectedOpportunity.grant_history.grant_statistics.max_grant || 0).toLocaleString()"></div>
+                                                                 x-text="'$' + (selectedOpportunity?.grant_history?.grant_statistics?.max_grant || 0).toLocaleString()"></div>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </template>
 
                                             <!-- Grant Distribution -->
-                                            <template x-if="selectedOpportunity.grant_history.geographic_distribution || selectedOpportunity.grant_history.program_distribution">
+                                            <template x-if="selectedOpportunity?.grant_history?.geographic_distribution || selectedOpportunity?.grant_history?.program_distribution">
                                                 <div class="mt-6">
                                                     <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Grant Distribution</h4>
                                                     <div class="grid grid-cols-2 gap-4">
-                                                        <template x-if="selectedOpportunity.grant_history.geographic_distribution">
+                                                        <template x-if="selectedOpportunity?.grant_history?.geographic_distribution">
                                                             <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                                                                 <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Top Geographic Areas</div>
                                                                 <div class="space-y-1">
-                                                                    <template x-for="area in Object.entries(selectedOpportunity.grant_history.geographic_distribution || {}).slice(0, 5)" :key="area[0]">
+                                                                    <template x-for="area in Object.entries(selectedOpportunity?.grant_history?.geographic_distribution || {}).slice(0, 5)" :key="area[0]">
                                                                         <div class="flex justify-between text-sm">
                                                                             <span class="text-gray-900 dark:text-white" x-text="area[0]"></span>
                                                                             <span class="font-medium text-gray-700 dark:text-gray-300" x-text="area[1] + '%'"></span>
@@ -2135,11 +2135,11 @@
                                                                 </div>
                                                             </div>
                                                         </template>
-                                                        <template x-if="selectedOpportunity.grant_history.program_distribution">
+                                                        <template x-if="selectedOpportunity?.grant_history?.program_distribution">
                                                             <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                                                                 <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Top Program Areas</div>
                                                                 <div class="space-y-1">
-                                                                    <template x-for="program in Object.entries(selectedOpportunity.grant_history.program_distribution || {}).slice(0, 5)" :key="program[0]">
+                                                                    <template x-for="program in Object.entries(selectedOpportunity?.grant_history?.program_distribution || {}).slice(0, 5)" :key="program[0]">
                                                                         <div class="flex justify-between text-sm">
                                                                             <span class="text-gray-900 dark:text-white" x-text="program[0]"></span>
                                                                             <span class="font-medium text-gray-700 dark:text-gray-300" x-text="program[1] + '%'"></span>
@@ -2252,7 +2252,7 @@
                                     </template>
 
                                     <!-- 990 PDF extracted officers (from ninetiesExtractionData) -->
-                                    <template x-if="ninetiesExtractionData?.officers && ninetiesExtractionData.officers.length > 0">
+                                    <template x-if="ninetiesExtractionData?.officers && ninetiesExtractionData?.officers.length > 0">
                                         <div class="mt-4">
                                             <div class="flex items-center justify-between mb-3">
                                                 <h4 class="font-semibold text-gray-900 dark:text-white">Officers from IRS 990 PDF</h4>
@@ -2275,7 +2275,7 @@
                                         </div>
                                     </template>
 
-                                    <template x-if="(!selectedOpportunity?.['990_data']?.officers || selectedOpportunity['990_data'].officers.length === 0) && (!selectedOpportunity?.['990_data']?.board_members || selectedOpportunity['990_data'].board_members.length === 0) && (!selectedOpportunity?.web_data?.leadership || selectedOpportunity?.web_data?.leadership.length === 0) && (!ninetiesExtractionData?.officers || ninetiesExtractionData.officers.length === 0)">
+                                    <template x-if="(!selectedOpportunity?.['990_data']?.officers || selectedOpportunity['990_data'].officers.length === 0) && (!selectedOpportunity?.['990_data']?.board_members || selectedOpportunity['990_data'].board_members.length === 0) && (!selectedOpportunity?.web_data?.leadership || selectedOpportunity?.web_data?.leadership.length === 0) && (!ninetiesExtractionData?.officers || ninetiesExtractionData?.officers.length === 0)">
                                         <div class="text-center py-8">
                                             <p class="text-gray-500 dark:text-gray-400 mb-2">No officer or director data available yet.</p>
                                             <p class="text-sm text-gray-400 dark:text-gray-500">Run <strong class="text-gray-600 dark:text-gray-300">② Search Website</strong> above to extract leadership from their website, or <strong class="text-gray-600 dark:text-gray-300">③ Search 990s</strong> to find officers from IRS filings.</p>
@@ -2286,7 +2286,7 @@
                                 <!-- Tab 5: Website Data (removed - content merged into Organization Details tab) -->
                                 <div x-show="false" class="hidden">
                                     <!-- Discovered Website URL (Phase 5 - URL Discovery) -->
-                                    <template x-if="selectedOpportunity?.website_url && selectedOpportunity.url_source !== 'not_found'">
+                                    <template x-if="selectedOpportunity?.website_url && selectedOpportunity?.url_source !== 'not_found'">
                                         <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                                             <div class="flex items-center justify-between mb-3">
                                                 <h4 class="font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
@@ -2301,7 +2301,7 @@
                                             </div>
 
                                             <!-- URL with External Link -->
-                                            <a :href="selectedOpportunity?.website_url?.startsWith('http') ? selectedOpportunity.website_url : 'https://' + selectedOpportunity?.website_url"
+                                            <a :href="selectedOpportunity?.website_url?.startsWith('http') ? selectedOpportunity?.website_url : 'https://' + selectedOpportunity?.website_url"
                                                target="_blank"
                                                class="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium text-lg break-all mb-3">
                                                 <span x-text="selectedOpportunity?.website_url"></span>
@@ -2314,11 +2314,11 @@
                                             <div class="grid grid-cols-2 gap-3 text-sm mt-3">
                                                 <div>
                                                     <div class="text-blue-700 dark:text-blue-300 font-medium">Source</div>
-                                                    <div class="text-blue-900 dark:text-blue-100 mt-1" x-text="selectedOpportunity.url_source ? selectedOpportunity.url_source.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown'"></div>
+                                                    <div class="text-blue-900 dark:text-blue-100 mt-1" x-text="selectedOpportunity?.url_source ? selectedOpportunity?.url_source.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown'"></div>
                                                 </div>
-                                                <div x-show="selectedOpportunity.url_discovered_at">
+                                                <div x-show="selectedOpportunity?.url_discovered_at">
                                                     <div class="text-blue-700 dark:text-blue-300 font-medium">Discovered</div>
-                                                    <div class="text-blue-900 dark:text-blue-100 mt-1" x-text="selectedOpportunity.url_discovered_at ? new Date(selectedOpportunity.url_discovered_at).toLocaleDateString() : '-'"></div>
+                                                    <div class="text-blue-900 dark:text-blue-100 mt-1" x-text="selectedOpportunity?.url_discovered_at ? new Date(selectedOpportunity?.url_discovered_at).toLocaleDateString() : '-'"></div>
                                                 </div>
                                             </div>
 
@@ -2331,7 +2331,7 @@
                                     </template>
 
                                     <!-- No URL Found Message -->
-                                    <template x-if="!selectedOpportunity?.website_url || selectedOpportunity.url_source === 'not_found'">
+                                    <template x-if="!selectedOpportunity?.website_url || selectedOpportunity?.url_source === 'not_found'">
                                         <div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                                             <div class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2605,12 +2605,12 @@
                                             <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
                                                 <div class="text-xs text-gray-500 dark:text-gray-400">Discovery Date</div>
                                                 <div class="text-sm font-medium text-gray-900 dark:text-white mt-1"
-                                                     x-text="selectedOpportunity?.created_at ? new Date(selectedOpportunity.created_at).toLocaleDateString() : 'N/A'"></div>
+                                                     x-text="selectedOpportunity?.created_at ? new Date(selectedOpportunity?.created_at).toLocaleDateString() : 'N/A'"></div>
                                             </div>
                                             <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
                                                 <div class="text-xs text-gray-500 dark:text-gray-400">Last Updated</div>
                                                 <div class="text-sm font-medium text-gray-900 dark:text-white mt-1"
-                                                     x-text="selectedOpportunity?.updated_at ? new Date(selectedOpportunity.updated_at).toLocaleDateString() : 'N/A'"></div>
+                                                     x-text="selectedOpportunity?.updated_at ? new Date(selectedOpportunity?.updated_at).toLocaleDateString() : 'N/A'"></div>
                                             </div>
                                             <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
                                                 <div class="text-xs text-gray-500 dark:text-gray-400">Workflow Stage</div>
@@ -3843,7 +3843,7 @@
                                                           x-text="'Confidence: ' + Math.round((ninetiesExtractionData?.extraction_confidence||0)*100) + '%'"></span>
                                                 </template>
                                             </div>
-                                            <template x-if="!ninetiesExtractionLoading && ninetiesExtractionData && ((ninetiesExtractionData.extraction_confidence || 0) > 0 || ninetiesExtractionData.stated_priorities?.length)">
+                                            <template x-if="!ninetiesExtractionLoading && ninetiesExtractionData && ((ninetiesExtractionData?.extraction_confidence || 0) > 0 || ninetiesExtractionData?.stated_priorities?.length)">
                                                 <div>
                                                     <div class="mb-2">
                                                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
@@ -3854,7 +3854,7 @@
                                                         <div class="mb-2">
                                                             <div class="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">Stated Priorities</div>
                                                             <ul class="space-y-0.5">
-                                                                <template x-for="p in ninetiesExtractionData.stated_priorities.slice(0,4)" :key="p">
+                                                                <template x-for="p in ninetiesExtractionData?.stated_priorities.slice(0,4)" :key="p">
                                                                     <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
                                                                         <span class="text-amber-500 flex-shrink-0">•</span><span x-text="p"></span>
                                                                     </li>
@@ -3864,14 +3864,14 @@
                                                     </template>
                                                     <template x-if="ninetiesExtractionData?.geographic_limitations">
                                                         <p class="text-xs text-gray-600 dark:text-gray-400">
-                                                            Geography: <span class="font-medium" x-text="ninetiesExtractionData.geographic_limitations"></span>
+                                                            Geography: <span class="font-medium" x-text="ninetiesExtractionData?.geographic_limitations"></span>
                                                         </p>
                                                     </template>
                                                     <p class="text-xs text-amber-500 dark:text-amber-400 mt-2 pt-2 border-t border-amber-200 dark:border-amber-800"
                                                        x-text="'Extracted from ' + (ninetiesExtractionData?.tax_year || 'recent') + ' 990 PDF'"></p>
                                                 </div>
                                             </template>
-                                            <template x-if="!ninetiesExtractionLoading && (!ninetiesExtractionData || ((ninetiesExtractionData.extraction_confidence || 0) === 0 && !ninetiesExtractionData.stated_priorities?.length))">
+                                            <template x-if="!ninetiesExtractionLoading && (!ninetiesExtractionData || ((ninetiesExtractionData?.extraction_confidence || 0) === 0 && !ninetiesExtractionData?.stated_priorities?.length))">
                                                 <p class="text-xs text-gray-500 dark:text-gray-400 italic">990 PDF was processed but contained no extractable grant intelligence.</p>
                                             </template>
                                         </div>
@@ -11571,7 +11571,7 @@
     <script src="/static/modules/network-graph.js" onerror="console.error('Failed to load network-graph.js')"></script>
 
     <!-- app.js contains catalynxApp() - must load before Alpine -->
-    <script src="/static/app.js?v=20260322_NULL_GUARDS" onerror="console.error('Failed to load app.js')"></script>
+    <script src="/static/app.js?v=20260322_COMPOUND_FIX" onerror="console.error('Failed to load app.js')"></script>
 
     <!-- Verify modules are defined BEFORE loading Alpine -->
     <script>
