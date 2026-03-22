@@ -2006,10 +2006,10 @@
                                                 </template>
                                                 <template x-if="selectedOpportunity.web_data.contact?.email || selectedOpportunity.web_data.contact?.phone">
                                                     <div class="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
-                                                        <span x-show="selectedOpportunity.web_data.contact.email"
-                                                              x-text="'✉ ' + selectedOpportunity.web_data.contact.email"></span>
-                                                        <span x-show="selectedOpportunity.web_data.contact.phone"
-                                                              x-text="'☎ ' + selectedOpportunity.web_data.contact.phone"></span>
+                                                        <span x-show="selectedOpportunity.web_data?.contact?.email"
+                                                              x-text="'✉ ' + selectedOpportunity.web_data?.contact?.email"></span>
+                                                        <span x-show="selectedOpportunity.web_data?.contact?.phone"
+                                                              x-text="'☎ ' + selectedOpportunity.web_data?.contact?.phone"></span>
                                                     </div>
                                                 </template>
                                             </div>
@@ -2443,18 +2443,18 @@
                                                     <div>
                                                         <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Contact Information</div>
                                                         <div class="bg-gray-50 dark:bg-gray-900 rounded p-3 space-y-1">
-                                                            <div class="text-sm" x-show="selectedOpportunity.web_data.contact.email">
+                                                            <div class="text-sm" x-show="selectedOpportunity.web_data?.contact?.email">
                                                                 <span class="text-gray-600 dark:text-gray-400">Email:</span>
-                                                                <a :href="'mailto:' + selectedOpportunity.web_data.contact.email"
+                                                                <a :href="'mailto:' + selectedOpportunity.web_data?.contact?.email"
                                                                    class="text-teal-600 hover:text-teal-700 ml-2"
-                                                                   x-text="selectedOpportunity.web_data.contact.email"></a>
+                                                                   x-text="selectedOpportunity.web_data?.contact?.email"></a>
                                                             </div>
-                                                            <div class="text-sm" x-show="selectedOpportunity.web_data.contact.phone">
+                                                            <div class="text-sm" x-show="selectedOpportunity.web_data?.contact?.phone">
                                                                 <span class="text-gray-600 dark:text-gray-400">Phone:</span>
-                                                                <span class="ml-2" x-text="selectedOpportunity.web_data.contact.phone"></span>
+                                                                <span class="ml-2" x-text="selectedOpportunity.web_data?.contact?.phone"></span>
                                                             </div>
-                                                            <div class="text-sm" x-show="selectedOpportunity.web_data.contact.address"
-                                                                 x-text="selectedOpportunity.web_data.contact.address"></div>
+                                                            <div class="text-sm" x-show="selectedOpportunity.web_data?.contact?.address"
+                                                                 x-text="selectedOpportunity.web_data?.contact?.address"></div>
                                                         </div>
                                                     </div>
                                                 </template>
