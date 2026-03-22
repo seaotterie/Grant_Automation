@@ -248,6 +248,10 @@ app.include_router(foundation_network_router)
 from src.web.routers.network import router as network_router
 app.include_router(network_router)
 
+# Include People / Network Intelligence routes
+from src.web.routers.people import router as people_router
+app.include_router(people_router)
+
 # Include Enhanced Scraping routes (optional)
 if enhanced_scraping_available and enhanced_scraping_router:
     app.include_router(enhanced_scraping_router)

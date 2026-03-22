@@ -1,0 +1,15 @@
+[tool]
+name = "connection_pathway"
+version = "1.0.0"
+description = "Discover warm introduction pathways between seeker and funder through shared board/officer connections"
+single_responsibility = "Multi-hop connection pathway discovery with AI-generated cultivation strategies"
+cost_per_execution = 0.03
+model = "claude-haiku-4-5-20251001"
+
+[tool.input]
+requires_ein = true
+requires_profile_id = true
+
+[tool.output]
+format = "structured"
+type = "ConnectionPathwayOutput"
