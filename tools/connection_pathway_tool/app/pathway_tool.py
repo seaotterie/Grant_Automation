@@ -244,8 +244,22 @@ class ConnectionPathwayTool(BaseTool[ConnectionPathwayOutput]):
         if not seeker_person_ids or not funder_person_ids:
             return []
 
-        # BFS from each seeker person outward
+        # Degree-1 (direct): same person at both seeker and funder orgs
         pathways: List[IntroductionPathway] = []
+        shared_person_ids = seeker_person_ids & funder_person_ids
+        for pid in shared_person_ids:
+            pathway = self._build_pathway_from_person_chain(
+                person_chain=[pid],
+                person_info=person_info,
+                role_info=role_info,
+                seeker_ein=seeker_ein,
+                funder_ein=funder_ein,
+                input_data=input_data,
+                is_shared_person=True,
+            )
+            pathways.append(pathway)
+
+        # BFS from each seeker person outward for multi-hop paths
         max_hops = min(input_data.max_hops, 4)
 
         for start_pid in seeker_person_ids:
@@ -324,45 +338,77 @@ class ConnectionPathwayTool(BaseTool[ConnectionPathwayOutput]):
         seeker_ein: Optional[str],
         funder_ein: str,
         input_data: ConnectionPathwayInput,
+        is_shared_person: bool = False,
     ) -> IntroductionPathway:
         """Convert a chain of person IDs into an IntroductionPathway."""
-        degree = len(person_chain) - 1
+        if is_shared_person:
+            degree = 1  # same person at both orgs counts as degree 1
+        else:
+            degree = len(person_chain) - 1
         strength = self._degree_to_strength(degree)
 
         # Build nodes
         nodes: List[dict] = []
-        for i, pid in enumerate(person_chain):
+        if is_shared_person and len(person_chain) == 1:
+            # Same person at both orgs: build two nodes (seeker role + funder role)
+            pid = person_chain[0]
             info = person_info.get(pid, {"name": "Unknown"})
-            if i == 0:
-                org_type = "seeker"
-                ein = seeker_ein
-                rinfo = role_info.get((pid, seeker_ein), {}) if seeker_ein else {}
-            elif i == len(person_chain) - 1:
-                org_type = "funder"
-                ein = funder_ein
-                rinfo = role_info.get((pid, funder_ein), {})
-            else:
-                org_type = "intermediary"
-                # Find the shared org between this person and the next
-                ein = None
-                rinfo = {}
-                # Pick any org this person has a role at (prefer one connecting to neighbors)
-                for key, ri in role_info.items():
-                    if key[0] == pid:
-                        ein = key[1]
-                        rinfo = ri
-                        break
+            seeker_rinfo = role_info.get((pid, seeker_ein), {}) if seeker_ein else {}
+            funder_rinfo = role_info.get((pid, funder_ein), {})
 
-            node = PathwayNode(
+            seeker_node = PathwayNode(
                 person_name=info.get("name", "Unknown"),
-                title=rinfo.get("title"),
-                organization_name=rinfo.get("org_name", input_data.seeker_org_name if i == 0 else input_data.target_funder_name),
-                organization_ein=ein,
-                org_type=org_type,
-                role_at_org=rinfo.get("position_type", "board"),
-                influence_score=self._compute_person_influence(rinfo),
+                title=seeker_rinfo.get("title"),
+                organization_name=seeker_rinfo.get("org_name", input_data.seeker_org_name),
+                organization_ein=seeker_ein,
+                org_type="seeker",
+                role_at_org=seeker_rinfo.get("position_type", "board"),
+                influence_score=self._compute_person_influence(seeker_rinfo),
             )
-            nodes.append(asdict(node))
+            funder_node = PathwayNode(
+                person_name=info.get("name", "Unknown"),
+                title=funder_rinfo.get("title"),
+                organization_name=funder_rinfo.get("org_name", input_data.target_funder_name),
+                organization_ein=funder_ein,
+                org_type="funder",
+                role_at_org=funder_rinfo.get("position_type", "board"),
+                influence_score=self._compute_person_influence(funder_rinfo),
+            )
+            nodes.append(asdict(seeker_node))
+            nodes.append(asdict(funder_node))
+        else:
+            for i, pid in enumerate(person_chain):
+                info = person_info.get(pid, {"name": "Unknown"})
+                if i == 0:
+                    org_type = "seeker"
+                    ein = seeker_ein
+                    rinfo = role_info.get((pid, seeker_ein), {}) if seeker_ein else {}
+                elif i == len(person_chain) - 1:
+                    org_type = "funder"
+                    ein = funder_ein
+                    rinfo = role_info.get((pid, funder_ein), {})
+                else:
+                    org_type = "intermediary"
+                    # Find the shared org between this person and the next
+                    ein = None
+                    rinfo = {}
+                    # Pick any org this person has a role at (prefer one connecting to neighbors)
+                    for key, ri in role_info.items():
+                        if key[0] == pid:
+                            ein = key[1]
+                            rinfo = ri
+                            break
+
+                node = PathwayNode(
+                    person_name=info.get("name", "Unknown"),
+                    title=rinfo.get("title"),
+                    organization_name=rinfo.get("org_name", input_data.seeker_org_name if i == 0 else input_data.target_funder_name),
+                    organization_ein=ein,
+                    org_type=org_type,
+                    role_at_org=rinfo.get("position_type", "board"),
+                    influence_score=self._compute_person_influence(rinfo),
+                )
+                nodes.append(asdict(node))
 
         # Aggregate strength with boosts
         aggregate = self._compute_aggregate_strength(degree, nodes)
