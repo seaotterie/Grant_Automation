@@ -1378,27 +1378,27 @@
                                                     Search Website Intelligence
                                                 </h4>
                                                 <span class="text-xs px-2 py-0.5 rounded-full font-medium"
-                                                      :class="(selectedOpportunity.web_data?.data_quality_score||0) >= 0.70 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : (selectedOpportunity.web_data?.data_quality_score||0) >= 0.40 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'"
-                                                      x-text="'Quality: ' + Math.round((selectedOpportunity.web_data?.data_quality_score||0)*100) + '%'"></span>
+                                                      :class="(selectedOpportunity?.web_data?.data_quality_score||0) >= 0.70 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' : (selectedOpportunity?.web_data?.data_quality_score||0) >= 0.40 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'"
+                                                      x-text="'Quality: ' + Math.round((selectedOpportunity?.web_data?.data_quality_score||0)*100) + '%'"></span>
                                             </div>
                                             <!-- accepts_applications pill -->
                                             <div class="mb-2">
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                                                      :class="['yes', true].includes(selectedOpportunity.web_data?.accepts_applications) ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' : ['no', false].includes(selectedOpportunity.web_data?.accepts_applications) ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'"
-                                                      x-text="['yes', true].includes(selectedOpportunity.web_data?.accepts_applications) ? 'Accepts Applications' : ['no', false].includes(selectedOpportunity.web_data?.accepts_applications) ? 'Does Not Accept Applications' : 'Application Status Unknown'"></span>
+                                                      :class="['yes', true].includes(selectedOpportunity?.web_data?.accepts_applications) ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200' : ['no', false].includes(selectedOpportunity?.web_data?.accepts_applications) ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'"
+                                                      x-text="['yes', true].includes(selectedOpportunity?.web_data?.accepts_applications) ? 'Accepts Applications' : ['no', false].includes(selectedOpportunity?.web_data?.accepts_applications) ? 'Does Not Accept Applications' : 'Application Status Unknown'"></span>
                                             </div>
                                             <!-- grant_size_range -->
-                                            <template x-if="selectedOpportunity.web_data?.grant_size_range">
+                                            <template x-if="selectedOpportunity?.web_data?.grant_size_range">
                                                 <p class="text-xs text-green-700 dark:text-green-400 mb-2">
-                                                    Grant Range: <span class="font-medium" x-text="selectedOpportunity.web_data.grant_size_range"></span>
+                                                    Grant Range: <span class="font-medium" x-text="selectedOpportunity?.web_data?.grant_size_range"></span>
                                                 </p>
                                             </template>
                                             <!-- funding_priorities -->
-                                            <template x-if="selectedOpportunity.web_data?.funding_priorities?.length > 0">
+                                            <template x-if="selectedOpportunity?.web_data?.funding_priorities?.length > 0">
                                                 <div class="mb-2">
                                                     <div class="text-xs font-medium text-green-700 dark:text-green-400 mb-1">Funding Priorities</div>
                                                     <ul class="space-y-0.5">
-                                                        <template x-for="p in selectedOpportunity.web_data.funding_priorities.slice(0,4)" :key="p">
+                                                        <template x-for="p in selectedOpportunity?.web_data?.funding_priorities.slice(0,4)" :key="p">
                                                             <li class="text-xs text-gray-700 dark:text-gray-300 flex items-start gap-1">
                                                                 <span class="text-green-500 flex-shrink-0">•</span><span x-text="p"></span>
                                                             </li>
@@ -1407,17 +1407,17 @@
                                                 </div>
                                             </template>
                                             <!-- geographic_limitations -->
-                                            <template x-if="selectedOpportunity.web_data?.geographic_limitations">
+                                            <template x-if="selectedOpportunity?.web_data?.geographic_limitations">
                                                 <p class="text-xs text-gray-600 dark:text-gray-400">
-                                                    Geography: <span class="font-medium" x-text="selectedOpportunity.web_data.geographic_limitations"></span>
+                                                    Geography: <span class="font-medium" x-text="selectedOpportunity?.web_data?.geographic_limitations"></span>
                                                 </p>
                                             </template>
                                             <!-- footer -->
                                             <div class="flex items-center gap-3 mt-2 pt-2 border-t border-green-200 dark:border-green-800">
-                                                <template x-if="selectedOpportunity.web_data?.execution_time">
-                                                    <span class="text-xs text-green-500 dark:text-green-400" x-text="'Fetched in ' + selectedOpportunity.web_data.execution_time + 's'"></span>
+                                                <template x-if="selectedOpportunity?.web_data?.execution_time">
+                                                    <span class="text-xs text-green-500 dark:text-green-400" x-text="'Fetched in ' + selectedOpportunity?.web_data?.execution_time + 's'"></span>
                                                 </template>
-                                                <template x-if="selectedOpportunity.web_data?.ai_interpreted">
+                                                <template x-if="selectedOpportunity?.web_data?.ai_interpreted">
                                                     <span class="text-xs text-green-600 dark:text-green-400 font-medium">AI interpreted</span>
                                                 </template>
                                             </div>
@@ -1834,17 +1834,17 @@
                                             <!-- Mission & Programs -->
                                             <div class="mt-6">
                                                 <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Mission & Programs</h4>
-                                                <template x-if="selectedOpportunity?.['990_data']?.mission || selectedOpportunity.web_data?.mission">
+                                                <template x-if="selectedOpportunity?.['990_data']?.mission || selectedOpportunity?.web_data?.mission">
                                                     <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-3">
                                                         <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Mission Statement</div>
-                                                        <div class="text-gray-900 dark:text-white" x-text="selectedOpportunity?.['990_data']?.mission || selectedOpportunity.web_data?.mission"></div>
+                                                        <div class="text-gray-900 dark:text-white" x-text="selectedOpportunity?.['990_data']?.mission || selectedOpportunity?.web_data?.mission"></div>
                                                     </div>
                                                 </template>
-                                                <template x-if="selectedOpportunity.web_data?.programs && selectedOpportunity.web_data.programs.length > 0">
+                                                <template x-if="selectedOpportunity?.web_data?.programs && selectedOpportunity?.web_data?.programs.length > 0">
                                                     <div>
                                                         <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Programs & Services</div>
                                                         <div class="space-y-2">
-                                                            <template x-for="(program, programIdx) in selectedOpportunity.web_data.programs" :key="programIdx">
+                                                            <template x-for="(program, programIdx) in selectedOpportunity?.web_data?.programs" :key="programIdx">
                                                                 <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
                                                                     <div class="font-medium text-gray-900 dark:text-white" x-text="program.name"></div>
                                                                     <div class="text-sm text-gray-600 dark:text-gray-400" x-text="program.description"></div>
@@ -1975,17 +1975,17 @@
                                         <!-- Web data summary when available -->
                                         <template x-if="selectedOpportunity?.web_search_complete && selectedOpportunity?.web_data">
                                             <div class="space-y-3 text-sm">
-                                                <template x-if="selectedOpportunity.web_data.mission">
+                                                <template x-if="selectedOpportunity?.web_data?.mission">
                                                     <div class="bg-teal-50 dark:bg-teal-900/10 rounded-lg p-3">
                                                         <div class="text-xs text-teal-600 dark:text-teal-400 font-medium mb-1">Mission (web)</div>
-                                                        <div class="text-gray-800 dark:text-gray-200" x-text="selectedOpportunity.web_data.mission"></div>
+                                                        <div class="text-gray-800 dark:text-gray-200" x-text="selectedOpportunity?.web_data?.mission"></div>
                                                     </div>
                                                 </template>
-                                                <template x-if="selectedOpportunity.web_data.key_facts?.length > 0">
+                                                <template x-if="selectedOpportunity?.web_data?.key_facts?.length > 0">
                                                     <div>
                                                         <div class="text-xs text-gray-500 dark:text-gray-400 font-medium mb-1">Key Facts</div>
                                                         <ul class="space-y-0.5">
-                                                            <template x-for="fact in selectedOpportunity.web_data.key_facts.slice(0,5)" :key="fact">
+                                                            <template x-for="fact in selectedOpportunity?.web_data?.key_facts.slice(0,5)" :key="fact">
                                                                 <li class="flex items-start gap-1.5 text-gray-700 dark:text-gray-300">
                                                                     <span class="text-teal-500 flex-shrink-0 mt-0.5">•</span>
                                                                     <span x-text="fact"></span>
@@ -1994,21 +1994,21 @@
                                                         </ul>
                                                     </div>
                                                 </template>
-                                                <template x-if="selectedOpportunity.web_data.grant_application_url">
+                                                <template x-if="selectedOpportunity?.web_data?.grant_application_url">
                                                     <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
                                                         <div class="font-medium text-green-700 dark:text-green-400 text-xs mb-1">Grant Application Portal Detected</div>
-                                                        <a :href="selectedOpportunity.web_data.grant_application_url"
+                                                        <a :href="selectedOpportunity?.web_data?.grant_application_url"
                                                            target="_blank"
                                                            class="text-green-600 hover:text-green-700 text-xs break-all"
-                                                           x-text="selectedOpportunity.web_data.grant_application_url"></a>
+                                                           x-text="selectedOpportunity?.web_data?.grant_application_url"></a>
                                                     </div>
                                                 </template>
-                                                <template x-if="selectedOpportunity.web_data.contact?.email || selectedOpportunity.web_data.contact?.phone">
+                                                <template x-if="selectedOpportunity?.web_data?.contact?.email || selectedOpportunity?.web_data?.contact?.phone">
                                                     <div class="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
-                                                        <span x-show="selectedOpportunity.web_data?.contact?.email"
-                                                              x-text="'✉ ' + selectedOpportunity.web_data?.contact?.email"></span>
-                                                        <span x-show="selectedOpportunity.web_data?.contact?.phone"
-                                                              x-text="'☎ ' + selectedOpportunity.web_data?.contact?.phone"></span>
+                                                        <span x-show="selectedOpportunity?.web_data?.contact?.email"
+                                                              x-text="'✉ ' + selectedOpportunity?.web_data?.contact?.email"></span>
+                                                        <span x-show="selectedOpportunity?.web_data?.contact?.phone"
+                                                              x-text="'☎ ' + selectedOpportunity?.web_data?.contact?.phone"></span>
                                                     </div>
                                                 </template>
                                             </div>
@@ -2205,7 +2205,7 @@
                                         </div>
                                     </template>
                                     <!-- Web Research Leadership (Tool 25) -->
-                                    <template x-if="selectedOpportunity?.web_data?.leadership && selectedOpportunity.web_data.leadership.length > 0">
+                                    <template x-if="selectedOpportunity?.web_data?.leadership && selectedOpportunity?.web_data?.leadership.length > 0">
                                         <div class="mt-6">
                                             <div class="flex items-center justify-between mb-3">
                                                 <h4 class="font-semibold text-gray-900 dark:text-white">Leadership Team (Web Research)</h4>
@@ -2217,7 +2217,7 @@
                                                 </span>
                                             </div>
                                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                <template x-for="leader in selectedOpportunity.web_data.leadership" :key="leader.name">
+                                                <template x-for="leader in selectedOpportunity?.web_data?.leadership" :key="leader.name">
                                                     <div class="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-lg p-3">
                                                         <div class="flex items-start justify-between">
                                                             <div class="flex-1">
@@ -2244,7 +2244,7 @@
                                             </div>
                                             <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">
                                                 Extracted from organization website via Web Intelligence Tool (Scrapy).
-                                                <template x-if="selectedOpportunity.web_data.leadership_cross_validated">
+                                                <template x-if="selectedOpportunity?.web_data?.leadership_cross_validated">
                                                     <span class="text-blue-600 dark:text-blue-400 font-medium">Some members cross-validated with 990 filings.</span>
                                                 </template>
                                             </p>
@@ -2275,7 +2275,7 @@
                                         </div>
                                     </template>
 
-                                    <template x-if="(!selectedOpportunity?.['990_data']?.officers || selectedOpportunity['990_data'].officers.length === 0) && (!selectedOpportunity?.['990_data']?.board_members || selectedOpportunity['990_data'].board_members.length === 0) && (!selectedOpportunity?.web_data?.leadership || selectedOpportunity.web_data.leadership.length === 0) && (!ninetiesExtractionData?.officers || ninetiesExtractionData.officers.length === 0)">
+                                    <template x-if="(!selectedOpportunity?.['990_data']?.officers || selectedOpportunity['990_data'].officers.length === 0) && (!selectedOpportunity?.['990_data']?.board_members || selectedOpportunity['990_data'].board_members.length === 0) && (!selectedOpportunity?.web_data?.leadership || selectedOpportunity?.web_data?.leadership.length === 0) && (!ninetiesExtractionData?.officers || ninetiesExtractionData.officers.length === 0)">
                                         <div class="text-center py-8">
                                             <p class="text-gray-500 dark:text-gray-400 mb-2">No officer or director data available yet.</p>
                                             <p class="text-sm text-gray-400 dark:text-gray-500">Run <strong class="text-gray-600 dark:text-gray-300">② Search Website</strong> above to extract leadership from their website, or <strong class="text-gray-600 dark:text-gray-300">③ Search 990s</strong> to find officers from IRS filings.</p>
@@ -2360,59 +2360,59 @@
                                         <div>
                                             <div class="flex items-center gap-2 mb-3">
                                                 <h4 class="font-semibold text-gray-900 dark:text-white">Web Intelligence</h4>
-                                                <template x-if="selectedOpportunity.web_data.ai_interpreted">
+                                                <template x-if="selectedOpportunity?.web_data?.ai_interpreted">
                                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
                                                         AI Interpreted
                                                     </span>
                                                 </template>
-                                                <template x-if="!selectedOpportunity.web_data.ai_interpreted">
+                                                <template x-if="!selectedOpportunity?.web_data?.ai_interpreted">
                                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
                                                         Scrapy Raw
                                                     </span>
                                                 </template>
                                             </div>
-                                            <template x-if="selectedOpportunity.web_data.interpretation_notes">
+                                            <template x-if="selectedOpportunity?.web_data?.interpretation_notes">
                                                 <p class="text-xs italic text-gray-500 dark:text-gray-400 mb-3"
-                                                   x-text="selectedOpportunity.web_data.interpretation_notes"></p>
+                                                   x-text="selectedOpportunity?.web_data?.interpretation_notes"></p>
                                             </template>
                                             <div class="space-y-4">
                                                 <!-- Website & Verification -->
                                                 <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                                                     <div class="flex items-center justify-between mb-2">
                                                         <div class="text-sm text-gray-500 dark:text-gray-400">Website</div>
-                                                        <template x-if="selectedOpportunity.web_data.website_verified">
+                                                        <template x-if="selectedOpportunity?.web_data?.website_verified">
                                                             <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                                                                 ✓ 990 Verified
                                                             </span>
                                                         </template>
                                                     </div>
-                                                    <a :href="selectedOpportunity.web_data.website.startsWith('http') ? selectedOpportunity.web_data.website : 'https://' + selectedOpportunity.web_data.website"
+                                                    <a :href="selectedOpportunity?.web_data?.website.startsWith('http') ? selectedOpportunity?.web_data?.website : 'https://' + selectedOpportunity?.web_data?.website"
                                                        target="_blank"
                                                        class="text-teal-600 hover:text-teal-700 font-medium break-all"
-                                                       x-text="selectedOpportunity.web_data.website"></a>
+                                                       x-text="selectedOpportunity?.web_data?.website"></a>
                                                 </div>
 
                                                 <!-- Grant Application URL -->
-                                                <template x-if="selectedOpportunity.web_data.grant_application_url">
+                                                <template x-if="selectedOpportunity?.web_data?.grant_application_url">
                                                     <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                                                         <div class="flex items-center mb-2">
                                                             <span class="text-green-700 dark:text-green-400 font-semibold">📝 Grant Application Detected</span>
                                                         </div>
-                                                        <a :href="selectedOpportunity.web_data.grant_application_url"
+                                                        <a :href="selectedOpportunity?.web_data?.grant_application_url"
                                                            target="_blank"
                                                            class="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-sm break-all"
-                                                           x-text="selectedOpportunity.web_data.grant_application_url"></a>
+                                                           x-text="selectedOpportunity?.web_data?.grant_application_url"></a>
                                                     </div>
                                                 </template>
 
                                                 <!-- Leadership Team - REMOVED: Now only shown in Officers & Directors tab -->
 
                                                 <!-- Programs (from Claude AI interpretation) -->
-                                                <template x-if="selectedOpportunity.web_data?.programs && selectedOpportunity.web_data.programs.length > 0">
+                                                <template x-if="selectedOpportunity?.web_data?.programs && selectedOpportunity?.web_data?.programs.length > 0">
                                                     <div>
                                                         <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Programs & Services</div>
                                                         <div class="space-y-2">
-                                                            <template x-for="(prog, progIdx) in selectedOpportunity.web_data.programs" :key="progIdx">
+                                                            <template x-for="(prog, progIdx) in selectedOpportunity?.web_data?.programs" :key="progIdx">
                                                                 <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
                                                                     <div class="font-medium text-sm text-gray-900 dark:text-white" x-text="prog.name"></div>
                                                                     <div class="text-sm text-gray-600 dark:text-gray-400 mt-1" x-text="prog.description"></div>
@@ -2423,11 +2423,11 @@
                                                 </template>
 
                                                 <!-- Key Facts (Claude-extracted) -->
-                                                <template x-if="selectedOpportunity.web_data.key_facts && selectedOpportunity.web_data.key_facts.length > 0">
+                                                <template x-if="selectedOpportunity?.web_data?.key_facts && selectedOpportunity?.web_data?.key_facts.length > 0">
                                                     <div>
                                                         <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Key Facts</div>
                                                         <ul class="space-y-1">
-                                                            <template x-for="fact in selectedOpportunity.web_data.key_facts" :key="fact">
+                                                            <template x-for="fact in selectedOpportunity?.web_data?.key_facts" :key="fact">
                                                                 <li class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                                                                     <span class="text-teal-500 mt-0.5 flex-shrink-0">•</span>
                                                                     <span x-text="fact"></span>
@@ -2438,33 +2438,33 @@
                                                 </template>
 
                                                 <!-- Contact Information -->
-                                                <template x-if="selectedOpportunity.web_data.contact">
+                                                <template x-if="selectedOpportunity?.web_data?.contact">
                                                     <div>
                                                         <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Contact Information</div>
                                                         <div class="bg-gray-50 dark:bg-gray-900 rounded p-3 space-y-1">
-                                                            <div class="text-sm" x-show="selectedOpportunity.web_data?.contact?.email">
+                                                            <div class="text-sm" x-show="selectedOpportunity?.web_data?.contact?.email">
                                                                 <span class="text-gray-600 dark:text-gray-400">Email:</span>
-                                                                <a :href="'mailto:' + selectedOpportunity.web_data?.contact?.email"
+                                                                <a :href="'mailto:' + selectedOpportunity?.web_data?.contact?.email"
                                                                    class="text-teal-600 hover:text-teal-700 ml-2"
-                                                                   x-text="selectedOpportunity.web_data?.contact?.email"></a>
+                                                                   x-text="selectedOpportunity?.web_data?.contact?.email"></a>
                                                             </div>
-                                                            <div class="text-sm" x-show="selectedOpportunity.web_data?.contact?.phone">
+                                                            <div class="text-sm" x-show="selectedOpportunity?.web_data?.contact?.phone">
                                                                 <span class="text-gray-600 dark:text-gray-400">Phone:</span>
-                                                                <span class="ml-2" x-text="selectedOpportunity.web_data?.contact?.phone"></span>
+                                                                <span class="ml-2" x-text="selectedOpportunity?.web_data?.contact?.phone"></span>
                                                             </div>
-                                                            <div class="text-sm" x-show="selectedOpportunity.web_data?.contact?.address"
-                                                                 x-text="selectedOpportunity.web_data?.contact?.address"></div>
+                                                            <div class="text-sm" x-show="selectedOpportunity?.web_data?.contact?.address"
+                                                                 x-text="selectedOpportunity?.web_data?.contact?.address"></div>
                                                         </div>
                                                     </div>
                                                 </template>
 
                                                 <!-- Social Media -->
-                                                <template x-if="selectedOpportunity.web_data.social_media && (selectedOpportunity.web_data.social_media.linkedin || selectedOpportunity.web_data.social_media.twitter || selectedOpportunity.web_data.social_media.facebook)">
+                                                <template x-if="selectedOpportunity?.web_data?.social_media && (selectedOpportunity?.web_data?.social_media.linkedin || selectedOpportunity?.web_data?.social_media.twitter || selectedOpportunity?.web_data?.social_media.facebook)">
                                                     <div>
                                                         <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Social Media</div>
                                                         <div class="flex flex-wrap gap-3">
-                                                            <template x-if="selectedOpportunity.web_data.social_media.linkedin">
-                                                                <a :href="selectedOpportunity.web_data.social_media.linkedin"
+                                                            <template x-if="selectedOpportunity?.web_data?.social_media.linkedin">
+                                                                <a :href="selectedOpportunity?.web_data?.social_media.linkedin"
                                                                    target="_blank"
                                                                    class="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
                                                                     <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
@@ -2473,8 +2473,8 @@
                                                                     LinkedIn
                                                                 </a>
                                                             </template>
-                                                            <template x-if="selectedOpportunity.web_data.social_media.twitter">
-                                                                <a :href="selectedOpportunity.web_data.social_media.twitter"
+                                                            <template x-if="selectedOpportunity?.web_data?.social_media.twitter">
+                                                                <a :href="selectedOpportunity?.web_data?.social_media.twitter"
                                                                    target="_blank"
                                                                    class="inline-flex items-center px-3 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors text-sm">
                                                                     <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
@@ -2483,8 +2483,8 @@
                                                                     Twitter
                                                                 </a>
                                                             </template>
-                                                            <template x-if="selectedOpportunity.web_data.social_media.facebook">
-                                                                <a :href="selectedOpportunity.web_data.social_media.facebook"
+                                                            <template x-if="selectedOpportunity?.web_data?.social_media.facebook">
+                                                                <a :href="selectedOpportunity?.web_data?.social_media.facebook"
                                                                    target="_blank"
                                                                    class="inline-flex items-center px-3 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors text-sm">
                                                                     <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
@@ -2498,11 +2498,11 @@
                                                 </template>
 
                                                 <!-- Recent News -->
-                                                <template x-if="selectedOpportunity.web_data.recent_news && selectedOpportunity.web_data.recent_news.length > 0">
+                                                <template x-if="selectedOpportunity?.web_data?.recent_news && selectedOpportunity?.web_data?.recent_news.length > 0">
                                                     <div>
                                                         <div class="text-sm text-gray-500 dark:text-gray-400 mb-2">Recent News</div>
                                                         <div class="space-y-2">
-                                                            <template x-for="news in selectedOpportunity.web_data.recent_news.slice(0, 5)" :key="news.url">
+                                                            <template x-for="news in selectedOpportunity?.web_data?.recent_news.slice(0, 5)" :key="news.url">
                                                                 <div class="bg-gray-50 dark:bg-gray-900 rounded p-3">
                                                                     <a :href="news.url" target="_blank" class="font-medium text-gray-900 dark:text-white hover:text-teal-600" x-text="news.title"></a>
                                                                     <div class="text-xs text-gray-500 dark:text-gray-400 mt-1" x-text="news.date"></div>
@@ -2517,16 +2517,16 @@
                                                     <div class="grid grid-cols-3 gap-4 text-center">
                                                         <div>
                                                             <div class="text-sm text-gray-500 dark:text-gray-400">Data Quality</div>
-                                                            <div class="text-lg font-bold" :class="selectedOpportunity.web_data.data_quality_score >= 0.8 ? 'text-green-600' : (selectedOpportunity.web_data.data_quality_score >= 0.6 ? 'text-yellow-600' : 'text-red-600')"
-                                                                 x-text="((selectedOpportunity.web_data.data_quality_score || 0) * 100).toFixed(0) + '%'"></div>
+                                                            <div class="text-lg font-bold" :class="selectedOpportunity?.web_data?.data_quality_score >= 0.8 ? 'text-green-600' : (selectedOpportunity?.web_data?.data_quality_score >= 0.6 ? 'text-yellow-600' : 'text-red-600')"
+                                                                 x-text="((selectedOpportunity?.web_data?.data_quality_score || 0) * 100).toFixed(0) + '%'"></div>
                                                         </div>
                                                         <div>
                                                             <div class="text-sm text-gray-500 dark:text-gray-400">Pages Scraped</div>
-                                                            <div class="text-lg font-bold text-gray-900 dark:text-white" x-text="selectedOpportunity.web_data.pages_scraped || 0"></div>
+                                                            <div class="text-lg font-bold text-gray-900 dark:text-white" x-text="selectedOpportunity?.web_data?.pages_scraped || 0"></div>
                                                         </div>
                                                         <div>
                                                             <div class="text-sm text-gray-500 dark:text-gray-400">Execution Time</div>
-                                                            <div class="text-lg font-bold text-gray-900 dark:text-white" x-text="(selectedOpportunity.web_data.execution_time || 0).toFixed(1) + 's'"></div>
+                                                            <div class="text-lg font-bold text-gray-900 dark:text-white" x-text="(selectedOpportunity?.web_data?.execution_time || 0).toFixed(1) + 's'"></div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -11571,7 +11571,7 @@
     <script src="/static/modules/network-graph.js" onerror="console.error('Failed to load network-graph.js')"></script>
 
     <!-- app.js contains catalynxApp() - must load before Alpine -->
-    <script src="/static/app.js?v=20251020_DEPTH_FIX" onerror="console.error('Failed to load app.js')"></script>
+    <script src="/static/app.js?v=20260322_NULL_GUARDS" onerror="console.error('Failed to load app.js')"></script>
 
     <!-- Verify modules are defined BEFORE loading Alpine -->
     <script>
