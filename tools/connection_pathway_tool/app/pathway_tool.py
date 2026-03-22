@@ -500,6 +500,22 @@ class ConnectionPathwayTool(BaseTool[ConnectionPathwayOutput]):
             return []
 
         pathways: List[IntroductionPathway] = []
+
+        # Degree-1 (direct): same person at both seeker and funder
+        shared_hashes = seeker_hashes & funder_hashes
+        for phash in shared_hashes:
+            pathway = self._build_pathway_from_hash_chain(
+                chain=[phash],
+                person_display=person_display,
+                membership_info=membership_info,
+                seeker_ein=seeker_ein,
+                funder_ein=input_data.target_funder_ein,
+                input_data=input_data,
+                is_shared_person=True,
+            )
+            pathways.append(pathway)
+
+        # BFS for multi-hop paths
         max_hops = min(input_data.max_hops, 4)
 
         for start_hash in seeker_hashes:
