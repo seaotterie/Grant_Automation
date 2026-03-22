@@ -587,44 +587,76 @@ class ConnectionPathwayTool(BaseTool[ConnectionPathwayOutput]):
         seeker_ein: Optional[str],
         funder_ein: str,
         input_data: ConnectionPathwayInput,
+        is_shared_person: bool = False,
     ) -> IntroductionPathway:
         """Build pathway from a chain of person_hash values."""
-        degree = len(chain) - 1
+        if is_shared_person and len(chain) == 1:
+            degree = 1
+        else:
+            degree = len(chain) - 1
         strength = self._degree_to_strength(degree)
 
         nodes: List[dict] = []
-        for i, phash in enumerate(chain):
+        if is_shared_person and len(chain) == 1:
+            # Same person at both orgs: build two nodes
+            phash = chain[0]
             name = person_display.get(phash, "Unknown")
-            if i == 0:
-                org_type = "seeker"
-                ein = seeker_ein
-            elif i == len(chain) - 1:
-                org_type = "funder"
-                ein = funder_ein
-            else:
-                org_type = "intermediary"
-                ein = None
+            seeker_minfo = membership_info.get((phash, seeker_ein or ""), {})
+            funder_minfo = membership_info.get((phash, funder_ein), {})
 
-            minfo = membership_info.get((phash, ein or ""), {})
-            if not minfo:
-                # Find any membership for this person
-                for key, mi in membership_info.items():
-                    if key[0] == phash:
-                        minfo = mi
-                        if not ein:
-                            ein = key[1]
-                        break
-
-            node = PathwayNode(
+            seeker_node = PathwayNode(
                 person_name=name,
-                title=minfo.get("title"),
-                organization_name=minfo.get("org_name", ""),
-                organization_ein=ein,
-                org_type=org_type,
-                role_at_org=minfo.get("org_type", "board"),
+                title=seeker_minfo.get("title"),
+                organization_name=seeker_minfo.get("org_name", input_data.seeker_org_name),
+                organization_ein=seeker_ein,
+                org_type="seeker",
+                role_at_org=seeker_minfo.get("org_type", "board"),
                 influence_score=0.5,
             )
-            nodes.append(asdict(node))
+            funder_node = PathwayNode(
+                person_name=name,
+                title=funder_minfo.get("title"),
+                organization_name=funder_minfo.get("org_name", input_data.target_funder_name),
+                organization_ein=funder_ein,
+                org_type="funder",
+                role_at_org=funder_minfo.get("org_type", "board"),
+                influence_score=0.5,
+            )
+            nodes.append(asdict(seeker_node))
+            nodes.append(asdict(funder_node))
+        else:
+            for i, phash in enumerate(chain):
+                name = person_display.get(phash, "Unknown")
+                if i == 0:
+                    org_type = "seeker"
+                    ein = seeker_ein
+                elif i == len(chain) - 1:
+                    org_type = "funder"
+                    ein = funder_ein
+                else:
+                    org_type = "intermediary"
+                    ein = None
+
+                minfo = membership_info.get((phash, ein or ""), {})
+                if not minfo:
+                    # Find any membership for this person
+                    for key, mi in membership_info.items():
+                        if key[0] == phash:
+                            minfo = mi
+                            if not ein:
+                                ein = key[1]
+                            break
+
+                node = PathwayNode(
+                    person_name=name,
+                    title=minfo.get("title"),
+                    organization_name=minfo.get("org_name", ""),
+                    organization_ein=ein,
+                    org_type=org_type,
+                    role_at_org=minfo.get("org_type", "board"),
+                    influence_score=0.5,
+                )
+                nodes.append(asdict(node))
 
         aggregate = self._compute_aggregate_strength(degree, nodes)
         names = [n["person_name"] for n in nodes]
