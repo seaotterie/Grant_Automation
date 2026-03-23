@@ -9,6 +9,7 @@ from .people_etl import PeopleETL
 from .person_deduplication import PersonDeduplicationService
 from .connection_strength import ConnectionStrengthScorer
 from .batch_preprocessor import NetworkBatchPreprocessor
+from .grant_wins import GrantWinService
 
 __all__ = [
     "NameNormalizer",
@@ -19,4 +20,5 @@ __all__ = [
     "PersonDeduplicationService",
     "ConnectionStrengthScorer",
     "NetworkBatchPreprocessor",
+    "GrantWinService",
 ]

@@ -252,6 +252,10 @@ app.include_router(network_router)
 from src.web.routers.people import router as people_router
 app.include_router(people_router)
 
+# Include Grant Wins / Proven Pathways routes
+from src.web.routers.grant_wins import router as grant_wins_router
+app.include_router(grant_wins_router)
+
 # Include Enhanced Scraping routes (optional)
 if enhanced_scraping_available and enhanced_scraping_router:
     app.include_router(enhanced_scraping_router)
