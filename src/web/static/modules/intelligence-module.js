@@ -107,6 +107,16 @@ function intelligenceModule() {
         networkFindUrlsLoading: false,
         network990Loading: false,
         networkXmlLookupLoading: false,
+        networkBatchPrepLoading: false,
+        networkDuplicates: [],
+        networkDupLoading: false,
+        networkAutoMergeLoading: false,
+        networkAutoMergeResult: null,
+        // Orchestrator state
+        networkPrepLoading: false,
+        networkPrepResult: null,
+        networkDeepResearchLoading: false,
+        networkShowViz: false,
 
         // =================================================================
         // LIFECYCLE
@@ -1470,6 +1480,225 @@ function intelligenceModule() {
                 this.showNotification?.('Funder Ranking', 'Network error', 'error');
             } finally {
                 this.networkRankLoading = false;
+            }
+        },
+
+        // =================================================================
+        // NETWORK ORCHESTRATORS (user-facing 3-button interface)
+        // =================================================================
+
+        /**
+         * Pre-process: populate graph → batch preprocess (XML+ETL+dedup) → auto-merge → rank funders.
+         * Entirely free, no AI calls.
+         */
+        async networkRunPreprocess() {
+            const pid = this.currentProfileId;
+            if (!pid) return;
+            this.networkPrepLoading = true;
+            this.networkPrepResult = null;
+            try {
+                // 1. Populate graph from ein_intelligence cache
+                await fetch('/api/v2/network/populate-graph', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile_id: pid }),
+                });
+
+                // 2a. XML officer extraction (fast, no API calls)
+                await fetch('/api/v2/people/batch/stage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile_id: pid, stage: 'xml_officers' }),
+                });
+                // 2b. ETL migrate into normalised people + organization_roles tables
+                await fetch('/api/v2/people/batch/stage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile_id: pid, stage: 'ingest_etl' }),
+                });
+                // 2c. Dedup scoring (no API calls)
+                await fetch('/api/v2/people/batch/stage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile_id: pid, stage: 'dedup_score' }),
+                });
+
+                // 3. Auto-merge high-confidence duplicates (threshold 0.90)
+                await fetch('/api/v2/people/auto-merge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ min_confidence: 0.90 }),
+                });
+
+                // 4. Rank funders by BFS warmth
+                const rankResp = await fetch('/api/v2/network/rank-funders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile_id: pid, max_degree: 3 }),
+                });
+                const rankData = await rankResp.json();
+                this.networkRankedFunders = rankData.ranked_funders || [];
+
+                // Refresh stats
+                await this.networkLoadStats(pid);
+
+                const hot = this.networkRankedFunders.filter(f => f.strength === 'hot').length;
+                const warm = this.networkRankedFunders.filter(f => f.strength === 'warm').length;
+                const total = this.networkGraphStats?.total_people || 0;
+                this.networkPrepResult = `${total} people · ${hot} hot · ${warm} warm funders`;
+                this.showNotification?.('Pre-process', this.networkPrepResult, 'success');
+            } catch (e) {
+                console.error('[networkRunPreprocess]', e);
+                this.showNotification?.('Pre-process', 'Network error', 'error');
+            } finally {
+                this.networkPrepLoading = false;
+            }
+        },
+
+        /**
+         * Deep Research: AI 990 PDF extraction for funders where free XML lookup found no officers.
+         * Cost: ~$0.01–0.03 per funder processed.
+         */
+        async networkRunDeepResearch() {
+            const pid = this.currentProfileId;
+            if (!pid) return;
+            this.networkDeepResearchLoading = true;
+            try {
+                // Ensure we have fresh stats to know which funders need AI analysis
+                await this.networkLoadStats(pid);
+                const coverage = this.networkGraphStats?.coverage || [];
+                const needsAI = coverage.filter(c => ['needs_990_search', 'pdf_no_officers'].includes(c.preflight));
+                if (needsAI.length === 0) {
+                    this.showNotification?.('Deep Research', 'No funders need AI analysis — all covered by free pipeline', 'info');
+                    return;
+                }
+                // Collect opportunity IDs for those funders
+                const oppIds = [];
+                for (const funder of needsAI) {
+                    oppIds.push(...(funder.opportunity_ids || []));
+                }
+                const resp = await fetch('/api/v2/opportunities/batch-analyze-990-pdfs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ opportunity_ids: oppIds }),
+                });
+                const data = await resp.json();
+                const done = (data.results || []).filter(r => r.status === 'success').length;
+                // Harvest newly extracted officers back into graph
+                await fetch('/api/v2/network/populate-graph', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile_id: pid }),
+                });
+                await this.networkLoadStats(pid);
+                this.showNotification?.('Deep Research', `${done}/${needsAI.length} funders analysed via AI · graph updated`, 'success');
+            } catch (e) {
+                console.error('[networkRunDeepResearch]', e);
+                this.showNotification?.('Deep Research', 'Network error', 'error');
+            } finally {
+                this.networkDeepResearchLoading = false;
+            }
+        },
+
+        /**
+         * Toggle the D3 force-directed network visualization panel.
+         */
+        networkToggleViz() {
+            this.networkShowViz = !this.networkShowViz;
+        },
+
+        /**
+         * Render the D3 network graph into #network-viz-svg using ranked funder data.
+         */
+        networkRenderViz() {
+            const svgEl = document.getElementById('network-viz-svg');
+            if (!svgEl || typeof window.renderNetworkGraph !== 'function') return;
+            const profileName = this.selectedProfile?.name || 'Your Organization';
+            const pipelineResult = {
+                profile_people: [],
+                network_connections: this.networkRankedFunders.map(f => ({
+                    funder_name: f.org_name,
+                    funder_ein: f.ein,
+                    connection_strength: f.strength === 'hot' ? 'strong' : f.strength === 'warm' ? 'moderate' : f.strength === 'cold' ? 'weak' : 'none',
+                    screening_score: 0,
+                    funder_people: [],
+                    connections: [],
+                })),
+            };
+            window.renderNetworkGraph(svgEl, profileName, pipelineResult);
+        },
+
+        /**
+         * Run 5-stage free preprocessing pipeline (XML officers, ETL, dedup).
+         */
+        async networkBatchPreprocess() {
+            const pid = this.currentProfileId;
+            if (!pid) return;
+            this.networkBatchPrepLoading = true;
+            try {
+                for (const stage of ['xml_officers', 'ingest_etl', 'dedup_score']) {
+                    await fetch('/api/v2/people/batch/stage', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ profile_id: pid, stage }),
+                    });
+                }
+                await this.networkLoadStats(pid);
+                this.showNotification?.('Batch Preprocess', 'Pipeline complete', 'success');
+            } catch (e) {
+                console.error('[networkBatchPreprocess]', e);
+                this.showNotification?.('Batch Preprocess', 'Network error', 'error');
+            } finally {
+                this.networkBatchPrepLoading = false;
+            }
+        },
+
+        /**
+         * Find duplicate person records in the people DB.
+         */
+        async networkFindDuplicates() {
+            const pid = this.currentProfileId;
+            if (!pid) return;
+            this.networkDupLoading = true;
+            try {
+                const resp = await fetch(`/api/v2/people/duplicates?profile_id=${pid}`);
+                const data = await resp.json();
+                this.networkDuplicates = data.duplicates || [];
+                if (this.networkDuplicates.length === 0) {
+                    this.showNotification?.('Duplicates', 'No duplicate candidates found', 'info');
+                } else {
+                    this.showNotification?.('Duplicates', `${this.networkDuplicates.length} candidate pairs found`, 'warning');
+                }
+            } catch (e) {
+                console.error('[networkFindDuplicates]', e);
+                this.showNotification?.('Duplicates', 'Network error', 'error');
+            } finally {
+                this.networkDupLoading = false;
+            }
+        },
+
+        /**
+         * Auto-merge high-confidence duplicate person records.
+         */
+        async networkAutoMerge() {
+            const pid = this.currentProfileId;
+            if (!pid) return;
+            this.networkAutoMergeLoading = true;
+            try {
+                const resp = await fetch('/api/v2/people/auto-merge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ min_confidence: 0.90 }),
+                });
+                const data = await resp.json();
+                this.networkAutoMergeResult = data;
+                await this.networkFindDuplicates();
+                this.showNotification?.('Auto-Merge', `${data.merged_count || 0} records merged`, 'success');
+            } catch (e) {
+                console.error('[networkAutoMerge]', e);
+                this.showNotification?.('Auto-Merge', 'Network error', 'error');
+            } finally {
+                this.networkAutoMergeLoading = false;
             }
         },
 

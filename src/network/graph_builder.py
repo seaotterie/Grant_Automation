@@ -64,7 +64,7 @@ class NetworkGraphBuilder:
                         (id, person_hash, display_name, org_ein, org_name, org_type,
                          profile_id, source, title, created_at, updated_at)
                     VALUES (?, ?, ?, NULL, ?, 'seeker', ?, 'board_members', ?, ?, ?)
-                    ON CONFLICT(person_hash, org_ein) DO UPDATE SET
+                    ON CONFLICT(id) DO UPDATE SET
                         display_name = excluded.display_name,
                         title = excluded.title,
                         updated_at = excluded.updated_at
@@ -150,7 +150,7 @@ class NetworkGraphBuilder:
                         (id, person_hash, display_name, org_ein, org_name, org_type,
                          profile_id, source, title, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, 'funder', NULL, ?, ?, ?, ?)
-                    ON CONFLICT(person_hash, org_ein) DO UPDATE SET
+                    ON CONFLICT(id) DO UPDATE SET
                         display_name = excluded.display_name,
                         title = excluded.title,
                         source = excluded.source,

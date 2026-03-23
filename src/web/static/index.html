@@ -2947,55 +2947,14 @@
                         </div>
                     </div>
 
-                    <!-- Analysis Configuration - Compact Design -->
-                    <div x-show="selectedOpportunities.length > 0" class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                        <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Select Analysis Depth</h4>
-
-                        <!-- Compact Two-Column Depth Selector -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                            <template x-for="depth in depths" :key="depth.id">
-                                <div @click="selectDepth(depth.id)"
-                                     :class="selectedDepth === depth.id ? 'border-teal-600 bg-teal-50 dark:bg-teal-900/20' : 'border-gray-200 dark:border-gray-700'"
-                                     class="border-2 rounded-lg p-3 cursor-pointer hover:border-teal-400 transition-colors">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex-1">
-                                            <span class="font-semibold text-gray-900 dark:text-white" x-text="depth.name"></span>
-                                            <span class="text-xs text-gray-500 dark:text-gray-400 ml-2" x-text="depth.time"></span>
-                                            <div class="text-xs text-gray-600 dark:text-gray-300 mt-1" x-text="depth.description"></div>
-                                        </div>
-                                        <div class="ml-3">
-                                            <span class="text-xl font-bold"
-                                                  :class="depth.id === 'essentials' ? 'text-teal-600' : 'text-purple-600'">
-                                                $<span x-text="depth.price.toFixed(2)"></span>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-
-                        <!-- Estimated Cost and Analyze Button - Single Row -->
-                        <div class="flex items-center justify-between gap-4">
-                            <div class="text-sm text-gray-600 dark:text-gray-400">
-                                Estimated Cost: <strong class="text-gray-900 dark:text-white">$<span x-text="getEstimatedCost().toFixed(2)"></span></strong>
-                            </div>
-                            <button @click="analyzeAll()"
-                                    :disabled="analyzing"
-                                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm">
-                                <span x-show="!analyzing">Analyze All</span>
-                                <span x-show="analyzing">Analyzing...</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Network Graph Card -->
+                    <!-- Network Intelligence Pipeline Card -->
                     <div x-show="selectedOpportunities.length > 0" class="bg-white dark:bg-gray-800 rounded-lg border border-indigo-200 dark:border-indigo-700 overflow-hidden">
                         <div class="p-4 border-b border-indigo-100 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                                 </svg>
-                                <h4 class="text-sm font-semibold text-indigo-900 dark:text-indigo-200">Network Graph</h4>
+                                <h4 class="text-sm font-semibold text-indigo-900 dark:text-indigo-200">Network Intelligence Pipeline</h4>
                             </div>
                             <!-- Stats badges -->
                             <div class="flex items-center gap-3 text-xs text-indigo-700 dark:text-indigo-300" x-show="networkGraphStats">
@@ -3008,26 +2967,79 @@
                             <div class="text-xs text-indigo-400" x-show="!networkGraphStats">No graph data yet</div>
                         </div>
                         <div class="p-4">
-                            <!-- Actions Row -->
+                            <!-- Three consolidated pipeline buttons -->
                             <div class="flex flex-wrap items-center gap-3 mb-4">
-                                <button @click="networkBuildFromCache()"
-                                        :disabled="networkBuildLoading"
-                                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2">
-                                    <span x-show="networkBuildLoading">
+                                <!-- Pre-process -->
+                                <button @click="networkRunPreprocess()"
+                                        :disabled="networkPrepLoading"
+                                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                        title="Builds graph from cached data, normalises people records, merges duplicates, and ranks all funders by connection warmth — free, no AI">
+                                    <span x-show="networkPrepLoading">
                                         <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                                     </span>
-                                    <span x-show="!networkBuildLoading">⓪</span>
-                                    Build from Cache <span class="text-indigo-200 font-normal">$0.00</span>
+                                    <span x-show="!networkPrepLoading">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                    </span>
+                                    Pre-process
+                                    <span class="text-indigo-200 font-normal text-xs">$0.00</span>
                                 </button>
-                                <button @click="networkRankFunders()"
-                                        :disabled="networkRankLoading"
-                                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2">
-                                    <span x-show="networkRankLoading">
+
+                                <!-- Find Filings -->
+                                <button @click="networkFindMissingUrls()"
+                                        :disabled="networkFindUrlsLoading"
+                                        class="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                        title="Queries ProPublica to find 990 filing URLs for every funder — required before Deep Research can fetch PDFs. Free but rate-limited (~minutes).">
+                                    <span x-show="networkFindUrlsLoading">
                                         <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                                     </span>
-                                    <span x-show="!networkRankLoading">↗</span>
-                                    Rank All Funders <span class="text-green-200 font-normal">$0.00</span>
+                                    <span x-show="!networkFindUrlsLoading">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    </span>
+                                    Find Filings
+                                    <span class="text-sky-200 font-normal text-xs">$0.00 · ProPublica</span>
                                 </button>
+
+                                <!-- Deep Research -->
+                                <button @click="networkRunDeepResearch()"
+                                        :disabled="networkDeepResearchLoading"
+                                        class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                        title="Uses AI to extract officer data from 990 PDFs for any funders that XML lookup could not resolve — ~$0.01–0.03 per funder">
+                                    <span x-show="networkDeepResearchLoading">
+                                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                    </span>
+                                    <span x-show="!networkDeepResearchLoading">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                                    </span>
+                                    Deep Research
+                                    <span class="text-amber-200 font-normal text-xs">AI · ~$0.01–0.03/funder</span>
+                                </button>
+
+                                <!-- Visualize -->
+                                <button @click="networkToggleViz()"
+                                        :disabled="networkRankedFunders.length === 0"
+                                        :class="networkShowViz ? 'bg-teal-700' : 'bg-teal-600 hover:bg-teal-700'"
+                                        class="px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                        title="Force-directed network graph showing your board's connections to each funder">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                    Visualize Network
+                                    <span class="text-teal-200 font-normal text-xs" x-show="networkRankedFunders.length === 0">· run Pre-process first</span>
+                                </button>
+                            </div>
+
+                            <!-- Pre-process status summary -->
+                            <div x-show="networkPrepResult" class="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                                Last run: <span class="text-gray-700 dark:text-gray-300" x-text="networkPrepResult"></span>
+                            </div>
+
+                            <!-- D3 visualization panel -->
+                            <div x-show="networkShowViz" class="mb-4 rounded-lg border border-teal-200 dark:border-teal-700 overflow-hidden bg-gray-50 dark:bg-gray-900">
+                                <div class="p-2 bg-teal-50 dark:bg-teal-900/20 border-b border-teal-200 dark:border-teal-700 text-xs text-teal-700 dark:text-teal-300 flex items-center justify-between">
+                                    <span>Connection Map — <span x-text="networkRankedFunders.length"></span> funders · colored by warmth</span>
+                                    <button @click="networkShowViz = false" class="text-teal-400 hover:text-teal-600">✕</button>
+                                </div>
+                                <svg id="network-viz-svg" class="w-full" style="height:340px;"
+                                     x-init="$watch('networkShowViz', v => v && $nextTick(() => networkRenderViz()))">
+                                </svg>
                             </div>
 
                             <!-- Coverage List + Preflight Flags -->
@@ -3164,6 +3176,47 @@
                                     </template>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <!-- Analysis Configuration - Compact Design -->
+                    <div x-show="selectedOpportunities.length > 0" class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Select Analysis Depth</h4>
+
+                        <!-- Compact Two-Column Depth Selector -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                            <template x-for="depth in depths" :key="depth.id">
+                                <div @click="selectDepth(depth.id)"
+                                     :class="selectedDepth === depth.id ? 'border-teal-600 bg-teal-50 dark:bg-teal-900/20' : 'border-gray-200 dark:border-gray-700'"
+                                     class="border-2 rounded-lg p-3 cursor-pointer hover:border-teal-400 transition-colors">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex-1">
+                                            <span class="font-semibold text-gray-900 dark:text-white" x-text="depth.name"></span>
+                                            <span class="text-xs text-gray-500 dark:text-gray-400 ml-2" x-text="depth.time"></span>
+                                            <div class="text-xs text-gray-600 dark:text-gray-300 mt-1" x-text="depth.description"></div>
+                                        </div>
+                                        <div class="ml-3">
+                                            <span class="text-xl font-bold"
+                                                  :class="depth.id === 'essentials' ? 'text-teal-600' : 'text-purple-600'">
+                                                $<span x-text="depth.price.toFixed(2)"></span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Estimated Cost and Analyze Button - Single Row -->
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="text-sm text-gray-600 dark:text-gray-400">
+                                Estimated Cost: <strong class="text-gray-900 dark:text-white">$<span x-text="getEstimatedCost().toFixed(2)"></span></strong>
+                            </div>
+                            <button @click="analyzeAll()"
+                                    :disabled="analyzing"
+                                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 text-sm">
+                                <span x-show="!analyzing">Analyze All</span>
+                                <span x-show="analyzing">Analyzing...</span>
+                            </button>
                         </div>
                     </div>
 
@@ -11567,7 +11620,7 @@
     <script src="/static/modules/shared-module.js?v=ALPINE_DEFER_FIX" onerror="console.error('Failed to load shared-module.js')"></script>
     <script src="/static/modules/profiles-module.js?v=20251018_ENHANCED_SEARCH_FIX" onerror="console.error('Failed to load profiles-module.js')"></script>
     <script src="/static/modules/screening-module.js?v=ALPINE_DEFER_FIX" onerror="console.error('Failed to load screening-module.js')"></script>
-    <script src="/static/modules/intelligence-module.js?v=TOOL_API_FIX_V2_20251122" onerror="console.error('Failed to load intelligence-module.js')"></script>
+    <script src="/static/modules/intelligence-module.js?v=NET_PIPELINE_20260323d" onerror="console.error('Failed to load intelligence-module.js')"></script>
     <script src="/static/modules/network-graph.js" onerror="console.error('Failed to load network-graph.js')"></script>
 
     <!-- app.js contains catalynxApp() - must load before Alpine -->
