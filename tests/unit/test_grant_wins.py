@@ -31,18 +31,6 @@ def db_path(tmp_path):
             ein TEXT
         );
 
-        CREATE TABLE opportunities (
-            id TEXT PRIMARY KEY,
-            profile_id TEXT,
-            ein TEXT,
-            organization_name TEXT,
-            notes TEXT,
-            tags TEXT,
-            user_rating INTEGER,
-            created_at TEXT,
-            current_stage TEXT DEFAULT 'prospects'
-        );
-
         CREATE TABLE people (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             normalized_name TEXT NOT NULL,
@@ -82,12 +70,6 @@ def db_path(tmp_path):
         INSERT INTO profiles (id, name, ein) VALUES ('p1', 'Test Nonprofit', '99-1234567');
 
         -- Seed opportunities (one "won")
-        INSERT INTO opportunities (id, profile_id, ein, organization_name, user_rating, notes, created_at)
-        VALUES ('opp1', 'p1', '13-1111111', 'Foundation Alpha', 5, 'Won this grant!', '2024-06-15');
-
-        INSERT INTO opportunities (id, profile_id, ein, organization_name, user_rating, notes, created_at)
-        VALUES ('opp2', 'p1', '13-2222222', 'Foundation Beta', 3, 'Still in progress', '2024-09-01');
-
         -- Seed people at Foundation Alpha
         INSERT INTO people (id, normalized_name, original_name, name_hash, first_name, last_name, created_at, updated_at)
         VALUES (1, 'jane smith', 'Jane Smith', 'hash_jane', 'Jane', 'Smith', '2024-01-01', '2024-01-01');
@@ -302,28 +284,6 @@ Ford Foundation,$100000,2024,stuff
         csv_content = "Funder\tAmount\nFoundation X\t50000\n"
         result = svc.import_from_csv("p1", csv_content, delimiter="\t")
         assert result.wins_created == 1
-
-
-# ---------------------------------------------------------------------------
-# Test: Opportunity ingestion
-# ---------------------------------------------------------------------------
-
-class TestOpportunityIngestion:
-    def test_ingest_won_opportunities(self, svc):
-        result = svc.ingest_from_opportunities("p1")
-
-        # opp1 has user_rating=5 → should be ingested
-        # opp2 has user_rating=3 → should not
-        assert result["wins_created"] == 1
-        assert result["wins_skipped"] == 0
-
-    def test_ingest_is_idempotent(self, svc):
-        svc.ingest_from_opportunities("p1")
-        result2 = svc.ingest_from_opportunities("p1")
-
-        # Second run should find the existing win
-        assert result2["wins_created"] == 0
-        assert result2["wins_skipped"] == 1
 
 
 # ---------------------------------------------------------------------------

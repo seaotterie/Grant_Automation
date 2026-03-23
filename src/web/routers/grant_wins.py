@@ -227,25 +227,7 @@ async def import_csv(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-# ── 7. Ingest from existing opportunities ────────────────────────────────────
-
-@router.post("/ingest-opportunities")
-async def ingest_from_opportunities(profile_id: str = Query(...)):
-    """
-    Scan opportunities tagged/rated as 'won' and create grant_win records.
-    Detects wins via user_rating=5 or notes/tags containing
-    'won'/'awarded'/'funded'. Cost: $0.00.
-    """
-    try:
-        from src.network.grant_wins import GrantWinService
-        svc = GrantWinService(_get_db_path())
-        return svc.ingest_from_opportunities(profile_id)
-    except Exception as e:
-        logger.error(f"[grant-wins/ingest-opportunities] {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-# ── 8. Auto-link contacts from people database ──────────────────────────────
+# ── 7. Auto-link contacts from people database ───────────────────────────────
 
 @router.post("/auto-link")
 async def auto_link_contacts(profile_id: str = Query(...)):
@@ -263,7 +245,7 @@ async def auto_link_contacts(profile_id: str = Query(...)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-# ── 9. Proven pathway scoring ────────────────────────────────────────────────
+# ── 8. Proven pathway scoring ────────────────────────────────────────────────
 
 @router.get("/proven-pathways")
 async def get_proven_pathways(profile_id: str = Query(...)):
@@ -283,7 +265,7 @@ async def get_proven_pathways(profile_id: str = Query(...)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-# ── 10. Summary stats ────────────────────────────────────────────────────────
+# ── 9. Summary stats ─────────────────────────────────────────────────────────
 
 @router.get("/summary")
 async def get_grant_win_summary(profile_id: str = Query(...)):

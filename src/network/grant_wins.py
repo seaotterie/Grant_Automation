@@ -43,7 +43,7 @@ class GrantWinRecord:
     grant_type: Optional[str] = None          # general, project, capacity, capital, etc.
     contact_names: list = field(default_factory=list)  # people involved
     notes: Optional[str] = None
-    source: str = "manual"                    # manual, csv_import, schedule_i, opportunity
+    source: str = "manual"                    # manual, csv_import, schedule_i
 
 
 @dataclass
@@ -420,54 +420,6 @@ class GrantWinService:
             "unmapped_columns": unmapped,
             "recognized_fields": list(mapping.keys()),
         }
-
-    # ------------------------------------------------------------------
-    # Ingest from existing opportunities marked as "won"
-    # ------------------------------------------------------------------
-
-    def ingest_from_opportunities(self, profile_id: str) -> dict:
-        """
-        Scan opportunities that have been tagged/staged as won and create
-        grant_win records from them. Uses user_rating=5 or notes containing
-        'won'/'awarded'/'funded' as heuristics.
-
-        Returns {wins_created, wins_skipped}.
-        """
-        self.ensure_tables()
-        created = 0
-        skipped = 0
-
-        with self._conn() as conn:
-            # Look for opportunities that appear to be wins
-            rows = conn.execute("""
-                SELECT id, organization_name, ein,
-                       notes, tags, created_at, user_rating
-                FROM opportunities
-                WHERE profile_id = ?
-                  AND (
-                      user_rating = 5
-                      OR LOWER(notes) LIKE '%won%'
-                      OR LOWER(notes) LIKE '%awarded%'
-                      OR LOWER(notes) LIKE '%funded%'
-                      OR LOWER(tags) LIKE '%won%'
-                  )
-            """, (profile_id,)).fetchall()
-
-            for row in rows:
-                record = GrantWinRecord(
-                    funder_name=row["organization_name"],
-                    funder_ein=row["ein"],
-                    award_date=row["created_at"],
-                    notes=row["notes"],
-                    source="opportunity",
-                )
-                res = self.add_win(profile_id, record)
-                if res["created"]:
-                    created += 1
-                else:
-                    skipped += 1
-
-        return {"wins_created": created, "wins_skipped": skipped}
 
     # ------------------------------------------------------------------
     # Auto-link contacts from existing people database
