@@ -1371,7 +1371,7 @@ function intelligenceModule() {
                 const resp = await fetch('/api/v2/network/xml-officer-lookup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, limit: 30 }),
+                    body: JSON.stringify({ profile_id: pid, limit: 2000 }),
                 });
                 const data = await resp.json();
                 if (data.success) {
@@ -1403,11 +1403,15 @@ function intelligenceModule() {
                 const resp = await fetch('/api/v2/network/discover-filings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, limit: 50 }),
+                    body: JSON.stringify({ profile_id: pid, limit: 2000 }),
                 });
                 const data = await resp.json();
-                this.showNotification?.('Find URLs', `${data.filing_histories_found} new filing histories found · ${data.already_cached} already cached`, 'success');
-                await this.networkLoadStats(pid);
+                if (data.status === 'running') {
+                    this.showNotification?.('Find Filings', data.message || `Fetching filings for ${data.eins_queried} funders in background — re-run Pre-process when complete`, 'info');
+                } else {
+                    this.showNotification?.('Find Filings', `${data.filing_histories_found ?? 0} new filing histories found · ${data.already_cached ?? 0} already cached`, 'success');
+                    await this.networkLoadStats(pid);
+                }
             } catch (e) {
                 console.error('[networkFindMissingUrls]', e);
                 this.showNotification?.('Find URLs', 'Network error', 'error');

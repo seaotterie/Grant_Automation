@@ -3,7 +3,7 @@ Network Router — graph population, coverage stats, filing discovery, funder ra
 All endpoints are $0.00 (pure DB reads + free ProPublica HTTP).
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel
 from typing import List, Optional
 import asyncio
@@ -26,7 +26,7 @@ class PopulateGraphRequest(BaseModel):
 
 class DiscoverFilingsRequest(BaseModel):
     profile_id: str
-    limit: int = 20
+    limit: int = 2000
 
 
 class RankFundersRequest(BaseModel):
@@ -36,7 +36,7 @@ class RankFundersRequest(BaseModel):
 
 class XmlOfficerLookupRequest(BaseModel):
     profile_id: str
-    limit: int = 30   # max EINs to process in one call
+    limit: int = 2000
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -217,9 +217,10 @@ async def graph_stats(profile_id: str = Query(...)):
 # ── Endpoint C: Discover filing histories (free HTTP, no AI) ──────────────────
 
 @router.post("/discover-filings")
-async def discover_filings(req: DiscoverFilingsRequest):
+async def discover_filings(req: DiscoverFilingsRequest, background_tasks: BackgroundTasks):
     """
     For EINs lacking filing_history in ein_intelligence, fetch from ProPublica.
+    Returns immediately; ProPublica calls run in the background.
     Cost: $0.00 (ProPublica public API).
     """
     try:
@@ -227,7 +228,6 @@ async def discover_filings(req: DiscoverFilingsRequest):
         conn = _conn(db_path)
         cur = conn.cursor()
 
-        # Get EINs for this profile that lack filing_history
         opp_rows = cur.execute(
             "SELECT DISTINCT o.ein, o.organization_name "
             "FROM opportunities o "
@@ -236,7 +236,6 @@ async def discover_filings(req: DiscoverFilingsRequest):
             (req.profile_id, req.limit),
         ).fetchall()
 
-        # Check which already have filing_history
         eins_to_fetch = []
         already_cached = 0
         for row in opp_rows:
@@ -253,53 +252,56 @@ async def discover_filings(req: DiscoverFilingsRequest):
 
         if not eins_to_fetch:
             return {
+                "status": "complete",
                 "eins_queried": 0,
                 "filing_histories_found": 0,
                 "already_cached": already_cached,
                 "errors": 0,
             }
 
-        # Fetch from ProPublica
-        from src.clients.propublica_client import ProPublicaClient
-        from src.database.database_manager import DatabaseManager
+        async def _run_in_background(items: list, path: str):
+            from src.clients.propublica_client import ProPublicaClient
+            from src.database.database_manager import DatabaseManager
+            db_manager = DatabaseManager(path)
+            sem = asyncio.Semaphore(3)
+            found = 0
+            errors = 0
 
-        db_manager = DatabaseManager(db_path)
-        sem = asyncio.Semaphore(3)
-        found = 0
-        errors = 0
+            async def fetch_one(item):
+                nonlocal found, errors
+                async with sem:
+                    try:
+                        client = ProPublicaClient()
+                        org_data = await client.get_organization_by_ein(item["ein"])
+                        filings = []
+                        if org_data:
+                            for f in org_data.get("filings_with_data", [])[:10]:
+                                filings.append({
+                                    "tax_year": f.get("tax_prd_yr"),
+                                    "pdf_url": f.get("pdf_url"),
+                                    "filing_date": f.get("updated"),
+                                    "source": "api",
+                                })
+                        if filings:
+                            db_manager.upsert_ein_intelligence(item["ein"], filing_history=filings)
+                            found += 1
+                        await asyncio.sleep(0.2)
+                    except Exception as exc:
+                        logger.warning(f"[discover-filings] EIN {item['ein']}: {exc}")
+                        errors += 1
 
-        async def fetch_one(item):
-            nonlocal found, errors
-            async with sem:
-                try:
-                    client = ProPublicaClient()
-                    org_data = await client.get_organization_by_ein(item["ein"])
-                    filings = []
-                    if org_data:
-                        for f in org_data.get("filings_with_data", [])[:10]:
-                            filings.append({
-                                "tax_year": f.get("tax_prd_yr"),
-                                "pdf_url": f.get("pdf_url"),
-                                "filing_date": f.get("updated"),
-                                "source": "api",
-                            })
-                    if filings:
-                        db_manager.upsert_ein_intelligence(
-                            item["ein"], filing_history=filings
-                        )
-                        found += 1
-                    await asyncio.sleep(0.2)
-                except Exception as exc:
-                    logger.warning(f"[discover-filings] EIN {item['ein']}: {exc}")
-                    errors += 1
+            await asyncio.gather(*[fetch_one(item) for item in items])
+            logger.info(f"[discover-filings] background complete: {found}/{len(items)} found, {errors} errors")
 
-        await asyncio.gather(*[fetch_one(item) for item in eins_to_fetch])
+        background_tasks.add_task(_run_in_background, eins_to_fetch, db_path)
 
         return {
+            "status": "running",
             "eins_queried": len(eins_to_fetch),
-            "filing_histories_found": found,
+            "filing_histories_found": 0,
             "already_cached": already_cached,
-            "errors": errors,
+            "errors": 0,
+            "message": f"Fetching filings for {len(eins_to_fetch)} funders in background — re-run Pre-process when complete",
         }
 
     except Exception as e:
