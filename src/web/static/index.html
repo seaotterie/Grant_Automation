@@ -1273,27 +1273,27 @@
                             <!-- Tab Navigation -->
                             <div class="flex border-b border-gray-200 dark:border-gray-700 px-6 flex-shrink-0">
                                 <button @click="switchOpportunityTab('scores')"
-                                        :class="modalActiveTab === 'scores' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        :class="modalActiveTab === 'scores' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
                                     Score Breakdown
                                 </button>
                                 <button @click="switchOpportunityTab('details')"
-                                        :class="modalActiveTab === 'details' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        :class="modalActiveTab === 'details' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
                                     Organization Details
                                 </button>
                                 <button @click="switchOpportunityTab('grants')"
-                                        :class="modalActiveTab === 'grants' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        :class="modalActiveTab === 'grants' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
                                     Grant History
                                 </button>
                                 <button @click="switchOpportunityTab('officers')"
-                                        :class="modalActiveTab === 'officers' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        :class="modalActiveTab === 'officers' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
                                     Officers & Directors
                                 </button>
                                 <button @click="switchOpportunityTab('notes')"
-                                        :class="modalActiveTab === 'notes' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
+                                        :class="modalActiveTab === 'notes' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'"
                                         class="px-4 py-3 border-b-2 font-medium text-sm transition-colors">
                                     Notes
                                 </button>
@@ -3032,14 +3032,43 @@
                             </div>
 
                             <!-- D3 visualization panel -->
-                            <div x-show="networkShowViz" class="mb-4 rounded-lg border border-teal-200 dark:border-teal-700 overflow-hidden bg-gray-50 dark:bg-gray-900">
+                            <div x-show="networkShowViz" class="mb-4 rounded-lg border border-teal-200 dark:border-teal-700 overflow-hidden bg-gray-50 dark:bg-gray-900 relative">
                                 <div class="p-2 bg-teal-50 dark:bg-teal-900/20 border-b border-teal-200 dark:border-teal-700 text-xs text-teal-700 dark:text-teal-300 flex items-center justify-between">
-                                    <span>Connection Map — <span x-text="networkRankedFunders.length"></span> funders · colored by warmth</span>
-                                    <button @click="networkShowViz = false" class="text-teal-400 hover:text-teal-600">✕</button>
+                                    <span>Connection Map — <span x-text="networkRankedFunders.length"></span> funders · colored by warmth · click a funder for details</span>
+                                    <button @click="networkShowViz = false; networkClearFunder()" class="text-teal-400 hover:text-teal-600">✕</button>
                                 </div>
-                                <svg id="network-viz-svg" class="w-full" style="height:340px;"
+                                <svg id="network-viz-svg" class="w-full" style="height:520px;"
                                      x-init="$watch('networkShowViz', v => v && $nextTick(() => networkRenderViz()))">
                                 </svg>
+                                <!-- Funder detail side panel -->
+                                <div x-show="networkSelectedFunder"
+                                     x-transition
+                                     class="absolute top-8 right-0 w-56 bg-white dark:bg-gray-800 border-l border-teal-200 dark:border-teal-700 p-4 overflow-y-auto z-10 shadow-lg"
+                                     style="height:calc(100% - 2rem)">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <h4 class="font-semibold text-sm text-gray-900 dark:text-white leading-snug pr-2"
+                                            x-text="networkSelectedFunder?.org_name"></h4>
+                                        <button @click="networkClearFunder()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0 mt-0.5">✕</button>
+                                    </div>
+                                    <dl class="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                                        <div>
+                                            <dt class="font-medium text-gray-500 dark:text-gray-500">EIN</dt>
+                                            <dd class="font-mono mt-0.5" x-text="networkSelectedFunder?.ein"></dd>
+                                        </div>
+                                        <div>
+                                            <dt class="font-medium text-gray-500 dark:text-gray-500">Warmth</dt>
+                                            <dd class="capitalize mt-0.5" x-text="networkSelectedFunder?.strength"></dd>
+                                        </div>
+                                        <div>
+                                            <dt class="font-medium text-gray-500 dark:text-gray-500">Score</dt>
+                                            <dd class="mt-0.5" x-text="Math.round((networkSelectedFunder?.score || 0) * 100) + '%'"></dd>
+                                        </div>
+                                        <div>
+                                            <dt class="font-medium text-gray-500 dark:text-gray-500">People in graph</dt>
+                                            <dd class="mt-0.5" x-text="networkSelectedFunder?.people_count || 0"></dd>
+                                        </div>
+                                    </dl>
+                                </div>
                             </div>
 
                             <!-- Coverage List + Preflight Flags -->
@@ -5416,7 +5445,7 @@
                                         Schedule I (Grant Recipients)
                                     </button>
                                     <button x-show="hasFoundationData()" @click="active990Tab = 'foundation-intel'" 
-                                            :class="active990Tab === 'foundation-intel' ? 'border-purple-500 text-purple-600 dark:text-purple-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
+                                            :class="active990Tab === 'foundation-intel' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'"
                                             class="whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
                                         Foundation Intelligence
                                     </button>

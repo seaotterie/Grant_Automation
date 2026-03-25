@@ -110,6 +110,7 @@ function intelligenceModule() {
         networkBatchPrepLoading: false,
         networkDuplicates: [],
         networkDupLoading: false,
+        networkSelectedFunder: null,
         networkAutoMergeLoading: false,
         networkAutoMergeResult: null,
         // Orchestrator state
@@ -289,8 +290,11 @@ function intelligenceModule() {
          */
         closeIntelligenceModal() {
             this.showIntelligenceModal = false;
-            this.selectedIntelligenceOpp = null;
-            this.intelligenceModalIndex = -1;
+            // Delay clearing data until x-show transition completes (avoids null-access errors)
+            setTimeout(() => {
+                this.selectedIntelligenceOpp = null;
+                this.intelligenceModalIndex = -1;
+            }, 150);
         },
 
         /**
@@ -1618,19 +1622,31 @@ function intelligenceModule() {
             const svgEl = document.getElementById('network-viz-svg');
             if (!svgEl || typeof window.renderNetworkGraph !== 'function') return;
             const profileName = this.selectedProfile?.name || 'Your Organization';
+
+            // Build EIN → people_count lookup from graph stats coverage
+            const coverageByEin = {};
+            for (const c of (this.networkGraphStats?.coverage || [])) {
+                coverageByEin[c.ein] = c.people_in_graph || 0;
+            }
+
             const pipelineResult = {
                 profile_people: [],
                 network_connections: this.networkRankedFunders.map(f => ({
                     funder_name: f.org_name,
                     funder_ein: f.ein,
                     connection_strength: f.strength === 'hot' ? 'strong' : f.strength === 'warm' ? 'moderate' : f.strength === 'cold' ? 'weak' : 'none',
-                    screening_score: 0,
+                    screening_score: f.warmth_score || 0,
                     funder_people: [],
+                    people_count: coverageByEin[f.ein] || 0,
                     connections: [],
                 })),
             };
-            window.renderNetworkGraph(svgEl, profileName, pipelineResult);
+            window.renderNetworkGraph(svgEl, profileName, pipelineResult, {
+                onFunderClick: (funder) => { this.networkSelectedFunder = funder; },
+            });
         },
+
+        networkClearFunder() { this.networkSelectedFunder = null; },
 
         /**
          * Run 5-stage free preprocessing pipeline (XML officers, ETL, dedup).

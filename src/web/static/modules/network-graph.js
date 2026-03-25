@@ -55,6 +55,7 @@
                 strength: conn.connection_strength || 'unknown',
                 score: conn.screening_score || 0,
                 color: strengthColor,
+                people_count: conn.people_count || 0,
                 group: 2,
             });
 
@@ -108,7 +109,8 @@
      * @param {string}     profileName
      * @param {object}     pipelineResult - from Alpine.js pipelineResult
      */
-    window.renderNetworkGraph = function (svgEl, profileName, pipelineResult) {
+    window.renderNetworkGraph = function (svgEl, profileName, pipelineResult, options) {
+        options = options || {};
         if (!svgEl || !pipelineResult) return;
         if (typeof d3 === 'undefined') {
             console.warn('[NetworkGraph] D3.js not loaded');
@@ -250,7 +252,19 @@
             .on('mousemove', (event) => {
                 tooltip.style('left', (event.clientX + 14) + 'px').style('top', (event.clientY - 10) + 'px');
             })
-            .on('mouseout', () => tooltip.style('display', 'none'));
+            .on('mouseout', () => tooltip.style('display', 'none'))
+            .on('click', (event, d) => {
+                event.stopPropagation();
+                if (d.type === 'funder' && options.onFunderClick) {
+                    options.onFunderClick({
+                        ein: d.id.replace('funder_', ''),
+                        org_name: d.label,
+                        strength: d.strength,
+                        score: d.score,
+                        people_count: d.people_count || 0,
+                    });
+                }
+            });
 
         // Circle
         node.append('circle')
@@ -270,6 +284,27 @@
                 const maxLen = d.type === 'org' || d.type === 'funder' ? 20 : 14;
                 return d.label.length > maxLen ? d.label.slice(0, maxLen - 1) + '…' : d.label;
             });
+
+        // People count badge (indigo dot, upper-right of funder circle)
+        node.filter(d => d.type === 'funder' && d.people_count > 0)
+            .append('circle')
+            .attr('r', 8)
+            .attr('cx', NODE_RADIUS.funder - 4)
+            .attr('cy', -(NODE_RADIUS.funder - 4))
+            .attr('fill', '#6366f1')
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 1.5)
+            .attr('pointer-events', 'none');
+        node.filter(d => d.type === 'funder' && d.people_count > 0)
+            .append('text')
+            .attr('x', NODE_RADIUS.funder - 4)
+            .attr('y', -(NODE_RADIUS.funder - 8))
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '8px')
+            .attr('font-weight', 'bold')
+            .attr('fill', '#fff')
+            .attr('pointer-events', 'none')
+            .text(d => d.people_count);
 
         // ── Legend ────────────────────────────────────────────────────────
         const legendData = [

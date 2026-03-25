@@ -49,6 +49,37 @@ def _normalize_web_data(web_data):
     return web_data
 
 
+def _get_preprocessed_officers(ein: str) -> list:
+    """Query board_network_index in nonprofit_intelligence.db for officers by EIN."""
+    try:
+        db_path = get_nonprofit_intelligence_db()
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT normalized_name, title FROM board_network_index WHERE ein = ? LIMIT 30",
+            (ein,)
+        ).fetchall()
+        conn.close()
+        return [
+            {"name": r["normalized_name"].title(), "title": r["title"] or "", "source": "preprocess"}
+            for r in rows
+        ]
+    except Exception:
+        return []
+
+
+def _get_web_data(web_data_raw, ein):
+    """Normalize web_data and backfill leadership from board_network_index if empty."""
+    web_data = _normalize_web_data(web_data_raw)
+    if not (web_data or {}).get('leadership') and ein:
+        preprocessed = _get_preprocessed_officers(ein)
+        if preprocessed:
+            if web_data is None:
+                web_data = {}
+            web_data['leadership'] = preprocessed
+    return web_data
+
+
 def _resolve_tool1_score(discovery_data, mode: str):
     """Return the mode-specific score, falling back to tool1_score if mode matches."""
     explicit = discovery_data.get(f'tool1_score_{mode}')
@@ -1975,7 +2006,7 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
                 "url_verification_status": opp_raw.get('url_verification_status'),
                 # Web Research data (Tool 25 - Web Intelligence)
                 "web_search_complete": discovery_data.get('web_search_complete', False),
-                "web_data": _normalize_web_data(discovery_data.get('web_data')),
+                "web_data": _get_web_data(discovery_data.get('web_data'), opp_raw.get('ein')),
                 "pdf_analyzed": discovery_data.get('pdf_analyzed', False),
                 # Tool 1 AI screening score (batch screen result)
                 "tool1_score": discovery_data.get('tool1_score'),
