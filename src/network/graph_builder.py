@@ -190,7 +190,7 @@ class NetworkGraphBuilder:
                 raw = conn.execute(
                     "SELECT ein, organization_name FROM opportunities "
                     "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
-                    "ORDER BY COALESCE(tool1_score, 0) DESC "
+                    "ORDER BY COALESCE(overall_score, 0) DESC "
                     "LIMIT ?",
                     (profile_id, opportunity_limit),
                 ).fetchall()

@@ -191,7 +191,7 @@ class PostScreeningAnalyzer:
                       AND id IN (
                         SELECT id FROM opportunities
                         WHERE profile_id = ? AND ein IS NOT NULL AND ein != ''
-                        ORDER BY COALESCE(tool1_score, 0) DESC
+                        ORDER BY COALESCE(overall_score, 0) DESC
                         LIMIT ?
                       )
                     GROUP BY ein

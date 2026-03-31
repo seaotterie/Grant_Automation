@@ -253,7 +253,7 @@ async def discover_filings(req: DiscoverFilingsRequest, background_tasks: Backgr
             raw_rows = cur.execute(
                 "SELECT ein, organization_name FROM opportunities "
                 "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
-                "ORDER BY COALESCE(tool1_score, 0) DESC "
+                "ORDER BY COALESCE(overall_score, 0) DESC "
                 "LIMIT ?",
                 (req.profile_id, req.opportunity_limit),
             ).fetchall()
@@ -499,7 +499,7 @@ async def xml_officer_lookup(req: XmlOfficerLookupRequest):
             raw_rows = conn.execute(
                 "SELECT ein, organization_name FROM opportunities "
                 "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
-                "ORDER BY COALESCE(tool1_score, 0) DESC "
+                "ORDER BY COALESCE(overall_score, 0) DESC "
                 "LIMIT ?",
                 (req.profile_id, req.opportunity_limit),
             ).fetchall()
