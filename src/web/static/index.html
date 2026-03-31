@@ -3014,6 +3014,21 @@
                                     <span class="text-amber-200 font-normal text-xs">AI · ~$0.01–0.03/funder</span>
                                 </button>
 
+                                <!-- Analyze -->
+                                <button @click="networkRunPostScreeningAnalysis()"
+                                        :disabled="networkAnalyzeLoading || !networkGraphStats"
+                                        class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                        title="Discovers funder-to-funder connections, co-funding clusters, warm paths via grant history, and data quality diagnostics — free">
+                                    <span x-show="networkAnalyzeLoading">
+                                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                    </span>
+                                    <span x-show="!networkAnalyzeLoading">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                                    </span>
+                                    Analyze
+                                    <span class="text-purple-200 font-normal text-xs">$0.00</span>
+                                </button>
+
                                 <!-- Visualize -->
                                 <button @click="networkToggleViz()"
                                         :disabled="networkRankedFunders.length === 0"
@@ -3029,6 +3044,126 @@
                             <!-- Pre-process status summary -->
                             <div x-show="networkPrepResult" class="mb-3 text-xs text-gray-500 dark:text-gray-400">
                                 Last run: <span class="text-gray-700 dark:text-gray-300" x-text="networkPrepResult"></span>
+                            </div>
+
+                            <!-- Post-screening analysis results -->
+                            <div x-show="networkShowAnalysis && networkAnalysisResult" class="mb-4 rounded-lg border border-purple-200 dark:border-purple-700 overflow-hidden">
+                                <div class="p-3 bg-purple-50 dark:bg-purple-900/20 border-b border-purple-200 dark:border-purple-700 flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xs font-semibold text-purple-900 dark:text-purple-200">Network Analysis</span>
+                                        <!-- Readiness score -->
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs text-purple-600 dark:text-purple-400">Readiness</span>
+                                            <div class="w-20 h-1.5 bg-purple-200 dark:bg-purple-800 rounded-full overflow-hidden">
+                                                <div class="h-full rounded-full transition-all"
+                                                     :class="(networkAnalysisResult?.network_readiness_score || 0) >= 0.7 ? 'bg-green-500' : (networkAnalysisResult?.network_readiness_score || 0) >= 0.4 ? 'bg-amber-500' : 'bg-red-500'"
+                                                     :style="`width:${Math.round((networkAnalysisResult?.network_readiness_score || 0) * 100)}%`"></div>
+                                            </div>
+                                            <span class="text-xs font-medium text-purple-800 dark:text-purple-200"
+                                                  x-text="Math.round((networkAnalysisResult?.network_readiness_score || 0) * 100) + '%'"></span>
+                                        </div>
+                                    </div>
+                                    <button @click="networkShowAnalysis = false" class="text-purple-400 hover:text-purple-600 text-xs">✕</button>
+                                </div>
+
+                                <div class="p-3 space-y-3 bg-white dark:bg-gray-800">
+
+                                    <!-- Summary stats -->
+                                    <div class="grid grid-cols-4 gap-2 text-center">
+                                        <div class="bg-purple-50 dark:bg-purple-900/20 rounded p-2">
+                                            <div class="text-lg font-bold text-purple-700 dark:text-purple-300" x-text="networkAnalysisResult?.summary?.funder_connections_found || 0"></div>
+                                            <div class="text-xs text-purple-500">Funder Links</div>
+                                        </div>
+                                        <div class="bg-purple-50 dark:bg-purple-900/20 rounded p-2">
+                                            <div class="text-lg font-bold text-purple-700 dark:text-purple-300" x-text="networkAnalysisResult?.summary?.funder_clusters_found || 0"></div>
+                                            <div class="text-xs text-purple-500">Clusters</div>
+                                        </div>
+                                        <div class="bg-amber-50 dark:bg-amber-900/20 rounded p-2">
+                                            <div class="text-lg font-bold text-amber-700 dark:text-amber-300" x-text="networkAnalysisResult?.summary?.warm_paths_found || 0"></div>
+                                            <div class="text-xs text-amber-500">Warm Paths</div>
+                                        </div>
+                                        <div class="bg-gray-50 dark:bg-gray-700 rounded p-2">
+                                            <div class="text-lg font-bold text-gray-700 dark:text-gray-300" x-text="networkAnalysisResult?.summary?.people_in_graph || 0"></div>
+                                            <div class="text-xs text-gray-500">People</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Diagnostics -->
+                                    <template x-if="networkAnalysisResult?.diagnostics?.length > 0">
+                                        <div class="space-y-1">
+                                            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Diagnostics</div>
+                                            <template x-for="d in networkAnalysisResult.diagnostics" :key="d.message">
+                                                <div class="flex items-start gap-2 text-xs p-2 rounded"
+                                                     :class="d.severity === 'critical' ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200'">
+                                                    <span :class="d.severity === 'critical' ? 'text-red-500' : 'text-amber-500'" class="mt-0.5 shrink-0">
+                                                        <template x-if="d.severity === 'critical'">&#9888;</template>
+                                                        <template x-if="d.severity !== 'critical'">&#9432;</template>
+                                                    </span>
+                                                    <div>
+                                                        <span x-text="d.message"></span>
+                                                        <span x-show="d.action" class="block text-xs opacity-70 mt-0.5" x-text="'→ ' + d.action"></span>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+
+                                    <!-- Top funders by frequency -->
+                                    <template x-if="networkAnalysisResult?.top_funders?.length > 0">
+                                        <div>
+                                            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Top Funders by Frequency</div>
+                                            <div class="space-y-1">
+                                                <template x-for="f in (networkAnalysisResult.top_funders || []).slice(0,5)" :key="f.ein">
+                                                    <div class="flex items-center justify-between text-xs py-1 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                                                        <span class="text-gray-800 dark:text-gray-200 truncate" x-text="f.name"></span>
+                                                        <div class="flex items-center gap-2 shrink-0 ml-2">
+                                                            <span class="text-gray-500" x-text="f.opportunity_count + ' opps'"></span>
+                                                            <span class="text-indigo-500" x-text="f.people_in_graph + ' people'"></span>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Funder connections -->
+                                    <template x-if="networkAnalysisResult?.funder_connections?.length > 0">
+                                        <div>
+                                            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Funder-to-Funder Links (shared board members)</div>
+                                            <div class="space-y-1">
+                                                <template x-for="c in (networkAnalysisResult.funder_connections || []).slice(0,5)" :key="c.funder1_ein + c.funder2_ein">
+                                                    <div class="text-xs py-1 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                                                        <span class="text-gray-800 dark:text-gray-200" x-text="c.funder1_name"></span>
+                                                        <span class="text-gray-400 mx-1">↔</span>
+                                                        <span class="text-gray-800 dark:text-gray-200" x-text="c.funder2_name"></span>
+                                                        <span class="text-indigo-500 ml-1" x-text="'(' + c.connection_count + ' shared)'"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Warm paths -->
+                                    <template x-if="networkAnalysisResult?.warm_paths?.length > 0">
+                                        <div>
+                                            <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Warm Paths (via grant history)</div>
+                                            <div class="space-y-1">
+                                                <template x-for="p in (networkAnalysisResult.warm_paths || []).slice(0,5)" :key="p.funder_ein + p.source">
+                                                    <div class="flex items-center justify-between text-xs py-1 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                                                        <span class="text-gray-800 dark:text-gray-200 truncate" x-text="p.funder_name"></span>
+                                                        <div class="flex items-center gap-2 shrink-0 ml-2">
+                                                            <span class="capitalize px-1.5 py-0.5 rounded text-xs font-medium"
+                                                                  :class="p.source === 'direct' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : p.source === 'contact_bridge' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'"
+                                                                  x-text="p.source?.replace('_', ' ')"></span>
+                                                            <span class="text-amber-600" x-text="Math.round((p.warmth_score || 0) * 100) + '%'"></span>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                </div>
                             </div>
 
                             <!-- D3 visualization panel -->

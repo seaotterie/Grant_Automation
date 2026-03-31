@@ -118,6 +118,10 @@ function intelligenceModule() {
         networkPrepResult: null,
         networkDeepResearchLoading: false,
         networkShowViz: false,
+        // Post-screening analysis state
+        networkAnalyzeLoading: false,
+        networkAnalysisResult: null,
+        networkShowAnalysis: false,
 
         // =================================================================
         // LIFECYCLE
@@ -1605,6 +1609,41 @@ function intelligenceModule() {
                 this.showNotification?.('Deep Research', 'Network error', 'error');
             } finally {
                 this.networkDeepResearchLoading = false;
+            }
+        },
+
+        /**
+         * Run post-screening network analysis: funder connections, clusters, warm paths, diagnostics.
+         * Cost: $0.00 — pure DB reads.
+         */
+        async networkRunPostScreeningAnalysis() {
+            const pid = this.currentProfileId;
+            if (!pid) return;
+            this.networkAnalyzeLoading = true;
+            this.networkAnalysisResult = null;
+            try {
+                const resp = await fetch('/api/v2/network/post-screening-analysis', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile_id: pid }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    this.networkAnalysisResult = data;
+                    this.networkShowAnalysis = true;
+                    const s = data.summary;
+                    const readiness = Math.round((data.network_readiness_score || 0) * 100);
+                    this.showNotification?.('Network Analysis',
+                        `${s.funder_connections_found} connections · ${s.warm_paths_found} warm paths · ${readiness}% readiness`,
+                        'success');
+                } else {
+                    this.showNotification?.('Network Analysis', data.detail || 'Analysis failed', 'error');
+                }
+            } catch (e) {
+                console.error('[networkRunPostScreeningAnalysis]', e);
+                this.showNotification?.('Network Analysis', 'Network error', 'error');
+            } finally {
+                this.networkAnalyzeLoading = false;
             }
         },
 
