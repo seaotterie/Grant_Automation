@@ -180,7 +180,7 @@ class NetworkBatchPreprocessor:
         if stage == "discover_filings":
             return await self._stage_discover_filings(funder_eins, concurrency)
         elif stage == "xml_officers":
-            return await self._stage_xml_officer_extraction(funder_eins, concurrency)
+            return await self._stage_xml_officer_extraction(funder_eins, concurrency, profile_id=profile_id)
         elif stage == "ingest_etl":
             return self._stage_ingest_and_etl(profile_id, funder_eins)
         elif stage == "dedup_score":
@@ -375,7 +375,7 @@ class NetworkBatchPreprocessor:
     # ------------------------------------------------------------------
 
     async def _stage_xml_officer_extraction(
-        self, funder_eins: list, concurrency: int
+        self, funder_eins: list, concurrency: int, profile_id: str = None
     ) -> StageResult:
         """
         Fetch 990 XML from ProPublica and parse officers. No AI involved.
@@ -385,13 +385,13 @@ class NetworkBatchPreprocessor:
         import xml.etree.ElementTree as ET
         start = time.time()
 
-        # Filter to EINs with 0 people in network_memberships
+        # Filter to EINs with 0 people in network_memberships (real or sentinel)
         targets = []
         with self._conn() as conn:
             for item in funder_eins:
                 count = conn.execute(
                     "SELECT COUNT(*) FROM network_memberships "
-                    "WHERE org_ein = ? AND org_type = 'funder'",
+                    "WHERE org_ein = ? AND org_type IN ('funder', 'funder_xml_no_data')",
                     (item["ein"],),
                 ).fetchone()[0]
                 if count == 0:
@@ -432,11 +432,13 @@ class NetworkBatchPreprocessor:
                     xml_bytes = await fetcher.fetch_xml_by_ein(ein)
                     if not xml_bytes:
                         eins_no_xml += 1
+                        self._mark_xml_no_data(ein, org_name)
                         return
 
                     officers = self._extract_officers_from_xml(xml_bytes, ein)
                     if not officers:
                         eins_no_xml += 1
+                        self._mark_xml_no_data(ein, org_name)
                         return
 
                     # Ingest into network_memberships
@@ -694,12 +696,33 @@ class NetworkBatchPreprocessor:
     # Helpers
     # ------------------------------------------------------------------
 
+    def _mark_xml_no_data(self, ein: str, org_name: str) -> None:
+        """Write a sentinel row so this EIN is skipped in future batch runs."""
+        from src.network.name_normalizer import NameNormalizer
+        normalizer = NameNormalizer()
+        now = self._now()
+        sentinel_id = normalizer.membership_id(f"__no_xml__{ein}", ein)
+        with self._conn() as conn:
+            conn.execute(
+                """
+                INSERT INTO network_memberships
+                    (id, person_hash, display_name, org_ein, org_name, org_type,
+                     profile_id, source, title, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 'funder_xml_no_data', NULL, 'xml_stage', NULL, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET updated_at = excluded.updated_at
+                """,
+                (sentinel_id, sentinel_id, "__no_xml__", ein, org_name or ein, now, now),
+            )
+            conn.commit()
+        logger.debug(f"[Stage 2] Marked EIN {ein} as funder_xml_no_data (no XML or no officers)")
+
     def _get_funder_eins(self, profile_id: str, limit: int, skip_in_graph: bool = False) -> list:
         """Get distinct funder EINs linked to a profile's opportunities, ordered by score.
 
         Args:
             skip_in_graph: If True, exclude EINs already in network_memberships so that
                            limit gives "next N unprocessed" rather than "top N overall".
+                           Also skips funder_xml_no_data sentinels (no XML available).
         """
         with self._conn() as conn:
             if skip_in_graph:
@@ -707,7 +730,8 @@ class NetworkBatchPreprocessor:
                     "SELECT ein, organization_name FROM opportunities "
                     "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
                     "  AND ein NOT IN ("
-                    "    SELECT DISTINCT org_ein FROM network_memberships WHERE org_type = 'funder'"
+                    "    SELECT DISTINCT org_ein FROM network_memberships "
+                    "    WHERE org_type IN ('funder', 'funder_xml_no_data')"
                     "  ) "
                     "ORDER BY COALESCE(overall_score, 0) DESC "
                     "LIMIT ?",
