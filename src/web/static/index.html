@@ -2989,36 +2989,36 @@
                             </div>
                         </div>
                         <div class="p-4">
-                            <!-- Three consolidated pipeline buttons -->
-                            <div class="flex flex-wrap items-center gap-3 mb-4">
+                            <!-- Five pipeline buttons — equal width grid -->
+                            <div class="grid grid-cols-5 gap-2 mb-4">
                                 <!-- Pre-process -->
                                 <button @click="networkRunPreprocess()"
                                         :disabled="networkPrepLoading"
-                                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                        class="w-full px-3 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-start gap-2 min-h-[52px]"
                                         title="Builds graph from cached data, normalises people records, merges duplicates, and ranks all funders by connection warmth — free, no AI">
-                                    <span x-show="networkPrepLoading">
+                                    <span x-show="networkPrepLoading" class="mt-0.5 shrink-0">
                                         <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                                     </span>
-                                    <span x-show="!networkPrepLoading">
+                                    <span x-show="!networkPrepLoading" class="mt-0.5 shrink-0">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                                     </span>
                                     <span class="flex flex-col items-start leading-tight">
                                         <span>Pre-process <span class="text-indigo-200 font-normal text-xs">$0.00</span></span>
                                         <span x-show="networkGraphStats?.coverage?.length > 0"
                                               class="text-xs font-normal opacity-60"
-                                              x-text="networkGraphStats?.coverage ? (networkGraphStats.coverage.filter(c=>c.people_in_graph>0).length) + ' / ' + networkGraphStats.coverage.length + ' in graph' : ''"></span>
+                                              x-text="networkGraphStats?.coverage ? networkGraphStats.coverage.filter(c=>c.xml_attempted).length + ' / ' + networkGraphStats.coverage.length + ' processed' : ''"></span>
                                     </span>
                                 </button>
 
                                 <!-- Find Filings -->
                                 <button @click="networkFindMissingUrls()"
                                         :disabled="networkFindUrlsLoading"
-                                        class="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                        class="w-full px-3 py-3 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-start gap-2 min-h-[52px]"
                                         title="Queries ProPublica to find 990 filing URLs for every funder — required before Deep Research can fetch PDFs. Free but rate-limited (~minutes).">
-                                    <span x-show="networkFindUrlsLoading">
+                                    <span x-show="networkFindUrlsLoading" class="mt-0.5 shrink-0">
                                         <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                                     </span>
-                                    <span x-show="!networkFindUrlsLoading">
+                                    <span x-show="!networkFindUrlsLoading" class="mt-0.5 shrink-0">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                     </span>
                                     <span class="flex flex-col items-start leading-tight">
@@ -3032,12 +3032,12 @@
                                 <!-- Deep Research -->
                                 <button @click="networkRunDeepResearch()"
                                         :disabled="networkDeepResearchLoading"
-                                        class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                        class="w-full px-3 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-start gap-2 min-h-[52px]"
                                         title="Uses AI to extract officer data from 990 PDFs for any funders that XML lookup could not resolve — ~$0.01–0.03 per funder">
-                                    <span x-show="networkDeepResearchLoading">
+                                    <span x-show="networkDeepResearchLoading" class="mt-0.5 shrink-0">
                                         <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                                     </span>
-                                    <span x-show="!networkDeepResearchLoading">
+                                    <span x-show="!networkDeepResearchLoading" class="mt-0.5 shrink-0">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
                                     </span>
                                     <span class="flex flex-col items-start leading-tight">
@@ -3051,19 +3051,19 @@
                                 <!-- Analyze -->
                                 <button @click="networkRunPostScreeningAnalysis()"
                                         :disabled="networkAnalyzeLoading || !networkGraphStats"
-                                        class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                        class="w-full px-3 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium disabled:opacity-50 flex items-start gap-2 min-h-[52px]"
                                         title="Discovers funder-to-funder connections, co-funding clusters, warm paths via grant history, and data quality diagnostics — free">
-                                    <span x-show="networkAnalyzeLoading">
+                                    <span x-show="networkAnalyzeLoading" class="mt-0.5 shrink-0">
                                         <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                                     </span>
-                                    <span x-show="!networkAnalyzeLoading">
+                                    <span x-show="!networkAnalyzeLoading" class="mt-0.5 shrink-0">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                                     </span>
                                     <span class="flex flex-col items-start leading-tight">
                                         <span>Analyze <span class="text-purple-200 font-normal text-xs">$0.00</span></span>
-                                        <span x-show="networkAnalysisResult"
+                                        <span x-show="networkGraphStats?.coverage?.length > 0"
                                               class="text-xs font-normal opacity-60"
-                                              x-text="networkAnalysisResult ? Math.round(networkAnalysisResult.network_readiness_score*100) + '% ready' : ''"></span>
+                                              x-text="networkGraphStats?.coverage ? (networkAnalysisResult ? networkAnalysisResult.summary.funders_with_people : 0) + ' / ' + networkGraphStats.coverage.length + ' analyzed' : ''"></span>
                                     </span>
                                 </button>
 
@@ -3071,11 +3071,15 @@
                                 <button @click="networkToggleViz()"
                                         :disabled="networkRankedFunders.length === 0"
                                         :class="networkShowViz ? 'bg-teal-700' : 'bg-teal-600 hover:bg-teal-700'"
-                                        class="px-4 py-2 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+                                        class="w-full px-3 py-3 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 flex items-start gap-2 min-h-[52px]"
                                         title="Force-directed network graph showing your board's connections to each funder">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                    Visualize Network
-                                    <span class="text-teal-200 font-normal text-xs" x-show="networkRankedFunders.length === 0">· run Pre-process first</span>
+                                    <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                    <span class="flex flex-col items-start leading-tight">
+                                        <span>Visualize Network</span>
+                                        <span x-show="networkGraphStats?.coverage?.length > 0"
+                                              class="text-xs font-normal opacity-60"
+                                              x-text="networkRankedFunders.length > 0 ? networkRankedFunders.length + ' funders ranked' : 'run Pre-process first'"></span>
+                                    </span>
                                 </button>
                             </div>
 

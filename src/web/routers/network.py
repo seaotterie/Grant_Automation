@@ -194,6 +194,12 @@ async def graph_stats(profile_id: str = Query(...)):
                 (ein,),
             ).fetchone()[0]
 
+            xml_no_data_count = cur.execute(
+                "SELECT COUNT(*) FROM network_memberships WHERE org_ein = ? AND org_type = 'funder_xml_no_data'",
+                (ein,),
+            ).fetchone()[0]
+            xml_attempted = bool(people_count > 0 or xml_no_data_count > 0)
+
             # Preflight status — what's needed to get officers into the graph
             if people_count > 0:
                 preflight = "ok"
@@ -214,6 +220,7 @@ async def graph_stats(profile_id: str = Query(...)):
                 "has_filing_history": has_filing,
                 "pdf_has_officers": pdf_has_officers,
                 "people_in_graph": people_count,
+                "xml_attempted": xml_attempted,
                 "opportunity_count": row["opp_count"],
                 "opportunity_ids": opportunity_ids,
                 "preflight": preflight,
