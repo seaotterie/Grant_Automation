@@ -1693,7 +1693,9 @@ function intelligenceModule() {
 
         /** Returns the active opportunity limit (custom input takes priority over preset). */
         getNetworkOppLimit() {
-            return this.networkOppLimitCustom || this.networkOppLimit;
+            return (this.networkOppLimitCustom != null && this.networkOppLimitCustom > 0)
+                ? this.networkOppLimitCustom
+                : this.networkOppLimit;
         },
 
         setNetworkOppLimit(size) {

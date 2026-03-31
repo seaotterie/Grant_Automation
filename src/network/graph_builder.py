@@ -187,9 +187,13 @@ class NetworkGraphBuilder:
         with self._conn() as conn:
             # 1. Distinct EINs + org names for this profile (top-N by score if limited)
             if opportunity_limit:
+                # Skip EINs already in graph — gives "next N unprocessed" behaviour
                 raw = conn.execute(
                     "SELECT ein, organization_name FROM opportunities "
                     "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                    "  AND ein NOT IN ("
+                    "    SELECT DISTINCT org_ein FROM network_memberships WHERE org_type = 'funder'"
+                    "  ) "
                     "ORDER BY COALESCE(overall_score, 0) DESC "
                     "LIMIT ?",
                     (profile_id, opportunity_limit),

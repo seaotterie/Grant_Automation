@@ -2966,9 +2966,9 @@
                                     <span x-text="(networkGraphStats?.seeker_people || 0) + ' seeker board'"></span>
                                 </div>
                                 <div class="text-xs text-indigo-400" x-show="!networkGraphStats">No graph data yet</div>
-                                <!-- Opportunity limit picker (Top N by score) -->
+                                <!-- Opportunity limit picker (Next N unprocessed by score) -->
                                 <div class="flex items-center gap-1 border-l border-indigo-200 dark:border-indigo-700 pl-3 ml-1">
-                                    <span class="text-xs text-indigo-500 dark:text-indigo-400 whitespace-nowrap">Top</span>
+                                    <span class="text-xs text-indigo-500 dark:text-indigo-400 whitespace-nowrap">Next</span>
                                     <template x-for="size in networkOppLimitPresets" :key="size">
                                         <button @click="setNetworkOppLimit(size)"
                                                 class="px-2 py-0.5 text-xs font-medium rounded border transition-colors"
@@ -2984,7 +2984,7 @@
                                            min="1"
                                            class="w-12 px-1.5 py-0.5 text-xs font-medium rounded border text-center bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-300"
                                            :class="networkOppLimitCustom ? 'border-indigo-500 ring-1 ring-indigo-300' : ''">
-                                    <span class="text-xs text-indigo-400 whitespace-nowrap">opps</span>
+                                    <span class="text-xs text-indigo-400 whitespace-nowrap">unprocessed</span>
                                 </div>
                             </div>
                         </div>

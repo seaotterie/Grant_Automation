@@ -250,9 +250,13 @@ async def discover_filings(req: DiscoverFilingsRequest, background_tasks: Backgr
         cur = conn.cursor()
 
         if req.opportunity_limit:
+            # Skip EINs that already have filing_history cached — gives "next N unprocessed" behaviour
             raw_rows = cur.execute(
                 "SELECT ein, organization_name FROM opportunities "
                 "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                "  AND ein NOT IN ("
+                "    SELECT ein FROM ein_intelligence WHERE filing_history IS NOT NULL"
+                "  ) "
                 "ORDER BY COALESCE(overall_score, 0) DESC "
                 "LIMIT ?",
                 (req.profile_id, req.opportunity_limit),
@@ -496,9 +500,13 @@ async def xml_officer_lookup(req: XmlOfficerLookupRequest):
 
         # Fetch funders that need officer data
         if req.opportunity_limit:
+            # Skip EINs already in graph as funders — gives "next N unprocessed" behaviour
             raw_rows = conn.execute(
                 "SELECT ein, organization_name FROM opportunities "
                 "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                "  AND ein NOT IN ("
+                "    SELECT DISTINCT org_ein FROM network_memberships WHERE org_type = 'funder'"
+                "  ) "
                 "ORDER BY COALESCE(overall_score, 0) DESC "
                 "LIMIT ?",
                 (req.profile_id, req.opportunity_limit),
