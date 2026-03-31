@@ -3117,10 +3117,9 @@
                                             <template x-for="d in networkAnalysisResult.diagnostics" :key="d.message">
                                                 <div class="flex items-start gap-2 text-xs p-2 rounded"
                                                      :class="d.severity === 'critical' ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200'">
-                                                    <span :class="d.severity === 'critical' ? 'text-red-500' : 'text-amber-500'" class="mt-0.5 shrink-0">
-                                                        <template x-if="d.severity === 'critical'">&#9888;</template>
-                                                        <template x-if="d.severity !== 'critical'">&#9432;</template>
-                                                    </span>
+                                                    <span :class="d.severity === 'critical' ? 'text-red-500' : 'text-amber-500'"
+                                                          class="mt-0.5 shrink-0"
+                                                          x-html="d.severity === 'critical' ? '&#9888;' : '&#9432;'"></span>
                                                     <div>
                                                         <span x-text="d.message"></span>
                                                         <span x-show="d.action" class="block text-xs opacity-70 mt-0.5" x-text="'→ ' + d.action"></span>
