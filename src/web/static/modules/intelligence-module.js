@@ -122,6 +122,10 @@ function intelligenceModule() {
         networkAnalyzeLoading: false,
         networkAnalysisResult: null,
         networkShowAnalysis: false,
+        // Opportunity limit filter (mirrors planFilter on Screening tab)
+        networkOppLimit: 25,
+        networkOppLimitPresets: [10, 25, 50, 100],
+        networkOppLimitCustom: null,
 
         // =================================================================
         // LIFECYCLE
@@ -1349,7 +1353,7 @@ function intelligenceModule() {
                 const resp = await fetch('/api/v2/network/populate-graph', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid }),
+                    body: JSON.stringify({ profile_id: pid, opportunity_limit: this.getNetworkOppLimit() }),
                 });
                 const data = await resp.json();
                 if (data.success) {
@@ -1379,7 +1383,7 @@ function intelligenceModule() {
                 const resp = await fetch('/api/v2/network/xml-officer-lookup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, limit: 2000 }),
+                    body: JSON.stringify({ profile_id: pid, limit: 2000, opportunity_limit: this.getNetworkOppLimit() }),
                 });
                 const data = await resp.json();
                 if (data.success) {
@@ -1411,7 +1415,7 @@ function intelligenceModule() {
                 const resp = await fetch('/api/v2/network/discover-filings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, limit: 2000 }),
+                    body: JSON.stringify({ profile_id: pid, limit: 2000, opportunity_limit: this.getNetworkOppLimit() }),
                 });
                 const data = await resp.json();
                 if (data.status === 'running') {
@@ -1513,7 +1517,7 @@ function intelligenceModule() {
                 await fetch('/api/v2/network/populate-graph', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid }),
+                    body: JSON.stringify({ profile_id: pid, opportunity_limit: this.getNetworkOppLimit() }),
                 });
 
                 // 2a. XML officer extraction (fast, no API calls)
@@ -1625,7 +1629,7 @@ function intelligenceModule() {
                 const resp = await fetch('/api/v2/network/post-screening-analysis', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid }),
+                    body: JSON.stringify({ profile_id: pid, opportunity_limit: this.getNetworkOppLimit() }),
                 });
                 const data = await resp.json();
                 if (data.success) {
@@ -1686,6 +1690,16 @@ function intelligenceModule() {
         },
 
         networkClearFunder() { this.networkSelectedFunder = null; },
+
+        /** Returns the active opportunity limit (custom input takes priority over preset). */
+        getNetworkOppLimit() {
+            return this.networkOppLimitCustom || this.networkOppLimit;
+        },
+
+        setNetworkOppLimit(size) {
+            this.networkOppLimit = size;
+            this.networkOppLimitCustom = null;
+        },
 
         /**
          * Run 5-stage free preprocessing pipeline (XML officers, ETL, dedup).

@@ -98,7 +98,7 @@ class PostScreeningAnalyzer:
     # Public API
     # ------------------------------------------------------------------
 
-    def analyze(self, profile_id: str) -> PostScreeningReport:
+    def analyze(self, profile_id: str, opportunity_limit: int | None = None) -> PostScreeningReport:
         """
         Run full post-screening analysis.  Cost: $0.00.
 
@@ -109,7 +109,7 @@ class PostScreeningAnalyzer:
         logger.info(f"[PostScreeningAnalyzer] Starting analysis for profile {profile_id}")
 
         # 1. Funder frequency
-        top_funders, unique_count, freq3_count = self._analyze_funder_frequency(profile_id)
+        top_funders, unique_count, freq3_count = self._analyze_funder_frequency(profile_id, opportunity_limit=opportunity_limit)
 
         # 2. Funder-to-funder connections
         funder_conns = self._finder.find_funder_connections(profile_id, min_shared=1, limit=100)
@@ -165,33 +165,62 @@ class PostScreeningAnalyzer:
     # ------------------------------------------------------------------
 
     def _analyze_funder_frequency(
-        self, profile_id: str
+        self, profile_id: str, opportunity_limit: int | None = None
     ) -> tuple[list[FunderFrequency], int, int]:
         """
         Which funders appear across the most opportunities?
         """
         with self._conn() as conn:
-            rows = conn.execute(
-                """
-                SELECT
-                    ein,
-                    organization_name,
-                    COUNT(*) as opp_count,
-                    SUM(CASE WHEN json_valid(analysis_discovery) THEN
-                        json_extract(analysis_discovery, '$.amount_max')
-                    ELSE 0 END) as total_potential,
-                    GROUP_CONCAT(DISTINCT
-                        CASE WHEN json_valid(analysis_discovery) THEN
-                            json_extract(analysis_discovery, '$.focus_area')
-                        ELSE NULL END
-                    ) as focus_areas
-                FROM opportunities
-                WHERE profile_id = ? AND ein IS NOT NULL AND ein != ''
-                GROUP BY ein
-                ORDER BY opp_count DESC
-                """,
-                (profile_id,),
-            ).fetchall()
+            if opportunity_limit:
+                rows = conn.execute(
+                    """
+                    SELECT
+                        ein,
+                        organization_name,
+                        COUNT(*) as opp_count,
+                        SUM(CASE WHEN json_valid(analysis_discovery) THEN
+                            json_extract(analysis_discovery, '$.amount_max')
+                        ELSE 0 END) as total_potential,
+                        GROUP_CONCAT(DISTINCT
+                            CASE WHEN json_valid(analysis_discovery) THEN
+                                json_extract(analysis_discovery, '$.focus_area')
+                            ELSE NULL END
+                        ) as focus_areas
+                    FROM opportunities
+                    WHERE profile_id = ? AND ein IS NOT NULL AND ein != ''
+                      AND id IN (
+                        SELECT id FROM opportunities
+                        WHERE profile_id = ? AND ein IS NOT NULL AND ein != ''
+                        ORDER BY COALESCE(tool1_score, 0) DESC
+                        LIMIT ?
+                      )
+                    GROUP BY ein
+                    ORDER BY opp_count DESC
+                    """,
+                    (profile_id, profile_id, opportunity_limit),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """
+                    SELECT
+                        ein,
+                        organization_name,
+                        COUNT(*) as opp_count,
+                        SUM(CASE WHEN json_valid(analysis_discovery) THEN
+                            json_extract(analysis_discovery, '$.amount_max')
+                        ELSE 0 END) as total_potential,
+                        GROUP_CONCAT(DISTINCT
+                            CASE WHEN json_valid(analysis_discovery) THEN
+                                json_extract(analysis_discovery, '$.focus_area')
+                            ELSE NULL END
+                        ) as focus_areas
+                    FROM opportunities
+                    WHERE profile_id = ? AND ein IS NOT NULL AND ein != ''
+                    GROUP BY ein
+                    ORDER BY opp_count DESC
+                    """,
+                    (profile_id,),
+                ).fetchall()
 
             total_unique = len(rows)
             freq3 = sum(1 for r in rows if r["opp_count"] >= 3)

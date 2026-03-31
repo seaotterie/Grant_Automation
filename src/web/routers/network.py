@@ -24,11 +24,13 @@ router = APIRouter(prefix="/api/v2/network", tags=["network"])
 
 class PopulateGraphRequest(BaseModel):
     profile_id: str
+    opportunity_limit: Optional[int] = None  # top-N opps by score; None = all
 
 
 class DiscoverFilingsRequest(BaseModel):
     profile_id: str
     limit: int = 2000
+    opportunity_limit: Optional[int] = None  # top-N opps by score; overrides limit
 
 
 class RankFundersRequest(BaseModel):
@@ -39,6 +41,7 @@ class RankFundersRequest(BaseModel):
 class XmlOfficerLookupRequest(BaseModel):
     profile_id: str
     limit: int = 2000
+    opportunity_limit: Optional[int] = None  # top-N opps by score; overrides limit
 
 
 class FunderConnectionsRequest(BaseModel):
@@ -54,6 +57,7 @@ class WarmPathsRequest(BaseModel):
 
 class PostScreeningAnalysisRequest(BaseModel):
     profile_id: str
+    opportunity_limit: Optional[int] = None  # top-N opps by score; None = all
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -82,7 +86,7 @@ async def populate_graph(req: PopulateGraphRequest):
         from src.network.graph_builder import NetworkGraphBuilder
         db_path = _get_db_path()
         builder = NetworkGraphBuilder(db_path)
-        stats = builder.ingest_all_funders_from_cache(req.profile_id)
+        stats = builder.ingest_all_funders_from_cache(req.profile_id, opportunity_limit=req.opportunity_limit)
         return {
             "success": True,
             "profile_id": req.profile_id,
@@ -245,13 +249,28 @@ async def discover_filings(req: DiscoverFilingsRequest, background_tasks: Backgr
         conn = _conn(db_path)
         cur = conn.cursor()
 
-        opp_rows = cur.execute(
-            "SELECT DISTINCT o.ein, o.organization_name "
-            "FROM opportunities o "
-            "WHERE o.profile_id = ? AND o.ein IS NOT NULL AND o.ein != '' "
-            "LIMIT ?",
-            (req.profile_id, req.limit),
-        ).fetchall()
+        if req.opportunity_limit:
+            raw_rows = cur.execute(
+                "SELECT ein, organization_name FROM opportunities "
+                "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                "ORDER BY COALESCE(tool1_score, 0) DESC "
+                "LIMIT ?",
+                (req.profile_id, req.opportunity_limit),
+            ).fetchall()
+            seen: set = set()
+            opp_rows = []
+            for r in raw_rows:
+                if r["ein"] not in seen:
+                    seen.add(r["ein"])
+                    opp_rows.append(r)
+        else:
+            opp_rows = cur.execute(
+                "SELECT DISTINCT o.ein, o.organization_name "
+                "FROM opportunities o "
+                "WHERE o.profile_id = ? AND o.ein IS NOT NULL AND o.ein != '' "
+                "LIMIT ?",
+                (req.profile_id, req.limit),
+            ).fetchall()
 
         eins_to_fetch = []
         already_cached = 0
@@ -476,13 +495,28 @@ async def xml_officer_lookup(req: XmlOfficerLookupRequest):
         conn = _conn(db_path)
 
         # Fetch funders that need officer data
-        opp_rows = conn.execute(
-            "SELECT DISTINCT o.ein, o.organization_name "
-            "FROM opportunities o "
-            "WHERE o.profile_id = ? AND o.ein IS NOT NULL AND o.ein != '' "
-            "LIMIT ?",
-            (req.profile_id, req.limit),
-        ).fetchall()
+        if req.opportunity_limit:
+            raw_rows = conn.execute(
+                "SELECT ein, organization_name FROM opportunities "
+                "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                "ORDER BY COALESCE(tool1_score, 0) DESC "
+                "LIMIT ?",
+                (req.profile_id, req.opportunity_limit),
+            ).fetchall()
+            seen_eins: set = set()
+            opp_rows = []
+            for r in raw_rows:
+                if r["ein"] not in seen_eins:
+                    seen_eins.add(r["ein"])
+                    opp_rows.append(r)
+        else:
+            opp_rows = conn.execute(
+                "SELECT DISTINCT o.ein, o.organization_name "
+                "FROM opportunities o "
+                "WHERE o.profile_id = ? AND o.ein IS NOT NULL AND o.ein != '' "
+                "LIMIT ?",
+                (req.profile_id, req.limit),
+            ).fetchall()
         conn.close()
 
         # Filter to those already in network_memberships with 0 people
@@ -709,7 +743,7 @@ async def post_screening_analysis(req: PostScreeningAnalysisRequest):
         from src.network.post_screening_analyzer import PostScreeningAnalyzer
         db_path = _get_db_path()
         analyzer = PostScreeningAnalyzer(db_path)
-        report = analyzer.analyze(req.profile_id)
+        report = analyzer.analyze(req.profile_id, opportunity_limit=req.opportunity_limit)
 
         return {
             "success": True,

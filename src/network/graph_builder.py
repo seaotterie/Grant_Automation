@@ -173,7 +173,7 @@ class NetworkGraphBuilder:
     # Bulk harvest from cache
     # ------------------------------------------------------------------
 
-    def ingest_all_funders_from_cache(self, profile_id: str) -> dict:
+    def ingest_all_funders_from_cache(self, profile_id: str, opportunity_limit: int | None = None) -> dict:
         """
         Batch-ingest all funder leadership data from ein_intelligence into
         network_memberships for every funder EIN linked to this profile's
@@ -185,12 +185,27 @@ class NetworkGraphBuilder:
         import json as _json
 
         with self._conn() as conn:
-            # 1. Distinct EINs + org names for this profile
-            rows = conn.execute(
-                "SELECT DISTINCT ein, organization_name FROM opportunities "
-                "WHERE profile_id = ? AND ein IS NOT NULL AND ein != ''",
-                (profile_id,),
-            ).fetchall()
+            # 1. Distinct EINs + org names for this profile (top-N by score if limited)
+            if opportunity_limit:
+                raw = conn.execute(
+                    "SELECT ein, organization_name FROM opportunities "
+                    "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                    "ORDER BY COALESCE(tool1_score, 0) DESC "
+                    "LIMIT ?",
+                    (profile_id, opportunity_limit),
+                ).fetchall()
+                seen: set = set()
+                rows = []
+                for r in raw:
+                    if r["ein"] not in seen:
+                        seen.add(r["ein"])
+                        rows.append(r)
+            else:
+                rows = conn.execute(
+                    "SELECT DISTINCT ein, organization_name FROM opportunities "
+                    "WHERE profile_id = ? AND ein IS NOT NULL AND ein != ''",
+                    (profile_id,),
+                ).fetchall()
 
             # 2. Seeker board members
             profile_row = conn.execute(
