@@ -1578,6 +1578,19 @@ function intelligenceModule() {
         async networkRunDeepResearch() {
             const pid = this.currentProfileId;
             if (!pid) return;
+
+            // Cost estimate confirmation before any AI calls
+            const coverage = this.networkGraphStats?.coverage || [];
+            const needsResearch = coverage.filter(c => ['needs_990_search', 'pdf_no_officers'].includes(c.preflight) && c.has_filing_history);
+            const n = Math.min(needsResearch.length, this.getNetworkOppLimit());
+            if (n > 0) {
+                const estCost = (n * 0.02).toFixed(2);
+                const ok = window.confirm(
+                    `Deep Research will process up to ${n} funder(s).\nEstimated cost: ~$${estCost}\n\nNote: each funder is processed once across all profiles — re-running skips already-researched funders.\n\nProceed?`
+                );
+                if (!ok) return;
+            }
+
             this.networkDeepResearchLoading = true;
             try {
                 // Ensure we have fresh stats to know which funders need AI analysis
