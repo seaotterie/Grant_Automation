@@ -170,7 +170,12 @@ class NetworkBatchPreprocessor:
         web_scraping_limit: int = 10,
     ) -> StageResult:
         """Run a single stage of the pipeline (for granular control)."""
-        funder_eins = self._get_funder_eins(profile_id, max_eins)
+
+        if stage == "xml_officers":
+            # Skip EINs already in graph so limit gives "next N unprocessed"
+            funder_eins = self._get_funder_eins(profile_id, max_eins, skip_in_graph=True)
+        else:
+            funder_eins = self._get_funder_eins(profile_id, max_eins)
 
         if stage == "discover_filings":
             return await self._stage_discover_filings(funder_eins, concurrency)
@@ -689,16 +694,33 @@ class NetworkBatchPreprocessor:
     # Helpers
     # ------------------------------------------------------------------
 
-    def _get_funder_eins(self, profile_id: str, limit: int) -> list:
-        """Get distinct funder EINs linked to a profile's opportunities, ordered by score."""
+    def _get_funder_eins(self, profile_id: str, limit: int, skip_in_graph: bool = False) -> list:
+        """Get distinct funder EINs linked to a profile's opportunities, ordered by score.
+
+        Args:
+            skip_in_graph: If True, exclude EINs already in network_memberships so that
+                           limit gives "next N unprocessed" rather than "top N overall".
+        """
         with self._conn() as conn:
-            rows = conn.execute(
-                "SELECT ein, organization_name FROM opportunities "
-                "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
-                "ORDER BY COALESCE(overall_score, 0) DESC "
-                "LIMIT ?",
-                (profile_id, limit),
-            ).fetchall()
+            if skip_in_graph:
+                rows = conn.execute(
+                    "SELECT ein, organization_name FROM opportunities "
+                    "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                    "  AND ein NOT IN ("
+                    "    SELECT DISTINCT org_ein FROM network_memberships WHERE org_type = 'funder'"
+                    "  ) "
+                    "ORDER BY COALESCE(overall_score, 0) DESC "
+                    "LIMIT ?",
+                    (profile_id, limit),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT ein, organization_name FROM opportunities "
+                    "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                    "ORDER BY COALESCE(overall_score, 0) DESC "
+                    "LIMIT ?",
+                    (profile_id, limit),
+                ).fetchall()
         seen: set = set()
         result = []
         for r in rows:
