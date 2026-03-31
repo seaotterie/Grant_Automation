@@ -1,5 +1,6 @@
 """
-Network Router — graph population, coverage stats, filing discovery, funder ranking.
+Network Router — graph population, coverage stats, filing discovery, funder ranking,
+funder-to-funder connections, warm paths, and post-screening analysis.
 All endpoints are $0.00 (pure DB reads + free ProPublica HTTP).
 """
 
@@ -11,6 +12,7 @@ import json
 import logging
 import sqlite3
 import xml.etree.ElementTree as ET
+from dataclasses import asdict
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -37,6 +39,21 @@ class RankFundersRequest(BaseModel):
 class XmlOfficerLookupRequest(BaseModel):
     profile_id: str
     limit: int = 2000
+
+
+class FunderConnectionsRequest(BaseModel):
+    profile_id: str
+    min_shared: int = 1
+    limit: int = 100
+
+
+class WarmPathsRequest(BaseModel):
+    profile_id: str
+    limit: int = 50
+
+
+class PostScreeningAnalysisRequest(BaseModel):
+    profile_id: str
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -550,4 +567,221 @@ async def xml_officer_lookup(req: XmlOfficerLookupRequest):
 
     except Exception as e:
         logger.error(f"[network/xml-officer-lookup] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ── Endpoint F: Funder-to-funder connections ─────────────────────────────────
+
+@router.post("/funder-connections")
+async def funder_connections(req: FunderConnectionsRequest):
+    """
+    Discover connections between funders through shared board members.
+    Two funders are connected when they share at least one person.
+
+    Cost: $0.00 — pure DB reads on network_memberships.
+    """
+    try:
+        from src.network.path_finder import PathFinder
+        db_path = _get_db_path()
+        finder = PathFinder(db_path)
+
+        connections = finder.find_funder_connections(
+            req.profile_id,
+            min_shared=req.min_shared,
+            limit=req.limit,
+        )
+
+        return {
+            "success": True,
+            "profile_id": req.profile_id,
+            "total_connections": len(connections),
+            "connections": [
+                {
+                    "funder1_ein": c.funder1_ein,
+                    "funder1_name": c.funder1_name,
+                    "funder2_ein": c.funder2_ein,
+                    "funder2_name": c.funder2_name,
+                    "shared_people": c.shared_people,
+                    "connection_count": c.connection_count,
+                    "strength": c.strength,
+                }
+                for c in connections
+            ],
+        }
+
+    except Exception as e:
+        logger.error(f"[network/funder-connections] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ── Endpoint G: Funder clusters ──────────────────────────────────────────────
+
+@router.post("/funder-clusters")
+async def funder_clusters(req: FunderConnectionsRequest):
+    """
+    Group connected funders into clusters based on shared board members.
+    Funders in the same cluster share people and may co-fund or coordinate.
+
+    Cost: $0.00 — pure DB reads.
+    """
+    try:
+        from src.network.path_finder import PathFinder
+        db_path = _get_db_path()
+        finder = PathFinder(db_path)
+
+        clusters = finder.find_funder_clusters(
+            req.profile_id,
+            min_shared=req.min_shared,
+        )
+
+        return {
+            "success": True,
+            "profile_id": req.profile_id,
+            "total_clusters": len(clusters),
+            "clusters": clusters,
+        }
+
+    except Exception as e:
+        logger.error(f"[network/funder-clusters] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ── Endpoint H: Grant-win warm paths ─────────────────────────────────────────
+
+@router.post("/warm-paths")
+async def warm_paths(req: WarmPathsRequest):
+    """
+    Discover warm paths to target funders through historical grant wins.
+
+    Three types:
+    - direct: You previously won from this funder
+    - contact_bridge: A contact from a past win also serves at a target funder
+    - funder_bridge: A past funder shares board members with a target funder
+
+    Cost: $0.00 — pure DB reads.
+    """
+    try:
+        from src.network.path_finder import PathFinder
+        db_path = _get_db_path()
+        finder = PathFinder(db_path)
+
+        paths = finder.find_warm_paths(req.profile_id, limit=req.limit)
+
+        return {
+            "success": True,
+            "profile_id": req.profile_id,
+            "total_warm_paths": len(paths),
+            "warm_paths": [
+                {
+                    "funder_ein": p.funder_ein,
+                    "funder_name": p.funder_name,
+                    "source": p.source,
+                    "win_details": p.win_details,
+                    "contact": p.contact,
+                    "connected_funder_ein": p.connected_funder_ein,
+                    "connected_funder_name": p.connected_funder_name,
+                    "warmth_score": p.warmth_score,
+                }
+                for p in paths
+            ],
+        }
+
+    except Exception as e:
+        logger.error(f"[network/warm-paths] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ── Endpoint I: Post-screening analysis ──────────────────────────────────────
+
+@router.post("/post-screening-analysis")
+async def post_screening_analysis(req: PostScreeningAnalysisRequest):
+    """
+    Run comprehensive post-screening network analysis. Discovers:
+    - Funder frequency (which funders appear across most opportunities)
+    - Funder-to-funder connections through shared board members
+    - Funder clusters (groups of connected funders)
+    - Warm paths from grant history
+    - Network diagnostics with actionable recommendations
+
+    Cost: $0.00 — pure DB reads.
+    """
+    try:
+        from src.network.post_screening_analyzer import PostScreeningAnalyzer
+        db_path = _get_db_path()
+        analyzer = PostScreeningAnalyzer(db_path)
+        report = analyzer.analyze(req.profile_id)
+
+        return {
+            "success": True,
+            "profile_id": report.profile_id,
+            "generated_at": report.generated_at,
+            "network_readiness_score": report.network_readiness_score,
+            "summary": {
+                "total_unique_funders": report.total_unique_funders,
+                "funders_appearing_3_plus": report.funders_appearing_3_plus,
+                "funder_connections_found": report.total_funder_connections,
+                "funder_clusters_found": len(report.funder_clusters),
+                "warm_paths_found": report.warm_funder_count,
+                "people_in_graph": report.people_in_graph,
+                "funders_with_people": report.funders_with_people,
+                "funders_without_people": report.funders_without_people,
+                "seeker_board_size": report.seeker_board_size,
+            },
+            "top_funders": [
+                {
+                    "ein": f.ein,
+                    "name": f.name,
+                    "opportunity_count": f.opportunity_count,
+                    "total_award_potential": f.total_award_potential,
+                    "program_areas": f.program_areas,
+                    "people_in_graph": f.people_in_graph,
+                }
+                for f in report.top_funders
+            ],
+            "funder_connections": report.funder_connections[:20],
+            "funder_clusters": report.funder_clusters[:10],
+            "warm_paths": report.warm_paths[:20],
+            "diagnostics": report.diagnostics,
+        }
+
+    except Exception as e:
+        logger.error(f"[network/post-screening-analysis] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ── Endpoint J: Network diagnostics ─────────────────────────────────────────
+
+@router.get("/diagnostics")
+async def network_diagnostics(profile_id: str = Query(...)):
+    """
+    Get actionable network diagnostics for a profile.
+    Identifies data gaps and recommends next steps.
+
+    Cost: $0.00.
+    """
+    try:
+        from src.network.post_screening_analyzer import PostScreeningAnalyzer
+        db_path = _get_db_path()
+        analyzer = PostScreeningAnalyzer(db_path)
+        diagnostics = analyzer._run_diagnostics(profile_id)
+
+        return {
+            "success": True,
+            "profile_id": profile_id,
+            "diagnostics": [
+                {
+                    "category": d.category,
+                    "severity": d.severity,
+                    "message": d.message,
+                    "action": d.action,
+                    "details": d.details,
+                }
+                for d in diagnostics
+            ],
+            "critical_count": sum(1 for d in diagnostics if d.severity == "critical"),
+            "warning_count": sum(1 for d in diagnostics if d.severity == "warning"),
+        }
+
+    except Exception as e:
+        logger.error(f"[network/diagnostics] {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")

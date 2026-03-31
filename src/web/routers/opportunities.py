@@ -2080,6 +2080,31 @@ async def _run_batch_screen(job_id: str, body: BatchScreenRequest) -> None:
     cost_per_opp = 0.001 if body.mode == "fast" else 0.01
     job["estimated_cost"] = len(body.opportunity_ids) * cost_per_opp
 
+    # ── Auto-trigger: populate network graph from cached ein_intelligence ──
+    # After screening completes, ingest any available funder leadership data
+    # into network_memberships so relationship analysis is immediately available.
+    # Cost: $0.00 — pure DB reads.
+    try:
+        from src.network.graph_builder import NetworkGraphBuilder
+        db_path = database_manager.db_path
+        builder = NetworkGraphBuilder(db_path)
+        graph_stats = builder.ingest_all_funders_from_cache(body.profile_id)
+        job["network_graph_populated"] = True
+        job["network_stats"] = {
+            "people_added": graph_stats.get("people_added", 0),
+            "graph_total_size": graph_stats.get("graph_total_size", 0),
+            "funders_with_data": graph_stats.get("funders_with_data", 0),
+            "funders_without_data": len(graph_stats.get("funders_without_data", [])),
+        }
+        logger.info(
+            f"[batch-screen] Auto-populated network graph for profile {body.profile_id}: "
+            f"{graph_stats.get('people_added', 0)} people added, "
+            f"graph size={graph_stats.get('graph_total_size', 0)}"
+        )
+    except Exception as graph_err:
+        logger.warning(f"[batch-screen] Network graph auto-populate failed (non-fatal): {graph_err}")
+        job["network_graph_populated"] = False
+
 
 @router.post("/batch-screen", summary="Screen up to 500 opportunities using Claude Haiku (async background job)")
 async def start_batch_screen(body: BatchScreenRequest, background_tasks: BackgroundTasks):
