@@ -1520,23 +1520,24 @@ function intelligenceModule() {
                     body: JSON.stringify({ profile_id: pid, opportunity_limit: this.getNetworkOppLimit() }),
                 });
 
+                const stageLimit = this.getNetworkOppLimit();
                 // 2a. XML officer extraction (fast, no API calls)
                 await fetch('/api/v2/people/batch/stage', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, stage: 'xml_officers' }),
+                    body: JSON.stringify({ profile_id: pid, stage: 'xml_officers', max_eins: stageLimit }),
                 });
                 // 2b. ETL migrate into normalised people + organization_roles tables
                 await fetch('/api/v2/people/batch/stage', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, stage: 'ingest_etl' }),
+                    body: JSON.stringify({ profile_id: pid, stage: 'ingest_etl', max_eins: stageLimit }),
                 });
                 // 2c. Dedup scoring (no API calls)
                 await fetch('/api/v2/people/batch/stage', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, stage: 'dedup_score' }),
+                    body: JSON.stringify({ profile_id: pid, stage: 'dedup_score', max_eins: stageLimit }),
                 });
 
                 // 3. Auto-merge high-confidence duplicates (threshold 0.90)
@@ -1555,18 +1556,18 @@ function intelligenceModule() {
                 const rankData = await rankResp.json();
                 this.networkRankedFunders = rankData.ranked_funders || [];
 
-                // Refresh stats
-                await this.networkLoadStats(pid);
-
                 const hot = this.networkRankedFunders.filter(f => f.strength === 'hot').length;
                 const warm = this.networkRankedFunders.filter(f => f.strength === 'warm').length;
-                const total = this.networkGraphStats?.total_people || 0;
-                this.networkPrepResult = `${total} people · ${hot} hot · ${warm} warm funders`;
-                this.showNotification?.('Pre-process', this.networkPrepResult, 'success');
+                this.networkPrepResult = `${hot} hot · ${warm} warm funders`;
+                this.showNotification?.('Pre-process', 'Complete', 'success');
             } catch (e) {
                 console.error('[networkRunPreprocess]', e);
                 this.showNotification?.('Pre-process', 'Network error', 'error');
             } finally {
+                // Always refresh stats so progress counts update even if a step errored
+                await this.networkLoadStats(pid);
+                const total = this.networkGraphStats?.total_people || 0;
+                if (this.networkPrepResult) this.networkPrepResult = `${total} people · ${this.networkPrepResult}`;
                 this.networkPrepLoading = false;
             }
         },

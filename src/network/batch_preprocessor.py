@@ -690,16 +690,22 @@ class NetworkBatchPreprocessor:
     # ------------------------------------------------------------------
 
     def _get_funder_eins(self, profile_id: str, limit: int) -> list:
-        """Get distinct funder EINs linked to a profile's opportunities."""
+        """Get distinct funder EINs linked to a profile's opportunities, ordered by score."""
         with self._conn() as conn:
             rows = conn.execute(
-                "SELECT DISTINCT ein, organization_name "
-                "FROM opportunities "
+                "SELECT ein, organization_name FROM opportunities "
                 "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                "ORDER BY COALESCE(overall_score, 0) DESC "
                 "LIMIT ?",
                 (profile_id, limit),
             ).fetchall()
-        return [{"ein": r["ein"], "org_name": r["organization_name"] or r["ein"]} for r in rows]
+        seen: set = set()
+        result = []
+        for r in rows:
+            if r["ein"] not in seen:
+                seen.add(r["ein"])
+                result.append({"ein": r["ein"], "org_name": r["organization_name"] or r["ein"]})
+        return result
 
     def _count_people_roles(self) -> tuple:
         """Return (people_count, roles_count) from normalized tables."""
