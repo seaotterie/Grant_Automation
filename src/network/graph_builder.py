@@ -122,7 +122,7 @@ class NetworkGraphBuilder:
             for _key, analysis in pdf_analyses.items():
                 if not isinstance(analysis, dict):
                     continue
-                for officer in (analysis.get("officers_and_directors") or []):
+                for officer in (analysis.get("officers_and_directors") or analysis.get("officers") or []):
                     if isinstance(officer, dict):
                         people.append({**officer, "_source": "pdf_analysis"})
 

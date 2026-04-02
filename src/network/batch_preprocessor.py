@@ -804,7 +804,7 @@ class NetworkBatchPreprocessor:
                     for year_key, analysis in pdf_data.items():
                         if not isinstance(analysis, dict):
                             continue
-                        officers = analysis.get("officers_and_directors", [])
+                        officers = analysis.get("officers_and_directors") or analysis.get("officers") or []
                         if officers:
                             filing_year = None
                             try:

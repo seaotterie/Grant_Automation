@@ -189,7 +189,7 @@ async def graph_stats(profile_id: str = Query(...)):
                         pdf_data = json.loads(ei_row["pdf_analyses"]) if isinstance(ei_row["pdf_analyses"], str) else ei_row["pdf_analyses"]
                         if isinstance(pdf_data, dict):
                             pdf_has_officers = any(
-                                len(v.get("officers_and_directors") or []) > 0
+                                len(v.get("officers_and_directors") or v.get("officers") or []) > 0
                                 for v in pdf_data.values()
                                 if isinstance(v, dict)
                             )
