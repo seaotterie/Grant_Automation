@@ -126,6 +126,8 @@ function intelligenceModule() {
         networkOppLimit: 25,
         networkOppLimitPresets: [10, 25, 50, 100],
         networkOppLimitCustom: null,
+        // Category-level filter
+        networkMinCategory: 'all',
 
         // =================================================================
         // LIFECYCLE
@@ -1333,7 +1335,7 @@ function intelligenceModule() {
             const pid = profileId || this.currentProfileId;
             if (!pid) return;
             try {
-                const resp = await fetch(`/api/v2/network/graph-stats?profile_id=${encodeURIComponent(pid)}`);
+                const resp = await fetch(`/api/v2/network/graph-stats?profile_id=${encodeURIComponent(pid)}&min_category=${encodeURIComponent(this.networkMinCategory || 'all')}`);
                 if (resp.ok) {
                     this.networkGraphStats = await resp.json();
                 }
@@ -1383,7 +1385,7 @@ function intelligenceModule() {
                 const resp = await fetch('/api/v2/network/xml-officer-lookup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, limit: 2000, opportunity_limit: this.getNetworkOppLimit() }),
+                    body: JSON.stringify({ profile_id: pid, limit: 2000, opportunity_limit: this.getNetworkOppLimit(), min_category: this.networkMinCategory }),
                 });
                 const data = await resp.json();
                 if (data.success) {
@@ -1415,7 +1417,7 @@ function intelligenceModule() {
                 const resp = await fetch('/api/v2/network/discover-filings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, limit: 2000, opportunity_limit: this.getNetworkOppLimit() }),
+                    body: JSON.stringify({ profile_id: pid, limit: 2000, opportunity_limit: this.getNetworkOppLimit(), min_category: this.networkMinCategory }),
                 });
                 const data = await resp.json();
                 if (data.status === 'running') {
@@ -1520,7 +1522,7 @@ function intelligenceModule() {
                 await fetch('/api/v2/network/populate-graph', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, opportunity_limit: this.getNetworkOppLimit() }),
+                    body: JSON.stringify({ profile_id: pid, opportunity_limit: this.getNetworkOppLimit(), min_category: this.networkMinCategory }),
                 });
 
                 const stageLimit = this.getNetworkOppLimit();
@@ -1528,19 +1530,19 @@ function intelligenceModule() {
                 await fetch('/api/v2/people/batch/stage', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, stage: 'xml_officers', max_eins: stageLimit }),
+                    body: JSON.stringify({ profile_id: pid, stage: 'xml_officers', max_eins: stageLimit, min_category: this.networkMinCategory }),
                 });
                 // 2b. ETL migrate into normalised people + organization_roles tables
                 await fetch('/api/v2/people/batch/stage', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, stage: 'ingest_etl', max_eins: stageLimit }),
+                    body: JSON.stringify({ profile_id: pid, stage: 'ingest_etl', max_eins: stageLimit, min_category: this.networkMinCategory }),
                 });
                 // 2c. Dedup scoring (no API calls)
                 await fetch('/api/v2/people/batch/stage', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, stage: 'dedup_score', max_eins: stageLimit }),
+                    body: JSON.stringify({ profile_id: pid, stage: 'dedup_score', max_eins: stageLimit, min_category: this.networkMinCategory }),
                 });
 
                 // 3. Auto-merge high-confidence duplicates (threshold 0.90)
@@ -1622,7 +1624,7 @@ function intelligenceModule() {
                 await fetch('/api/v2/network/populate-graph', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid }),
+                    body: JSON.stringify({ profile_id: pid, min_category: this.networkMinCategory }),
                 });
                 await this.networkLoadStats(pid);
                 this.showNotification?.('Deep Research', `${done}/${needsAI.length} funders analysed via AI · graph updated`, 'success');
@@ -1647,7 +1649,7 @@ function intelligenceModule() {
                 const resp = await fetch('/api/v2/network/post-screening-analysis', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile_id: pid, opportunity_limit: this.getNetworkOppLimit() }),
+                    body: JSON.stringify({ profile_id: pid, opportunity_limit: this.getNetworkOppLimit(), min_category: this.networkMinCategory }),
                 });
                 const data = await resp.json();
                 if (data.success) {
@@ -1719,6 +1721,10 @@ function intelligenceModule() {
         setNetworkOppLimit(size) {
             this.networkOppLimit = size;
             this.networkOppLimitCustom = null;
+        },
+
+        setNetworkMinCategory(cat) {
+            this.networkMinCategory = cat;
         },
 
         /**

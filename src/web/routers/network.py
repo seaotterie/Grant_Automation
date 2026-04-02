@@ -25,12 +25,14 @@ router = APIRouter(prefix="/api/v2/network", tags=["network"])
 class PopulateGraphRequest(BaseModel):
     profile_id: str
     opportunity_limit: Optional[int] = None  # top-N opps by score; None = all
+    min_category: Optional[str] = None  # category-level filter: 'consider', 'review', 'qualified'
 
 
 class DiscoverFilingsRequest(BaseModel):
     profile_id: str
     limit: int = 2000
     opportunity_limit: Optional[int] = None  # top-N opps by score; overrides limit
+    min_category: Optional[str] = None  # category-level filter
 
 
 class RankFundersRequest(BaseModel):
@@ -42,6 +44,7 @@ class XmlOfficerLookupRequest(BaseModel):
     profile_id: str
     limit: int = 2000
     opportunity_limit: Optional[int] = None  # top-N opps by score; overrides limit
+    min_category: Optional[str] = None  # category-level filter
 
 
 class FunderConnectionsRequest(BaseModel):
@@ -58,6 +61,7 @@ class WarmPathsRequest(BaseModel):
 class PostScreeningAnalysisRequest(BaseModel):
     profile_id: str
     opportunity_limit: Optional[int] = None  # top-N opps by score; None = all
+    min_category: Optional[str] = None  # category-level filter
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -73,6 +77,19 @@ def _conn(db_path: str) -> sqlite3.Connection:
     return conn
 
 
+def _category_levels(min_category: Optional[str]) -> list:
+    """Return the set of category_level values that satisfy the given minimum tier.
+    Returns an empty list when no filter should be applied (min_category is None or 'all').
+    """
+    if min_category == "qualified":
+        return ["qualified"]
+    if min_category == "review":
+        return ["review", "qualified"]
+    if min_category == "consider":
+        return ["consider", "review", "qualified"]
+    return []  # no filter
+
+
 # ── Endpoint A: Populate graph from cache ─────────────────────────────────────
 
 @router.post("/populate-graph")
@@ -86,7 +103,7 @@ async def populate_graph(req: PopulateGraphRequest):
         from src.network.graph_builder import NetworkGraphBuilder
         db_path = _get_db_path()
         builder = NetworkGraphBuilder(db_path)
-        stats = builder.ingest_all_funders_from_cache(req.profile_id, opportunity_limit=req.opportunity_limit)
+        stats = builder.ingest_all_funders_from_cache(req.profile_id, opportunity_limit=req.opportunity_limit, min_category=req.min_category)
         return {
             "success": True,
             "profile_id": req.profile_id,
@@ -100,7 +117,7 @@ async def populate_graph(req: PopulateGraphRequest):
 # ── Endpoint B: Graph coverage stats ──────────────────────────────────────────
 
 @router.get("/graph-stats")
-async def graph_stats(profile_id: str = Query(...)):
+async def graph_stats(profile_id: str = Query(...), min_category: Optional[str] = None):
     """
     Return graph coverage stats for all funders linked to this profile.
     Cost: $0.00
@@ -144,12 +161,23 @@ async def graph_stats(profile_id: str = Query(...)):
         ).fetchone()[0]
 
         # Coverage per funder — include all opportunity IDs for this EIN
-        opp_rows = cur.execute(
-            "SELECT ein, organization_name, COUNT(*) as opp_count "
-            "FROM opportunities WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
-            "GROUP BY ein",
-            (profile_id,),
-        ).fetchall()
+        _cat_levels = _category_levels(min_category)
+        if _cat_levels:
+            _cat_placeholders = ",".join("?" * len(_cat_levels))
+            opp_rows = cur.execute(
+                "SELECT ein, organization_name, COUNT(*) as opp_count "
+                "FROM opportunities WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                f"AND category_level IN ({_cat_placeholders}) "
+                "GROUP BY ein",
+                (profile_id, *_cat_levels),
+            ).fetchall()
+        else:
+            opp_rows = cur.execute(
+                "SELECT ein, organization_name, COUNT(*) as opp_count "
+                "FROM opportunities WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                "GROUP BY ein",
+                (profile_id,),
+            ).fetchall()
 
         coverage = []
         for row in opp_rows:
@@ -265,18 +293,33 @@ async def discover_filings(req: DiscoverFilingsRequest, background_tasks: Backgr
         conn = _conn(db_path)
         cur = conn.cursor()
 
+        _df_cat_levels = _category_levels(req.min_category)
         if req.opportunity_limit:
             # Skip EINs that already have filing_history cached — gives "next N unprocessed" behaviour
-            raw_rows = cur.execute(
-                "SELECT ein, organization_name FROM opportunities "
-                "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
-                "  AND ein NOT IN ("
-                "    SELECT ein FROM ein_intelligence WHERE filing_history IS NOT NULL"
-                "  ) "
-                "ORDER BY COALESCE(overall_score, 0) DESC "
-                "LIMIT ?",
-                (req.profile_id, req.opportunity_limit),
-            ).fetchall()
+            if _df_cat_levels:
+                _df_placeholders = ",".join("?" * len(_df_cat_levels))
+                raw_rows = cur.execute(
+                    "SELECT ein, organization_name FROM opportunities "
+                    "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                    f"  AND category_level IN ({_df_placeholders}) "
+                    "  AND ein NOT IN ("
+                    "    SELECT ein FROM ein_intelligence WHERE filing_history IS NOT NULL"
+                    "  ) "
+                    "ORDER BY COALESCE(overall_score, 0) DESC "
+                    "LIMIT ?",
+                    (req.profile_id, *_df_cat_levels, req.opportunity_limit),
+                ).fetchall()
+            else:
+                raw_rows = cur.execute(
+                    "SELECT ein, organization_name FROM opportunities "
+                    "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                    "  AND ein NOT IN ("
+                    "    SELECT ein FROM ein_intelligence WHERE filing_history IS NOT NULL"
+                    "  ) "
+                    "ORDER BY COALESCE(overall_score, 0) DESC "
+                    "LIMIT ?",
+                    (req.profile_id, req.opportunity_limit),
+                ).fetchall()
             seen: set = set()
             opp_rows = []
             for r in raw_rows:
@@ -284,13 +327,24 @@ async def discover_filings(req: DiscoverFilingsRequest, background_tasks: Backgr
                     seen.add(r["ein"])
                     opp_rows.append(r)
         else:
-            opp_rows = cur.execute(
-                "SELECT DISTINCT o.ein, o.organization_name "
-                "FROM opportunities o "
-                "WHERE o.profile_id = ? AND o.ein IS NOT NULL AND o.ein != '' "
-                "LIMIT ?",
-                (req.profile_id, req.limit),
-            ).fetchall()
+            if _df_cat_levels:
+                _df_placeholders = ",".join("?" * len(_df_cat_levels))
+                opp_rows = cur.execute(
+                    "SELECT DISTINCT o.ein, o.organization_name "
+                    "FROM opportunities o "
+                    "WHERE o.profile_id = ? AND o.ein IS NOT NULL AND o.ein != '' "
+                    f"  AND o.category_level IN ({_df_placeholders}) "
+                    "LIMIT ?",
+                    (req.profile_id, *_df_cat_levels, req.limit),
+                ).fetchall()
+            else:
+                opp_rows = cur.execute(
+                    "SELECT DISTINCT o.ein, o.organization_name "
+                    "FROM opportunities o "
+                    "WHERE o.profile_id = ? AND o.ein IS NOT NULL AND o.ein != '' "
+                    "LIMIT ?",
+                    (req.profile_id, req.limit),
+                ).fetchall()
 
         eins_to_fetch = []
         already_cached = 0
@@ -515,18 +569,33 @@ async def xml_officer_lookup(req: XmlOfficerLookupRequest):
         conn = _conn(db_path)
 
         # Fetch funders that need officer data
+        _xl_cat_levels = _category_levels(req.min_category)
         if req.opportunity_limit:
             # Skip EINs already in graph as funders — gives "next N unprocessed" behaviour
-            raw_rows = conn.execute(
-                "SELECT ein, organization_name FROM opportunities "
-                "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
-                "  AND ein NOT IN ("
-                "    SELECT DISTINCT org_ein FROM network_memberships WHERE org_type = 'funder'"
-                "  ) "
-                "ORDER BY COALESCE(overall_score, 0) DESC "
-                "LIMIT ?",
-                (req.profile_id, req.opportunity_limit),
-            ).fetchall()
+            if _xl_cat_levels:
+                _xl_placeholders = ",".join("?" * len(_xl_cat_levels))
+                raw_rows = conn.execute(
+                    "SELECT ein, organization_name FROM opportunities "
+                    "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                    f"  AND category_level IN ({_xl_placeholders}) "
+                    "  AND ein NOT IN ("
+                    "    SELECT DISTINCT org_ein FROM network_memberships WHERE org_type = 'funder'"
+                    "  ) "
+                    "ORDER BY COALESCE(overall_score, 0) DESC "
+                    "LIMIT ?",
+                    (req.profile_id, *_xl_cat_levels, req.opportunity_limit),
+                ).fetchall()
+            else:
+                raw_rows = conn.execute(
+                    "SELECT ein, organization_name FROM opportunities "
+                    "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                    "  AND ein NOT IN ("
+                    "    SELECT DISTINCT org_ein FROM network_memberships WHERE org_type = 'funder'"
+                    "  ) "
+                    "ORDER BY COALESCE(overall_score, 0) DESC "
+                    "LIMIT ?",
+                    (req.profile_id, req.opportunity_limit),
+                ).fetchall()
             seen_eins: set = set()
             opp_rows = []
             for r in raw_rows:
@@ -534,13 +603,24 @@ async def xml_officer_lookup(req: XmlOfficerLookupRequest):
                     seen_eins.add(r["ein"])
                     opp_rows.append(r)
         else:
-            opp_rows = conn.execute(
-                "SELECT DISTINCT o.ein, o.organization_name "
-                "FROM opportunities o "
-                "WHERE o.profile_id = ? AND o.ein IS NOT NULL AND o.ein != '' "
-                "LIMIT ?",
-                (req.profile_id, req.limit),
-            ).fetchall()
+            if _xl_cat_levels:
+                _xl_placeholders = ",".join("?" * len(_xl_cat_levels))
+                opp_rows = conn.execute(
+                    "SELECT DISTINCT o.ein, o.organization_name "
+                    "FROM opportunities o "
+                    "WHERE o.profile_id = ? AND o.ein IS NOT NULL AND o.ein != '' "
+                    f"  AND o.category_level IN ({_xl_placeholders}) "
+                    "LIMIT ?",
+                    (req.profile_id, *_xl_cat_levels, req.limit),
+                ).fetchall()
+            else:
+                opp_rows = conn.execute(
+                    "SELECT DISTINCT o.ein, o.organization_name "
+                    "FROM opportunities o "
+                    "WHERE o.profile_id = ? AND o.ein IS NOT NULL AND o.ein != '' "
+                    "LIMIT ?",
+                    (req.profile_id, req.limit),
+                ).fetchall()
         conn.close()
 
         # Filter to those already in network_memberships with 0 people
@@ -767,7 +847,7 @@ async def post_screening_analysis(req: PostScreeningAnalysisRequest):
         from src.network.post_screening_analyzer import PostScreeningAnalyzer
         db_path = _get_db_path()
         analyzer = PostScreeningAnalyzer(db_path)
-        report = analyzer.analyze(req.profile_id, opportunity_limit=req.opportunity_limit)
+        report = analyzer.analyze(req.profile_id, opportunity_limit=req.opportunity_limit, min_category=req.min_category)
 
         return {
             "success": True,

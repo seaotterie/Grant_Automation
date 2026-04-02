@@ -23,6 +23,20 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+def _category_levels(min_category: Optional[str]) -> list:
+    """Return the category_level values that satisfy the given minimum tier.
+    Returns an empty list when no filter should be applied (None or 'all').
+    Defined inline to avoid circular imports with routers.
+    """
+    if min_category == "qualified":
+        return ["qualified"]
+    if min_category == "review":
+        return ["review", "qualified"]
+    if min_category == "consider":
+        return ["consider", "review", "qualified"]
+    return []
+
+
 @dataclass
 class StageResult:
     """Result from a single pipeline stage."""
@@ -81,6 +95,7 @@ class NetworkBatchPreprocessor:
         include_web_scraping: bool = False,
         web_scraping_limit: int = 10,
         concurrency: int = 3,
+        min_category: Optional[str] = None,
     ) -> BatchPreprocessResult:
         """
         Run the full preprocessing pipeline for a profile.
@@ -104,7 +119,7 @@ class NetworkBatchPreprocessor:
         result.total_people_before, result.total_roles_before = self._count_people_roles()
 
         # Get all funder EINs for this profile
-        funder_eins = self._get_funder_eins(profile_id, max_eins)
+        funder_eins = self._get_funder_eins(profile_id, max_eins, min_category=min_category)
         if not funder_eins:
             result.completed_at = self._now()
             result.stages.append(StageResult(
@@ -168,14 +183,15 @@ class NetworkBatchPreprocessor:
         max_eins: int = 200,
         concurrency: int = 3,
         web_scraping_limit: int = 10,
+        min_category: Optional[str] = None,
     ) -> StageResult:
         """Run a single stage of the pipeline (for granular control)."""
 
         if stage == "xml_officers":
             # Skip EINs already in graph so limit gives "next N unprocessed"
-            funder_eins = self._get_funder_eins(profile_id, max_eins, skip_in_graph=True)
+            funder_eins = self._get_funder_eins(profile_id, max_eins, skip_in_graph=True, min_category=min_category)
         else:
-            funder_eins = self._get_funder_eins(profile_id, max_eins)
+            funder_eins = self._get_funder_eins(profile_id, max_eins, min_category=min_category)
 
         if stage == "discover_filings":
             return await self._stage_discover_filings(funder_eins, concurrency)
@@ -716,35 +732,63 @@ class NetworkBatchPreprocessor:
             conn.commit()
         logger.debug(f"[Stage 2] Marked EIN {ein} as funder_xml_no_data (no XML or no officers)")
 
-    def _get_funder_eins(self, profile_id: str, limit: int, skip_in_graph: bool = False) -> list:
+    def _get_funder_eins(self, profile_id: str, limit: int, skip_in_graph: bool = False, min_category: Optional[str] = None) -> list:
         """Get distinct funder EINs linked to a profile's opportunities, ordered by score.
 
         Args:
             skip_in_graph: If True, exclude EINs already in network_memberships so that
                            limit gives "next N unprocessed" rather than "top N overall".
                            Also skips funder_xml_no_data sentinels (no XML available).
+            min_category: Optional minimum category level filter ('consider', 'review', 'qualified').
         """
+        cat_levels = _category_levels(min_category)
         with self._conn() as conn:
             if skip_in_graph:
-                rows = conn.execute(
-                    "SELECT ein, organization_name FROM opportunities "
-                    "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
-                    "  AND ein NOT IN ("
-                    "    SELECT DISTINCT org_ein FROM network_memberships "
-                    "    WHERE org_type IN ('funder', 'funder_xml_no_data')"
-                    "  ) "
-                    "ORDER BY COALESCE(overall_score, 0) DESC "
-                    "LIMIT ?",
-                    (profile_id, limit),
-                ).fetchall()
+                if cat_levels:
+                    placeholders = ",".join("?" * len(cat_levels))
+                    rows = conn.execute(
+                        "SELECT ein, organization_name FROM opportunities "
+                        "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                        f"  AND category_level IN ({placeholders}) "
+                        "  AND ein NOT IN ("
+                        "    SELECT DISTINCT org_ein FROM network_memberships "
+                        "    WHERE org_type IN ('funder', 'funder_xml_no_data')"
+                        "  ) "
+                        "ORDER BY COALESCE(overall_score, 0) DESC "
+                        "LIMIT ?",
+                        (profile_id, *cat_levels, limit),
+                    ).fetchall()
+                else:
+                    rows = conn.execute(
+                        "SELECT ein, organization_name FROM opportunities "
+                        "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                        "  AND ein NOT IN ("
+                        "    SELECT DISTINCT org_ein FROM network_memberships "
+                        "    WHERE org_type IN ('funder', 'funder_xml_no_data')"
+                        "  ) "
+                        "ORDER BY COALESCE(overall_score, 0) DESC "
+                        "LIMIT ?",
+                        (profile_id, limit),
+                    ).fetchall()
             else:
-                rows = conn.execute(
-                    "SELECT ein, organization_name FROM opportunities "
-                    "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
-                    "ORDER BY COALESCE(overall_score, 0) DESC "
-                    "LIMIT ?",
-                    (profile_id, limit),
-                ).fetchall()
+                if cat_levels:
+                    placeholders = ",".join("?" * len(cat_levels))
+                    rows = conn.execute(
+                        "SELECT ein, organization_name FROM opportunities "
+                        "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                        f"  AND category_level IN ({placeholders}) "
+                        "ORDER BY COALESCE(overall_score, 0) DESC "
+                        "LIMIT ?",
+                        (profile_id, *cat_levels, limit),
+                    ).fetchall()
+                else:
+                    rows = conn.execute(
+                        "SELECT ein, organization_name FROM opportunities "
+                        "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                        "ORDER BY COALESCE(overall_score, 0) DESC "
+                        "LIMIT ?",
+                        (profile_id, limit),
+                    ).fetchall()
         seen: set = set()
         result = []
         for r in rows:

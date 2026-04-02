@@ -2966,6 +2966,19 @@
                                     <span x-text="(networkGraphStats?.seeker_people || 0) + ' seeker board'"></span>
                                 </div>
                                 <div class="text-xs text-indigo-400" x-show="!networkGraphStats">No graph data yet</div>
+                                <!-- Category-level filter -->
+                                <div class="flex items-center gap-1 border-l border-indigo-200 dark:border-indigo-700 pl-3 ml-1">
+                                    <span class="text-xs text-indigo-500 dark:text-indigo-400 whitespace-nowrap">Min</span>
+                                    <template x-for="cat in [['all','All'],['consider','Consider+'],['review','Review+'],['qualified','Qualified']]" :key="cat[0]">
+                                        <button @click="setNetworkMinCategory(cat[0])"
+                                                class="px-2 py-0.5 text-xs font-medium rounded border transition-colors"
+                                                :class="networkMinCategory === cat[0]
+                                                    ? 'bg-indigo-600 text-white border-indigo-600'
+                                                    : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-indigo-400'"
+                                                x-text="cat[1]">
+                                        </button>
+                                    </template>
+                                </div>
                                 <!-- Opportunity limit picker (Next N unprocessed by score) -->
                                 <div class="flex items-center gap-1 border-l border-indigo-200 dark:border-indigo-700 pl-3 ml-1">
                                     <span class="text-xs text-indigo-500 dark:text-indigo-400 whitespace-nowrap">Next</span>

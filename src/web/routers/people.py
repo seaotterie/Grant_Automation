@@ -399,6 +399,7 @@ class BatchStageRequest(BaseModel):
     max_eins: int = Field(default=200, ge=1, le=1000)
     concurrency: int = Field(default=3, ge=1, le=5)
     web_scraping_limit: int = Field(default=10, ge=1, le=50)
+    min_category: Optional[str] = None  # category-level filter
 
 
 @router.post("/batch/preprocess")
@@ -467,6 +468,7 @@ async def batch_run_stage(req: BatchStageRequest):
             max_eins=req.max_eins,
             concurrency=req.concurrency,
             web_scraping_limit=req.web_scraping_limit,
+            min_category=req.min_category,
         )
         return asdict(result)
 

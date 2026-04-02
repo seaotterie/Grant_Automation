@@ -13,6 +13,20 @@ from .name_normalizer import NameNormalizer
 logger = logging.getLogger(__name__)
 
 
+def _category_levels(min_category: Optional[str]) -> list:
+    """Return the category_level values that satisfy the given minimum tier.
+    Returns an empty list when no filter should be applied (None or 'all').
+    Defined inline to avoid circular imports with routers.
+    """
+    if min_category == "qualified":
+        return ["qualified"]
+    if min_category == "review":
+        return ["review", "qualified"]
+    if min_category == "consider":
+        return ["consider", "review", "qualified"]
+    return []
+
+
 class NetworkGraphBuilder:
     def __init__(self, db_path: str):
         self.db_path = db_path
@@ -173,7 +187,7 @@ class NetworkGraphBuilder:
     # Bulk harvest from cache
     # ------------------------------------------------------------------
 
-    def ingest_all_funders_from_cache(self, profile_id: str, opportunity_limit: int | None = None) -> dict:
+    def ingest_all_funders_from_cache(self, profile_id: str, opportunity_limit: int | None = None, min_category: Optional[str] = None) -> dict:
         """
         Batch-ingest all funder leadership data from ein_intelligence into
         network_memberships for every funder EIN linked to this profile's
@@ -184,20 +198,35 @@ class NetworkGraphBuilder:
         """
         import json as _json
 
+        cat_levels = _category_levels(min_category)
         with self._conn() as conn:
             # 1. Distinct EINs + org names for this profile (top-N by score if limited)
             if opportunity_limit:
                 # Skip EINs already in graph — gives "next N unprocessed" behaviour
-                raw = conn.execute(
-                    "SELECT ein, organization_name FROM opportunities "
-                    "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
-                    "  AND ein NOT IN ("
-                    "    SELECT DISTINCT org_ein FROM network_memberships WHERE org_type = 'funder'"
-                    "  ) "
-                    "ORDER BY COALESCE(overall_score, 0) DESC "
-                    "LIMIT ?",
-                    (profile_id, opportunity_limit),
-                ).fetchall()
+                if cat_levels:
+                    _placeholders = ",".join("?" * len(cat_levels))
+                    raw = conn.execute(
+                        "SELECT ein, organization_name FROM opportunities "
+                        "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                        f"  AND category_level IN ({_placeholders}) "
+                        "  AND ein NOT IN ("
+                        "    SELECT DISTINCT org_ein FROM network_memberships WHERE org_type = 'funder'"
+                        "  ) "
+                        "ORDER BY COALESCE(overall_score, 0) DESC "
+                        "LIMIT ?",
+                        (profile_id, *cat_levels, opportunity_limit),
+                    ).fetchall()
+                else:
+                    raw = conn.execute(
+                        "SELECT ein, organization_name FROM opportunities "
+                        "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                        "  AND ein NOT IN ("
+                        "    SELECT DISTINCT org_ein FROM network_memberships WHERE org_type = 'funder'"
+                        "  ) "
+                        "ORDER BY COALESCE(overall_score, 0) DESC "
+                        "LIMIT ?",
+                        (profile_id, opportunity_limit),
+                    ).fetchall()
                 seen: set = set()
                 rows = []
                 for r in raw:
@@ -205,11 +234,20 @@ class NetworkGraphBuilder:
                         seen.add(r["ein"])
                         rows.append(r)
             else:
-                rows = conn.execute(
-                    "SELECT DISTINCT ein, organization_name FROM opportunities "
-                    "WHERE profile_id = ? AND ein IS NOT NULL AND ein != ''",
-                    (profile_id,),
-                ).fetchall()
+                if cat_levels:
+                    _placeholders = ",".join("?" * len(cat_levels))
+                    rows = conn.execute(
+                        "SELECT DISTINCT ein, organization_name FROM opportunities "
+                        "WHERE profile_id = ? AND ein IS NOT NULL AND ein != '' "
+                        f"AND category_level IN ({_placeholders})",
+                        (profile_id, *cat_levels),
+                    ).fetchall()
+                else:
+                    rows = conn.execute(
+                        "SELECT DISTINCT ein, organization_name FROM opportunities "
+                        "WHERE profile_id = ? AND ein IS NOT NULL AND ein != ''",
+                        (profile_id,),
+                    ).fetchall()
 
             # 2. Seeker board members
             profile_row = conn.execute(
