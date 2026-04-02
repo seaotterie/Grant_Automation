@@ -1582,7 +1582,7 @@ function intelligenceModule() {
 
             // Cost estimate confirmation before any AI calls
             const coverage = this.networkGraphStats?.coverage || [];
-            const needsResearch = coverage.filter(c => ['needs_990_search', 'pdf_no_officers'].includes(c.preflight) && c.has_filing_history);
+            const needsResearch = coverage.filter(c => c.preflight === 'needs_990_search');
             const n = Math.min(needsResearch.length, this.getNetworkOppLimit());
             if (n > 0) {
                 const estCost = (n * 0.02).toFixed(2);
@@ -1597,7 +1597,7 @@ function intelligenceModule() {
                 // Ensure we have fresh stats to know which funders need AI analysis
                 await this.networkLoadStats(pid);
                 const coverage = this.networkGraphStats?.coverage || [];
-                const allNeedingAI = coverage.filter(c => ['needs_990_search', 'pdf_no_officers'].includes(c.preflight));
+                const allNeedingAI = coverage.filter(c => c.preflight === 'needs_990_search');
                 const needsAI = allNeedingAI.slice(0, this.getNetworkOppLimit());
                 if (needsAI.length === 0) {
                     this.showNotification?.('Deep Research', 'No funders need AI analysis — all covered by free pipeline', 'info');
