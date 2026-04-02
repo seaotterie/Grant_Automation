@@ -74,7 +74,7 @@ class PDFNarrativeExtractor:
     structured intelligence that feeds into the foundation_narratives table.
     """
 
-    PDF_PAGE_LIMIT = 35  # Claude API max is 100; grant info is in early pages
+    PDF_PAGE_LIMIT = 10  # Officers/directors (Part VII) are in first ~10 pages; 35 was excessive and triggered rate limits
 
     EXTRACTION_PROMPT = """Analyze this IRS nonprofit tax filing (Form 990, 990-EZ, or 990-PF) and extract grant-making intelligence.
 
