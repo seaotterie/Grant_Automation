@@ -136,25 +136,29 @@ Return ONLY the JSON object, no other text."""
         """
         import io
         import urllib.request
-        import pypdf
 
         req = urllib.request.Request(pdf_url, headers={"User-Agent": "Catalynx/1.0 Grant Research"})
         with urllib.request.urlopen(req, timeout=30) as resp:
             raw = resp.read()
 
-        reader = pypdf.PdfReader(io.BytesIO(raw))
-        total_pages = len(reader.pages)
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(raw))
+            total_pages = len(reader.pages)
 
-        if total_pages <= self.PDF_PAGE_LIMIT:
-            return raw, total_pages, total_pages
+            if total_pages <= self.PDF_PAGE_LIMIT:
+                return raw, total_pages, total_pages
 
-        # Truncate: write first PDF_PAGE_LIMIT pages to a new buffer
-        writer = pypdf.PdfWriter()
-        for i in range(self.PDF_PAGE_LIMIT):
-            writer.add_page(reader.pages[i])
-        buf = io.BytesIO()
-        writer.write(buf)
-        return buf.getvalue(), total_pages, self.PDF_PAGE_LIMIT
+            # Truncate: write first PDF_PAGE_LIMIT pages to a new buffer
+            writer = pypdf.PdfWriter()
+            for i in range(self.PDF_PAGE_LIMIT):
+                writer.add_page(reader.pages[i])
+            buf = io.BytesIO()
+            writer.write(buf)
+            return buf.getvalue(), total_pages, self.PDF_PAGE_LIMIT
+        except ImportError:
+            logger.warning("pypdf not available — sending full PDF without truncation. Install pypdf to enable page limiting.")
+            return raw, 0, 0
 
     def _get_client(self):
         """Lazy-initialize Anthropic client."""
