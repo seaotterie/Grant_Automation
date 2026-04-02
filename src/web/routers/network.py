@@ -171,10 +171,17 @@ async def graph_stats(profile_id: str = Query(...)):
             has_web = False
             has_pdf = False
             has_filing = False
+            has_pdf_url = False
             pdf_has_officers = False
             if ei_row:
                 has_web = bool(ei_row["web_data"])
                 has_filing = bool(ei_row["filing_history"])
+                if ei_row["filing_history"]:
+                    try:
+                        fh = json.loads(ei_row["filing_history"]) if isinstance(ei_row["filing_history"], str) else ei_row["filing_history"]
+                        has_pdf_url = any(f.get("pdf_url") for f in fh if isinstance(f, dict))
+                    except Exception:
+                        pass
                 if ei_row["pdf_analyses"]:
                     has_pdf = True
                     # Check whether any analysis actually extracted officers
@@ -204,11 +211,13 @@ async def graph_stats(profile_id: str = Query(...)):
             if people_count > 0:
                 preflight = "ok"
             elif has_pdf and not pdf_has_officers:
-                preflight = "pdf_no_officers"   # PDF ran but no officers found — web scrape may help
-            elif has_filing and not has_pdf:
-                preflight = "needs_990_search"  # Has filing URL, needs PDF analysis
+                preflight = "pdf_no_officers"   # PDF ran but no officers found
+            elif has_filing and has_pdf_url and not has_pdf:
+                preflight = "needs_990_search"  # Has a real PDF URL — ready for Deep Research
+            elif has_filing and not has_pdf_url and not has_pdf:
+                preflight = "no_pdf_url"        # Filing history exists but no downloadable PDF
             elif not has_filing:
-                preflight = "needs_url"         # No filing history — run Find URLs first
+                preflight = "needs_url"         # No filing history — run Find Filings first
             else:
                 preflight = "unknown"
 

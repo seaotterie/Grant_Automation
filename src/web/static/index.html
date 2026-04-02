@@ -3078,7 +3078,7 @@
                                         <span>Visualize Network</span>
                                         <span x-show="networkGraphStats?.coverage?.length > 0"
                                               class="text-xs font-normal opacity-60"
-                                              x-text="networkRankedFunders.length > 0 ? networkRankedFunders.length + ' funders ranked' : 'run Pre-process first'"></span>
+                                              x-text="networkRankedFunders.length > 0 ? networkRankedFunders.length + ' funders ranked' : 'run Analyze first'"></span>
                                     </span>
                                 </button>
                             </div>
@@ -3260,7 +3260,12 @@
                                         </template>
                                         <template x-if="networkGraphStats.coverage.filter(c => c.preflight === 'needs_990_search').length > 0">
                                             <span class="ml-1 text-blue-600">
-                                                · <span x-text="networkGraphStats.coverage.filter(c => c.preflight === 'needs_990_search').length"></span> ready for 990
+                                                · <span x-text="networkGraphStats.coverage.filter(c => c.preflight === 'needs_990_search').length"></span> ready for Deep Research
+                                            </span>
+                                        </template>
+                                        <template x-if="networkGraphStats.coverage.filter(c => c.preflight === 'no_pdf_url').length > 0">
+                                            <span class="ml-1 text-gray-400">
+                                                · <span x-text="networkGraphStats.coverage.filter(c => c.preflight === 'no_pdf_url').length"></span> filed but no PDF
                                             </span>
                                         </template>
                                     </div>
