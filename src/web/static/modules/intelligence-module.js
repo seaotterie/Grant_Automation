@@ -1419,7 +1419,10 @@ function intelligenceModule() {
                 });
                 const data = await resp.json();
                 if (data.status === 'running') {
-                    this.showNotification?.('Find Filings', data.message || `Fetching filings for ${data.eins_queried} funders in background — re-run Pre-process when complete`, 'info');
+                    this.showNotification?.('Find Filings', data.message || `Fetching filings for ${data.eins_queried} funders in background…`, 'info');
+                    // Background task — wait for it to finish then refresh stats
+                    await new Promise(r => setTimeout(r, 4000));
+                    await this.networkLoadStats(pid);
                 } else {
                     this.showNotification?.('Find Filings', `${data.filing_histories_found ?? 0} new filing histories found · ${data.already_cached ?? 0} already cached`, 'success');
                     await this.networkLoadStats(pid);
