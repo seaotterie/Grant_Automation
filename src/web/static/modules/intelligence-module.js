@@ -1597,12 +1597,13 @@ function intelligenceModule() {
                 // Ensure we have fresh stats to know which funders need AI analysis
                 await this.networkLoadStats(pid);
                 const coverage = this.networkGraphStats?.coverage || [];
-                const needsAI = coverage.filter(c => ['needs_990_search', 'pdf_no_officers'].includes(c.preflight));
+                const allNeedingAI = coverage.filter(c => ['needs_990_search', 'pdf_no_officers'].includes(c.preflight));
+                const needsAI = allNeedingAI.slice(0, this.getNetworkOppLimit());
                 if (needsAI.length === 0) {
                     this.showNotification?.('Deep Research', 'No funders need AI analysis — all covered by free pipeline', 'info');
                     return;
                 }
-                // Collect opportunity IDs for those funders
+                // Collect opportunity IDs for those funders (respects limit)
                 const oppIds = [];
                 for (const funder of needsAI) {
                     oppIds.push(...(funder.opportunity_ids || []));
