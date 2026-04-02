@@ -3044,7 +3044,7 @@
                                         <span>Deep Research <span class="text-amber-200 font-normal text-xs">AI · ~$0.01–0.03/funder</span></span>
                                         <span x-show="networkGraphStats?.coverage?.length > 0"
                                               class="text-xs font-normal opacity-60"
-                                              x-text="networkGraphStats?.coverage ? networkGraphStats.coverage.filter(c=>c.has_pdf_data).length + ' / ' + networkGraphStats.coverage.length + ' analyzed' : ''"></span>
+                                              x-text="networkGraphStats?.coverage ? networkGraphStats.coverage.filter(c=>c.has_pdf_data).length + ' analyzed · ' + (networkGraphStats.coverage.filter(c=>c.preflight==='needs_990_search').length > 0 ? networkGraphStats.coverage.filter(c=>c.preflight==='needs_990_search').length + ' ready' : 'none ready') : ''"></span>
                                     </span>
                                 </button>
 
