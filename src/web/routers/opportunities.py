@@ -1501,7 +1501,7 @@ async def batch_analyze_990_pdfs(body: BatchAnalyze990PDFsRequest):
         raise HTTPException(status_code=400, detail="Batch size cannot exceed 50 opportunities")
 
     results = []
-    semaphore = asyncio.Semaphore(3)  # Max 3 concurrent PDF analyses
+    semaphore = asyncio.Semaphore(1)  # Sequential — PDFs are large; 3 concurrent exceeded 50k token/min rate limit
 
     async def analyze_one(opp_id: str):
         async with semaphore:
@@ -1582,6 +1582,10 @@ async def batch_analyze_990_pdfs(body: BatchAnalyze990PDFsRequest):
                     "cache_hit": result.get("cache_hit", False),
                     "extraction": result.get("extraction", {}),
                 })
+
+                # Pace requests to stay within 50k tokens/min rate limit
+                if not result.get("cache_hit"):
+                    await asyncio.sleep(3)
 
             except Exception as e:
                 logger.warning(f"Batch 990 analysis failed for {opp_id}: {e}")
