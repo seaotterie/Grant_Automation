@@ -60,3 +60,53 @@ CREATE TABLE IF NOT EXISTS organization_websites (
 );
 
 CREATE INDEX IF NOT EXISTS idx_ow_ein ON organization_websites(ein);
+
+-- =====================================================================================
+-- FORM 990 FINANCIALS TABLE
+-- Summary financial data extracted from 990, 990-PF, and 990-EZ XML during bulk load.
+-- Provides a fast local alternative to ProPublica API for revenue/expenses/assets.
+-- INSERT OR IGNORE — most recent year loaded wins (process years descending).
+-- =====================================================================================
+
+CREATE TABLE IF NOT EXISTS form990_financials (
+    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+    ein                     TEXT NOT NULL,
+    tax_year                INTEGER NOT NULL,
+    form_type               TEXT NOT NULL,      -- '990', '990-PF', '990-EZ'
+
+    -- Summary (all form types)
+    total_revenue           REAL,
+    total_expenses          REAL,
+    total_assets            REAL,
+    net_assets              REAL,
+    total_liabilities       REAL,
+
+    -- Revenue breakdown (990, 990-EZ)
+    contributions_grants        REAL,
+    program_service_revenue     REAL,
+    investment_income           REAL,
+    other_revenue               REAL,
+
+    -- Expense breakdown (990 only)
+    program_expenses            REAL,
+    admin_expenses              REAL,
+    fundraising_expenses        REAL,
+
+    -- 990-PF specific
+    grants_paid_total           REAL,
+    distributable_amount        REAL,
+    qualifying_distributions    REAL,
+    assets_fmv                  REAL,
+
+    -- Workforce
+    employee_count          INTEGER,
+
+    -- Provenance
+    source_zip_file         TEXT,
+    loaded_at               TEXT DEFAULT (datetime('now')),
+
+    UNIQUE(ein, tax_year, form_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_f990fin_ein  ON form990_financials(ein, tax_year DESC);
+CREATE INDEX IF NOT EXISTS idx_f990fin_year ON form990_financials(tax_year DESC);

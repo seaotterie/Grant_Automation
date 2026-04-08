@@ -231,8 +231,19 @@ def _parse_990(root: ET.Element, pfx: str, result: dict) -> None:
     # Financials — from IRS990 element
     irs990 = root.find(f".//{pfx}IRS990") or root.find(".//IRS990")
     if irs990 is not None:
-        result["financials"]["total_revenue"] = _flt(irs990, pfx, "CYTotalRevenueAmt")
-        result["financials"]["total_assets"]  = _flt(irs990, pfx, "TotalAssetsEOYAmt")
+        result["financials"]["total_revenue"]           = _flt(irs990, pfx, "CYTotalRevenueAmt")
+        result["financials"]["total_assets"]            = _flt(irs990, pfx, "TotalAssetsEOYAmt")
+        result["financials"]["total_expenses"]          = _flt(irs990, pfx, "CYTotalFunctionalExpensesAmt")
+        result["financials"]["program_expenses"]        = _flt(irs990, pfx, "CYProgramServiceExpensesAmt")
+        result["financials"]["admin_expenses"]          = _flt(irs990, pfx, "CYManagementAndGeneralExpensesAmt")
+        result["financials"]["fundraising_expenses"]    = _flt(irs990, pfx, "CYFundraisingExpensesAmt")
+        result["financials"]["total_liabilities"]       = _flt(irs990, pfx, "TotalLiabilitiesEOYAmt")
+        result["financials"]["net_assets"]              = _flt(irs990, pfx, "TotalNetAssetsOrFundBalancesEOYAmt")
+        result["financials"]["contributions_grants"]    = _flt(irs990, pfx, "CYContributionsGrantsAmt")
+        result["financials"]["program_service_revenue"] = _flt(irs990, pfx, "CYProgramServiceRevenueAmt")
+        result["financials"]["investment_income"]       = _flt(irs990, pfx, "CYInvestmentIncomeAmt")
+        result["financials"]["other_revenue"]           = _flt(irs990, pfx, "CYOtherRevenueAmt")
+        result["financials"]["employee_count"]          = _int(irs990, pfx, "TotalEmployeeCnt")
 
     # Website URL and mission statement
     result["website_url"] = _normalize_url(_txt(root, pfx, "WebsiteAddressTxt")) or None
@@ -349,8 +360,11 @@ def _parse_990ez(root: ET.Element, pfx: str, result: dict) -> None:
             officers_found = True
 
     # Financials
-    result["financials"]["total_revenue"] = _first_flt(root, pfx, "TotalRevenueAmt")
-    result["financials"]["total_assets"]  = _first_flt(root, pfx, "TotalAssetsEOYAmt")
+    result["financials"]["total_revenue"]        = _first_flt(root, pfx, "TotalRevenueAmt")
+    result["financials"]["total_assets"]         = _first_flt(root, pfx, "TotalAssetsEOYAmt")
+    result["financials"]["total_expenses"]       = _first_flt(root, pfx, "TotalExpensesAmt")
+    result["financials"]["net_assets"]           = _first_flt(root, pfx, "NetAssetsOrFundBalancesEOYAmt")
+    result["financials"]["contributions_grants"] = _first_flt(root, pfx, "TotalContributionsAmt")
 
     # Website URL and mission statement
     result["website_url"] = _normalize_url(_txt(root, pfx, "WebsiteAddressTxt")) or None
@@ -457,14 +471,43 @@ def _normalize_url(url: str) -> Optional[str]:
     return url.rstrip("/")
 
 
+def _int(parent: ET.Element, pfx: str, *tags: str) -> Optional[int]:
+    """Return int value of first matching tag."""
+    for tag in tags:
+        val = parent.findtext(f".//{pfx}{tag}") or parent.findtext(f".//{tag}") or ""
+        val = val.strip()
+        if val:
+            try:
+                return int(float(val))
+            except ValueError:
+                pass
+    return None
+
+
 def _empty_financials() -> dict:
     return {
+        # All form types
+        "total_revenue":            None,
+        "total_expenses":           None,
         "total_assets":             None,
+        "net_assets":               None,
+        "total_liabilities":        None,
+        # Revenue breakdown (990, 990-EZ)
+        "contributions_grants":     None,
+        "program_service_revenue":  None,
+        "investment_income":        None,
+        "other_revenue":            None,
+        # Expense breakdown (990)
+        "program_expenses":         None,
+        "admin_expenses":           None,
+        "fundraising_expenses":     None,
+        # 990-PF specific
         "assets_fmv":               None,
         "grants_paid_total":        None,
-        "total_revenue":            None,
         "distributable_amount":     None,
         "qualifying_distributions": None,
+        # Workforce
+        "employee_count":           None,
     }
 
 

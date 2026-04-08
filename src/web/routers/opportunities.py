@@ -1339,13 +1339,63 @@ async def get_990_extraction(opportunity_id: str):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+def _lookup_local_financials(ein: str) -> List[Dict[str, Any]]:
+    """
+    Query form990_financials in nonprofit_intelligence.db for up to 5 most recent
+    years.  Returns a list in the same shape as filing_history entries so the
+    rest of the pipeline is unchanged.  Returns [] if table missing or no rows.
+    """
+    try:
+        intel_db = Path(get_nonprofit_intelligence_db())
+        if not intel_db.exists():
+            return []
+        conn = sqlite3.connect(str(intel_db), timeout=5)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """SELECT tax_year, form_type, total_revenue, total_expenses, total_assets
+               FROM form990_financials WHERE ein = ?
+               ORDER BY tax_year DESC LIMIT 5""",
+            (ein,),
+        ).fetchall()
+        conn.close()
+        return [
+            {
+                "tax_year":  r["tax_year"],
+                "form_type": r["form_type"],
+                "revenue":   r["total_revenue"],
+                "expenses":  r["total_expenses"],
+                "assets":    r["total_assets"],
+                "pdf_url":   None,       # not available from bulk XML
+                "source":    "bulk_xml",
+            }
+            for r in rows
+        ]
+    except Exception:
+        return []
+
+
 async def _fetch_and_cache_filing_history(ein: str, org_name: str) -> List[Dict[str, Any]]:
     """
-    Fetch filing history for an EIN from ProPublica (API + scraped PDF links)
-    and cache the result in ein_intelligence.  Used by both get_990_filings
-    and the batch 990 endpoint so the batch doesn't require pre-populated history.
+    Fetch filing history for an EIN.  Fast-path: checks local form990_financials
+    table first (populated by IRS bulk XML loader).  Falls back to ProPublica API
+    + PDF scraping when no local data exists.
     Returns the list of filing dicts (may be empty).
     """
+    # Fast-path: local bulk-loaded financials (no ProPublica call needed)
+    local_filings = _lookup_local_financials(ein)
+    if local_filings:
+        try:
+            database_manager.upsert_ein_intelligence(
+                ein=ein,
+                org_name=org_name,
+                filing_history=local_filings,
+                filing_history_fetched_at=datetime.now().isoformat(),
+            )
+            logger.info(f"Filing history for EIN {ein} served from local bulk DB ({len(local_filings)} years)")
+        except Exception as cache_err:
+            logger.warning(f"Failed to cache local filing_history for EIN {ein}: {cache_err}")
+        return local_filings
+
     filings: List[Dict[str, Any]] = []
 
     # 1. ProPublica API filings (structured data + pdf_url)

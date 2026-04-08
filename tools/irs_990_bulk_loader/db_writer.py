@@ -429,6 +429,55 @@ class BulkLoaderDBWriter:
         return inserted
 
     # ------------------------------------------------------------------
+    # form990_financials
+    # ------------------------------------------------------------------
+
+    def flush_financials(self, batch: list) -> int:
+        """
+        INSERT OR IGNORE financial summary rows extracted from 990 XML.
+        All 3 form types accepted. Does not overwrite — first loaded year wins
+        (bulk_loader processes years descending so most recent is captured first).
+        """
+        rows = []
+        for r in batch:
+            fin = r.get("financials", {})
+            rows.append((
+                r["ein"], r.get("tax_year"), r.get("form_type"),
+                fin.get("total_revenue"),    fin.get("total_expenses"),
+                fin.get("total_assets"),     fin.get("net_assets"),
+                fin.get("total_liabilities"),
+                fin.get("contributions_grants"),    fin.get("program_service_revenue"),
+                fin.get("investment_income"),       fin.get("other_revenue"),
+                fin.get("program_expenses"),        fin.get("admin_expenses"),
+                fin.get("fundraising_expenses"),
+                fin.get("grants_paid_total"),       fin.get("distributable_amount"),
+                fin.get("qualifying_distributions"), fin.get("assets_fmv"),
+                fin.get("employee_count"),
+                r.get("source_zip_file"), _now(),
+            ))
+        if not rows:
+            return 0
+        conn = self._intel()
+        cur  = conn.cursor()
+        cur.executemany(
+            """
+            INSERT OR IGNORE INTO form990_financials (
+                ein, tax_year, form_type,
+                total_revenue, total_expenses, total_assets, net_assets, total_liabilities,
+                contributions_grants, program_service_revenue, investment_income, other_revenue,
+                program_expenses, admin_expenses, fundraising_expenses,
+                grants_paid_total, distributable_amount, qualifying_distributions, assets_fmv,
+                employee_count, source_zip_file, loaded_at
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            rows,
+        )
+        conn.commit()
+        inserted = cur.rowcount if cur.rowcount >= 0 else len(rows)
+        logger.debug(f"form990_financials: {len(rows)} attempted, {inserted} inserted")
+        return inserted
+
+    # ------------------------------------------------------------------
     # ein_intelligence.pdf_analyses  (catalynx.db)
     # ------------------------------------------------------------------
 

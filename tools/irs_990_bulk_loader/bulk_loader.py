@@ -167,10 +167,11 @@ async def process_zip(
     fn_batch      = []
     ei_batch      = []
     website_batch = []
+    fin_batch     = []
 
     stats = {"processed": 0, "success": 0, "errors": 0, "skipped_form": 0,
              "officers": 0, "grants": 0, "fi_rows": 0, "websites": 0,
-             "stopped_early": False}
+             "financials": 0, "stopped_early": False}
 
     temp_dir = Path(args.temp_dir) if args.temp_dir else Path(tempfile.gettempdir()) / "irs_bulk_loader"
     temp_dir.mkdir(parents=True, exist_ok=True)
@@ -299,6 +300,12 @@ async def process_zip(
                             })
                             stats["websites"] += 1
 
+                        # Financials (all form types with any financial data)
+                        if parsed.get("financials", {}).get("total_revenue") is not None:
+                            parsed["source_zip_file"] = zip_filename
+                            fin_batch.append(parsed)
+                            stats["financials"] += 1
+
                         # Flush at batch-size threshold
                         if len(board_batch) >= args.batch_size:
                             writer.flush_board_network(board_batch);   board_batch = []
@@ -312,6 +319,8 @@ async def process_zip(
                             writer.flush_ein_intelligence(ei_batch);    ei_batch = []
                         if len(website_batch) >= args.batch_size:
                             writer.flush_organization_websites(website_batch); website_batch = []
+                        if len(fin_batch) >= args.batch_size:
+                            writer.flush_financials(fin_batch);         fin_batch = []
 
                 except Exception as e:
                     stats["errors"] += 1
@@ -351,6 +360,7 @@ async def process_zip(
         if fn_batch:      writer.flush_foundation_narratives(fn_batch)
         if ei_batch:      writer.flush_ein_intelligence(ei_batch)
         if website_batch: writer.flush_organization_websites(website_batch)
+        if fin_batch:     writer.flush_financials(fin_batch)
 
     elapsed = time.time() - start
     logger.info(
@@ -358,7 +368,7 @@ async def process_zip(
         f"processed={stats['processed']:,} ok={stats['success']:,} "
         f"errors={stats['errors']} | "
         f"officers={stats['officers']:,} grants={stats['grants']:,} "
-        f"websites={stats['websites']:,} fi={stats['fi_rows']:,} | "
+        f"websites={stats['websites']:,} financials={stats['financials']:,} fi={stats['fi_rows']:,} | "
         f"{elapsed/60:.1f} min"
     )
 
@@ -498,7 +508,7 @@ async def main():
 
     total_stats = {"processed": 0, "success": 0, "errors": 0,
                    "officers": 0, "grants": 0, "fi_rows": 0, "websites": 0,
-                   "zips_run": 0, "zips_skipped": 0}
+                   "financials": 0, "zips_run": 0, "zips_skipped": 0}
     run_start = time.time()
     deadline  = (run_start + args.max_time * 60) if args.max_time else None
     stopped_early = False
@@ -533,7 +543,7 @@ async def main():
                                           deadline=deadline,
                                           global_remaining=(args.max_total - total_stats["processed"])
                                           if args.max_total else None)
-                for k in ("processed", "success", "errors", "officers", "grants", "fi_rows", "websites"):
+                for k in ("processed", "success", "errors", "officers", "grants", "fi_rows", "websites", "financials"):
                     total_stats[k] += stats.get(k, 0)
                 total_stats["zips_run"] += 1
                 if stats.get("stopped_early"):
@@ -558,6 +568,7 @@ async def main():
     logger.info(f"Officers:    {total_stats['officers']:,}")
     logger.info(f"Grants:      {total_stats['grants']:,}")
     logger.info(f"Websites:    {total_stats['websites']:,}")
+    logger.info(f"Financials:  {total_stats['financials']:,}")
     logger.info(f"Foundations: {total_stats['fi_rows']:,}")
     logger.info(f"Total time:  {elapsed/3600:.1f} hours")
 
