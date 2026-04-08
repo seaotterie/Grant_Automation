@@ -1690,8 +1690,9 @@ function screeningModule() {
                 const skipMsg = this.excludeLowPriority ? ` (skipping ${skippedCount} low priority)` : '';
                 this.showNotification?.(`🔍 Discovering URLs for ${eligibleCount} opportunities${skipMsg}... ($0.00)`, 'info');
 
+                const urlLimit = this.getEffectiveBatchSize();
                 const response = await fetch(
-                    `/api/v2/profiles/${this.currentProfileId}/discover-urls?force_refresh=${forceRefresh}&exclude_low_priority=${this.excludeLowPriority}`,
+                    `/api/v2/profiles/${this.currentProfileId}/discover-urls?force_refresh=${forceRefresh}&exclude_low_priority=${this.excludeLowPriority}&limit=${urlLimit}`,
                     { method: 'POST' }
                 );
 

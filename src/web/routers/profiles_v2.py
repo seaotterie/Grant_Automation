@@ -2091,7 +2091,8 @@ async def get_profile_opportunities(profile_id: str, stage: Optional[str] = None
 async def discover_urls_for_profile(
     profile_id: str,
     force_refresh: bool = False,
-    exclude_low_priority: bool = True
+    exclude_low_priority: bool = True,
+    limit: Optional[int] = None
 ):
     """
     Bulk URL discovery for opportunities in a profile (skips low priority by default).
@@ -2133,13 +2134,14 @@ async def discover_urls_for_profile(
     }
     """
     try:
-        logger.info(f"Starting URL discovery for profile {profile_id} (force_refresh={force_refresh}, exclude_low_priority={exclude_low_priority})")
+        logger.info(f"Starting URL discovery for profile {profile_id} (force_refresh={force_refresh}, exclude_low_priority={exclude_low_priority}, limit={limit})")
 
         # Run URL discovery
         result = await url_discovery_service.discover_urls_for_opportunities(
             profile_id=profile_id,
             force_refresh=force_refresh,
-            exclude_low_priority=exclude_low_priority
+            exclude_low_priority=exclude_low_priority,
+            limit=limit
         )
 
         # Get updated statistics

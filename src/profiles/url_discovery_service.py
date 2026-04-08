@@ -76,6 +76,7 @@ class URLDiscoveryService:
         opportunity_ids: Optional[List[str]] = None,
         force_refresh: bool = False,
         exclude_low_priority: bool = True,
+        limit: Optional[int] = None,
         progress_callback: Optional[Callable[[Dict[str, Any]], None]] = None
     ) -> URLDiscoveryResult:
         """
@@ -101,7 +102,7 @@ class URLDiscoveryService:
         try:
             opportunities = await asyncio.to_thread(
                 self._get_opportunities_for_profile,
-                profile_id, opportunity_ids, exclude_low_priority
+                profile_id, opportunity_ids, exclude_low_priority, limit
             )
             result.total = len(opportunities)
 
@@ -249,7 +250,8 @@ class URLDiscoveryService:
         self,
         profile_id: str,
         opportunity_ids: Optional[List[str]] = None,
-        exclude_low_priority: bool = True
+        exclude_low_priority: bool = True,
+        limit: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
         Get opportunities from database.
@@ -277,15 +279,14 @@ class URLDiscoveryService:
                         organization_name,
                         website_url,
                         url_source,
-                        json_extract(analysis_discovery, '$.category_level') as category_level
+                        category_level
                     FROM opportunities
                     WHERE profile_id = ? AND id IN ({placeholders})
                 """
                 params = [profile_id] + opportunity_ids
 
-                # Add low_priority filter if requested (INCLUSIVE: only qualified/review/consider)
                 if exclude_low_priority:
-                    query += " AND json_extract(analysis_discovery, '$.category_level') IN ('qualified', 'review', 'consider')"
+                    query += " AND category_level IN ('qualified', 'review', 'consider')"
 
             else:
                 # All opportunities for profile
@@ -296,15 +297,17 @@ class URLDiscoveryService:
                         organization_name,
                         website_url,
                         url_source,
-                        json_extract(analysis_discovery, '$.category_level') as category_level
+                        category_level
                     FROM opportunities
                     WHERE profile_id = ?
                 """
                 params = [profile_id]
 
-                # Add low_priority filter if requested (INCLUSIVE: only qualified/review/consider)
                 if exclude_low_priority:
-                    query += " AND json_extract(analysis_discovery, '$.category_level') IN ('qualified', 'review', 'consider')"
+                    query += " AND category_level IN ('qualified', 'review', 'consider')"
+
+                if limit:
+                    query += f" LIMIT {limit}"
 
             cursor.execute(query, params)
             opportunities = [dict(row) for row in cursor.fetchall()]
