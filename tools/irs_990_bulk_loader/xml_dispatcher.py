@@ -462,10 +462,14 @@ def _normalize_url(url: str) -> Optional[str]:
     """Normalize a raw URL string from 990 XML to a usable https:// URL."""
     if not url:
         return None
-    url = url.strip().lower()
+    import re
+    # Collapse whitespace first (catches "https: //..." or "http: www...")
+    url = re.sub(r"\s+", "", url).lower()
     invalid = {"none", "n/a", "na", "null", "unknown", "www", "http://", "https://", ""}
     if url in invalid or "." not in url:
         return None
+    # Strip malformed double-protocol (e.g. "https://https://...")
+    url = re.sub(r"^(https?://)+(https?://)", r"\2", url)
     if not url.startswith(("http://", "https://")):
         url = f"https://{url}"
     return url.rstrip("/")
