@@ -5,7 +5,8 @@ Bulk URL discovery for opportunities using the Enhanced URL Discovery Pipeline.
 
 Pipeline Stages (cascading – stops when URL found):
   0: User-provided URL (0.95 confidence)          - $0.00
-  1: 990 XML WebsiteAddressTxt (0.85)              - $0.00
+  B: Bulk DB lookup — organization_websites table (0.85) - $0.00 (instant)
+  1: 990 XML WebsiteAddressTxt via ProPublica (0.85) - $0.00
   2: Multi-year 990 + cross-form consolidation (0.82) - $0.00
   3: ProPublica JSON API website field (0.80)      - $0.00
   4: DuckDuckGo + Wikidata public APIs (0.70)      - $0.00
@@ -142,6 +143,31 @@ class URLDiscoveryService:
                             'status': 'cached' if cached_url else 'not_found',
                         })
                     continue
+
+                # Fast-path: check bulk-loaded organization_websites table before
+                # hitting the ProPublica pipeline (instant DB lookup, no network call)
+                if ein and not force_refresh:
+                    bulk_url = await asyncio.to_thread(self._lookup_bulk_website, ein)
+                    if bulk_url:
+                        await asyncio.to_thread(
+                            self._update_opportunity_url, opp_id, bulk_url, '990_xml_bulk', 'bulk_loaded'
+                        )
+                        result.discovered += 1
+                        result.found += 1
+                        result.processed += 1
+                        result.stage_breakdown['bulk_db'] = result.stage_breakdown.get('bulk_db', 0) + 1
+                        logger.debug(f"  -> Bulk DB hit: {bulk_url}")
+                        if progress_callback:
+                            progress_callback({
+                                'processed': result.processed,
+                                'total': result.total,
+                                'found': result.found,
+                                'not_found': result.not_found,
+                                'cached': result.cached,
+                                'organization': org_name,
+                                'status': 'found',
+                            })
+                        continue
 
                 # Run enhanced pipeline
                 if ein:
@@ -296,6 +322,22 @@ class URLDiscoveryService:
         except Exception as e:
             logger.error(f"Error fetching opportunities: {e}", exc_info=True)
             return []
+
+    def _lookup_bulk_website(self, ein: str) -> Optional[str]:
+        """
+        Fast-path: check organization_websites table in nonprofit_intelligence.db.
+        Populated by the IRS 990 XML bulk loader from WebsiteAddressTxt field.
+        Returns URL string or None if not found.
+        """
+        try:
+            conn = sqlite3.connect(self.intelligence_db_path, timeout=5)
+            row = conn.execute(
+                "SELECT website_url FROM organization_websites WHERE ein = ?", (ein,)
+            ).fetchone()
+            conn.close()
+            return row[0] if row and row[0] else None
+        except Exception:
+            return None
 
     async def _discover_url_from_990(self, ein: str) -> tuple[Optional[str], Optional[str]]:
         """

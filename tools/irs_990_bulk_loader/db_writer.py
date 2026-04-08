@@ -398,6 +398,37 @@ class BulkLoaderDBWriter:
         return inserted
 
     # ------------------------------------------------------------------
+    # organization_websites
+    # ------------------------------------------------------------------
+
+    def flush_organization_websites(self, batch: list) -> int:
+        """
+        INSERT OR IGNORE website URLs extracted from 990 XML WebsiteAddressTxt.
+        Does not overwrite existing rows — first loaded year wins.
+        Caller filters out entries without website_url before calling.
+        """
+        rows = [
+            (r["ein"], r["website_url"], r.get("tax_year"), _now())
+            for r in batch
+            if r.get("ein") and r.get("website_url")
+        ]
+        if not rows:
+            return 0
+        conn = self._intel()
+        cur  = conn.cursor()
+        cur.executemany(
+            """
+            INSERT OR IGNORE INTO organization_websites (ein, website_url, tax_year, loaded_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            rows,
+        )
+        conn.commit()
+        inserted = cur.rowcount if cur.rowcount >= 0 else len(rows)
+        logger.debug(f"organization_websites: {len(rows)} attempted, {inserted} inserted")
+        return inserted
+
+    # ------------------------------------------------------------------
     # ein_intelligence.pdf_analyses  (catalynx.db)
     # ------------------------------------------------------------------
 

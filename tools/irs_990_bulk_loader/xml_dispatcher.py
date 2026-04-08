@@ -78,6 +78,7 @@ def parse_xml_bytes(xml_bytes: bytes) -> Optional[dict]:
         "financials": _empty_financials(),
         "narrative":  _empty_narrative(),
         "is_operating_foundation": False,
+        "website_url": None,
     }
 
     if form_type == "990":
@@ -233,6 +234,14 @@ def _parse_990(root: ET.Element, pfx: str, result: dict) -> None:
         result["financials"]["total_revenue"] = _flt(irs990, pfx, "CYTotalRevenueAmt")
         result["financials"]["total_assets"]  = _flt(irs990, pfx, "TotalAssetsEOYAmt")
 
+    # Website URL and mission statement
+    result["website_url"] = _normalize_url(_txt(root, pfx, "WebsiteAddressTxt")) or None
+    result["narrative"]["mission_statement"] = (
+        _txt(root, pfx, "ActivityOrMissionDesc")
+        or _txt(root, pfx, "MissionDesc")
+        or None
+    )
+
 
 # ---------------------------------------------------------------------------
 # Form 990-PF (private foundations)
@@ -315,6 +324,9 @@ def _parse_990pf(root: ET.Element, pfx: str, result: dict) -> None:
             or _txt(irs990pf, pfx, "PurposeOfGrantOrContributionTxt")
         )
 
+    # Website URL (searched outside irs990pf scope to catch ReturnHeader location)
+    result["website_url"] = _normalize_url(_txt(root, pfx, "WebsiteAddressTxt")) or None
+
 
 # ---------------------------------------------------------------------------
 # Form 990-EZ (small nonprofits)
@@ -339,6 +351,10 @@ def _parse_990ez(root: ET.Element, pfx: str, result: dict) -> None:
     # Financials
     result["financials"]["total_revenue"] = _first_flt(root, pfx, "TotalRevenueAmt")
     result["financials"]["total_assets"]  = _first_flt(root, pfx, "TotalAssetsEOYAmt")
+
+    # Website URL and mission statement
+    result["website_url"] = _normalize_url(_txt(root, pfx, "WebsiteAddressTxt")) or None
+    result["narrative"]["mission_statement"] = _txt(root, pfx, "ActivityOrMissionDesc") or None
 
 
 # ---------------------------------------------------------------------------
@@ -426,6 +442,19 @@ def _infer_accepts(accepts_flag: Optional[str], procedures_text: str) -> str:
     if any(kw in text for kw in ("does not accept", "not accept", "no unsolicited")):
         return "no"
     return "unknown"
+
+
+def _normalize_url(url: str) -> Optional[str]:
+    """Normalize a raw URL string from 990 XML to a usable https:// URL."""
+    if not url:
+        return None
+    url = url.strip().lower()
+    invalid = {"none", "n/a", "na", "null", "unknown", "www", "http://", "https://", ""}
+    if url in invalid or "." not in url:
+        return None
+    if not url.startswith(("http://", "https://")):
+        url = f"https://{url}"
+    return url.rstrip("/")
 
 
 def _empty_financials() -> dict:

@@ -44,3 +44,19 @@ CREATE INDEX IF NOT EXISTS idx_fg_recip_ein  ON foundation_grants(recipient_ein)
 CREATE INDEX IF NOT EXISTS idx_fg_amount     ON foundation_grants(grant_amount DESC);
 CREATE INDEX IF NOT EXISTS idx_fg_state      ON foundation_grants(recipient_state, tax_year DESC);
 CREATE INDEX IF NOT EXISTS idx_fg_year       ON foundation_grants(tax_year DESC);
+
+-- =====================================================================================
+-- ORGANIZATION WEBSITES TABLE
+-- Website URLs extracted from 990 XML WebsiteAddressTxt during bulk load.
+-- Used by url_discovery_service as a fast-path lookup before hitting ProPublica.
+-- INSERT OR IGNORE — most recent year loaded wins (process years descending).
+-- =====================================================================================
+
+CREATE TABLE IF NOT EXISTS organization_websites (
+    ein         TEXT PRIMARY KEY,
+    website_url TEXT NOT NULL,
+    tax_year    INTEGER,
+    loaded_at   TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_ow_ein ON organization_websites(ein);
