@@ -73,8 +73,14 @@ class NetworkBatchPreprocessor:
     for a given profile, prioritizing free data sources.
     """
 
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: str, intel_db_path: str = None):
         self.db_path = db_path
+        if intel_db_path:
+            self.intel_db_path = intel_db_path
+        else:
+            # Derive intel DB path alongside catalynx.db
+            from pathlib import Path
+            self.intel_db_path = str(Path(db_path).parent / "nonprofit_intelligence.db")
 
     def _conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
@@ -445,13 +451,23 @@ class NetworkBatchPreprocessor:
                 ein = item["ein"]
                 org_name = item["org_name"]
                 try:
-                    xml_bytes = await fetcher.fetch_xml_by_ein(ein)
-                    if not xml_bytes:
-                        eins_no_xml += 1
-                        self._mark_xml_no_data(ein, org_name)
-                        return
+                    # 1. Check board_network_index (populated by offline bulk loader)
+                    officers = self._load_officers_from_bni(ein)
+                    source = "bni"
 
-                    officers = self._extract_officers_from_xml(xml_bytes, ein)
+                    # 2. Check ein_intelligence.pdf_analyses
+                    if not officers:
+                        officers = self._load_officers_from_pdf_analyses(ein)
+                        source = "pdf_analyses"
+
+                    # 3. Fall back to ProPublica XML fetch (may hit 403)
+                    if not officers:
+                        xml_bytes = await fetcher.fetch_xml_by_ein(ein)
+                        if xml_bytes:
+                            officers = self._extract_officers_from_xml(xml_bytes, ein)
+                            source = "propublica"
+                        await asyncio.sleep(0.3)  # Polite delay for ProPublica
+
                     if not officers:
                         eins_no_xml += 1
                         self._mark_xml_no_data(ein, org_name)
@@ -464,9 +480,8 @@ class NetworkBatchPreprocessor:
                     eins_with_officers += 1
 
                     logger.debug(
-                        f"[Stage 2] EIN {ein}: {len(officers)} officers from XML"
+                        f"[Stage 2] EIN {ein}: {len(officers)} officers from {source}"
                     )
-                    await asyncio.sleep(0.3)  # Polite delay
                 except Exception as e:
                     logger.warning(f"[Stage 2] EIN {ein}: {e}")
                     errors += 1
@@ -711,6 +726,61 @@ class NetworkBatchPreprocessor:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _load_officers_from_bni(self, ein: str) -> list:
+        """
+        Query board_network_index in nonprofit_intelligence.db for officer records.
+        Returns [{"name": str, "title": str|None}] or [].
+        """
+        try:
+            conn = sqlite3.connect(self.intel_db_path, timeout=10)
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT normalized_name, title FROM board_network_index WHERE ein = ?",
+                (ein,),
+            ).fetchall()
+            conn.close()
+            if rows:
+                return [{"name": r["normalized_name"], "title": r["title"]} for r in rows]
+        except Exception as e:
+            logger.debug(f"[Stage 2] BNI lookup failed EIN {ein}: {e}")
+        return []
+
+    def _load_officers_from_pdf_analyses(self, ein: str) -> list:
+        """
+        Read the most recent year from ein_intelligence.pdf_analyses in catalynx.db.
+        Returns [{"name": str, "title": str|None}] or [].
+        """
+        try:
+            with self._conn() as conn:
+                row = conn.execute(
+                    "SELECT pdf_analyses FROM ein_intelligence WHERE ein = ?", (ein,)
+                ).fetchone()
+            if not row or not row["pdf_analyses"]:
+                return []
+            data = json.loads(row["pdf_analyses"]) if isinstance(row["pdf_analyses"], str) else row["pdf_analyses"]
+            if not isinstance(data, dict):
+                return []
+            # Pick the most recent year key
+            years = sorted(data.keys(), reverse=True)
+            for year in years:
+                analysis = data[year]
+                if not isinstance(analysis, dict):
+                    continue
+                officers_raw = (
+                    analysis.get("officers_and_directors")
+                    or analysis.get("officers")
+                    or []
+                )
+                if officers_raw:
+                    return [
+                        {"name": o.get("name", ""), "title": o.get("title")}
+                        for o in officers_raw
+                        if o.get("name")
+                    ]
+        except Exception as e:
+            logger.debug(f"[Stage 2] pdf_analyses lookup failed EIN {ein}: {e}")
+        return []
 
     def _mark_xml_no_data(self, ein: str, org_name: str) -> None:
         """Write a sentinel row so this EIN is skipped in future batch runs."""

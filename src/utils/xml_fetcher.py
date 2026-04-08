@@ -112,12 +112,16 @@ class XMLFetcher:
     
     async def _download_xml(self, session: aiohttp.ClientSession, object_id: str) -> Optional[bytes]:
         """
-        Download XML content using object_id.
-        
+        Download XML content using object_id from ProPublica.
+
+        Note: The AWS S3 irs-form-990 public dataset was discontinued (~Oct 2021).
+        ProPublica's download-xml endpoint is the primary source; it may be blocked
+        by Cloudflare bot-protection (403) for automated requests.
+
         Args:
             session: aiohttp session
             object_id: ProPublica object_id for the filing
-            
+
         Returns:
             XML content as bytes, or None if failed
         """
@@ -127,35 +131,27 @@ class XMLFetcher:
             "Referer": self.propublica_base
         }
         params = {"object_id": object_id}
-        
+
         try:
             async with session.get(download_url, headers=headers, params=params, allow_redirects=True) as response:
                 if response.status == 200:
-                    # Check content type
                     content_type = response.headers.get("Content-Type", "").lower()
                     if "xml" not in content_type and "application/octet-stream" not in content_type:
                         logger.warning(f"Unexpected content type for object_id {object_id}: {content_type}")
-                        # Still try to process - sometimes content-type is not set correctly
-
                     xml_content = await response.read()
                     logger.info(f"Downloaded XML for object_id {object_id} ({len(xml_content):,} bytes)")
                     return xml_content
-
+                elif response.status == 403:
+                    logger.debug(f"ProPublica XML blocked (Cloudflare) for object_id {object_id} — no XML fallback available")
+                    return None
                 elif response.status == 404:
-                    logger.warning(f"XML file not found for object_id {object_id}")
+                    logger.warning(f"XML not found for object_id {object_id}")
                     return None
                 elif response.status == 429:
-                    # Rate limited - handle differently based on context
-                    if self.context == "profile":
-                        logger.warning(f"Rate limited for profile context, but continuing without delay for object_id {object_id}")
-                        # For profile context, we don't enforce rate limits as strongly
-                        # Return None but don't wait - let the profile completion proceed
-                        return None
-                    else:
-                        logger.error(f"Rate limited for opportunity context for object_id {object_id}: status {response.status}")
-                        return None
+                    logger.warning(f"Rate limited for object_id {object_id}")
+                    return None
                 else:
-                    logger.error(f"Failed to download XML for object_id {object_id}: status {response.status}")
+                    logger.warning(f"ProPublica returned {response.status} for object_id {object_id}")
                     return None
 
         except Exception as e:
