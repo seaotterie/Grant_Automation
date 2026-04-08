@@ -1,9 +1,9 @@
 """
 IRS 990 XML Offline Bulk Loader
 
-Streams individual 990 XML files from IRS monthly ZIP archives using HTTP
-range requests (no full download required). Parses officers, grants, and
-financial data, then writes to nonprofit_intelligence.db and catalynx.db.
+Downloads full IRS monthly ZIP archives, extracts XML files locally, parses
+officers, grants, website URLs, and financial data, then writes to
+nonprofit_intelligence.db and catalynx.db. ZIP is deleted after processing.
 
 Run from project root:
 
@@ -22,6 +22,9 @@ Run from project root:
     # Full 4-year load (run overnight)
     python tools/irs_990_bulk_loader/bulk_loader.py
 
+    # Custom temp directory for downloaded ZIPs
+    python tools/irs_990_bulk_loader/bulk_loader.py --temp-dir D:/tmp
+
 Resume is on by default — interrupted runs can be restarted safely.
 """
 
@@ -29,7 +32,9 @@ import argparse
 import asyncio
 import logging
 import sys
+import tempfile
 import time
+import zipfile
 from pathlib import Path
 
 import aiohttp
@@ -41,7 +46,6 @@ _PROJECT_ROOT = Path(__file__).parent.parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from tools.irs_990_bulk_loader.zip_streamer import ZipStreamer
 from tools.irs_990_bulk_loader.xml_dispatcher import parse_xml_bytes
 from tools.irs_990_bulk_loader.db_writer import BulkLoaderDBWriter
 
@@ -61,6 +65,9 @@ FORM_FILTER_MAP = {
     "all":    {"990", "990-PF", "990-EZ"},
 }
 
+DOWNLOAD_CHUNK_SIZE = 4 * 1024 * 1024   # 4 MB chunks
+LOG_DOWNLOAD_EVERY  = 10                 # log download progress every N %
+
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
@@ -71,6 +78,63 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger("bulk_loader")
+
+
+# ---------------------------------------------------------------------------
+# Download helper
+# ---------------------------------------------------------------------------
+
+async def _download_zip(
+    url: str,
+    zip_filename: str,
+    session: aiohttp.ClientSession,
+    temp_dir: Path,
+) -> Path:
+    """
+    Download a ZIP file to temp_dir with progress logging.
+    Returns the local path. Raises on HTTP error.
+    """
+    zip_path = temp_dir / zip_filename
+    dl_start = time.time()
+    last_pct_logged = -1
+
+    async with session.get(url) as resp:
+        resp.raise_for_status()
+        total_bytes = int(resp.headers.get("Content-Length", 0))
+        downloaded  = 0
+
+        if total_bytes:
+            logger.info(
+                f"Downloading {zip_filename} ({total_bytes / 1e6:.0f} MB) → {zip_path}"
+            )
+        else:
+            logger.info(f"Downloading {zip_filename} (size unknown) → {zip_path}")
+
+        with open(zip_path, "wb") as fh:
+            async for chunk in resp.content.iter_chunked(DOWNLOAD_CHUNK_SIZE):
+                fh.write(chunk)
+                downloaded += len(chunk)
+
+                if total_bytes:
+                    pct = int(downloaded / total_bytes * 100)
+                    bucket = (pct // LOG_DOWNLOAD_EVERY) * LOG_DOWNLOAD_EVERY
+                    if bucket > last_pct_logged:
+                        elapsed = time.time() - dl_start
+                        rate_mb = downloaded / 1e6 / elapsed if elapsed > 0 else 0
+                        logger.info(
+                            f"  {zip_filename}: {pct}%  "
+                            f"({downloaded/1e6:.0f}/{total_bytes/1e6:.0f} MB  "
+                            f"{rate_mb:.1f} MB/s)"
+                        )
+                        last_pct_logged = bucket
+
+    elapsed = time.time() - dl_start
+    size_mb = zip_path.stat().st_size / 1e6
+    logger.info(
+        f"Download complete: {zip_filename}  {size_mb:.0f} MB  "
+        f"in {elapsed:.1f}s  ({size_mb/elapsed:.1f} MB/s)"
+    )
+    return zip_path
 
 
 # ---------------------------------------------------------------------------
@@ -87,9 +151,8 @@ async def process_zip(
     global_remaining: int = None,
 ) -> dict:
     """
-    Stream and process one monthly ZIP. Returns stats dict.
-    deadline: epoch time after which we stop (from --max-time).
-    global_remaining: max files left from global cap (from --max-total).
+    Download, extract, and process one monthly ZIP. Returns stats dict.
+    The ZIP file is deleted from disk after processing.
     """
     logger.info(f"Starting {zip_filename}")
     start = time.time()
@@ -109,154 +172,176 @@ async def process_zip(
              "officers": 0, "grants": 0, "fi_rows": 0, "websites": 0,
              "stopped_early": False}
 
-    async with aiohttp.ClientSession(
-        timeout=aiohttp.ClientTimeout(total=120, connect=15),
-        headers={"User-Agent": "Catalynx Grant Research / IRS 990 Bulk Loader"},
-    ) as session:
+    temp_dir = Path(args.temp_dir) if args.temp_dir else Path(tempfile.gettempdir()) / "irs_bulk_loader"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    zip_path = None
 
-        # Check URL exists before streaming
-        try:
-            async with session.head(url) as resp:
-                if resp.status == 404:
-                    logger.warning(f"ZIP not found (404): {zip_filename} — skipping")
-                    return stats
-                if resp.status != 200:
-                    logger.warning(f"ZIP returned {resp.status}: {zip_filename} — skipping")
-                    return stats
-        except Exception as e:
-            logger.warning(f"ZIP HEAD failed {zip_filename}: {e} — skipping")
-            return stats
+    try:
+        # ------------------------------------------------------------------
+        # 1. Download ZIP
+        # ------------------------------------------------------------------
+        async with aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=None, connect=30, sock_read=120),
+            headers={"User-Agent": "Catalynx Grant Research / IRS 990 Bulk Loader"},
+        ) as session:
 
-        streamer = ZipStreamer(url, session, concurrency=args.concurrency)
-        total_in_zip = await streamer.get_entry_count()
-
-        async for filename, xml_bytes in streamer.stream_xml_entries():
-            stats["processed"] += 1
-
-            # Per-ZIP file cap
-            if args.max_files and stats["processed"] > args.max_files:
-                stats["stopped_early"] = True
-                break
-
-            # Global file cap (across ZIPs)
-            if global_remaining is not None and stats["processed"] > global_remaining:
-                stats["stopped_early"] = True
-                break
-
-            # Time limit
-            if deadline and time.time() >= deadline:
-                stats["stopped_early"] = True
-                break
-
+            # HEAD check first (fast 404 detection)
             try:
-                parsed = parse_xml_bytes(xml_bytes)
-                if parsed is None:
-                    stats["errors"] += 1
-                    continue
-
-                # Form type filter
-                if parsed["form_type"] not in form_filter:
-                    stats["skipped_form"] += 1
-                    continue
-
-                # EIN filter
-                if ein_filter and parsed.get("ein") not in ein_filter:
-                    continue
-
-                ein      = parsed["ein"] or ""
-                tax_year = parsed["tax_year"]
-                form_type = parsed["form_type"]
-
-                if not ein:
-                    stats["errors"] += 1
-                    continue
-
-                stats["success"] += 1
-
-                if not args.dry_run:
-                    # Board network (all form types)
-                    for o in parsed["officers"]:
-                        board_batch.append({
-                            **o,
-                            "ein":             ein,
-                            "source_tax_year": tax_year,
-                        })
-                        stats["officers"] += 1
-
-                    # Grants (990 and 990-PF)
-                    if form_type in ("990", "990-PF"):
-                        for g in parsed["grants"]:
-                            grant_batch.append({
-                                **g,
-                                "grantor_ein":    ein,
-                                "tax_year":       tax_year,
-                                "form_type":      form_type,
-                                "source_zip_file": zip_filename,
-                            })
-                        stats["grants"] += len(parsed["grants"])
-
-                    # Foundation intelligence + narratives (990-PF only)
-                    if form_type == "990-PF":
-                        parsed["grant_count"] = len(parsed["grants"])
-                        fi_batch.append(parsed)
-                        fn_batch.append(parsed)
-                        stats["fi_rows"] += 1
-
-                    # Mission statement for 990/990-EZ filers (INSERT OR IGNORE)
-                    if form_type in ("990", "990-EZ") and parsed["narrative"].get("mission_statement"):
-                        fn_batch.append(parsed)
-
-                    # ein_intelligence officer merge (all types)
-                    if parsed["officers"]:
-                        ei_batch.append(parsed)
-
-                    # Website URL (all form types)
-                    if parsed.get("website_url"):
-                        website_batch.append({
-                            "ein":         ein,
-                            "website_url": parsed["website_url"],
-                            "tax_year":    tax_year,
-                        })
-                        stats["websites"] += 1
-
-                    # Flush at batch-size threshold
-                    if len(board_batch) >= args.batch_size:
-                        writer.flush_board_network(board_batch)
-                        board_batch = []
-                    if len(grant_batch) >= args.batch_size:
-                        writer.flush_grants(grant_batch)
-                        grant_batch = []
-                    if len(fi_batch) >= args.batch_size:
-                        writer.flush_foundation_intelligence(fi_batch)
-                        fi_batch = []
-                    if len(fn_batch) >= args.batch_size:
-                        writer.flush_foundation_narratives(fn_batch)
-                        fn_batch = []
-                    if len(ei_batch) >= args.batch_size:
-                        writer.flush_ein_intelligence(ei_batch)
-                        ei_batch = []
-                    if len(website_batch) >= args.batch_size:
-                        writer.flush_organization_websites(website_batch)
-                        website_batch = []
-
+                async with session.head(url) as resp:
+                    if resp.status == 404:
+                        logger.warning(f"ZIP not found (404): {zip_filename} — skipping")
+                        return stats
+                    if resp.status not in (200, 405):   # 405 = HEAD not allowed, try GET anyway
+                        logger.warning(f"ZIP HEAD returned {resp.status}: {zip_filename} — skipping")
+                        return stats
             except Exception as e:
-                stats["errors"] += 1
-                logger.debug(f"Error processing {filename}: {e}")
+                logger.warning(f"ZIP HEAD failed {zip_filename}: {e} — skipping")
+                return stats
 
-            # Progress logging
-            if stats["processed"] % args.log_interval == 0:
-                elapsed = time.time() - start
-                rate = stats["processed"] / elapsed if elapsed > 0 else 0
-                cap = min(args.max_files, total_in_zip) if args.max_files else total_in_zip
-                pct = (stats["processed"] / cap * 100) if cap else 0
-                eta_s = ((cap - stats["processed"]) / rate) if rate > 0 and cap > stats["processed"] else 0
-                eta_str = f"{eta_s/60:.0f}m" if eta_s > 0 else "—"
-                logger.info(
-                    f"[{zip_filename}] {stats['processed']:,}/{cap:,} ({pct:.1f}%) | "
-                    f"ok={stats['success']:,} err={stats['errors']} | "
-                    f"officers={stats['officers']:,} grants={stats['grants']:,} | "
-                    f"{rate:.0f} files/s  ETA {eta_str}"
-                )
+            zip_path = await _download_zip(url, zip_filename, session, temp_dir)
+
+        # ------------------------------------------------------------------
+        # 2. Process extracted XML entries (synchronous, local I/O)
+        # ------------------------------------------------------------------
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            xml_entries = [e for e in zf.infolist() if e.filename.lower().endswith(".xml")]
+            total_in_zip = len(xml_entries)
+            logger.info(f"Extracted {total_in_zip:,} XML entries from {zip_filename}")
+
+            for entry in xml_entries:
+                filename = entry.filename
+                stats["processed"] += 1
+
+                # Per-ZIP file cap
+                if args.max_files and stats["processed"] > args.max_files:
+                    stats["stopped_early"] = True
+                    break
+
+                # Global file cap (across ZIPs)
+                if global_remaining is not None and stats["processed"] > global_remaining:
+                    stats["stopped_early"] = True
+                    break
+
+                # Time limit
+                if deadline and time.time() >= deadline:
+                    stats["stopped_early"] = True
+                    break
+
+                try:
+                    xml_bytes = zf.read(entry)
+                    parsed = parse_xml_bytes(xml_bytes)
+                    if parsed is None:
+                        stats["errors"] += 1
+                        continue
+
+                    # Form type filter
+                    if parsed["form_type"] not in form_filter:
+                        stats["skipped_form"] += 1
+                        continue
+
+                    # EIN filter
+                    if ein_filter and parsed.get("ein") not in ein_filter:
+                        continue
+
+                    ein       = parsed["ein"] or ""
+                    tax_year  = parsed["tax_year"]
+                    form_type = parsed["form_type"]
+
+                    if not ein:
+                        stats["errors"] += 1
+                        continue
+
+                    stats["success"] += 1
+
+                    if not args.dry_run:
+                        # Board network (all form types)
+                        for o in parsed["officers"]:
+                            board_batch.append({
+                                **o,
+                                "ein":             ein,
+                                "source_tax_year": tax_year,
+                            })
+                            stats["officers"] += 1
+
+                        # Grants (990 and 990-PF)
+                        if form_type in ("990", "990-PF"):
+                            for g in parsed["grants"]:
+                                grant_batch.append({
+                                    **g,
+                                    "grantor_ein":     ein,
+                                    "tax_year":        tax_year,
+                                    "form_type":       form_type,
+                                    "source_zip_file": zip_filename,
+                                })
+                            stats["grants"] += len(parsed["grants"])
+
+                        # Foundation intelligence + narratives (990-PF only)
+                        if form_type == "990-PF":
+                            parsed["grant_count"] = len(parsed["grants"])
+                            fi_batch.append(parsed)
+                            fn_batch.append(parsed)
+                            stats["fi_rows"] += 1
+
+                        # Mission statement for 990/990-EZ filers (INSERT OR IGNORE)
+                        if form_type in ("990", "990-EZ") and parsed["narrative"].get("mission_statement"):
+                            fn_batch.append(parsed)
+
+                        # ein_intelligence officer merge (all types)
+                        if parsed["officers"]:
+                            ei_batch.append(parsed)
+
+                        # Website URL (all form types)
+                        if parsed.get("website_url"):
+                            website_batch.append({
+                                "ein":         ein,
+                                "website_url": parsed["website_url"],
+                                "tax_year":    tax_year,
+                            })
+                            stats["websites"] += 1
+
+                        # Flush at batch-size threshold
+                        if len(board_batch) >= args.batch_size:
+                            writer.flush_board_network(board_batch);   board_batch = []
+                        if len(grant_batch) >= args.batch_size:
+                            writer.flush_grants(grant_batch);           grant_batch = []
+                        if len(fi_batch) >= args.batch_size:
+                            writer.flush_foundation_intelligence(fi_batch); fi_batch = []
+                        if len(fn_batch) >= args.batch_size:
+                            writer.flush_foundation_narratives(fn_batch);   fn_batch = []
+                        if len(ei_batch) >= args.batch_size:
+                            writer.flush_ein_intelligence(ei_batch);    ei_batch = []
+                        if len(website_batch) >= args.batch_size:
+                            writer.flush_organization_websites(website_batch); website_batch = []
+
+                except Exception as e:
+                    stats["errors"] += 1
+                    logger.debug(f"Error processing {filename}: {e}")
+
+                # Progress logging
+                if stats["processed"] % args.log_interval == 0:
+                    elapsed = time.time() - start
+                    rate = stats["processed"] / elapsed if elapsed > 0 else 0
+                    cap = min(args.max_files, total_in_zip) if args.max_files else total_in_zip
+                    pct = (stats["processed"] / cap * 100) if cap else 0
+                    eta_s = ((cap - stats["processed"]) / rate) if rate > 0 and cap > stats["processed"] else 0
+                    eta_str = f"{eta_s/60:.0f}m" if eta_s > 0 else "—"
+                    logger.info(
+                        f"[{zip_filename}] {stats['processed']:,}/{cap:,} ({pct:.1f}%) | "
+                        f"ok={stats['success']:,} err={stats['errors']} | "
+                        f"officers={stats['officers']:,} grants={stats['grants']:,} | "
+                        f"{rate:.0f} files/s  ETA {eta_str}"
+                    )
+
+    finally:
+        # ------------------------------------------------------------------
+        # 3. Delete ZIP regardless of success/failure
+        # ------------------------------------------------------------------
+        if zip_path and zip_path.exists():
+            try:
+                zip_path.unlink()
+                logger.info(f"Deleted {zip_path.name} ({zip_path.stat().st_size / 1e6:.0f} MB freed)" if zip_path.exists() else f"Deleted {zip_path.name}")
+            except Exception as e:
+                logger.warning(f"Could not delete {zip_path}: {e}")
 
     # Flush remaining batches
     if not args.dry_run:
@@ -319,10 +404,6 @@ def parse_args():
         help="Form types to process (default: all)",
     )
     p.add_argument(
-        "--concurrency", type=int, default=3,
-        help="Simultaneous range requests per ZIP (default: 3)",
-    )
-    p.add_argument(
         "--batch-size", type=int, default=500,
         dest="batch_size",
         help="DB insert batch size (default: 500)",
@@ -336,6 +417,12 @@ def parse_args():
         "--catalynx-db", default=DEFAULT_CATALYNX_DB,
         dest="catalynx_db",
         help=f"Path to catalynx.db (default: {DEFAULT_CATALYNX_DB})",
+    )
+    p.add_argument(
+        "--temp-dir", default=None,
+        dest="temp_dir",
+        metavar="DIR",
+        help="Directory for temporary ZIP downloads (default: system temp)",
     )
     p.add_argument(
         "--resume", action="store_true", default=True,
@@ -360,9 +447,9 @@ def parse_args():
         help="Only process XML files matching these EINs",
     )
     p.add_argument(
-        "--log-interval", type=int, default=100,
+        "--log-interval", type=int, default=500,
         dest="log_interval",
-        help="Log progress every N files (default: 100)",
+        help="Log progress every N files (default: 500)",
     )
     p.add_argument(
         "--max-total", type=int, default=None,
@@ -373,7 +460,7 @@ def parse_args():
         "--max-time", type=int, default=None,
         dest="max_time",
         metavar="MINUTES",
-        help="Stop gracefully after N minutes (completes current batch before exiting)",
+        help="Stop gracefully after N minutes (completes current ZIP before exiting)",
     )
     return p.parse_args()
 
@@ -387,10 +474,11 @@ async def main():
     logger.info(f"Years:       {args.years}")
     logger.info(f"Months:      {args.months}")
     logger.info(f"Forms:       {args.forms}")
-    logger.info(f"Concurrency: {args.concurrency}")
     logger.info(f"Batch size:  {args.batch_size}")
     logger.info(f"Dry run:     {args.dry_run}")
     logger.info(f"Resume:      {args.resume}")
+    temp_display = args.temp_dir or f"{tempfile.gettempdir()}/irs_bulk_loader"
+    logger.info(f"Temp dir:    {temp_display}")
     if args.max_files:
         logger.info(f"Max files:   {args.max_files} per ZIP")
     if args.max_total:
