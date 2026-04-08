@@ -156,7 +156,7 @@ class URLDiscoveryService:
                         result.found += 1
                         result.processed += 1
                         result.stage_breakdown['bulk_db'] = result.stage_breakdown.get('bulk_db', 0) + 1
-                        logger.debug(f"  -> Bulk DB hit: {bulk_url}")
+                        logger.info(f"  -> Bulk DB hit for {org_name}: {bulk_url}")
                         if progress_callback:
                             progress_callback({
                                 'processed': result.processed,
