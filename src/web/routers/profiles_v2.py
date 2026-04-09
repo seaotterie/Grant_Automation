@@ -2211,3 +2211,150 @@ async def get_url_statistics(profile_id: str):
     except Exception as e:
         logger.error(f"Failed to get URL statistics for profile {profile_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# ---------------------------------------------------------------------------
+# Behavioral Discovery (Stage 0 — IRS grant-history based funder matching)
+# ---------------------------------------------------------------------------
+
+class BehavioralDiscoverRequest(BaseModel):
+    include_public_charity_track: bool = True
+    min_year: int = 2022
+    min_grant_amount: float = 1000.0
+    limit: int = 200
+
+
+@router.post("/{profile_id}/behavioral-discover",
+             summary="Discover grant funders by behavioral evidence (actual IRS grant history)")
+async def behavioral_discover(profile_id: str, body: BehavioralDiscoverRequest = None):
+    """
+    Stage 0: Behavioral Discovery.
+
+    Queries foundation_grants + form990_financials + bmf_organizations in
+    nonprofit_intelligence.db to find funders who have *actually given grants*
+    matching this profile's signals (keywords, geography, ask range).
+
+    Results are upserted into the opportunities table (source='behavioral_discovery').
+    Duplicate EINs for the same profile are skipped.
+
+    Returns:
+        found:              total candidates scored
+        saved:              new opportunities inserted
+        skipped_duplicates: EINs already in the opportunities table for this profile
+        top_candidates:     preview of top 10 results
+    """
+    if body is None:
+        body = BehavioralDiscoverRequest()
+
+    # ── Load profile ──────────────────────────────────────────────────────
+    try:
+        catalynx_db = get_catalynx_db()
+        with sqlite3.connect(catalynx_db, timeout=15) as pconn:
+            pconn.row_factory = sqlite3.Row
+            pcursor = pconn.cursor()
+            pcursor.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,))
+            row = pcursor.fetchone()
+    except Exception as e:
+        logger.error(f"behavioral_discover: DB error loading profile {profile_id}: {e}")
+        raise HTTPException(status_code=500, detail="Database error loading profile")
+
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Profile {profile_id} not found")
+
+    profile_dict = dict(row)
+
+    # ── Run behavioral discovery ──────────────────────────────────────────
+    try:
+        from src.discovery.behavioral_discoverer import discover_behavioral_candidates
+        candidates = discover_behavioral_candidates(
+            profile_dict=profile_dict,
+            limit=body.limit,
+            min_year=body.min_year,
+            min_grant_amount=body.min_grant_amount,
+            include_public_charity_track=body.include_public_charity_track,
+        )
+    except Exception as e:
+        logger.error(f"behavioral_discover: discovery failed for {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Discovery failed: {e}")
+
+    # ── Save new opportunities ─────────────────────────────────────────────
+    saved = 0
+    skipped = 0
+    now_str = datetime.now(timezone.utc).isoformat()
+
+    try:
+        with sqlite3.connect(catalynx_db, timeout=15) as oconn:
+            ocursor = oconn.cursor()
+
+            for c in candidates:
+                # Skip duplicates (same EIN already exists for this profile)
+                ocursor.execute(
+                    "SELECT id FROM opportunities WHERE profile_id = ? AND ein = ? LIMIT 1",
+                    (profile_id, c.ein),
+                )
+                if ocursor.fetchone():
+                    skipped += 1
+                    continue
+
+                opp_id = f"bd_{c.ein}_{profile_id[:8]}"
+                analysis_discovery = json.dumps({
+                    "ntee_code": c.ntee_code,
+                    "foundation_code": "15" if c.source == "foundation_grants" else None,
+                    "location": {"state": c.state, "city": None},
+                    "behavioral_signals": {
+                        "grant_count": c.grant_count,
+                        "avg_grant": round(c.avg_grant),
+                        "last_active": c.last_active_year,
+                        "grants_paid": round(c.grants_paid),
+                        "assets_fmv": round(c.assets_fmv),
+                        "source": c.source,
+                        "score_breakdown": c.score_breakdown,
+                        "grant_purposes_sample": c.grant_purposes[:300] if c.grant_purposes else "",
+                    },
+                })
+
+                ocursor.execute("""
+                    INSERT INTO opportunities (
+                        id, profile_id, organization_name, ein,
+                        current_stage, overall_score, confidence_level,
+                        analysis_discovery, processing_status,
+                        source, discovery_date
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    opp_id, profile_id, c.name, c.ein,
+                    'prospects', c.pre_score, round(c.pre_score, 2),
+                    analysis_discovery, 'pending',
+                    'behavioral_discovery', now_str,
+                ))
+                saved += 1
+
+            oconn.commit()
+
+    except Exception as e:
+        logger.error(f"behavioral_discover: failed saving opportunities for {profile_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed saving results: {e}")
+
+    logger.info(
+        f"behavioral_discover: profile={profile_id} "
+        f"found={len(candidates)} saved={saved} skipped={skipped}"
+    )
+
+    return {
+        "found": len(candidates),
+        "saved": saved,
+        "skipped_duplicates": skipped,
+        "top_candidates": [
+            {
+                "ein": c.ein,
+                "name": c.name,
+                "state": c.state,
+                "pre_score": c.pre_score,
+                "grant_count": c.grant_count,
+                "avg_grant": round(c.avg_grant),
+                "last_active": c.last_active_year,
+                "source": c.source,
+                "score_breakdown": c.score_breakdown,
+            }
+            for c in candidates[:10]
+        ],
+    }

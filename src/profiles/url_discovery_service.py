@@ -333,9 +333,10 @@ class URLDiscoveryService:
         Returns URL string or None if not found.
         """
         try:
+            normalized = ein.replace("-", "").replace(" ", "").zfill(9)
             conn = sqlite3.connect(self.intelligence_db_path, timeout=5)
             row = conn.execute(
-                "SELECT website_url FROM organization_websites WHERE ein = ?", (ein,)
+                "SELECT website_url FROM organization_websites WHERE ein = ?", (normalized,)
             ).fetchone()
             conn.close()
             return row[0] if row and row[0] else None

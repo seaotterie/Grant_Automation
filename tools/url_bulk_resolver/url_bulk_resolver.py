@@ -106,9 +106,10 @@ def get_unresolved_opportunities(
 def bulk_db_lookup(intel_db: str, ein: str) -> Optional[str]:
     """Check organization_websites table for a pre-loaded URL."""
     try:
+        normalized = ein.replace("-", "").replace(" ", "").zfill(9)
         conn = sqlite3.connect(intel_db, timeout=5)
         row = conn.execute(
-            "SELECT website_url FROM organization_websites WHERE ein = ?", (ein,)
+            "SELECT website_url FROM organization_websites WHERE ein = ?", (normalized,)
         ).fetchone()
         conn.close()
         return row[0] if row and row[0] else None
@@ -166,19 +167,31 @@ def run_bulk_pass(
     hits = 0
 
     # Batch lookup: pull all EINs at once for speed
-    eins = [o["ein"] for o in opportunities if o.get("ein")]
-    if not eins:
+    # Normalize EINs: strip dashes, pad to 9 digits to match organization_websites format
+    def _normalize_ein(ein: str) -> str:
+        return ein.replace("-", "").replace(" ", "").zfill(9)
+
+    eins_raw = [o["ein"] for o in opportunities if o.get("ein")]
+    if not eins_raw:
         return opportunities, 0
 
+    normalized_map = {_normalize_ein(e): e for e in eins_raw}  # normalized → original
+    eins_normalized = list(normalized_map.keys())
+
     conn = sqlite3.connect(intel_db, timeout=10)
-    placeholders = ",".join("?" * len(eins))
+    placeholders = ",".join("?" * len(eins_normalized))
     rows = conn.execute(
         f"SELECT ein, website_url FROM organization_websites WHERE ein IN ({placeholders})",
-        eins,
+        eins_normalized,
     ).fetchall()
     conn.close()
 
-    bulk_map = {r[0]: r[1] for r in rows if r[1]}
+    # Map normalized EIN → url, then re-key by original EIN format
+    bulk_map = {}
+    for db_ein, url in rows:
+        if url:
+            orig_ein = normalized_map.get(db_ein, db_ein)
+            bulk_map[orig_ein] = url
 
     for opp in opportunities:
         ein = opp.get("ein")

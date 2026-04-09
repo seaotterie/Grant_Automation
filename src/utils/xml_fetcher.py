@@ -137,8 +137,20 @@ class XMLFetcher:
                 if response.status == 200:
                     content_type = response.headers.get("Content-Type", "").lower()
                     if "xml" not in content_type and "application/octet-stream" not in content_type:
-                        logger.warning(f"Unexpected content type for object_id {object_id}: {content_type}")
+                        logger.warning(
+                            f"Unexpected content type for object_id {object_id}: {content_type} — "
+                            f"likely a bot-protection or error page; discarding"
+                        )
+                        return None
                     xml_content = await response.read()
+                    # Sniff first bytes — real IRS XML starts with "<?xml" or "<Return"
+                    sniff = xml_content[:200].lstrip()
+                    if not (sniff.startswith(b"<?xml") or sniff.startswith(b"<Return")):
+                        logger.warning(
+                            f"Response body for object_id {object_id} does not look like XML "
+                            f"(starts with: {sniff[:60]!r}); discarding"
+                        )
+                        return None
                     logger.info(f"Downloaded XML for object_id {object_id} ({len(xml_content):,} bytes)")
                     return xml_content
                 elif response.status == 403:

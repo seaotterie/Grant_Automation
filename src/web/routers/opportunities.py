@@ -2015,20 +2015,36 @@ async def _run_batch_screen(job_id: str, body: BatchScreenRequest) -> None:
                 ad = json.loads(ad_raw) if isinstance(ad_raw, str) and ad_raw else {}
                 data_990 = ad.get("990_data") or {}
                 ntee = ad.get("ntee_code") or ""
+                bsig = ad.get("behavioral_signals") or {}
+
+                # Build description — include behavioral grant history when available
+                desc_parts = [
+                    f"Organization: {org_name}.",
+                    f"NTEE: {ntee}." if ntee else "",
+                    f"Revenue: ${data_990.get('revenue', 0):,.0f}." if data_990.get('revenue') else "",
+                    f"Assets: ${data_990.get('assets', 0):,.0f}." if data_990.get('assets') else "",
+                    (
+                        f"Location: {ad.get('location', {}).get('city', '')}, "
+                        f"{ad.get('location', {}).get('state', '')}."
+                    ),
+                ]
+                if bsig:
+                    desc_parts += [
+                        f"IRS grant history: {bsig.get('grant_count', 0)} grants avg "
+                        f"${bsig.get('avg_grant', 0):,.0f} (last active {bsig.get('last_active', 'N/A')}).",
+                        f"Total grants paid: ${bsig.get('grants_paid', 0):,.0f}.",
+                    ]
+                    if bsig.get("grant_purposes_sample"):
+                        desc_parts.append(
+                            f"Sample grant purposes: {bsig['grant_purposes_sample'][:200]}."
+                        )
 
                 screening_opp = ScreeningOpportunity(
                     opportunity_id=opp_id_db,
                     title=org_name or "Unknown Organization",
                     funder=org_name or "Unknown",
                     funder_type="foundation" if ad.get("foundation_code") else "nonprofit",
-                    description=(
-                        f"Organization: {org_name}. "
-                        f"NTEE: {ntee}. "
-                        f"Revenue: ${data_990.get('revenue', 0):,.0f}. "
-                        f"Assets: ${data_990.get('assets', 0):,.0f}. "
-                        f"Location: {ad.get('location', {}).get('city', '')}, "
-                        f"{ad.get('location', {}).get('state', '')}."
-                    ),
+                    description=" ".join(p for p in desc_parts if p),
                     geographic_restrictions=[],  # Don't assume local-only restriction; most nonprofits give broadly
                 )
 

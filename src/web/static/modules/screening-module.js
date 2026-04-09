@@ -92,6 +92,10 @@ function screeningModule() {
             skipped: 0  // Low priority opportunities skipped
         },
 
+        // Behavioral Discovery State (Stage 0 — IRS grant-history matching)
+        behavioralDiscoveryInProgress: false,
+        behavioralDiscoveryResult: null,
+
         // Website Batch Research State (Theme A — Haiku web scraper)
         websiteSearchInProgress: false,
         websiteSearchProgress: {
@@ -1731,6 +1735,58 @@ function screeningModule() {
                 this.showNotification?.(`URL discovery failed: ${error.message}`, 'error');
             } finally {
                 this.urlDiscoveryInProgress = false;
+            }
+        },
+
+        /**
+         * Behavioral Discovery (Stage 0) — query IRS grant history to find funders
+         * who have actually given grants matching this profile.
+         * Cost: $0.00 (pure database query, no AI calls).
+         * Saves new opportunities with source='behavioral_discovery'.
+         */
+        async behavioralDiscover() {
+            if (!this.currentProfileId) {
+                this.showNotification?.('No profile selected', 'warning');
+                return;
+            }
+
+            this.behavioralDiscoveryInProgress = true;
+            this.behavioralDiscoveryResult = null;
+            this.showNotification?.('Searching IRS grant history...', 'info');
+
+            try {
+                const response = await fetch(
+                    `/api/v2/profiles/${this.currentProfileId}/behavioral-discover`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            include_public_charity_track: true,
+                            min_year: 2022,
+                            limit: 200,
+                        }),
+                    }
+                );
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.detail || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                this.behavioralDiscoveryResult = data;
+
+                const msg = `Found ${data.found} funders · ${data.saved} new · ${data.skipped_duplicates} already known`;
+                this.showNotification?.(msg, 'success');
+
+                // Reload opportunities list so new prospects appear
+                await this.loadOpportunities?.();
+
+            } catch (error) {
+                console.error('[BEHAVIORAL_DISCOVER] Error:', error);
+                this.showNotification?.(`Behavioral discovery failed: ${error.message}`, 'error');
+            } finally {
+                this.behavioralDiscoveryInProgress = false;
             }
         },
 
