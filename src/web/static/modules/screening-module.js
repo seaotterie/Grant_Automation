@@ -95,6 +95,7 @@ function screeningModule() {
         // Behavioral Discovery State (Stage 0 — IRS grant-history matching)
         behavioralDiscoveryInProgress: false,
         behavioralDiscoveryResult: null,
+        behavioralDiscoverIncludeBmf: false,
 
         // Website Batch Research State (Theme A — Haiku web scraper)
         websiteSearchInProgress: false,
@@ -1776,7 +1777,26 @@ function screeningModule() {
                 const data = await response.json();
                 this.behavioralDiscoveryResult = data;
 
-                const msg = `Found ${data.found} funders · ${data.saved} new · ${data.skipped_duplicates} already known`;
+                let msg = `Found ${data.found} funders · ${data.saved} new · ${data.skipped_duplicates} already known`;
+
+                // Optionally also run BMF/NTEE geographic search as supplemental source
+                if (this.behavioralDiscoverIncludeBmf) {
+                    this.showNotification?.('Running BMF/NTEE search...', 'info');
+                    try {
+                        const bmfResponse = await fetch(
+                            `/api/profiles/${this.currentProfileId}/run-bmf-filter`,
+                            { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+                        );
+                        if (bmfResponse.ok) {
+                            const bmfData = await bmfResponse.json();
+                            const bmfSaved = bmfData.saved || bmfData.total_added || 0;
+                            msg += ` · BMF: +${bmfSaved}`;
+                        }
+                    } catch (bmfErr) {
+                        console.warn('[BEHAVIORAL_DISCOVER] BMF supplemental search failed:', bmfErr);
+                    }
+                }
+
                 this.showNotification?.(msg, 'success');
 
                 // Reload opportunities list so new prospects appear

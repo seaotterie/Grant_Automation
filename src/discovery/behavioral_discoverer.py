@@ -168,10 +168,16 @@ def _score_candidate(
         scores['geo_alignment'] = 0.2
 
     # 3. Keyword density (15%) — keyword hits in concatenated grant purposes
+    # Use word-boundary matching to avoid false positives ("art" in "charter",
+    # "child" in "Rothschild", etc.)
     purposes_lower = (candidate.grant_purposes or '').lower()
     kws = signals.get('keywords', [])
     if kws and purposes_lower:
-        matched = sum(1 for kw in kws if kw and kw in purposes_lower)
+        import re
+        matched = sum(
+            1 for kw in kws
+            if kw and re.search(r'\b' + re.escape(kw) + r'\b', purposes_lower)
+        )
         scores['keyword_density'] = min(1.0, matched / max(len(kws), 1))
     elif not kws:
         scores['keyword_density'] = 0.5  # neutral — no keywords to match
@@ -184,17 +190,32 @@ def _score_candidate(
     scores['recency'] = recency_map.get(delta, 0.15)
 
     # 5. Grant frequency (15%)
-    cnt = candidate.grant_count
-    if cnt >= 10:
-        scores['frequency'] = 1.0
-    elif cnt >= 5:
-        scores['frequency'] = 0.8
-    elif cnt >= 3:
-        scores['frequency'] = 0.6
-    elif cnt >= 2:
-        scores['frequency'] = 0.4
+    # Track 2 (public_charity_financials) lacks per-grant rows so grant_count=1 artificially.
+    # For those, proxy frequency using total grants_paid volume instead.
+    if candidate.source == 'public_charity_financials':
+        gp = candidate.grants_paid
+        if gp >= 5_000_000:
+            scores['frequency'] = 1.0
+        elif gp >= 1_000_000:
+            scores['frequency'] = 0.8
+        elif gp >= 500_000:
+            scores['frequency'] = 0.6
+        elif gp >= 100_000:
+            scores['frequency'] = 0.4
+        else:
+            scores['frequency'] = 0.2
     else:
-        scores['frequency'] = 0.2
+        cnt = candidate.grant_count
+        if cnt >= 10:
+            scores['frequency'] = 1.0
+        elif cnt >= 5:
+            scores['frequency'] = 0.8
+        elif cnt >= 3:
+            scores['frequency'] = 0.6
+        elif cnt >= 2:
+            scores['frequency'] = 0.4
+        else:
+            scores['frequency'] = 0.2
 
     # 6. Financial payout health (10%)
     if candidate.assets_fmv > 0 and candidate.grants_paid > 0:

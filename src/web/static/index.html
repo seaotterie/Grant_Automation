@@ -581,6 +581,49 @@
 
                                 </div>
 
+                                <!-- Sub-row: BMF checkbox + pipeline funnel counts -->
+                                <div class="flex items-center gap-2 mt-0.5 text-xs">
+                                    <label class="flex items-center gap-1 cursor-pointer text-gray-500 dark:text-gray-400 flex-shrink-0"
+                                           title="Also run NTEE/BMF geographic search and merge results with IRS grant history">
+                                        <input type="checkbox" x-model="behavioralDiscoverIncludeBmf" class="w-3 h-3 text-blue-600 rounded">
+                                        <span>+ NTEE/BMF</span>
+                                    </label>
+                                    <!-- Funnel counts: visible once opps are loaded -->
+                                    <div x-show="discoveryResults.length > 0"
+                                         class="flex items-center flex-wrap gap-px text-gray-400 dark:text-gray-500 min-w-0 overflow-hidden">
+                                        <span class="mx-1 opacity-40 flex-shrink-0">|</span>
+                                        <span x-show="behavioralDiscoveryResult && behavioralDiscoveryResult.found > 0"
+                                              class="font-semibold text-blue-500 flex-shrink-0"
+                                              x-text="behavioralDiscoveryResult?.found"></span>
+                                        <span x-show="behavioralDiscoveryResult && behavioralDiscoveryResult.found > 0"
+                                              class="opacity-70 ml-px flex-shrink-0">IRS</span>
+                                        <span x-show="behavioralDiscoveryResult && behavioralDiscoveryResult.found > 0"
+                                              class="mx-1 opacity-40 flex-shrink-0">→</span>
+                                        <span class="font-semibold text-gray-600 dark:text-gray-300 flex-shrink-0"
+                                              x-text="discoveryResults.length"></span>
+                                        <span class="opacity-70 ml-px flex-shrink-0">loaded</span>
+                                        <span class="mx-1 opacity-40 flex-shrink-0">→</span>
+                                        <span class="font-semibold text-gray-600 dark:text-gray-300 flex-shrink-0"
+                                              x-text="_getFoundCountFor('urls')"></span>
+                                        <span class="opacity-70 ml-px flex-shrink-0">urls</span>
+                                        <span class="mx-1 opacity-40 flex-shrink-0">→</span>
+                                        <span class="font-semibold text-gray-600 dark:text-gray-300 flex-shrink-0"
+                                              x-text="_getFoundCountFor('web')"></span>
+                                        <span class="opacity-70 ml-px flex-shrink-0">web</span>
+                                        <span class="mx-1 opacity-40 flex-shrink-0">→</span>
+                                        <span class="font-semibold text-gray-600 dark:text-gray-300 flex-shrink-0"
+                                              x-text="_getFoundCountFor('990s')"></span>
+                                        <span class="opacity-70 ml-px flex-shrink-0">990s</span>
+                                        <span class="mx-1 opacity-40 flex-shrink-0">→</span>
+                                        <span class="font-semibold text-gray-600 dark:text-gray-300 flex-shrink-0"
+                                              x-text="_getFoundCountFor('fast')"></span>
+                                        <span class="opacity-70 ml-px flex-shrink-0">fast</span>
+                                        <span class="mx-1 opacity-40 flex-shrink-0">→</span>
+                                        <span class="font-semibold text-gray-600 dark:text-gray-300 flex-shrink-0"
+                                              x-text="_getFoundCountFor('thorough')"></span>
+                                        <span class="opacity-70 ml-px flex-shrink-0">thorough</span>
+                                    </div>
+                                </div>
 
                             </div>
 
