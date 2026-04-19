@@ -234,7 +234,9 @@ app.include_router(discovery_router)
 
 # Include opportunities routes
 from src.web.routers.opportunities import router as opportunities_router
+from src.web.routers.opportunities_990 import router as opportunities_990_router
 app.include_router(opportunities_router)
+app.include_router(opportunities_990_router)
 
 # Include admin routes
 from src.web.routers.admin import router as admin_router
