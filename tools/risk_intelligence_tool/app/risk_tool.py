@@ -13,9 +13,15 @@ from src.core.tool_framework.path_helper import setup_tool_paths
 project_root = setup_tool_paths(__file__)
 
 from typing import Optional
+import json
 import time
 from datetime import datetime, timedelta
 
+from src.core.anthropic_service import (
+    AnthropicService,
+    PipelineStage,
+    get_anthropic_service,
+)
 from src.core.tool_framework import BaseTool, ToolResult, ToolExecutionContext
 from .risk_models import (
     RiskIntelligenceInput,
@@ -48,7 +54,8 @@ class RiskIntelligenceTool(BaseTool[RiskIntelligenceOutput]):
     def __init__(self, config: Optional[dict] = None):
         """Initialize risk intelligence tool."""
         super().__init__(config)
-        self.openai_api_key = config.get("openai_api_key") if config else None
+        self._anthropic: AnthropicService = get_anthropic_service()
+        self._ai_available = self._anthropic.is_available
 
     def get_tool_name(self) -> str:
         return "Risk Intelligence Tool"
@@ -97,8 +104,8 @@ class RiskIntelligenceTool(BaseTool[RiskIntelligenceOutput]):
         mitigation_strategies = self._generate_mitigation_strategies(all_risks)
         immediate_actions = [s.strategy for s in mitigation_strategies if s.priority == MitigationPriority.IMMEDIATE]
 
-        # AI insights (placeholder)
-        ai_insights = self._generate_ai_insights(
+        # AI insights (Claude-backed, rule-based fallback)
+        ai_insights = await self._generate_ai_insights(
             risk_input, all_risks, critical_risks, high_risks, overall_risk_level
         )
 
@@ -584,7 +591,7 @@ class RiskIntelligenceTool(BaseTool[RiskIntelligenceOutput]):
         # Proceed with caution if high risk
         return True
 
-    def _generate_ai_insights(
+    async def _generate_ai_insights(
         self,
         inp: RiskIntelligenceInput,
         all_risks: list[RiskFactor],
@@ -592,22 +599,118 @@ class RiskIntelligenceTool(BaseTool[RiskIntelligenceOutput]):
         high: list[RiskFactor],
         overall_level: RiskLevel
     ) -> AIRiskInsights:
-        """Generate AI insights (placeholder)"""
+        """Claude-backed AI risk insights with rule-based fallback."""
+        if self._ai_available:
+            try:
+                return await self._generate_ai_insights_claude(
+                    inp, all_risks, critical, high, overall_level
+                )
+            except Exception as e:
+                self.logger.warning(
+                    f"Claude risk insights failed for {inp.opportunity_id}, "
+                    f"falling back to rule-based: {e}"
+                )
+        return self._generate_ai_insights_rules(
+            inp, all_risks, critical, high, overall_level
+        )
 
-        # TODO: Implement actual BAML call
+    async def _generate_ai_insights_claude(
+        self,
+        inp: RiskIntelligenceInput,
+        all_risks: list[RiskFactor],
+        critical: list[RiskFactor],
+        high: list[RiskFactor],
+        overall_level: RiskLevel
+    ) -> AIRiskInsights:
+        """Generate AI insights via Claude sonnet."""
+        risks_summary = [
+            {
+                "category": r.category.value,
+                "risk_level": r.risk_level.value,
+                "description": r.description,
+                "likelihood": round(r.likelihood, 2),
+                "impact": round(r.impact, 2),
+                "risk_score": round(r.risk_score, 2),
+            }
+            for r in sorted(all_risks, key=lambda x: x.risk_score, reverse=True)[:12]
+        ]
 
+        system = (
+            "You are a grant-risk analyst producing a concise JSON assessment. "
+            "Return valid JSON only, no prose, no markdown fences. Use the exact keys "
+            "requested."
+        )
+        user = (
+            f"Opportunity: {inp.opportunity_title}\n"
+            f"Funder: {inp.funder_name} ({inp.funder_type})\n"
+            f"Organization: {inp.organization_name} (EIN {inp.organization_ein})\n"
+            f"Mission: {inp.organization_mission}\n"
+            f"Overall risk level: {overall_level.value}\n"
+            f"Critical risks: {len(critical)}   High risks: {len(high)}\n"
+            f"Top risk factors (ranked):\n{json.dumps(risks_summary, indent=2)}\n\n"
+            "Return JSON with keys:\n"
+            "  risk_executive_summary (string, 2-3 sentences)\n"
+            "  top_3_risks (list[string])\n"
+            "  deal_breaker_risks (list[string])\n"
+            "  overlooked_risks (list[string], 2-4 items not already in the ranked list)\n"
+            "  strategic_risk_factors (list[string], 2-4 items)\n"
+            "  go_no_go_recommendation (boolean)\n"
+            "  recommendation_confidence (number 0-1)\n"
+            "  recommendation_reasoning (string, 1-2 sentences)\n"
+            "  risk_reduction_suggestions (list[string], 3-5 items)\n"
+        )
+
+        result = await self._anthropic.create_json_completion(
+            messages=[{"role": "user", "content": user}],
+            system=system,
+            stage=PipelineStage.THOROUGH_SCREENING,
+            max_tokens=1024,
+            temperature=0.0,
+        )
+
+        def _as_list(value) -> list[str]:
+            if isinstance(value, list):
+                return [str(v) for v in value if v]
+            return []
+
+        return AIRiskInsights(
+            risk_executive_summary=str(result.get("risk_executive_summary", "")).strip(),
+            top_3_risks=_as_list(result.get("top_3_risks"))[:3],
+            deal_breaker_risks=_as_list(result.get("deal_breaker_risks")),
+            overlooked_risks=_as_list(result.get("overlooked_risks")),
+            strategic_risk_factors=_as_list(result.get("strategic_risk_factors")),
+            go_no_go_recommendation=bool(result.get("go_no_go_recommendation", False)),
+            recommendation_confidence=float(result.get("recommendation_confidence", 0.75) or 0.75),
+            recommendation_reasoning=str(result.get("recommendation_reasoning", "")).strip(),
+            risk_reduction_suggestions=_as_list(result.get("risk_reduction_suggestions")),
+        )
+
+    def _generate_ai_insights_rules(
+        self,
+        inp: RiskIntelligenceInput,
+        all_risks: list[RiskFactor],
+        critical: list[RiskFactor],
+        high: list[RiskFactor],
+        overall_level: RiskLevel
+    ) -> AIRiskInsights:
+        """Deterministic rule-based fallback when Claude is unavailable."""
         top_risks = [r.description for r in sorted(all_risks, key=lambda x: x.risk_score, reverse=True)[:3]]
         deal_breakers = [r.description for r in critical]
 
-        summary = f"""
-Risk analysis for {inp.opportunity_title} identifies {overall_level.value} overall risk level
-with {len(critical)} critical and {len(high)} high-priority risks.
-{"Proceed with caution and address critical risks before application." if overall_level in [RiskLevel.MEDIUM, RiskLevel.HIGH] else
- "Not recommended to proceed unless critical risks can be mitigated." if overall_level == RiskLevel.CRITICAL else
- "Proceed - manageable risk profile with standard mitigation strategies."}
-        """.strip()
+        if overall_level == RiskLevel.CRITICAL:
+            tail = "Not recommended to proceed unless critical risks can be mitigated."
+        elif overall_level in (RiskLevel.MEDIUM, RiskLevel.HIGH):
+            tail = "Proceed with caution and address critical risks before application."
+        else:
+            tail = "Proceed - manageable risk profile with standard mitigation strategies."
 
-        proceed = overall_level not in [RiskLevel.CRITICAL] and len(critical) == 0
+        summary = (
+            f"Risk analysis for {inp.opportunity_title} identifies {overall_level.value} "
+            f"overall risk level with {len(critical)} critical and {len(high)} "
+            f"high-priority risks. {tail}"
+        )
+
+        proceed = overall_level != RiskLevel.CRITICAL and len(critical) == 0
 
         return AIRiskInsights(
             risk_executive_summary=summary,
@@ -616,8 +719,8 @@ with {len(critical)} critical and {len(high)} high-priority risks.
             overlooked_risks=["Consider funder's funding priorities alignment", "Review past award patterns"],
             strategic_risk_factors=["Competition level", "Organizational readiness"],
             go_no_go_recommendation=proceed,
-            recommendation_confidence=0.85,
-            recommendation_reasoning=f"Based on {overall_level.value} risk level with {len(critical)} critical risks",
+            recommendation_confidence=0.70,
+            recommendation_reasoning=f"Rule-based assessment on {overall_level.value} risk level with {len(critical)} critical risks",
             risk_reduction_suggestions=[s.strategy for s in self._generate_mitigation_strategies(all_risks)[:3]]
         )
 
