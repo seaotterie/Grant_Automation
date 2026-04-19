@@ -156,7 +156,7 @@ New API endpoints go in `src/web/routers/`. Pick the most relevant existing rout
 | `ANTHROPIC_API_KEY` | Yes | Claude API key |
 | `AI_LITE_MODEL` | No | Override lite model (default: `claude-haiku-4-5-20251001`) |
 | `AI_HEAVY_MODEL` | No | Override heavy model (default: `claude-sonnet-4-6`) |
-| `AI_RESEARCH_MODEL` | No | Override research model (default: `claude-opus-4-6`) |
+| `AI_RESEARCH_MODEL` | No | Override research model (default: `claude-opus-4-7`) |
 | `CORS_ALLOWED_ORIGINS` | No | Comma-separated origins (default: localhost) |
 | `GRANTS_GOV_API_KEY` | No | Grants.gov API access |
 | `PROPUBLICA_API_KEY` | No | ProPublica nonprofit API |

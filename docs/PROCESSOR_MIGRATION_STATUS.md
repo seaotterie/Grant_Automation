@@ -1,6 +1,6 @@
 # Processor → Tool Migration Status
 
-**Last updated**: 2026-03-21
+**Last updated**: 2026-04-19 (post code-review Phases A–E)
 **Reference**: `docs/TOOL_ARCHITECTURE_MAPPING.md` for full detail
 
 ---
@@ -78,12 +78,15 @@ The following were removed in Phase C of the code review (no live callers):
 
 | Before | After | Status |
 |--------|-------|--------|
-| `src/core/openai_service.py` (OpenAI GPT) | `src/core/anthropic_service.py` (Claude) | ⚠️ Both present |
-| `openai` SDK | `anthropic` SDK | ✅ New code uses Anthropic |
-| GPT-5 models | Haiku (fast) / Sonnet (heavy) / Opus (future) | ✅ Configured |
+| `src/core/openai_service.py` (OpenAI GPT) | `src/core/anthropic_service.py` (Claude) | ✅ Removed in Phase B |
+| `src/core/gpt_url_discovery_service.py` | (folded into web/discovery flows) | ✅ Removed in Phase B |
+| `openai` SDK | `anthropic` SDK | ✅ Anthropic-only |
+| GPT-5 models | Haiku 4.5 (fast) / Sonnet 4.6 (heavy) / Opus 4.7 (premium) | ✅ Configured |
 
-**Future action**: Remove all callers of `openai_service.py`, then delete the file.
-Current callers: check with `grep -rn "openai_service\|get_openai_service" src/ --include="*.py"`.
+**No remaining action.** `openai_service.py` and `gpt_url_discovery_service.py`
+were deleted in commit `0e51bd9` (Phase B); the `openai` package was dropped
+from `pyproject.toml` in commit `cbc8c58` (Phase E). Verify with:
+`grep -rn "openai_service\|get_openai_service\|^import openai\|^from openai" src/ tools/ --include="*.py"`.
 
 ---
 
