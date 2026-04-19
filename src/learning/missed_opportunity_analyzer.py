@@ -9,7 +9,7 @@ import json
 import logging
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -120,7 +120,7 @@ class MissedOpportunityAnalyzer:
             common_weak_dimensions=common_weak,
             threshold_analysis=threshold_analysis,
             recommendations=recommendations,
-            generated_at=datetime.utcnow().isoformat(),
+            generated_at=datetime.now(timezone.utc).isoformat(),
         )
 
     # ------------------------------------------------------------------

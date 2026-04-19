@@ -7,12 +7,13 @@ handling authentication, rate limiting, error handling, cost tracking, and model
 Model Routing:
   - claude-haiku-4-5:  Fast screening (~$0.001/call) - discovery, fast screening
   - claude-sonnet-4-6: Thorough analysis (~$0.01/call) - thorough screening, deep intelligence
-  - claude-opus-4-6:   Premium analysis (~$0.20/call) - premium tier deep intelligence
+  - claude-opus-4-7:   Premium analysis (~$0.20/call) - premium tier deep intelligence
 """
 
 import asyncio
 import logging
 import os
+import re
 import time
 import json
 from typing import Any, Dict, List, Optional, Union
@@ -20,6 +21,12 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+# Strip leading/trailing markdown fences (```json ... ``` or ``` ... ```)
+_FENCE_RE = re.compile(
+    r"\A\s*```(?:json|JSON)?\s*\n?|\n?```\s*\Z",
+    re.MULTILINE,
+)
 
 # Try to import the anthropic SDK; allow graceful degradation if not installed
 try:
@@ -35,7 +42,7 @@ class ClaudeModel(Enum):
     """Available Claude models with their intended use cases."""
     HAIKU = "claude-haiku-4-5-20251001"
     SONNET = "claude-sonnet-4-6"
-    OPUS = "claude-opus-4-6"
+    OPUS = "claude-opus-4-7"
 
 
 class PipelineStage(Enum):
@@ -110,19 +117,26 @@ class AnthropicService:
     - Graceful error handling with retries
     """
 
-    # Claude API pricing (per token) — March 2026
+    # Claude API pricing (per token) — April 2026
+    # Includes cache read/write pricing for prompt caching
     COST_PER_TOKEN = {
         ClaudeModel.HAIKU.value: {
-            "input": 0.80 / 1_000_000,
-            "output": 4.00 / 1_000_000,
+            "input": 1.00 / 1_000_000,
+            "output": 5.00 / 1_000_000,
+            "cache_write": 1.25 / 1_000_000,
+            "cache_read": 0.10 / 1_000_000,
         },
         ClaudeModel.SONNET.value: {
             "input": 3.00 / 1_000_000,
             "output": 15.00 / 1_000_000,
+            "cache_write": 3.75 / 1_000_000,
+            "cache_read": 0.30 / 1_000_000,
         },
         ClaudeModel.OPUS.value: {
             "input": 15.00 / 1_000_000,
             "output": 75.00 / 1_000_000,
+            "cache_write": 18.75 / 1_000_000,
+            "cache_read": 1.50 / 1_000_000,
         },
     }
 
@@ -140,8 +154,9 @@ class AnthropicService:
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
         self.client: Optional[Any] = None
         self.cost_tracking: Dict[str, ModelCostTracker] = {}
-        self.request_count = 0
-        self._request_times: List[float] = []
+        # (timestamp, input_tokens_est) tuples for sliding-window RPM/TPM enforcement
+        self._request_history: List[tuple] = []
+        self._rate_limit_lock = asyncio.Lock()
 
         if not ANTHROPIC_SDK_AVAILABLE:
             logger.error(
@@ -190,6 +205,7 @@ class AnthropicService:
         temperature: Optional[float] = None,
         stop_sequences: Optional[List[str]] = None,
         json_mode: bool = False,
+        cache_system_prompt: bool = False,
     ) -> ClaudeCompletionResponse:
         """
         Create a Claude completion with rate limiting and cost tracking.
@@ -203,6 +219,9 @@ class AnthropicService:
             temperature: Sampling temperature (0.0-1.0)
             stop_sequences: Stop sequences
             json_mode: If True, instructs Claude to return valid JSON
+            cache_system_prompt: If True, emit ephemeral cache_control on the
+                system prompt for prompt caching (50-90% input-token savings
+                on repeated system prompts, e.g. batch screening).
 
         Returns:
             ClaudeCompletionResponse with content and metadata
@@ -224,8 +243,23 @@ class AnthropicService:
             else:
                 model = ClaudeModel.SONNET.value
 
-        # Rate limiting
-        await self._check_rate_limits()
+        # Resolve system prompt (json_mode appends JSON instruction)
+        if system and json_mode:
+            system = (
+                f"{system}\n\nIMPORTANT: Respond with valid JSON only. "
+                "Do not include any text outside the JSON object."
+            )
+        elif not system and json_mode:
+            system = (
+                "Respond with valid JSON only. "
+                "Do not include any text outside the JSON object."
+            )
+
+        # Estimate tokens for TPM rate limiting (rough: ~4 chars per token)
+        estimated_input_tokens = self._estimate_tokens(messages, system)
+
+        # Rate limiting (concurrency-safe, enforces both RPM and TPM)
+        await self._check_rate_limits(estimated_input_tokens + max_tokens)
 
         # Build API params
         api_params: Dict[str, Any] = {
@@ -235,18 +269,17 @@ class AnthropicService:
         }
 
         if system:
-            # If json_mode, append JSON instruction to system prompt
-            if json_mode:
-                system = (
-                    f"{system}\n\nIMPORTANT: Respond with valid JSON only. "
-                    "Do not include any text outside the JSON object."
-                )
-            api_params["system"] = system
-        elif json_mode:
-            api_params["system"] = (
-                "Respond with valid JSON only. "
-                "Do not include any text outside the JSON object."
-            )
+            if cache_system_prompt:
+                # Emit a structured system block with ephemeral cache_control
+                api_params["system"] = [
+                    {
+                        "type": "text",
+                        "text": system,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ]
+            else:
+                api_params["system"] = system
 
         if temperature is not None:
             api_params["temperature"] = temperature
@@ -259,7 +292,9 @@ class AnthropicService:
         try:
             response = await self.client.messages.create(**api_params)
         except Exception as e:
-            logger.error(f"Claude API call failed ({model}): {e}")
+            # Log with classification to help downstream retry decisions
+            err_type = type(e).__name__
+            logger.error(f"Claude API call failed ({model}, {err_type}): {e}")
             raise
 
         latency_ms = (time.time() - start_time) * 1000
@@ -267,24 +302,43 @@ class AnthropicService:
         # Extract content
         content = self._extract_content(response)
 
-        # Build usage dict
-        usage = {
-            "input_tokens": response.usage.input_tokens,
-            "output_tokens": response.usage.output_tokens,
-            "total_tokens": (
-                response.usage.input_tokens + response.usage.output_tokens
-            ),
-        }
+        # Build usage dict (include cache tokens when available)
+        usage_obj = response.usage
 
-        # Calculate cost
+        def _usage_int(attr: str) -> int:
+            val = getattr(usage_obj, attr, None)
+            if isinstance(val, int):
+                return val
+            return 0
+
+        usage = {
+            "input_tokens": _usage_int("input_tokens"),
+            "output_tokens": _usage_int("output_tokens"),
+            "cache_creation_input_tokens": _usage_int("cache_creation_input_tokens"),
+            "cache_read_input_tokens": _usage_int("cache_read_input_tokens"),
+        }
+        usage["total_tokens"] = (
+            usage["input_tokens"]
+            + usage["output_tokens"]
+            + usage["cache_creation_input_tokens"]
+            + usage["cache_read_input_tokens"]
+        )
+
+        # Calculate cost (includes cache write/read pricing)
         cost = self._calculate_cost(model, usage)
 
         # Track
         self._track_request(model, usage, cost, latency_ms)
 
+        # Normalize stop_reason (SDK may return None on some interruptions)
+        stop_reason = response.stop_reason or "unknown"
+
         logger.info(
             f"Claude completion: {model}, "
-            f"tokens: {usage['total_tokens']}, "
+            f"tokens: {usage['total_tokens']} "
+            f"(in={usage['input_tokens']}, out={usage['output_tokens']}, "
+            f"cache_w={usage['cache_creation_input_tokens']}, "
+            f"cache_r={usage['cache_read_input_tokens']}), "
             f"cost: ${cost:.4f}, "
             f"latency: {latency_ms:.0f}ms"
         )
@@ -293,7 +347,7 @@ class AnthropicService:
             content=content,
             model=model,
             usage=usage,
-            stop_reason=response.stop_reason,
+            stop_reason=stop_reason,
             cost_estimate=cost,
             latency_ms=latency_ms,
         )
@@ -306,6 +360,7 @@ class AnthropicService:
         system: Optional[str] = None,
         max_tokens: int = 4096,
         temperature: float = 0.0,
+        cache_system_prompt: bool = False,
     ) -> Dict[str, Any]:
         """
         Create a Claude completion that returns parsed JSON.
@@ -327,17 +382,11 @@ class AnthropicService:
             max_tokens=max_tokens,
             temperature=temperature,
             json_mode=True,
+            cache_system_prompt=cache_system_prompt,
         )
 
-        # Strip markdown code fences if present
-        content = response.content.strip()
-        if content.startswith("```json"):
-            content = content[7:]
-        if content.startswith("```"):
-            content = content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-        content = content.strip()
+        # Strip markdown code fences via a single regex (handles ```json, ```, etc.)
+        content = _FENCE_RE.sub("", response.content).strip()
 
         return json.loads(content)
 
@@ -360,7 +409,7 @@ class AnthropicService:
         return "\n".join(text_parts)
 
     def _calculate_cost(self, model: str, usage: Dict[str, int]) -> float:
-        """Calculate cost estimate for an API call."""
+        """Calculate cost estimate for an API call (includes cache pricing)."""
         rates = self.COST_PER_TOKEN.get(model)
         if not rates:
             # Fall back to Sonnet pricing for unknown models
@@ -368,8 +417,34 @@ class AnthropicService:
 
         input_cost = usage.get("input_tokens", 0) * rates["input"]
         output_cost = usage.get("output_tokens", 0) * rates["output"]
+        cache_write_cost = (
+            usage.get("cache_creation_input_tokens", 0) * rates.get("cache_write", rates["input"])
+        )
+        cache_read_cost = (
+            usage.get("cache_read_input_tokens", 0) * rates.get("cache_read", rates["input"])
+        )
 
-        return input_cost + output_cost
+        return input_cost + output_cost + cache_write_cost + cache_read_cost
+
+    def _estimate_tokens(
+        self,
+        messages: List[Dict[str, Any]],
+        system: Optional[str] = None,
+    ) -> int:
+        """Rough token estimate for TPM rate limiting (~4 chars/token)."""
+        total_chars = 0
+        if system:
+            total_chars += len(system)
+        for msg in messages:
+            content = msg.get("content", "")
+            if isinstance(content, str):
+                total_chars += len(content)
+            elif isinstance(content, list):
+                # Handle structured content blocks
+                for block in content:
+                    if isinstance(block, dict):
+                        total_chars += len(str(block.get("text", "")))
+        return max(1, total_chars // 4)
 
     def _track_request(
         self,
@@ -379,32 +454,61 @@ class AnthropicService:
         latency_ms: float,
     ) -> None:
         """Track request for cost and performance monitoring."""
-        self.request_count += 1
-        self._request_times.append(time.time())
-
         if model not in self.cost_tracking:
             self.cost_tracking[model] = ModelCostTracker()
 
         tracker = self.cost_tracking[model]
         tracker.requests += 1
         tracker.total_cost += cost
-        tracker.total_input_tokens += usage.get("input_tokens", 0)
+        tracker.total_input_tokens += (
+            usage.get("input_tokens", 0)
+            + usage.get("cache_creation_input_tokens", 0)
+            + usage.get("cache_read_input_tokens", 0)
+        )
         tracker.total_output_tokens += usage.get("output_tokens", 0)
         tracker.total_latency_ms += latency_ms
 
-    async def _check_rate_limits(self) -> None:
-        """Enforce rate limits with backpressure."""
-        now = time.time()
-        # Remove requests older than 60s
-        self._request_times = [
-            t for t in self._request_times if now - t < 60
-        ]
+    async def _check_rate_limits(self, estimated_tokens: int = 0) -> None:
+        """Enforce RPM + TPM rate limits with backpressure.
 
-        if len(self._request_times) >= self.RATE_LIMIT_RPM * 0.9:
-            wait_time = 60 - (now - self._request_times[0])
-            if wait_time > 0:
-                logger.info(f"Rate limit approaching, waiting {wait_time:.1f}s")
+        Concurrency-safe via asyncio.Lock: prevents the overshoot that occurs
+        when many coroutines (e.g. 200-opportunity screening) pass the check
+        simultaneously and trigger Anthropic's 429 response.
+        """
+        async with self._rate_limit_lock:
+            while True:
+                now = time.time()
+                # Slide the window: drop entries older than 60s
+                self._request_history = [
+                    (t, tokens) for (t, tokens) in self._request_history
+                    if now - t < 60
+                ]
+
+                current_rpm = len(self._request_history)
+                current_tpm = sum(tokens for (_, tokens) in self._request_history)
+
+                rpm_threshold = int(self.RATE_LIMIT_RPM * 0.9)
+                tpm_threshold = int(self.RATE_LIMIT_TPM * 0.9)
+
+                rpm_hit = current_rpm >= rpm_threshold
+                tpm_hit = current_tpm + estimated_tokens >= tpm_threshold
+
+                if not (rpm_hit or tpm_hit):
+                    # Reserve our slot now, while still holding the lock, so the
+                    # next coroutine sees our reservation when it computes limits.
+                    self._request_history.append((now, estimated_tokens))
+                    return
+
+                # Figure out how long to wait for the oldest entry to age out
+                oldest_ts = self._request_history[0][0] if self._request_history else now
+                wait_time = max(0.1, 60 - (now - oldest_ts))
+                reason = "RPM" if rpm_hit else "TPM"
+                logger.info(
+                    f"Rate limit approaching ({reason}: rpm={current_rpm}, "
+                    f"tpm={current_tpm}), waiting {wait_time:.1f}s"
+                )
                 await asyncio.sleep(wait_time)
+                # Loop and re-check — other coroutines may still push us back over
 
     def get_cost_summary(self) -> Dict[str, Any]:
         """Get comprehensive cost tracking summary."""
@@ -435,8 +539,13 @@ class AnthropicService:
     def reset_cost_tracking(self) -> None:
         """Reset all cost tracking data."""
         self.cost_tracking.clear()
-        self.request_count = 0
+        self._request_history.clear()
         logger.info("Anthropic cost tracking reset")
+
+    @property
+    def request_count(self) -> int:
+        """Total requests tracked across all models (read-only)."""
+        return sum(t.requests for t in self.cost_tracking.values())
 
 
 # ---------------------------------------------------------------------------

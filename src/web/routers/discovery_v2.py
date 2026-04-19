@@ -21,7 +21,7 @@ from typing import Dict, Any, List, Optional
 from enum import Enum
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 import sqlite3
 
 from src.core.tool_registry import ToolRegistry
@@ -152,7 +152,7 @@ async def execute_discovery(
             "total_results": total_count,
             "criteria": criteria,
             "results": results,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except HTTPException:

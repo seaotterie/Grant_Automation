@@ -18,7 +18,7 @@ launch_catalynx_web.bat         # Windows launcher
 |----------|-------|---------|
 | Fast screening / discovery | `claude-haiku-4-5-20251001` | `AI_LITE_MODEL` |
 | Thorough screening / deep intelligence | `claude-sonnet-4-6` | `AI_HEAVY_MODEL` |
-| Premium analysis (future) | `claude-opus-4-6` | `AI_RESEARCH_MODEL` |
+| Premium analysis (future) | `claude-opus-4-7` | `AI_RESEARCH_MODEL` |
 
 **Key files:**
 - `src/core/anthropic_service.py` — centralized Claude API client (use this)

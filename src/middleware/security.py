@@ -64,19 +64,21 @@ class XSSProtectionMiddleware(BaseHTTPMiddleware):
     
     def __init__(self, app):
         super().__init__(app)
-        # Common XSS attack patterns
+        # Common XSS attack patterns. `\s*` allows arbitrary whitespace
+        # (including multi-space) between tag name and attributes so that
+        # `<svg  onload=...>` (double space) is not a bypass.
         self.xss_patterns = [
-            re.compile(r'<script[^>]*>.*?</script>', re.IGNORECASE | re.DOTALL),
+            re.compile(r'<script\b[^>]*>.*?</script>', re.IGNORECASE | re.DOTALL),
             re.compile(r'javascript:', re.IGNORECASE),
             re.compile(r'on\w+\s*=', re.IGNORECASE),  # Event handlers
-            re.compile(r'<iframe[^>]*>', re.IGNORECASE),
-            re.compile(r'<object[^>]*>', re.IGNORECASE),
-            re.compile(r'<embed[^>]*>', re.IGNORECASE),
-            re.compile(r'<form[^>]*>', re.IGNORECASE),
+            re.compile(r'<iframe\b[^>]*>', re.IGNORECASE),
+            re.compile(r'<object\b[^>]*>', re.IGNORECASE),
+            re.compile(r'<embed\b[^>]*>', re.IGNORECASE),
+            re.compile(r'<form\b[^>]*>', re.IGNORECASE),
             re.compile(r'eval\s*\(', re.IGNORECASE),
             re.compile(r'expression\s*\(', re.IGNORECASE),
-            re.compile(r'<svg[^>]*onload', re.IGNORECASE),
-            re.compile(r'<img[^>]*onerror', re.IGNORECASE)
+            re.compile(r'<svg\b[^>]*\son\w+\s*=', re.IGNORECASE),
+            re.compile(r'<img\b[^>]*\son\w+\s*=', re.IGNORECASE),
         ]
     
     def _contains_xss(self, text: str) -> bool:
@@ -147,10 +149,12 @@ class XSSProtectionMiddleware(BaseHTTPMiddleware):
         return text
     
     async def dispatch(self, request: Request, call_next):
-        # Skip XSS protection for static files and routes that don't need it
+        # Skip XSS protection for static files only. The API surface
+        # is the primary XSS target (stored-XSS via persisted JSON payloads)
+        # so it MUST NOT bypass sanitization.
         path = request.url.path
-        if (path.startswith(('/static/', '/api/')) or 
-            path in ('/', '/favicon.ico') or 
+        if (path.startswith('/static/') or
+            path in ('/', '/favicon.ico') or
             'javascript' in request.headers.get('accept', '').lower() or
             'text/javascript' in request.headers.get('content-type', '').lower()):
             return await call_next(request)

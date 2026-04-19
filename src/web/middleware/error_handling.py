@@ -30,6 +30,29 @@ from src.web.models.error_responses import (
 logger = logging.getLogger(__name__)
 
 
+# Sentinel for server-error responses: clients never see the raw exception text.
+# Operators inspect the logs (correlated by X-Request-ID) for debugging.
+_GENERIC_5XX_DETAIL = "An internal error occurred. Please contact support if this persists."
+
+
+def _sanitize_detail(status_code: int, detail: Any) -> str:
+    """Return a client-safe detail string.
+
+    - 5xx responses get a generic message to avoid leaking internals
+      (stack-trace fragments, file paths, DSNs, etc.).
+    - 4xx responses retain their detail (typically user-facing validation
+      messages), capped at a reasonable length.
+    """
+    if status_code >= 500:
+        return _GENERIC_5XX_DETAIL
+    if not isinstance(detail, str):
+        detail = str(detail)
+    # Cap detail length to avoid echoing huge payloads
+    if len(detail) > 500:
+        detail = detail[:500] + "…"
+    return detail
+
+
 class DateTimeAwareJSONResponse(JSONResponse):
     """JSON response that properly serializes datetime objects."""
     
@@ -110,32 +133,33 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
     async def _handle_http_exception(self, exc: HTTPException, context: Dict[str, Any]) -> JSONResponse:
         """Handle FastAPI HTTPException with standardized response."""
         request_id = context.get("request_id")
-        
+        safe_detail = _sanitize_detail(exc.status_code, exc.detail)
+
         # Create appropriate error response based on status code
         if exc.status_code == 400:
             error_response = ValidationErrorResponse(
-                message=exc.detail,
+                message=safe_detail,
                 request_id=request_id
             )
         elif exc.status_code == 401:
             error_response = AuthenticationErrorResponse(
-                message=exc.detail,
+                message=safe_detail,
                 request_id=request_id
             )
         elif exc.status_code == 404:
             error_response = NotFoundErrorResponse(
                 error_code="RESOURCE_NOT_FOUND",
-                message=exc.detail,
+                message=safe_detail,
                 request_id=request_id
             )
         elif exc.status_code == 429:
             error_response = RateLimitErrorResponse(
-                message=exc.detail,
+                message=safe_detail,
                 request_id=request_id
             )
         else:
             error_response = SystemErrorResponse(
-                message=exc.detail,
+                message=safe_detail,
                 request_id=request_id
             )
         
@@ -283,31 +307,35 @@ async def validation_exception_handler(request: Request, exc: Exception):
 async def http_exception_handler(request: Request, exc: HTTPException):
     """Handle HTTP exceptions with standardized responses."""
     request_id = getattr(request.state, 'request_id', None)
-    
+    safe_detail = _sanitize_detail(exc.status_code, exc.detail)
+
     # Create appropriate error response
     if exc.status_code == 401:
         error_response = AuthenticationErrorResponse(
-            message=exc.detail,
+            message=safe_detail,
             request_id=request_id
         )
     elif exc.status_code == 404:
         error_response = NotFoundErrorResponse(
             error_code="RESOURCE_NOT_FOUND",
-            message=exc.detail,
+            message=safe_detail,
             request_id=request_id
         )
     elif exc.status_code == 429:
         error_response = RateLimitErrorResponse(
-            message=exc.detail,
+            message=safe_detail,
             request_id=request_id
         )
     else:
         error_response = create_error_response(
-            exc, 
-            ErrorResponseType.SYSTEM_ERROR, 
+            exc,
+            ErrorResponseType.SYSTEM_ERROR,
             request_id
         )
-    
+        # Override the message for 5xx to prevent leakage through this path too.
+        if exc.status_code >= 500 and hasattr(error_response, "message"):
+            error_response.message = safe_detail
+
     return DateTimeAwareJSONResponse(
         status_code=exc.status_code,
         content=error_response.model_dump()

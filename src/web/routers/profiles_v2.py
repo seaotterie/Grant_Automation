@@ -1255,7 +1255,7 @@ async def create_profile(request: Dict[str, Any]):
             ntee_codes=request.get('ntee_codes', []),
             geographic_scope=request.get('geographic_scope', {}),
             mission_statement=request.get('mission_statement'),
-            created_at=datetime.utcnow().isoformat()
+            created_at=datetime.now(timezone.utc).isoformat()
         )
 
         # Save to database
@@ -1410,7 +1410,7 @@ async def update_profile(profile_id: str, updates: Dict[str, Any]):
                 setattr(existing_profile, key, value)
 
         # Update timestamp
-        existing_profile.updated_at = datetime.utcnow().isoformat()
+        existing_profile.updated_at = datetime.now(timezone.utc).isoformat()
 
         # Save
         success = profile_service.update_profile(existing_profile)

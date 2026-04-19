@@ -317,6 +317,28 @@ try:
 except ImportError:
     logger.warning("Pydantic ValidationError handler not available")
 
+
+# Catch-all for uncaught exceptions: return a generic 500 so internal
+# details (stack trace, exception message) never reach clients.
+# The ErrorHandlingMiddleware logs the full context with a request_id.
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    from fastapi.responses import JSONResponse
+    request_id = getattr(request.state, 'request_id', None)
+    logger.exception(
+        "Unhandled exception reached FastAPI handler",
+        extra={"request_id": request_id, "path": str(request.url)},
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error_type": "system_error",
+            "message": "An internal error occurred. Please contact support if this persists.",
+            "request_id": request_id,
+        },
+    )
+
 # Serve static files using FastAPI's built-in StaticFiles (secure, no path traversal)
 static_path = Path(__file__).parent / "static"
 if static_path.exists():

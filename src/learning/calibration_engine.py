@@ -11,7 +11,7 @@ import logging
 import math
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ class ScoringCalibrationEngine:
                 weight_adjustments={},
                 threshold_adjustment=None,
                 summary=f"Insufficient data for calibration ({len(outcomes)} outcomes, need at least 3).",
-                generated_at=datetime.utcnow().isoformat(),
+                generated_at=datetime.now(timezone.utc).isoformat(),
             )
 
         awarded = [o for o in outcomes if o["award_status"] == "awarded"]
@@ -140,7 +140,7 @@ class ScoringCalibrationEngine:
             weight_adjustments=weight_adjustments,
             threshold_adjustment=threshold_adjustment,
             summary=summary,
-            generated_at=datetime.utcnow().isoformat(),
+            generated_at=datetime.now(timezone.utc).isoformat(),
         )
 
     # ------------------------------------------------------------------
