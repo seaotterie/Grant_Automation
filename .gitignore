@@ -77,6 +77,8 @@ tmp/
 # pytest
 .pytest_cache/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
 
 # mypy

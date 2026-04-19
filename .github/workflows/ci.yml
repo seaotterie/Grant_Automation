@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  # Dummy secrets so modules that read them at import time can load.
+  # Real Anthropic calls are never made in CI; tools fall back to
+  # rule-based paths when ANTHROPIC_API_KEY is empty.
+  JWT_SECRET_KEY: ci-jwt-secret-must-be-long-enough
+  ADMIN_PASSWORD: ci-admin-password-placeholder
+  USER_PASSWORD: ci-user-password-placeholder
+  ANTHROPIC_API_KEY: ""
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install ruff
+        run: pip install --quiet "ruff>=0.9.0"
+      - name: Ruff fatal check (E9 syntax, F63 bad comparisons)
+        # Narrow rule set enforced as a hard gate. Style rules remain
+        # available for local use (`ruff check src/ tools/`) but are not
+        # gating yet; tightening the CI rule set is tracked as a follow-up.
+        run: ruff check src/ tools/ --select=E9,F63
+
+  test-core:
+    name: Test (core + anthropic_service)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: |
+          pip install --quiet -r requirements.txt
+          pip install --quiet ".[test]"
+      - name: Run core unit tests
+        run: |
+          python -m pytest tests/core/test_anthropic_service.py -v
+
+  test-tools:
+    name: Test (tool suites)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tool:
+          - risk_intelligence_tool
+          - data_validator_tool
+          - ein_validator_tool
+          - connection_pathway_tool
+          - network_intelligence_tool
+          - schedule_i_grant_analyzer_tool
+          - xml-990-parser-tool
+          - xml-990pf-parser-tool
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: |
+          pip install --quiet -r requirements.txt
+          pip install --quiet ".[test]"
+      - name: Run tool tests
+        run: |
+          python -m pytest "tools/${{ matrix.tool }}/tests/" -v
+
+  coverage:
+    name: Coverage (src + tools)
+    runs-on: ubuntu-latest
+    needs: [test-core, test-tools]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies
+        run: |
+          pip install --quiet -r requirements.txt
+          pip install --quiet ".[test]"
+      - name: Run tests with coverage
+        # Each suite runs in its own pytest invocation because conftest.py
+        # files collide when multiple tool trees are collected together.
+        # --cov-append merges them into a single .coverage file.
+        run: |
+          rm -f .coverage
+          for target in \
+            tests/core/test_anthropic_service.py \
+            tools/risk_intelligence_tool/tests/ \
+            tools/data_validator_tool/tests/ \
+            tools/ein_validator_tool/tests/ \
+            tools/connection_pathway_tool/tests/ \
+            tools/network_intelligence_tool/tests/ \
+            tools/schedule_i_grant_analyzer_tool/tests/ \
+            tools/xml-990-parser-tool/tests/ \
+            tools/xml-990pf-parser-tool/tests/; do
+            python -m pytest "$target" \
+              --cov=src --cov=tools --cov-append
+          done
+          python -m coverage report
+          python -m coverage xml -o coverage.xml
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: warn

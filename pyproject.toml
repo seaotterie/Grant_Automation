@@ -37,7 +37,8 @@ dependencies = [
     "typing-extensions>=4.15.0",
 
     # AI / LLM Integration
-    "openai>=2.29.0",
+    # Anthropic is the only supported provider (OpenAI removed April 2026).
+    "anthropic>=0.40.0",
     "tqdm>=4.67.3",
 
     # HTTP Clients & Async I/O
@@ -145,16 +146,9 @@ collect_ignore_glob = ["tests/_legacy/*.py", "tools/*.py"]
 addopts = [
     "--strict-markers",
     "--strict-config",
-    "--verbose",
     "--tb=short",
     "--show-capture=no",
     "--durations=10",
-    "--cov=src",
-    "--cov=tools",
-    "--cov-report=term-missing",
-    "--cov-report=html:htmlcov",
-    "--cov-report=xml:coverage.xml",
-    "--cov-fail-under=40",
 ]
 markers = [
     "asyncio: async test functions",

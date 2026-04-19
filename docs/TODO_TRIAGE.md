@@ -1,7 +1,8 @@
 # TODO / FIXME Triage (Phase E5)
 
 Triage performed: 2026-03-21
-Total markers found: 39
+Last refreshed: 2026-04-19 (post Phase D.2)
+Total markers found: 38 (was 39 — risk_tool BAML placeholder resolved in Phase D.2)
 
 ---
 
@@ -23,7 +24,7 @@ These are valid future-work markers. They should stay as reminders but don't blo
 | `tools/foundation_grantee_bundling_tool/app/bundling_tool.py` | 154, 288, 354 | XML 990-PF auto-fetch and data enrichment — future sprint |
 | `tools/foundation_grantee_bundling_tool/app/cofunding_analyzer.py` | 198, 402, 403, 404 | Geographic/funding enrichment — future sprint |
 | `tools/foundation_preprocessing_tool/app/foundation_preprocessor.py` | 837 | Board member cross-reference — future sprint |
-| `tools/risk_intelligence_tool/app/risk_tool.py` | 597 | BAML AI call placeholder — functions without it |
+| ~~`tools/risk_intelligence_tool/app/risk_tool.py`~~ | ~~597~~ | **Resolved in Phase D.2** — Claude Sonnet call with rule-based fallback |
 | `tools/web_intelligence_tool/app/scrapy_pipelines/structured_output_pipeline.py` | 176, 180 | OpportunityIntelligence / FoundationIntelligence conversion — future sprint |
 
 ## Category B — Endpoint Stubs (exposed as 501, implement in a future sprint)
@@ -43,8 +44,12 @@ They are **known** and should not be silently removed — they mark where real i
 
 | Category | Count | Action |
 |----------|-------|--------|
-| A — Future work, keep | 30 | No change needed |
+| A — Future work, keep | 29 | No change needed |
 | B — Endpoint stubs | 9 | Implement in a future sprint |
+| **Resolved** | 1 | risk_tool BAML placeholder (Phase D.2) |
 
 No TODO/FIXME markers were found to be incorrect, misleading, or hiding bugs.
 The `opportunities.py` 501 endpoint is the highest-priority item as it is user-visible.
+The remaining BAML placeholders in `financial_intelligence_tool` and
+`deep_intelligence_tool` follow the same pattern established by Phase D.2
+(Claude call + rule-based fallback) and can be resolved incrementally.
