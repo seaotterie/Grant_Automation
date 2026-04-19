@@ -291,13 +291,13 @@ async def run_full_pipeline_summary(request: Dict[str, Any]):
     """Execute complete pipeline status overview across all tracks."""
     try:
         from src.core.workflow_engine import get_workflow_engine
-        from src.processors.registry import get_processor_summary
+        from src.core.tool_registry import get_tool_summary
         from src.pipeline.resource_allocator import resource_allocator
 
         logger.info("Generating full pipeline summary")
 
         engine = get_workflow_engine()
-        processor_summary = get_processor_summary()
+        tool_summary = get_tool_summary()
         workflow_stats = engine.get_workflow_statistics()
         resource_status = resource_allocator.get_resource_status()
 
@@ -305,7 +305,7 @@ async def run_full_pipeline_summary(request: Dict[str, Any]):
             "status": "completed",
             "summary_type": "full_pipeline",
             "system_overview": {
-                "processors": processor_summary,
+                "tools": tool_summary,
                 "workflows": workflow_stats,
                 "resources": resource_status,
                 "uptime": datetime.now().isoformat()

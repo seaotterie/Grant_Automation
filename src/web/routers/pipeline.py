@@ -282,32 +282,38 @@ async def get_trend_analysis():
 
 @router.get("/processors")
 async def list_processors():
-    """List all available processors with status."""
+    """List all available 12-factor tools with status."""
     try:
-        from src.processors.registry import get_processor_summary
+        from src.core.tool_registry import get_tool_summary
 
-        summary = get_processor_summary()
+        summary = get_tool_summary()
         return {
             "status": "success",
-            "processors": summary["processors_info"],
-            "total_count": summary["total_processors"],
-            "by_type": summary["by_type"]
+            "processors": summary["tools_info"],
+            "total_count": summary["total_tools"],
+            "by_type": summary["by_category"]
         }
     except Exception as e:
-        logger.error(f"Failed to get processors: {e}", exc_info=True)
+        logger.error(f"Failed to get tools: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/processors/architecture/overview")
 async def get_processor_architecture_overview():
-    """Get comprehensive overview of processor architecture and migration status."""
+    """Report the current 12-factor tool architecture."""
     try:
-        from src.processors.registry import get_architecture_overview
-        overview = get_architecture_overview()
+        from src.core.tool_registry import get_tool_summary
+
+        summary = get_tool_summary()
 
         return {
             "status": "success",
-            "architecture_overview": overview,
+            "architecture_overview": {
+                "architecture": "12-factor tool framework",
+                "total_tools": summary["total_tools"],
+                "operational_tools": summary["operational_tools"],
+                "categories": list(summary["by_category"].keys()),
+            },
             "timestamp": datetime.now().isoformat()
         }
 
@@ -318,28 +324,19 @@ async def get_processor_architecture_overview():
 
 @router.get("/processors/migration/status")
 async def get_migration_status():
-    """Get detailed migration status for client architecture integration."""
+    """Legacy migration-status endpoint. Processor→tool migration is complete."""
     try:
-        from src.processors.registry import get_processor_summary
-        summary = get_processor_summary()
+        from src.core.tool_registry import get_tool_summary
 
-        # Extract migration-specific information
-        architecture_stats = summary.get('architecture_stats', {})
-        migration_insights = summary.get('migration_insights', {})
+        summary = get_tool_summary()
 
         return {
             "status": "success",
             "migration_status": {
-                "overall_completion": architecture_stats.get('migration_completion', 0),
-                "processors_migrated": architecture_stats.get('client_integrated', 0),
-                "total_processors": architecture_stats.get('total_processors', 0),
-                "data_collection_progress": {
-                    "total": migration_insights.get('data_collection_total', 0),
-                    "migrated": migration_insights.get('data_collection_migrated', 0),
-                    "completion_rate": migration_insights.get('data_collection_migration_rate', 0)
-                },
-                "priority_processors": migration_insights.get('priority_processors_status', {}),
-                "architecture_benefits": migration_insights.get('architecture_benefits', [])
+                "overall_completion": 100.0,
+                "processors_migrated": summary["operational_tools"],
+                "total_processors": summary["total_tools"],
+                "notes": "Processor subsystem was retired in favor of the 12-factor tool framework.",
             },
             "timestamp": datetime.now().isoformat()
         }

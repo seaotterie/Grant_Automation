@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException
 import logging
 from datetime import datetime
 
-from src.processors.registry import get_processor_summary
+from src.core.tool_registry import get_tool_summary
 from src.profiles.unified_service import get_unified_profile_service
 
 # Configure logging
@@ -33,12 +33,12 @@ def _get_profile_service():
 async def get_welcome_status():
     """Get welcome stage status and system overview."""
     try:
-        processor_summary = get_processor_summary()
+        tool_summary = get_tool_summary()
 
         return {
             "status": "ready",
             "system_health": "operational",
-            "processors_available": processor_summary["total_processors"],
+            "processors_available": tool_summary["operational_tools"],
             "capabilities": [
                 "Multi-track opportunity discovery",
                 "AI-powered organization analysis",

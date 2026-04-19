@@ -1,17 +1,28 @@
 #!/usr/bin/env python3
 """
-AI Cost Tracker - Enhanced cost tracking with database integration
-Connects OpenAI service with database cost tracking and monitoring
+AI Cost Tracker - Enhanced cost tracking with database integration.
+
+Provider-agnostic: accepts any response object that exposes `.model`,
+`.usage` (dict), and `.cost_estimate`. The Anthropic client's
+ClaudeCompletionResponse satisfies this protocol; the legacy OpenAI
+CompletionResponse did too (kept here only for historical shape notes).
 """
 
 import logging
 from datetime import datetime, date
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, List, Any, Protocol, runtime_checkable
 from dataclasses import dataclass, asdict
 from pathlib import Path
 import json
 
-from .openai_service import OpenAIService, CompletionResponse, get_openai_service
+
+@runtime_checkable
+class _CostReportingResponse(Protocol):
+    """Duck-typed response shape used by record_processing_result."""
+    model: str
+    usage: Dict[str, int]
+    cost_estimate: float
+
 
 # Import with proper path handling
 try:
@@ -54,14 +65,13 @@ class AICostTracker:
     
     def __init__(self, database_path: Optional[str] = None, daily_budget: float = 10.0, monthly_budget: float = 300.0):
         self.db = DatabaseManager(database_path or "data/catalynx.db")
-        self.openai_service = get_openai_service()
         self.daily_budget = daily_budget
         self.monthly_budget = monthly_budget
-        
+
         # In-memory tracking for session
         self.session_costs = []
         self.session_start = datetime.now()
-        
+
         logger.info(f"AI Cost Tracker initialized with budgets: ${daily_budget}/day, ${monthly_budget}/month")
     
     def record_processing_result(
@@ -69,7 +79,7 @@ class AICostTracker:
         opportunity_id: str,
         processor_type: str,
         processing_stage: str,
-        response: CompletionResponse,
+        response: _CostReportingResponse,
         processing_time: float,
         input_data: Dict = None,
         output_data: Dict = None,

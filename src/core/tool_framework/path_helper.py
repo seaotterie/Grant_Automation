@@ -31,7 +31,7 @@ def setup_tool_paths(tool_file: Optional[str] = None) -> Path:
         project_root = setup_tool_paths(__file__)
 
         # Now you can import from src
-        from src.core.openai_service import OpenAIService
+        from src.core.anthropic_service import AnthropicService
         ```
 
     Note:

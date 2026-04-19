@@ -430,6 +430,33 @@ def reset_registry() -> None:
     _global_registry = None
 
 
+def get_tool_summary() -> Dict[str, Any]:
+    """
+    Return a summary of all registered 12-factor tools.
+
+    Replaces the legacy `src.processors.registry.get_processor_summary()` helper
+    that was tied to the retired processor subsystem. Callers should prefer this
+    tool-registry-based summary.
+    """
+    registry = get_registry()
+    tools_info = registry.list_tools_as_dicts()
+
+    by_category: Dict[str, List[Dict[str, Any]]] = {}
+    for info in tools_info:
+        category = info.get("category", "uncategorized")
+        by_category.setdefault(category, []).append(info)
+
+    operational = registry.get_operational_tools()
+
+    return {
+        "total_tools": len(tools_info),
+        "operational_tools": len(operational),
+        "by_category": by_category,
+        "tool_names": [t["name"] for t in tools_info],
+        "tools_info": tools_info,
+    }
+
+
 if __name__ == "__main__":
     # Example usage
     registry = get_registry()
