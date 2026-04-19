@@ -8,6 +8,8 @@ from typing import List, Optional, Dict, Any
 from enum import Enum
 from datetime import datetime
 
+from tools.shared_schemas import RiskLevel
+
 
 class AnalysisDepth(Enum):
     """Analysis depth levels - TRUE COST 2-tier system"""
@@ -20,14 +22,6 @@ class AnalysisDepth(Enum):
     STANDARD = "standard"    # → ESSENTIALS
     ENHANCED = "enhanced"    # → PREMIUM
     COMPLETE = "complete"    # → PREMIUM
-
-
-class RiskLevel(Enum):
-    """Risk assessment levels"""
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
 
 
 class SuccessProbability(Enum):

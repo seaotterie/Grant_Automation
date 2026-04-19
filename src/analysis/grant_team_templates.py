@@ -21,6 +21,8 @@ from typing import Dict, List, Optional, Any, Union
 from pathlib import Path
 import logging
 
+from tools.shared_schemas import RiskLevel
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,14 +33,6 @@ class DecisionCategory(Enum):
     CONDITIONAL = "conditional"
     DEFER = "defer"
     MORE_INFO_NEEDED = "more_info_needed"
-
-
-class RiskLevel(Enum):
-    """Risk assessment levels"""
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
 
 
 @dataclass

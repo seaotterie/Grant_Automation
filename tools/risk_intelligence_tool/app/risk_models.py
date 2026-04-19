@@ -7,14 +7,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional, Dict
 
-
-class RiskLevel(str, Enum):
-    """Risk level indicator"""
-    MINIMAL = "minimal"
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
+from tools.shared_schemas import RiskLevel
 
 
 class RiskCategory(str, Enum):

@@ -26,6 +26,8 @@ from typing import Dict, List, Optional, Any, Union, Tuple
 from pathlib import Path
 import uuid
 
+from tools.shared_schemas import RiskLevel
+
 # Import Phase 3 components
 from .ai_research_platform import AIResearchPlatform, ResearchReport, ReportFormat
 from .research_scoring_integration import ResearchScoringIntegration, IntegratedAnalysis
@@ -50,15 +52,6 @@ class DecisionStatus(Enum):
     CONDITIONAL_APPROVAL = "conditional_approval"
     DEFERRED = "deferred"
     REQUIRES_MORE_INFO = "requires_more_info"
-
-
-class RiskLevel(Enum):
-    """Risk assessment levels"""
-    CRITICAL = "critical"
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
-    MINIMAL = "minimal"
 
 
 @dataclass
