@@ -22,8 +22,9 @@ typing-extensions==4.15.0
 # =============================================================================
 # AI / LLM Integration
 # =============================================================================
+# Anthropic is the only supported provider. OpenAI was removed in April 2026
+# along with src/core/openai_service.py and src/core/gpt_url_discovery_service.py.
 anthropic>=0.40.0
-openai==2.29.0
 jiter==0.13.0
 tqdm==4.67.3
 

@@ -18,12 +18,14 @@ launch_catalynx_web.bat         # Windows launcher
 |----------|-------|---------|
 | Fast screening / discovery | `claude-haiku-4-5-20251001` | `AI_LITE_MODEL` |
 | Thorough screening / deep intelligence | `claude-sonnet-4-6` | `AI_HEAVY_MODEL` |
-| Premium analysis (future) | `claude-opus-4-6` | `AI_RESEARCH_MODEL` |
+| Premium analysis (future) | `claude-opus-4-7` | `AI_RESEARCH_MODEL` |
 
 **Key files:**
 - `src/core/anthropic_service.py` — centralized Claude API client (use this)
-- `src/core/openai_service.py` — legacy OpenAI client (do not extend; scheduled for removal)
 - `.env` — set `ANTHROPIC_API_KEY` here
+
+The legacy `openai_service.py` and `gpt_url_discovery_service.py` were removed
+in code-review Phase B — do not reintroduce them.
 
 ---
 
@@ -119,18 +121,27 @@ All tools are in `tools/` and follow the 12-factor pattern (`12factors.toml` + `
 ### Key Commands
 
 ```bash
-# Tests
-pytest tests/unit/ tools/*/tests/           # fast unit tests
-pytest -m integration                        # integration tests
-pytest --cov=src --cov=tools                 # with coverage
+# Tests (each tool suite runs independently — conftest.py files
+# collide if multiple tool trees are collected in one invocation)
+pytest tests/core/test_anthropic_service.py        # fast core tests
+pytest tools/risk_intelligence_tool/tests/         # one tool suite
+pytest -m integration                              # integration tests
+pytest --cov=src --cov=tools --cov-append          # add to coverage
 
-# Lint / format
-ruff check src/ tools/
+# Lint / format (CI gates only on E9,F63 — full ruff is advisory locally)
+ruff check src/ tools/ --select=E9,F63             # fatal-only (CI gate)
+ruff check src/ tools/                             # full lint (advisory)
 ruff format src/ tools/
 
 # Type check
 mypy src/web/main.py src/web/routers/ --ignore-missing-imports
 ```
+
+### Continuous Integration
+
+GitHub Actions workflow at `.github/workflows/ci.yml`. Runs on every push
+and PR. Four jobs: `lint`, `test-core`, `test-tools` (matrix of 8 passing
+tool suites), `coverage` (aggregated via `--cov-append`).
 
 ### Core Principles
 

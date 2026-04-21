@@ -11,7 +11,7 @@ import logging
 import sqlite3
 import uuid
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -103,7 +103,7 @@ class OutcomeTracker:
         if award_status not in valid_statuses:
             raise ValueError(f"award_status must be one of {valid_statuses}")
 
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         # Fetch screening scores from the opportunity record
         scores = self._fetch_opportunity_scores(opportunity_id)
@@ -353,7 +353,7 @@ class OutcomeTracker:
                 json.dumps(dimension_scores) if dimension_scores else None,
                 actual_outcome, award_amount,
                 prediction_error, "screening",
-                datetime.utcnow().isoformat(),
+                datetime.now(timezone.utc).isoformat(),
             ),
         )
 

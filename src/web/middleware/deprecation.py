@@ -9,7 +9,7 @@ from fastapi import Request, Response
 from typing import Dict, Any
 import logging
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -293,7 +293,7 @@ async def track_deprecated_usage(request: Request, call_next) -> Response:
             f"Method: {request.method} | "
             f"User-Agent: {request.headers.get('user-agent', 'unknown')} | "
             f"Usage count: {deprecated_usage[endpoint_path]} | "
-            f"Timestamp: {datetime.utcnow().isoformat()}"
+            f"Timestamp: {datetime.now(timezone.utc).isoformat()}"
         )
 
     return await call_next(request)
@@ -326,7 +326,7 @@ def get_deprecation_stats() -> Dict[str, Any]:
         "by_endpoint": dict(deprecated_usage),
         "by_phase": by_phase,
         "top_10": dict(deprecated_usage.most_common(10)),
-        "last_updated": datetime.utcnow().isoformat()
+        "last_updated": datetime.now(timezone.utc).isoformat()
     }
 
 

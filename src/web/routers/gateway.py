@@ -10,7 +10,7 @@ decisions, and send selected opportunities to deep analysis.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import logging
 import uuid
@@ -31,7 +31,7 @@ class GatewaySession:
     def __init__(self, session_id: str, screening_results: List[Dict[str, Any]],
                  organization: Dict[str, Any]):
         self.session_id = session_id
-        self.created_at = datetime.utcnow()
+        self.created_at = datetime.now(timezone.utc)
         self.organization = organization
         # Store each opportunity with its screening score + decision state
         self.items: Dict[str, Dict[str, Any]] = {}
@@ -156,7 +156,7 @@ async def record_decision(session_id: str, opportunity_id: str, request: Decisio
     item = session.items[opportunity_id]
     item["decision"] = request.decision
     item["decision_reason"] = request.reason
-    item["decided_at"] = datetime.utcnow().isoformat()
+    item["decided_at"] = datetime.now(timezone.utc).isoformat()
 
     if request.selected_depth:
         item["selected_depth"] = request.selected_depth
@@ -189,7 +189,7 @@ async def batch_decision(session_id: str, request: BatchDecisionRequest):
         if opp_id in session.items:
             session.items[opp_id]["decision"] = request.decision
             session.items[opp_id]["decision_reason"] = request.reason
-            session.items[opp_id]["decided_at"] = datetime.utcnow().isoformat()
+            session.items[opp_id]["decided_at"] = datetime.now(timezone.utc).isoformat()
             updated.append(opp_id)
             _persist_gateway_decision(session_id, opp_id, session.items[opp_id], session.organization)
 
@@ -307,7 +307,7 @@ async def investigate_opportunity(
     existing_notes.append({
         "question": request.question,
         "answer": investigation_result,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     })
     item["investigation_notes"] = existing_notes
 

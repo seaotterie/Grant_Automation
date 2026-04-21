@@ -237,12 +237,12 @@ async def websocket_system_monitor(websocket: WebSocket):
     logger.info("System monitoring WebSocket connected")
 
     async def _get_processor_status() -> Dict[str, Any]:
-        """Return current processor summary using the tool registry."""
+        """Return current tool summary using the 12-factor tool registry."""
         try:
-            from src.processors.registry import get_processor_summary
-            return get_processor_summary()
+            from src.core.tool_registry import get_tool_summary
+            return get_tool_summary()
         except Exception as e:
-            logger.warning(f"Could not retrieve processor summary: {e}")
+            logger.warning(f"Could not retrieve tool summary: {e}")
             return {}
 
     try:

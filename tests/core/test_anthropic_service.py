@@ -48,12 +48,13 @@ def service_no_key():
 @pytest.fixture
 def service_with_key():
     """Service initialized with a test API key (bypasses SDK requirement)."""
+    import asyncio
     svc = AnthropicService.__new__(AnthropicService)
     svc.api_key = "sk-ant-test-key"
     svc.client = MagicMock()  # Mock client directly
     svc.cost_tracking = {}
-    svc.request_count = 0
-    svc._request_times = []
+    svc._request_history = []
+    svc._rate_limit_lock = asyncio.Lock()
     return svc
 
 
@@ -139,7 +140,8 @@ class TestCostCalculation:
     def test_haiku_cost(self, service_with_key):
         usage = {"input_tokens": 1000, "output_tokens": 500}
         cost = service_with_key._calculate_cost(ClaudeModel.HAIKU.value, usage)
-        expected = (1000 * 0.80 / 1e6) + (500 * 4.00 / 1e6)
+        # April 2026 rates
+        expected = (1000 * 1.00 / 1e6) + (500 * 5.00 / 1e6)
         assert abs(cost - expected) < 1e-9
 
     def test_sonnet_cost(self, service_with_key):
@@ -159,6 +161,27 @@ class TestCostCalculation:
         cost = service_with_key._calculate_cost("unknown-model", usage)
         sonnet_cost = service_with_key._calculate_cost(ClaudeModel.SONNET.value, usage)
         assert cost == sonnet_cost
+
+    def test_cost_includes_cache_tokens(self, service_with_key):
+        """Cache-read and cache-write tokens must be priced separately."""
+        usage = {
+            "input_tokens": 1000,
+            "output_tokens": 500,
+            "cache_creation_input_tokens": 2000,
+            "cache_read_input_tokens": 5000,
+        }
+        cost = service_with_key._calculate_cost(ClaudeModel.SONNET.value, usage)
+        expected = (
+            1000 * 3.00 / 1e6
+            + 500 * 15.00 / 1e6
+            + 2000 * 3.75 / 1e6
+            + 5000 * 0.30 / 1e6
+        )
+        assert abs(cost - expected) < 1e-9
+
+    def test_opus_model_id_is_47(self):
+        """Guard: Opus must be the current model ID, not the stale 4-6."""
+        assert ClaudeModel.OPUS.value == "claude-opus-4-7"
 
 
 # ---------------------------------------------------------------------------
@@ -288,3 +311,61 @@ class TestContentExtraction:
         response.content = []
         content = service_with_key._extract_content(response)
         assert content == ""
+
+
+# ---------------------------------------------------------------------------
+# Rate limit concurrency tests
+# ---------------------------------------------------------------------------
+
+class TestRateLimitConcurrency:
+
+    @pytest.mark.asyncio
+    async def test_concurrent_checks_do_not_overshoot_rpm(self, service_with_key):
+        """Many coroutines racing through _check_rate_limits must not exceed RPM.
+
+        Reproduces the bug described in the April 2026 review: without a lock,
+        multiple coroutines could pass the threshold check simultaneously and
+        trigger Anthropic's 429. With the lock, each reservation is atomic, so
+        the post-run count matches the number of calls that fit under the cap.
+        """
+        import asyncio
+
+        # threshold = int(20 * 0.9) = 18 — well above 10 parallel callers
+        service_with_key.RATE_LIMIT_RPM = 20
+
+        async def one():
+            await service_with_key._check_rate_limits(estimated_tokens=100)
+
+        await asyncio.gather(*(one() for _ in range(10)))
+
+        # Exactly 10 reservations landed, none lost to races
+        assert len(service_with_key._request_history) == 10
+
+    @pytest.mark.asyncio
+    async def test_stop_reason_none_is_normalized(self, service_with_key):
+        """When the SDK returns stop_reason=None, the response must carry 'unknown'."""
+        mock_response = _make_mock_response("out", 100, 50, stop_reason=None)
+        service_with_key.client.messages.create = AsyncMock(return_value=mock_response)
+
+        response = await service_with_key.create_completion(
+            messages=[{"role": "user", "content": "x"}],
+            stage=PipelineStage.FAST_SCREENING,
+        )
+        assert response.stop_reason == "unknown"
+
+    @pytest.mark.asyncio
+    async def test_cache_system_prompt_adds_cache_control(self, service_with_key):
+        """cache_system_prompt=True must emit structured system block with cache_control."""
+        mock_response = _make_mock_response("ok", 100, 50)
+        service_with_key.client.messages.create = AsyncMock(return_value=mock_response)
+
+        await service_with_key.create_completion(
+            messages=[{"role": "user", "content": "x"}],
+            stage=PipelineStage.FAST_SCREENING,
+            system="You are a helpful assistant.",
+            cache_system_prompt=True,
+        )
+
+        call_kwargs = service_with_key.client.messages.create.call_args.kwargs
+        assert isinstance(call_kwargs["system"], list)
+        assert call_kwargs["system"][0]["cache_control"] == {"type": "ephemeral"}

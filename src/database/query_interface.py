@@ -179,16 +179,21 @@ class DatabaseQueryInterface:
                 # Apply sorting with validation to prevent SQL injection
                 if sort:
                     self._validate_sort_fields(sort, self.ALLOWED_PROFILE_SORT_FIELDS, "profiles")
-                    base_query += f" ORDER BY {sort.field} {sort.direction}"
+                    # sort.field is whitelist-validated; direction uppercased
+                    direction = sort.direction.upper()
+                    base_query += f" ORDER BY {sort.field} {direction}"
                     if sort.secondary_field:
-                        base_query += f", {sort.secondary_field} {sort.secondary_direction}"
+                        sec_dir = sort.secondary_direction.upper()
+                        base_query += f", {sort.secondary_field} {sec_dir}"
                 else:
                     base_query += " ORDER BY updated_at DESC"
-                    
-                # Apply pagination
+
+                # Apply pagination — coerce to int to prevent injection even
+                # though these are typed as int at the router layer.
                 if limit:
-                    base_query += f" LIMIT {limit} OFFSET {offset}"
-                    
+                    base_query += " LIMIT ? OFFSET ?"
+                    params = params + [int(limit), int(offset)]
+
                 cursor.execute(base_query, params)
                 profiles = [dict(row) for row in cursor.fetchall()]
                 
@@ -353,16 +358,19 @@ class DatabaseQueryInterface:
                 # Apply sorting with validation to prevent SQL injection
                 if sort:
                     self._validate_sort_fields(sort, self.ALLOWED_OPPORTUNITY_SORT_FIELDS, "opportunities")
-                    base_query += f" ORDER BY o.{sort.field} {sort.direction}"
+                    direction = sort.direction.upper()
+                    base_query += f" ORDER BY o.{sort.field} {direction}"
                     if sort.secondary_field:
-                        base_query += f", o.{sort.secondary_field} {sort.secondary_direction}"
+                        sec_dir = sort.secondary_direction.upper()
+                        base_query += f", o.{sort.secondary_field} {sec_dir}"
                 else:
                     base_query += " ORDER BY o.overall_score DESC, o.updated_at DESC"
-                    
-                # Apply pagination
+
+                # Apply pagination — coerce to int to prevent injection.
                 if limit:
-                    base_query += f" LIMIT {limit} OFFSET {offset}"
-                    
+                    base_query += " LIMIT ? OFFSET ?"
+                    params = params + [int(limit), int(offset)]
+
                 cursor.execute(base_query, params)
                 opportunities = [dict(row) for row in cursor.fetchall()]
                 

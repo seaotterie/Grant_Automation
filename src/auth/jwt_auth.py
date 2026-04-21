@@ -8,7 +8,7 @@ import jwt
 import secrets
 import hashlib
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, List
 from fastapi import HTTPException, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -140,14 +140,14 @@ class AuthenticationService:
     def create_access_token(self, user: User) -> str:
         """Create JWT access token for user"""
         expires_delta = timedelta(hours=JWT_EXPIRATION_HOURS)
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
         
         token_data = {
             "sub": user.username,
             "user_id": user.user_id,
             "role": user.role,
             "exp": expire,
-            "iat": datetime.utcnow()
+            "iat": datetime.now(timezone.utc)
         }
         
         token = jwt.encode(token_data, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
